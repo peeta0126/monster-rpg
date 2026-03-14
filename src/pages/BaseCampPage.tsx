@@ -47,8 +47,14 @@ export default function BaseCampPage() {
         if (keys["arrowleft"] || keys["a"]) nextX -= SPEED;
         if (keys["arrowright"] || keys["d"]) nextX += SPEED;
 
-        nextX = Math.max(PLAYER_SIZE / 2, Math.min(MAP_WIDTH - PLAYER_SIZE / 2, nextX));
-        nextY = Math.max(PLAYER_SIZE / 2, Math.min(MAP_HEIGHT - PLAYER_SIZE / 2, nextY));
+        nextX = Math.max(
+          PLAYER_SIZE / 2,
+          Math.min(MAP_WIDTH - PLAYER_SIZE / 2, nextX),
+        );
+        nextY = Math.max(
+          PLAYER_SIZE / 2,
+          Math.min(MAP_HEIGHT - PLAYER_SIZE / 2, nextY),
+        );
 
         return { x: nextX, y: nextY };
       });
@@ -61,7 +67,7 @@ export default function BaseCampPage() {
     <div className="min-h-screen bg-slate-950 p-6 text-white">
       <div className="mx-auto mb-4 flex max-w-[1280px] items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Base Camp</h1>
+          <h1 className="text-3xl font-bold">Monster Base Camp</h1>
           <p className="text-sm text-white/70">WASD 또는 방향키로 이동</p>
         </div>
 
