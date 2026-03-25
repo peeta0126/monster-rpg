@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+
 import { monsters } from "../data/monsters";
 import type { Move } from "../types/game";
 
-import { useGameStore } from "../store/gameStore";
 import battleBg from "../assets/backgrounds/battle-bg.png";
 import flamelingImg from "../assets/monsters/flameling.png";
 import aquabeImg from "../assets/monsters/aquabe.png";
@@ -23,10 +24,20 @@ import {
 
 type BattleResult = "idle" | "player-win" | "enemy-win";
 
-//배틀 페이지
+type BattleRouteState = {
+  from?: string;
+  portalId?: string;
+};
+
 export default function BattlePage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const routeState = location.state as BattleRouteState | undefined;
+  const from = routeState?.from ?? "unknown";
+  const portalId = routeState?.portalId ?? "none";
+
   const initialPlayerMonster = monsters[0];
-  const { setScene } = useGameStore();
 
   const getRandomEnemyMonster = () => {
     const enemyCandidates = monsters.filter(
@@ -37,7 +48,6 @@ export default function BattlePage() {
     return enemyCandidates[randomIndex];
   };
 
-  
   const initialEnemyMonster = getRandomEnemyMonster();
 
   const [player, setPlayer] = useState<BattleMonster>(() =>
@@ -69,7 +79,6 @@ export default function BattlePage() {
     setIsProcessing(false);
   };
 
-  //기술 위력 효과
   const getEffectText = (multiplier: number) => {
     if (multiplier >= 2) return "효과가 굉장했다!";
     if (multiplier < 1) return "효과가 별로인 듯하다...";
@@ -222,7 +231,6 @@ export default function BattlePage() {
   const playerExpPercent = (player.exp / player.expToNextLevel) * 100;
   const enemyHpPercent = (enemy.currentHp / enemy.maxHp) * 100;
 
-  //몬스터 이미지 맵
   const monsterImageMap: Record<string, string> = {
     flameling: flamelingImg,
     aquabe: aquabeImg,
@@ -237,9 +245,8 @@ export default function BattlePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 px-6 py-8 text-white">
-      {/* 🔹 베이스캠프 돌아가기 버튼 */}
       <button
-        onClick={() => setScene("basecamp")}
+        onClick={() => navigate("/")}
         className="absolute left-6 top-6 z-50 rounded-lg bg-black/60 px-4 py-2 text-sm text-white backdrop-blur hover:bg-black/80"
       >
         ← 베이스캠프로
@@ -247,6 +254,11 @@ export default function BattlePage() {
 
       <div className="mx-auto max-w-5xl">
         <h1 className="mb-6 text-3xl font-bold">몬스터 배틀 MVP</h1>
+
+        <div className="mb-4 rounded-xl bg-zinc-800 px-4 py-3 text-sm text-zinc-300">
+          <p>from: {from}</p>
+          <p>portalId: {portalId}</p>
+        </div>
 
         <div
           className="relative mb-6 h-[420px] overflow-hidden rounded-3xl border border-zinc-800 bg-cover bg-center shadow-2xl"
@@ -282,7 +294,7 @@ export default function BattlePage() {
           </div>
 
           {/* 플레이어 상태창 */}
-          <div className="absolute top-6 left-6 z-20 w-72 rounded-2xl border border-white/10 bg-black/45 p-4 backdrop-blur-md">
+          <div className="absolute left-6 top-6 z-20 w-72 rounded-2xl border border-white/10 bg-black/45 p-4 backdrop-blur-md">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-2xl font-bold text-white">{player.name}</h3>
@@ -329,7 +341,7 @@ export default function BattlePage() {
               <img
                 src={playerImage}
                 alt={player.name}
-                className="h-52 w-52 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.55)]"
+                className="battle-monster-player h-40 w-40 object-contain"
               />
             </div>
 
@@ -337,7 +349,7 @@ export default function BattlePage() {
               <img
                 src={enemyImage}
                 alt={enemy.name}
-                className="h-44 w-44 object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.55)]"
+                className="battle-monster-enemy h-40 w-40 object-contain"
               />
             </div>
           </div>
@@ -386,8 +398,6 @@ export default function BattlePage() {
             >
               다시 시작
             </button>
-
-  
 
             {result === "player-win" && (
               <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/15 pointer-events-none">

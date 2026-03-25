@@ -1,13 +1,14 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import BaseCampPage from "./pages/BaseCampPage";
 import BattlePage from "./pages/BattlePage";
-import { useGameStore } from "./store/gameStore";
 
 export default function App() {
-  const { scene } = useGameStore();
-
-  if (scene === "battle") {
-    return <BattlePage />;
-  }
-
-  return <BaseCampPage />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<BaseCampPage />} />
+        <Route path="/battle" element={<BattlePage />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }

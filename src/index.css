@@ -1,1 +1,35 @@
 @import "tailwindcss";
+
+@keyframes float-player {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes float-enemy {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.battle-monster-player {
+  animation: float-player 1.8s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.battle-monster-enemy {
+  animation: float-enemy 1.6s ease-in-out infinite;
+  transform-origin: center bottom;
+}
