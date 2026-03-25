@@ -4,7 +4,16 @@ import { gameEvents, GAME_EVENT } from "../events";
 export default class BaseCampScene extends Phaser.Scene {
   preload() {
   this.load.image("player", "/assets/basecamp/player.png");
+  //이런식으로 이미지 파일 추가해야함
+  // this.load.image("house", "/assets/basecamp/house.png"); //집
+  // this.load.image("tree", "/assets/basecamp/tree.png"); //나무
+  // this.load.image("portal", "/assets/basecamp/portal.png");// 포탈
+  // this.load.image("ground", "/assets/basecamp/ground.png");//땅?
   }
+
+  //여기 있는 player타입도 바꾸면 좋다고 하던데 
+  //private player!: Phaser.Physics.Arcade.Sprite; 이렇게
+  
   private player!: Phaser.GameObjects.Rectangle;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
