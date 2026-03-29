@@ -2,19 +2,7 @@ import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../events";
 
 export default class BaseCampScene extends Phaser.Scene {
-  preload() {
-  this.load.image("player", "/assets/basecamp/player.png");
-  //이런식으로 이미지 파일 추가해야함
-  // this.load.image("house", "/assets/basecamp/house.png"); //집
-  // this.load.image("tree", "/assets/basecamp/tree.png"); //나무
-  // this.load.image("portal", "/assets/basecamp/portal.png");// 포탈
-  // this.load.image("ground", "/assets/basecamp/ground.png");//땅?
-  }
-
-  //여기 있는 player타입도 바꾸면 좋다고 하던데 
-  //private player!: Phaser.Physics.Arcade.Sprite; 이렇게
-  
-  private player!: Phaser.GameObjects.Rectangle;
+  private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
@@ -23,8 +11,36 @@ export default class BaseCampScene extends Phaser.Scene {
     D: Phaser.Input.Keyboard.Key;
   };
 
+  private facing: "up" | "down" | "left" | "right" = "down";
+  private walkFrame: 1 | 2 = 1;
+  private walkTimer = 0;
+
   constructor() {
     super("BaseCampScene");
+  }
+
+  preload() {
+    this.load.image("player-up", "/assets/basecamp/player-up.png");
+    this.load.image("player-up-1", "/assets/basecamp/player-up-1.png");
+    this.load.image("player-up-2", "/assets/basecamp/player-up-2.png");
+
+    this.load.image("player-down", "/assets/basecamp/player-down.png");
+    this.load.image("player-down-1", "/assets/basecamp/player-down-1.png");
+    this.load.image("player-down-2", "/assets/basecamp/player-down-2.png");
+
+    this.load.image("player-left", "/assets/basecamp/player-left.png");
+    this.load.image("player-left-1", "/assets/basecamp/player-left-1.png");
+    this.load.image("player-left-2", "/assets/basecamp/player-left-2.png");
+
+    this.load.image("player-right", "/assets/basecamp/player-right.png");
+    this.load.image("player-right-1", "/assets/basecamp/player-right-1.png");
+    this.load.image("player-right-2", "/assets/basecamp/player-right-2.png");
+
+    // 나중에 실제 이미지 넣으면 주석 해제
+    // this.load.image("house", "/assets/basecamp/house.png");
+    // this.load.image("tree", "/assets/basecamp/tree.png");
+    // this.load.image("portal", "/assets/basecamp/portal.png");
+    // this.load.image("ground", "/assets/basecamp/ground.png");
   }
 
   create() {
@@ -35,26 +51,27 @@ export default class BaseCampScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
     this.cameras.main.setBackgroundColor("#87b567");
 
-    // 길/배경 느낌
-    this.add.rectangle(mapWidth / 2, mapHeight / 2, mapWidth, mapHeight, 0x87b567);
+    // 배경
+    this.add.rectangle(
+      mapWidth / 2,
+      mapHeight / 2,
+      mapWidth,
+      mapHeight,
+      0x87b567,
+    );
 
-    // 장애물
+    // 임시 장애물
     const house = this.add.rectangle(500, 300, 180, 140, 0x8b5a2b);
     const tree = this.add.rectangle(800, 500, 80, 80, 0x2e7d32);
     const pond = this.add.rectangle(1000, 650, 140, 100, 0x4aa3d8);
 
-    // 포탈
+    // 임시 포탈 표시
     this.add.rectangle(1100, 250, 90, 90, 0x5dade2);
 
     // 플레이어
-    const player = this.physics.add.sprite(200, 200, "player");
-    player.setCollideWorldBounds(true);
-    player.setScale(2);
-
-    this.player = player as unknown as Phaser.GameObjects.Rectangle;
-
-    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
-    playerBody.setCollideWorldBounds(true);
+    this.player = this.physics.add.sprite(200, 200, "player-down");
+    this.player.setCollideWorldBounds(true);
+    this.player.setScale(2);
 
     // 물리 충돌
     this.physics.add.existing(house, true);
@@ -115,7 +132,7 @@ export default class BaseCampScene extends Phaser.Scene {
     });
   }
 
-  update() {
+  update(_time: number, delta: number) {
     if (!this.player || !this.cursors || !this.wasd) return;
 
     const speed = 180;
@@ -128,12 +145,40 @@ export default class BaseCampScene extends Phaser.Scene {
     const up = this.cursors.up.isDown || this.wasd.W.isDown;
     const down = this.cursors.down.isDown || this.wasd.S.isDown;
 
-    if (left) body.setVelocityX(-speed);
-    if (right) body.setVelocityX(speed);
-    if (up) body.setVelocityY(-speed);
-    if (down) body.setVelocityY(speed);
+    const isMoving = left || right || up || down;
+
+    if (left) {
+      body.setVelocityX(-speed);
+      this.facing = "left";
+    } else if (right) {
+      body.setVelocityX(speed);
+      this.facing = "right";
+    }
+
+    if (up) {
+      body.setVelocityY(-speed);
+      this.facing = "up";
+    } else if (down) {
+      body.setVelocityY(speed);
+      this.facing = "down";
+    }
 
     body.velocity.normalize().scale(speed);
+
+    if (isMoving) {
+      this.walkTimer += delta;
+
+      if (this.walkTimer >= 160) {
+        this.walkTimer = 0;
+        this.walkFrame = this.walkFrame === 1 ? 2 : 1;
+      }
+
+      this.player.setTexture(`player-${this.facing}-${this.walkFrame}`);
+    } else {
+      this.walkTimer = 0;
+      this.walkFrame = 1;
+      this.player.setTexture(`player-${this.facing}`);
+    }
 
     const oldHint = this.children.getByName("portalHint");
     if (oldHint) {
