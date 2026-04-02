@@ -88,8 +88,6 @@ export default class BattleScene extends Phaser.Scene {
   // ─ 시각 오브젝트 ────────────────────────────────────────────────────────────────
   private playerSprite!: Phaser.GameObjects.Container;
   private enemySprite!: Phaser.GameObjects.Container;
-  private playerSpriteInner!: Phaser.GameObjects.RenderTexture;
-  private enemySpriteInner!: Phaser.GameObjects.RenderTexture;
 
   // 플레이어 HUD (우하단)
   private playerHudBg!: Phaser.GameObjects.Graphics;
@@ -209,41 +207,41 @@ export default class BattleScene extends Phaser.Scene {
     const ps = 4; // 픽셀 단위 크기 (20×20 grid × 4 = 80×80)
 
     // ── 적 스프라이트 ──
-    const enemyTex = this.generateMonsterTexture(this.enemyMon.id, ps);
-    this.enemySpriteInner = this.add.renderTexture(0, 0, 80, 80);
-    this.enemySpriteInner.draw(enemyTex, 0, 0);
+    const enemyKey = `mon-${this.enemyMon.id}`;
+    this.generateMonsterTexture(enemyKey, this.enemyMon.id, ps);
+    const enemyImg = this.add.image(0, 0, enemyKey).setOrigin(0.5, 0.5).setScale(1.5);
     this.enemySprite = this.add.container(ENEMY_X, ENEMY_Y).setDepth(5);
-    this.enemySprite.add(this.enemySpriteInner);
-    this.enemySpriteInner.setOrigin(0.5, 0.5);
-    this.enemySpriteInner.setScale(1.5); // 적: 좀 더 크게
+    this.enemySprite.add(enemyImg);
 
     // ── 플레이어 스프라이트 ──
-    const playerTex = this.generateMonsterTexture(this.playerMon.id, ps);
-    this.playerSpriteInner = this.add.renderTexture(0, 0, 80, 80);
-    this.playerSpriteInner.draw(playerTex, 0, 0);
+    const playerKey = `mon-${this.playerMon.id}`;
+    this.generateMonsterTexture(playerKey, this.playerMon.id, ps);
+    const playerImg = this.add.image(0, 0, playerKey).setOrigin(0.5, 0.5).setScale(1.8).setFlipX(true);
     this.playerSprite = this.add.container(PLAYER_X, PLAYER_Y).setDepth(5);
-    this.playerSprite.add(this.playerSpriteInner);
-    this.playerSpriteInner.setOrigin(0.5, 0.5);
-    this.playerSpriteInner.setScale(1.8); // 플레이어: 더 크게 (가까이 있는 것처럼)
-    this.playerSpriteInner.setFlipX(true); // 플레이어는 오른쪽을 향함
+    this.playerSprite.add(playerImg);
 
     // 플로팅 애니메이션
     this.floatSprite(this.enemySprite, 8, 1600);
     this.floatSprite(this.playerSprite, 6, 1800);
   }
 
-  /** 몬스터 ID → Phaser Graphics → RenderTexture 생성 */
-  private generateMonsterTexture(id: string, ps: number): Phaser.GameObjects.Graphics {
+  /** 몬스터 ID → Graphics.generateTexture() → TextureManager에 등록 */
+  private generateMonsterTexture(key: string, id: string, ps: number) {
+    // 같은 씬 재시작 시 중복 생성 방지
+    if (this.textures.exists(key)) return;
+
     const g = this.make.graphics({ x: 0, y: 0, add: false });
     const drawFn = monsterDrawFns[id];
     if (drawFn) {
       drawFn(g, ps);
     } else {
-      // 폴백: 타입별 색상 원
-      g.fillStyle(0xAAAAAA, 1);
+      // 폴백: 속성별 색상 원
+      const type = (id in TYPE_COLORS) ? id : "normal";
+      g.fillStyle(TYPE_COLORS[type] ?? 0xAAAAAA, 1);
       g.fillCircle(ps * 10, ps * 10, ps * 8);
     }
-    return g;
+    g.generateTexture(key, ps * 20, ps * 20);
+    g.destroy();
   }
 
   /** 상하 플로팅 루프 트윈 */
