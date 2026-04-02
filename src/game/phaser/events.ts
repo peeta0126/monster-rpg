@@ -3,18 +3,12 @@ import Phaser from "phaser";
 export const gameEvents = new Phaser.Events.EventEmitter();
 
 export const GAME_EVENT = {
-  /** 베이스캠프 포탈에서 전투 씬으로 진입 */
   ENTER_BATTLE: "portal:enter-battle",
-
-  /** BattlePage → BattleScene: 씬 초기화 완료 후 첫 상태 전달 */
   BATTLE_INIT: "battle:init",
-
-  /**
-   * BattlePage → BattleScene: 매 턴 후 전투 상태(HP·상태이상 등) 갱신
-   * payload: BattleSceneUpdatePayload
-   */
+  /** BattlePage → BattleScene: 매 턴 후 HP·상태이상 갱신 */
   BATTLE_STATE_UPDATE: "battle:state-update",
-
-  /** BattlePage → BattleScene: 전투 종료 알림 */
+  /** BattlePage → BattleScene: 전투 로그 한 줄 전달 */
+  BATTLE_LOG: "battle:log",
+  /** BattlePage → BattleScene: 전투 종료 */
   BATTLE_END: "battle:end",
 } as const;
