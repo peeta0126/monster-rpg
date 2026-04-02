@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { monsters } from "../data/monsters";
-import type { Move, BattlePhase, BattleOutcome } from "../types/game";
+import type { Move, BattlePhase } from "../types/game";
 
 import flamelingImg from "../assets/monsters/flameling.png";
 import aquabeImg from "../assets/monsters/aquabe.png";
@@ -35,7 +35,6 @@ type BattleRouteState = {
   from?: string;
   portalId?: string;
   isCatchZone?: boolean;
-  /** 무한의 탑 현재 층 */
   floor?: number;
 };
 
@@ -55,15 +54,13 @@ const MONSTER_IMAGE_MAP: Record<string, string> = {
   mossy: mossyImg,
 };
 
-// ─── 기술 타입 색상 ──────────────────────────────────────────────────────────────
-
 const TYPE_COLORS: Record<string, string> = {
-  fire:     "border-red-700    bg-red-900/30    hover:bg-red-900/50",
-  water:    "border-blue-700   bg-blue-900/30   hover:bg-blue-900/50",
-  grass:    "border-green-700  bg-green-900/30  hover:bg-green-900/50",
-  electric: "border-yellow-600 bg-yellow-900/30 hover:bg-yellow-900/50",
-  ice:      "border-cyan-600   bg-cyan-900/30   hover:bg-cyan-900/50",
-  normal:   "border-zinc-600   bg-zinc-800/60   hover:bg-zinc-700/60",
+  fire:     "border-red-800    bg-red-950/60    hover:bg-red-900/60    text-red-200",
+  water:    "border-blue-800   bg-blue-950/60   hover:bg-blue-900/60   text-blue-200",
+  grass:    "border-green-800  bg-green-950/60  hover:bg-green-900/60  text-green-200",
+  electric: "border-yellow-700 bg-yellow-950/60 hover:bg-yellow-900/60 text-yellow-200",
+  ice:      "border-cyan-700   bg-cyan-950/60   hover:bg-cyan-900/60   text-cyan-200",
+  normal:   "border-zinc-700   bg-zinc-900/60   hover:bg-zinc-800/60   text-zinc-200",
 };
 
 function typeClass(type: string) {
@@ -84,33 +81,48 @@ export default function BattlePage() {
 
   // ─── 초기 몬스터 ────────────────────────────────────────────────────────────────
 
-  const initialPlayerMonster = monsters[0];
+  const initialPlayer = monsters[0];
   const getRandomEnemy = () => {
-    const pool = monsters.filter((m) => m.id !== initialPlayerMonster.id);
+    const pool = monsters.filter((m) => m.id !== initialPlayer.id);
     return pool[Math.floor(Math.random() * pool.length)];
   };
-  const initialEnemyMonster = getRandomEnemy();
+  const initialEnemy = getRandomEnemy();
 
   // ─── 전투 상태 ──────────────────────────────────────────────────────────────────
 
-  const [player, setPlayer] = useState<BattleMonster>(() => createBattleMonster(initialPlayerMonster));
-  const [enemy, setEnemy] = useState<BattleMonster>(() => createBattleMonster(initialEnemyMonster));
-  const [_phase, setPhase] = useState<BattlePhase>("IDLE");
-  const [result, setResult] = useState<BattleOutcome>("idle");
+  const [player, setPlayer] = useState<BattleMonster>(() => createBattleMonster(initialPlayer));
+  const [enemyState, setEnemyState] = useState<BattleMonster>(() => createBattleMonster(initialEnemy));
+  const [phase, setPhase] = useState<BattlePhase>("IDLE");
+  const [isResultSent, setIsResultSent] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // ─── Phaser 마운트 ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!gameRef.current) return;
+
     setBattleInitData({
-      playerImageUrl: MONSTER_IMAGE_MAP[initialPlayerMonster.id] ?? "",
-      enemyImageUrl: MONSTER_IMAGE_MAP[initialEnemyMonster.id] ?? "",
+      playerImageUrl: MONSTER_IMAGE_MAP[initialPlayer.id] ?? "",
+      playerName: initialPlayer.name,
+      playerLevel: createBattleMonster(initialPlayer).level,
+      enemyImageUrl: MONSTER_IMAGE_MAP[initialEnemy.id] ?? "",
+      enemyName: initialEnemy.name,
+      enemyLevel: createBattleMonster(initialEnemy).level,
       floor,
     });
+
     const game = createBattleGame(gameRef.current);
+
+    // Phaser → React 이동 이벤트
+    const onNextFloor = () => navigate("/battle", { state: { floor: floor + 1, isCatchZone } });
+    const onRetry = () => navigate("/battle", { state: { floor, isCatchZone } });
+    gameEvents.on(GAME_EVENT.BATTLE_NEXT_FLOOR, onNextFloor);
+    gameEvents.on(GAME_EVENT.BATTLE_RETRY, onRetry);
+
     return () => {
       gameEvents.emit(GAME_EVENT.BATTLE_END);
+      gameEvents.off(GAME_EVENT.BATTLE_NEXT_FLOOR, onNextFloor);
+      gameEvents.off(GAME_EVENT.BATTLE_RETRY, onRetry);
       game.destroy(true);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,15 +135,23 @@ export default function BattlePage() {
       playerHp: player.currentHp,
       playerMaxHp: player.maxHp,
       playerStatus: player.status,
-      enemyHp: enemy.currentHp,
-      enemyMaxHp: enemy.maxHp,
-      enemyStatus: enemy.status,
+      enemyHp: enemyState.currentHp,
+      enemyMaxHp: enemyState.maxHp,
+      enemyStatus: enemyState.status,
     });
-  }, [player, enemy]);
+  }, [player, enemyState]);
 
-  // ─── 로그 → Phaser 전송 ─────────────────────────────────────────────────────────
+  // ─── 로그 헬퍼 ──────────────────────────────────────────────────────────────────
 
   const sendLog = (text: string) => gameEvents.emit(GAME_EVENT.BATTLE_LOG, text);
+
+  // ─── 결과 전송 ──────────────────────────────────────────────────────────────────
+
+  const sendResult = (outcome: "win" | "lose") => {
+    if (isResultSent) return;
+    setIsResultSent(true);
+    gameEvents.emit(GAME_EVENT.BATTLE_RESULT, { outcome, floor });
+  };
 
   // ─── 공격 처리 ──────────────────────────────────────────────────────────────────
 
@@ -173,83 +193,74 @@ export default function BattlePage() {
     return { updatedDefender: next, fainted };
   };
 
-  const handlePlayerWin = (currentPlayer: BattleMonster, defeatedEnemy: BattleMonster) => {
-    const expResult = gainExp(currentPlayer, defeatedEnemy.rewardExp);
-    setPlayer(expResult.updatedMonster);
-    sendLog(`${expResult.updatedMonster.name}이(가) 경험치 ${defeatedEnemy.rewardExp}를 획득했다!`);
-    if (expResult.leveledUp) sendLog(`레벨이 ${expResult.updatedMonster.level}(으)로 올랐다!`);
-    setResult("player-win");
+  const handlePlayerWin = (p: BattleMonster, e: BattleMonster) => {
+    const exp = gainExp(p, e.rewardExp);
+    setPlayer(exp.updatedMonster);
+    sendLog(`${exp.updatedMonster.name}이(가) 경험치 ${e.rewardExp}를 획득했다!`);
+    if (exp.leveledUp) sendLog(`레벨이 ${exp.updatedMonster.level}(으)로 올랐다!`);
     setPhase("RESULT");
     setIsProcessing(false);
+    sendResult("win");
   };
 
   // ─── 스킬 선택 ──────────────────────────────────────────────────────────────────
 
   const handleMoveClick = async (move: Move) => {
-    if (isProcessing || result !== "idle") return;
+    if (isProcessing || isResultSent) return;
     setIsProcessing(true);
     setPhase("PLAYER_TURN");
 
-    let nextPlayer = player;
-    let nextEnemy = enemy;
-    const enemyMove = getAIAction(nextEnemy, nextPlayer);
-    const playerFirst = nextPlayer.speed >= nextEnemy.speed;
+    let np = player;
+    let ne = enemyState;
+    const eMove = getAIAction(ne, np);
+    const playerFirst = np.speed >= ne.speed;
 
     if (playerFirst) {
-      const ps = checkStatusEffects(nextPlayer);
-      nextPlayer = ps.monster;
-      setPlayer(nextPlayer);
+      const ps = checkStatusEffects(np);
+      np = ps.monster; setPlayer(np);
       ps.logs.forEach(sendLog);
 
       if (!ps.skipTurn) {
-        const atk = runAttack(nextPlayer, nextEnemy, move, nextPlayer.name);
-        nextEnemy = atk.updatedDefender;
-        setEnemy(nextEnemy);
-        if (atk.fainted) { handlePlayerWin(nextPlayer, nextEnemy); return; }
+        const a = runAttack(np, ne, move, np.name);
+        ne = a.updatedDefender; setEnemyState(ne);
+        if (a.fainted) { handlePlayerWin(np, ne); return; }
       }
 
       await new Promise((r) => setTimeout(r, 500));
       setPhase("ENEMY_TURN");
 
-      const es = checkStatusEffects(nextEnemy);
-      nextEnemy = es.monster;
-      setEnemy(nextEnemy);
+      const es = checkStatusEffects(ne);
+      ne = es.monster; setEnemyState(ne);
       es.logs.forEach(sendLog);
 
       if (!es.skipTurn) {
-        const atk = runAttack(nextEnemy, nextPlayer, enemyMove, nextEnemy.name);
-        nextPlayer = atk.updatedDefender;
-        setPlayer(nextPlayer);
-        if (atk.fainted) { setResult("enemy-win"); setPhase("RESULT"); setIsProcessing(false); return; }
+        const a = runAttack(ne, np, eMove, ne.name);
+        np = a.updatedDefender; setPlayer(np);
+        if (a.fainted) { setPhase("RESULT"); setIsProcessing(false); sendResult("lose"); return; }
       }
     } else {
-      const es = checkStatusEffects(nextEnemy);
-      nextEnemy = es.monster;
-      setEnemy(nextEnemy);
+      const es = checkStatusEffects(ne);
+      ne = es.monster; setEnemyState(ne);
       es.logs.forEach(sendLog);
-
       setPhase("ENEMY_TURN");
 
       if (!es.skipTurn) {
-        const atk = runAttack(nextEnemy, nextPlayer, enemyMove, nextEnemy.name);
-        nextPlayer = atk.updatedDefender;
-        setPlayer(nextPlayer);
-        if (atk.fainted) { setResult("enemy-win"); setPhase("RESULT"); setIsProcessing(false); return; }
+        const a = runAttack(ne, np, eMove, ne.name);
+        np = a.updatedDefender; setPlayer(np);
+        if (a.fainted) { setPhase("RESULT"); setIsProcessing(false); sendResult("lose"); return; }
       }
 
       await new Promise((r) => setTimeout(r, 500));
       setPhase("PLAYER_TURN");
 
-      const ps = checkStatusEffects(nextPlayer);
-      nextPlayer = ps.monster;
-      setPlayer(nextPlayer);
+      const ps = checkStatusEffects(np);
+      np = ps.monster; setPlayer(np);
       ps.logs.forEach(sendLog);
 
       if (!ps.skipTurn) {
-        const atk = runAttack(nextPlayer, nextEnemy, move, nextPlayer.name);
-        nextEnemy = atk.updatedDefender;
-        setEnemy(nextEnemy);
-        if (atk.fainted) { handlePlayerWin(nextPlayer, nextEnemy); return; }
+        const a = runAttack(np, ne, move, np.name);
+        ne = a.updatedDefender; setEnemyState(ne);
+        if (a.fainted) { handlePlayerWin(np, ne); return; }
       }
     }
 
@@ -260,141 +271,98 @@ export default function BattlePage() {
   // ─── 포획 ────────────────────────────────────────────────────────────────────────
 
   const handleCatch = () => {
-    if (isProcessing || result !== "idle") return;
+    if (isProcessing || isResultSent) return;
     setIsProcessing(true);
     setPhase("CATCH_PHASE");
 
-    const catchResult = checkCatchCondition(enemy, isCatchZone);
-    sendLog(catchResult.message);
+    const res = checkCatchCondition(enemyState, isCatchZone);
+    sendLog(res.message);
 
-    if (!catchResult.canAttempt) { setPhase("IDLE"); setIsProcessing(false); return; }
+    if (!res.canAttempt) { setPhase("IDLE"); setIsProcessing(false); return; }
 
-    if (catchResult.success) {
-      setResult("caught");
+    if (res.success) {
       setPhase("RESULT");
+      sendResult("win");
     } else {
       setPhase("ENEMY_TURN");
-      const enemyMove = getAIAction(enemy, player);
-      const atk = runAttack(enemy, player, enemyMove, enemy.name);
+      const em = getAIAction(enemyState, player);
+      const atk = runAttack(enemyState, player, em, enemyState.name);
       setPlayer(atk.updatedDefender);
-      if (atk.fainted) { setResult("enemy-win"); setPhase("RESULT"); }
+      if (atk.fainted) { setPhase("RESULT"); sendResult("lose"); }
       else setPhase("IDLE");
     }
     setIsProcessing(false);
   };
 
-  // ─── 다음 층 / 재시작 ────────────────────────────────────────────────────────────
-
-  const handleNextFloor = () => {
-    navigate("/battle", { state: { floor: floor + 1, isCatchZone } });
-  };
-
-  const resetBattle = () => {
-    const newEnemy = getRandomEnemy();
-    setPlayer((prev) => ({ ...prev, currentHp: prev.maxHp, status: null, skipNextTurn: false }));
-    setEnemy(createBattleMonster(newEnemy));
-    sendLog(`야생의 ${newEnemy.name}이(가) 나타났다!`);
-    setResult("idle");
-    setPhase("IDLE");
-    setIsProcessing(false);
-  };
-
-  // ─── 파생값 ──────────────────────────────────────────────────────────────────────
-
-  const canShowCatch = isCatchZone && enemy.currentHp / enemy.maxHp <= 0.3 && result === "idle";
-  const isResultPhase = result !== "idle";
-
   // ─── 렌더 ────────────────────────────────────────────────────────────────────────
+
+  const isIdle = phase === "IDLE" && !isResultSent;
+  const canShowCatch = isCatchZone && enemyState.currentHp / enemyState.maxHp <= 0.3 && isIdle;
+  const playerHpPct = (player.currentHp / player.maxHp) * 100;
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-white overflow-hidden">
-      {/* ── Phaser 캔버스 (상단, 최대한 크게) ── */}
-      <div className="relative flex-1 min-h-0">
-        <div ref={gameRef} className="w-full h-full" />
+      {/* ── Phaser 캔버스 ── */}
+      <div ref={gameRef} className="relative flex-1 min-h-0" />
 
-        {/* 복귀 버튼 */}
-        <button
-          onClick={() => navigate("/")}
-          className="absolute left-4 bottom-4 z-50 rounded bg-black/60 px-3 py-1.5 text-xs text-zinc-400 backdrop-blur hover:text-white hover:bg-black/80"
-        >
-          ← 나가기
-        </button>
-      </div>
-
-      {/* ── 기술 선택 패널 (하단 고정) ── */}
-      <div className="shrink-0 border-t border-zinc-800 bg-zinc-900/95 px-4 py-3">
-        {/* 헤더: 몬스터 이름 + HP + 층 정보 */}
-        <div className="mb-3 flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4">
-            <span className="font-bold text-white">{player.name}</span>
-            <span className="text-zinc-400">
-              HP {player.currentHp}/{player.maxHp}
-            </span>
+      {/* ── 하단 기술 패널 ── */}
+      <div className="shrink-0 border-t border-zinc-800 bg-[#0e0b06] px-4 py-3">
+        {/* 상태 표시줄 */}
+        <div className="mb-2 flex items-center justify-between text-xs text-zinc-500">
+          <div className="flex items-center gap-3">
+            <span className="text-zinc-300 font-semibold">{player.name}</span>
+            <div className="flex items-center gap-1">
+              <span>HP</span>
+              <div className="h-2 w-24 rounded-full bg-zinc-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${playerHpPct}%`,
+                    backgroundColor: playerHpPct > 50 ? "#44ee66" : playerHpPct > 20 ? "#eecc22" : "#ff4444",
+                  }}
+                />
+              </div>
+              <span>{player.currentHp}/{player.maxHp}</span>
+            </div>
             {player.status && (
-              <span className="rounded bg-yellow-900/60 px-1.5 py-0.5 text-xs text-yellow-300">
+              <span className="rounded bg-yellow-900/50 px-1.5 py-0.5 text-yellow-300">
                 {STATUS_LABELS[player.status]}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 text-zinc-500 text-xs">
-            <span>vs {enemy.name} Lv.{enemy.level}</span>
-            <span className="rounded bg-orange-900/40 px-2 py-0.5 text-orange-400 font-mono">
+          <div className="flex items-center gap-2">
+            {isProcessing && <span className="text-amber-600 animate-pulse">전투 중...</span>}
+            <span className="rounded bg-amber-950/60 px-2 py-0.5 text-amber-500 font-mono font-bold">
               {floor}F
             </span>
+            <button
+              onClick={() => navigate("/")}
+              className="rounded bg-zinc-800 px-2 py-0.5 text-zinc-500 hover:text-zinc-300"
+            >
+              나가기
+            </button>
           </div>
         </div>
 
-        {/* 결과 상태 */}
-        {isResultPhase && (
-          <div className="mb-3 flex items-center gap-3">
-            {result === "player-win" && (
-              <>
-                <span className="rounded bg-emerald-900/60 px-3 py-1 text-emerald-300 font-semibold">승리!</span>
-                <button onClick={handleNextFloor} className="rounded bg-emerald-700 px-3 py-1 text-sm font-semibold hover:bg-emerald-600">
-                  {floor + 1}층으로 →
-                </button>
-                <button onClick={resetBattle} className="rounded bg-zinc-700 px-3 py-1 text-sm hover:bg-zinc-600">
-                  다시 시작
-                </button>
-              </>
-            )}
-            {result === "enemy-win" && (
-              <>
-                <span className="rounded bg-rose-900/60 px-3 py-1 text-rose-300 font-semibold">패배...</span>
-                <button onClick={resetBattle} className="rounded bg-zinc-700 px-3 py-1 text-sm hover:bg-zinc-600">
-                  다시 시작
-                </button>
-              </>
-            )}
-            {result === "caught" && (
-              <>
-                <span className="rounded bg-sky-900/60 px-3 py-1 text-sky-300 font-semibold">포획 성공!</span>
-                <button onClick={handleNextFloor} className="rounded bg-sky-700 px-3 py-1 text-sm font-semibold hover:bg-sky-600">
-                  {floor + 1}층으로 →
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* 기술 버튼 그리드 */}
-        {!isResultPhase && (
+        {/* 기술 버튼 (결과 없을 때만) */}
+        {!isResultSent && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {player.moves.map((move) => {
-              const mult = getTypeMultiplier(move.type, enemy.type);
+              const mult = getTypeMultiplier(move.type, enemyState.type);
               return (
                 <button
                   key={move.id}
                   onClick={() => handleMoveClick(move)}
                   disabled={isProcessing}
-                  className={`rounded-lg border px-3 py-2 text-left transition disabled:opacity-40 ${typeClass(move.type)}`}
+                  className={`rounded-lg border px-3 py-2.5 text-left transition disabled:opacity-35 ${typeClass(move.type)}`}
                 >
-                  <p className="font-semibold text-sm text-white">{move.name}</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    {move.type} · {move.power}위력
-                  </p>
-                  {mult > 1 && <p className="text-xs text-emerald-400 mt-0.5">상성 우위</p>}
-                  {mult < 1 && <p className="text-xs text-yellow-600 mt-0.5">상성 불리</p>}
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm">{move.name}</span>
+                    <span className="text-xs opacity-60 uppercase">{move.type}</span>
+                  </div>
+                  <div className="text-xs opacity-50 mt-0.5">위력 {move.power} · 명중 {move.accuracy}</div>
+                  {mult > 1 && <div className="text-xs text-emerald-400 mt-0.5">▲ 상성 우위</div>}
+                  {mult < 1 && <div className="text-xs text-yellow-600 mt-0.5">▼ 상성 불리</div>}
                 </button>
               );
             })}
@@ -406,10 +374,17 @@ export default function BattlePage() {
           <button
             onClick={handleCatch}
             disabled={isProcessing}
-            className="mt-2 w-full rounded-lg border border-sky-600 bg-sky-900/30 py-2 text-sm font-semibold text-sky-300 hover:bg-sky-900/50 disabled:opacity-40"
+            className="mt-2 w-full rounded-lg border border-sky-700 bg-sky-950/50 py-2 text-sm font-semibold text-sky-300 hover:bg-sky-900/50 disabled:opacity-35"
           >
-            포획 시도 {enemy.status ? "(상태이상 보너스)" : ""}
+            포획 시도 {enemyState.status ? "(상태이상 보너스)" : ""}
           </button>
+        )}
+
+        {/* 결과 대기 안내 */}
+        {isResultSent && (
+          <p className="text-center text-sm text-zinc-600 py-2">
+            Q 또는 화면을 클릭해 계속하세요
+          </p>
         )}
       </div>
     </div>
