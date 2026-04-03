@@ -154,6 +154,42 @@ export default class BaseCampScene extends Phaser.Scene {
       }
     });
 
+    // ── 숲 입구 ──
+    const FOREST_X = 300, FOREST_Y = 200;
+    // 나무 그룹으로 표현
+    this.add.rectangle(FOREST_X, FOREST_Y, 160, 130, 0x1a4a0a, 0.75).setDepth(1);
+    const forestBorder = this.add.graphics().setDepth(2);
+    forestBorder.lineStyle(2, 0x44aa22, 0.8);
+    forestBorder.strokeRect(FOREST_X - 80, FOREST_Y - 65, 160, 130);
+    this.add.text(FOREST_X, FOREST_Y - 55, "🌲 숲", {
+      fontSize: "14px", color: "#88ee44", backgroundColor: "#051005",
+      padding: { x: 7, y: 3 },
+    }).setOrigin(0.5, 0.5).setDepth(3);
+    this.add.text(FOREST_X, FOREST_Y - 33, "탐험 · 포획", {
+      fontSize: "11px", color: "#66cc33",
+    }).setOrigin(0.5, 0.5).setDepth(3);
+
+    // 나무 장식
+    for (let i = 0; i < 6; i++) {
+      const tx = FOREST_X - 55 + i * 22;
+      const ty = FOREST_Y + 10 + Math.sin(i) * 12;
+      const g = this.add.graphics().setDepth(2);
+      g.fillStyle(0x2e7d32, 0.7);
+      g.fillTriangle(tx, ty - 18, tx - 9, ty + 4, tx + 9, ty + 4);
+    }
+
+    const forestZone = this.add.zone(FOREST_X, FOREST_Y, 160, 130);
+    this.physics.add.existing(forestZone, true);
+
+    this.physics.add.overlap(this.player, forestZone, () => {
+      if (!this.children.getByName("forestHint")) {
+        this.add.text(this.player.x - 45, this.player.y - 52, "E: 숲 입장", {
+          fontSize: "13px", color: "#88ee44",
+          backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
+        }).setName("forestHint").setDepth(10);
+      }
+    });
+
     // ── 농장/파티 관리 구역 ──
     const FARM_X = 700, FARM_Y = 900;
     this.add.rectangle(FARM_X, FARM_Y, 180, 130, 0x6d4c41, 0.7).setDepth(1);
@@ -180,10 +216,11 @@ export default class BaseCampScene extends Phaser.Scene {
       }
     });
 
-    // E 키: 포탈 / 포획 구역
+    // E 키: 포탈 / 포획 구역 / 숲
     keyboard.on("keydown-E", () => {
       const distPortal = Phaser.Math.Distance.Between(this.player.x, this.player.y, PORTAL_X, PORTAL_Y);
       const distCatch  = Phaser.Math.Distance.Between(this.player.x, this.player.y, CZ_X, CZ_Y);
+      const distForest = Phaser.Math.Distance.Between(this.player.x, this.player.y, FOREST_X, FOREST_Y);
 
       if (distPortal < 80) {
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
@@ -199,6 +236,8 @@ export default class BaseCampScene extends Phaser.Scene {
           isCatchZone: true,
           floor: 1,
         });
+      } else if (distForest < 100) {
+        gameEvents.emit(GAME_EVENT.ENTER_FOREST);
       }
     });
 
@@ -217,15 +256,18 @@ export default class BaseCampScene extends Phaser.Scene {
 
     // 힌트 텍스트 정리 (겹침 방지)
     this.physics.world.on("overlap", () => {
-      const ph = this.children.getByName("portalHint");
-      const ch = this.children.getByName("catchHint");
-      const fh = this.children.getByName("farmHint");
+      const ph  = this.children.getByName("portalHint");
+      const ch  = this.children.getByName("catchHint");
+      const fh  = this.children.getByName("farmHint");
+      const frh = this.children.getByName("forestHint");
       const distPortal = Phaser.Math.Distance.Between(this.player.x, this.player.y, PORTAL_X, PORTAL_Y);
       const distCatch  = Phaser.Math.Distance.Between(this.player.x, this.player.y, CZ_X, CZ_Y);
       const distFarm   = Phaser.Math.Distance.Between(this.player.x, this.player.y, FARM_X, FARM_Y);
-      if (ph && distPortal >= 120) { ph.destroy(); }
-      if (ch && distCatch  >= 160) { ch.destroy(); }
-      if (fh && distFarm   >= 140) { fh.destroy(); }
+      const distForest = Phaser.Math.Distance.Between(this.player.x, this.player.y, FOREST_X, FOREST_Y);
+      if (ph  && distPortal >= 120) { ph.destroy(); }
+      if (ch  && distCatch  >= 160) { ch.destroy(); }
+      if (fh  && distFarm   >= 140) { fh.destroy(); }
+      if (frh && distForest >= 130) { frh.destroy(); }
     });
   }
 

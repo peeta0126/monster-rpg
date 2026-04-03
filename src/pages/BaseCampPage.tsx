@@ -146,16 +146,19 @@ export default function BaseCampPage() {
       });
     };
 
-    const handleEnterFarm = () => navigate("/farm");
+    const handleEnterFarm   = () => navigate("/farm");
+    const handleEnterForest = () => navigate("/forest");
     const handleOpenDex = () => setDexOpen(true);
 
     gameEvents.on(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
     gameEvents.on(GAME_EVENT.ENTER_FARM, handleEnterFarm);
+    gameEvents.on(GAME_EVENT.ENTER_FOREST, handleEnterForest);
     gameEvents.on("open-dex", handleOpenDex);
 
     return () => {
       gameEvents.off(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
       gameEvents.off(GAME_EVENT.ENTER_FARM, handleEnterFarm);
+      gameEvents.off(GAME_EVENT.ENTER_FOREST, handleEnterForest);
       gameEvents.off("open-dex", handleOpenDex);
       game.destroy(true);
     };

@@ -6,6 +6,8 @@ export const GAME_EVENT = {
   ENTER_BATTLE: "portal:enter-battle",
   /** BaseCampScene → BaseCampPage: 농장 페이지로 이동 */
   ENTER_FARM: "portal:enter-farm",
+  /** BaseCampScene → BaseCampPage: 숲 탐험 페이지로 이동 */
+  ENTER_FOREST: "portal:enter-forest",
   BATTLE_INIT: "battle:init",
   /** BattlePage → BattleScene: HP·상태이상 갱신 */
   BATTLE_STATE_UPDATE: "battle:state-update",
