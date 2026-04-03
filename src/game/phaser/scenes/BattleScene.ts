@@ -91,6 +91,9 @@ export default class BattleScene extends Phaser.Scene {
   private prevPlayerHp = -1;
   private prevEnemyHp  = -1;
 
+  // ── 생존 플래그: false이면 모든 gameEvents 핸들러를 무시 ──
+  private _isActive = false;
+
   constructor() {
     super("BattleScene");
   }
@@ -105,6 +108,12 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    this._isActive = true;
+
+    // scene이 destroy될 때 gameEvents 리스너를 반드시 정리
+    this.events.once(Phaser.Scenes.Events.DESTROY,  this._removeGameListeners, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this._removeGameListeners, this);
+
     const d = getBattleInitData();
     const floor = d?.floor ?? 1;
     const isBoss = d?.isBoss ?? false;
@@ -523,6 +532,7 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private onBattleLog(message: string) {
+    if (!this._isActive) return;
     this.logState = "showing";
     this.idleText.setVisible(false);
     this.notifBox.setVisible(true);
@@ -536,6 +546,7 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private onBattleResult(payload: BattleResultPayload) {
+    if (!this._isActive) return;
     this.logState = "result";
     this.notifBox.setVisible(false);
     this.notifText.setVisible(false);
@@ -557,7 +568,7 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private onAdvance() {
-    if (this.logState !== "showing") return;
+    if (!this._isActive || this.logState !== "showing") return;
 
     // 로그 박스 숨기고 idle로 복귀
     this.logState = "idle";
@@ -575,6 +586,7 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private onStateUpdate(p: BattleSceneUpdatePayload) {
+    if (!this._isActive) return;
     this.drawBar(this.enemyHpBar, E_BAR_X, E_BAR_Y, BAR_W_INNER, BAR_H, p.enemyHp / p.enemyMaxHp, true);
     this.enemyHpText.setText(`${p.enemyHp}/${p.enemyMaxHp}`);
 
@@ -594,11 +606,26 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   private onBattleEnd() {
-    this.cameras.main.fadeOut(500, 0, 0, 0);
+    if (!this._isActive) return;
+    this._removeGameListeners(); // 먼저 리스너 제거
+    this.cameras.main.fadeOut(300, 0, 0, 0);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 이름/레벨 업데이트 (BattlePage에서 호출 없이 BATTLE_INIT_INFO 이벤트로 받음)
+  // gameEvents 리스너 일괄 제거 (shutdown/destroy/battleEnd 시 호출)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  private _removeGameListeners() {
+    if (!this._isActive) return;
+    this._isActive = false;
+    gameEvents.off(GAME_EVENT.BATTLE_STATE_UPDATE, this.onStateUpdate, this);
+    gameEvents.off(GAME_EVENT.BATTLE_LOG,          this.onBattleLog,   this);
+    gameEvents.off(GAME_EVENT.BATTLE_RESULT,       this.onBattleResult,this);
+    gameEvents.off(GAME_EVENT.BATTLE_END,          this.onBattleEnd,   this);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 이름/레벨 업데이트
   // ─────────────────────────────────────────────────────────────────────────────
 
   updateNames(playerName: string, playerLv: number, enemyName: string, enemyLv: number) {
@@ -641,10 +668,7 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
 
   shutdown() {
-    gameEvents.off(GAME_EVENT.BATTLE_STATE_UPDATE, this.onStateUpdate, this);
-    gameEvents.off(GAME_EVENT.BATTLE_LOG,          this.onBattleLog,   this);
-    gameEvents.off(GAME_EVENT.BATTLE_RESULT,       this.onBattleResult,this);
-    gameEvents.off(GAME_EVENT.BATTLE_END,          this.onBattleEnd,   this);
+    this._removeGameListeners();
   }
 }
 

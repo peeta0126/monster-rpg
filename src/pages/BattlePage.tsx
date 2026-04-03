@@ -76,9 +76,25 @@ export default function BattlePage() {
   const [enemyState, setEnemyState] = useState<BattleMonster>(() => createBattleMonster(initialEnemy));
   const [isProcessing, setIsProcessing] = useState(false);
   const [battleOutcome, setBattleOutcome] = useState<"win" | "lose" | null>(null);
+  // 결과 오버레이는 Phaser 승리/패배 애니메이션(400ms) 후 표시
+  const [showResultUI, setShowResultUI] = useState(false);
 
   // 적 행동 턴 카운터 (고정 스킬 순서용)
   const enemyTurnRef = useRef(0);
+  // 컴포넌트 언마운트 시 비동기 로직 취소 플래그
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    return () => { cancelledRef.current = true; };
+  }, []);
+
+  // battleOutcome 설정 후 500ms 뒤에 결과 UI 표시
+  useEffect(() => {
+    if (!battleOutcome) return;
+    const t = setTimeout(() => setShowResultUI(true), 500);
+    return () => clearTimeout(t);
+  }, [battleOutcome]);
 
   // ─── Phaser HP 즉시 동기화 ─────────────────────────────────────────────────────
 
@@ -98,11 +114,13 @@ export default function BattlePage() {
 
   /**
    * Phaser에 로그를 보내고, 플레이어가 Q/클릭으로 확인할 때까지 await한다.
-   * 이 방식으로 React 로직이 Q 입력과 완전히 동기화된다.
+   * 컴포넌트 언마운트(cancelledRef) 시엔 즉시 resolve하여 async 체인 빠르게 종료.
    */
   const sendLogAndWait = useCallback((text: string): Promise<void> => {
+    if (cancelledRef.current) return Promise.resolve();
     return new Promise((resolve) => {
-      gameEvents.once(GAME_EVENT.BATTLE_LOG_ACK, resolve);
+      const handler = () => resolve();
+      gameEvents.once(GAME_EVENT.BATTLE_LOG_ACK, handler);
       gameEvents.emit(GAME_EVENT.BATTLE_LOG, text);
     });
   }, []);
@@ -126,8 +144,10 @@ export default function BattlePage() {
     const game = createBattleGame(gameRef.current);
 
     return () => {
+      cancelledRef.current = true;
       gameEvents.emit(GAME_EVENT.BATTLE_END);
-      // BATTLE_LOG_ACK 리스너가 남아 있으면 정리 (비정상 종료 시)
+      // 대기 중인 sendLogAndWait promise가 있으면 즉시 해제
+      gameEvents.emit(GAME_EVENT.BATTLE_LOG_ACK);
       gameEvents.removeAllListeners(GAME_EVENT.BATTLE_LOG_ACK);
       game.destroy(true);
     };
@@ -137,6 +157,7 @@ export default function BattlePage() {
   // ─── 결과 전송 ──────────────────────────────────────────────────────────────────
 
   const finishBattle = useCallback((outcome: "win" | "lose") => {
+    if (cancelledRef.current) return;
     gameEvents.emit(GAME_EVENT.BATTLE_RESULT, { outcome, floor });
     setBattleOutcome(outcome);
   }, [floor]);
@@ -332,7 +353,7 @@ export default function BattlePage() {
     && !isProcessing && battleOutcome === null;
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-950 text-white overflow-hidden">
+    <div className="relative flex h-screen flex-col bg-zinc-950 text-white overflow-hidden">
       {/* ── Phaser 캔버스 ── */}
       <div ref={gameRef} className="relative flex-1 min-h-0" />
 
@@ -377,7 +398,7 @@ export default function BattlePage() {
           </div>
         </div>
 
-        {/* ── 전투 중: 기술 버튼 ── */}
+        {/* ── 기술 버튼 (전투 중일 때) ── */}
         {battleOutcome === null && (
           <>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -420,47 +441,66 @@ export default function BattlePage() {
           </>
         )}
 
-        {/* ── 전투 종료: 결과 버튼 ── */}
-        {battleOutcome === "win" && (
-          <div className="flex flex-col gap-2">
-            <p className="text-center font-bold text-green-400">⭐ 승리!</p>
-            <div className="grid grid-cols-2 gap-2">
+        {/* 결과 후 하단은 비워둠 (오버레이로 처리) */}
+        {battleOutcome !== null && (
+          <p className="py-1 text-center text-xs text-zinc-700">잠시 후 선택 화면이 표시됩니다...</p>
+        )}
+      </div>
+
+      {/* ── 결과 오버레이 (화면 중앙, Phaser 승리/패배 애니 후 500ms 뒤 표시) ── */}
+      {showResultUI && battleOutcome === "win" && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm transition-opacity">
+          <div className="text-center px-8 py-10 rounded-2xl border border-green-800/60 bg-zinc-950/90 shadow-2xl max-w-sm w-full mx-4">
+            <p className="text-5xl font-bold text-green-400 mb-2 drop-shadow-[0_0_24px_rgba(74,222,128,0.6)]">
+              승리!
+            </p>
+            <p className="text-base text-zinc-400 mb-6">
+              다음 스테이지로 넘어가시겠습니까?
+            </p>
+            <div className="flex flex-col gap-3">
               <button
                 onClick={() => navigate("/battle", { state: { floor: floor + 1, isCatchZone: false } })}
-                className="rounded-lg bg-green-900/60 border border-green-700 py-2.5 text-sm font-semibold text-green-200 hover:bg-green-800/60 transition"
+                className="w-full rounded-xl bg-green-800/70 border border-green-600 py-3 text-base font-bold text-green-200 hover:bg-green-700/70 transition active:scale-95"
               >
-                다음 층으로 ({floor + 1}층)
+                다음 스테이지 진입 &nbsp;({floor + 1}층)
               </button>
               <button
                 onClick={() => navigate("/")}
-                className="rounded-lg bg-zinc-800 border border-zinc-600 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-zinc-700 transition"
-              >
-                베이스캠프로
-              </button>
-            </div>
-          </div>
-        )}
-
-        {battleOutcome === "lose" && (
-          <div className="flex flex-col gap-2">
-            <p className="text-center font-bold text-red-400">💀 패배...</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => navigate("/battle", { state: { floor, isCatchZone } })}
-                className="rounded-lg bg-red-900/60 border border-red-700 py-2.5 text-sm font-semibold text-red-200 hover:bg-red-800/60 transition"
-              >
-                다시 도전 ({floor}층)
-              </button>
-              <button
-                onClick={() => navigate("/")}
-                className="rounded-lg bg-zinc-800 border border-zinc-600 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-zinc-700 transition"
+                className="w-full rounded-xl bg-zinc-800/80 border border-zinc-600 py-3 text-base font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95"
               >
                 나가기
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {showResultUI && battleOutcome === "lose" && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm transition-opacity">
+          <div className="text-center px-8 py-10 rounded-2xl border border-red-800/60 bg-zinc-950/90 shadow-2xl max-w-sm w-full mx-4">
+            <p className="text-5xl font-bold text-red-400 mb-2 drop-shadow-[0_0_24px_rgba(248,113,113,0.5)]">
+              패배...
+            </p>
+            <p className="text-base text-zinc-400 mb-6">
+              {floor}층을 재도전하시겠습니까?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => navigate("/battle", { state: { floor, isCatchZone } })}
+                className="w-full rounded-xl bg-red-900/70 border border-red-700 py-3 text-base font-bold text-red-200 hover:bg-red-800/70 transition active:scale-95"
+              >
+                재도전 &nbsp;({floor}층)
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="w-full rounded-xl bg-zinc-800/80 border border-zinc-600 py-3 text-base font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95"
+              >
+                나가기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

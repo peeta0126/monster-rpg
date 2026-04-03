@@ -6,7 +6,8 @@ export { setBattleInitData, getBattleInitData } from "./battleInitStore";
 
 export const createBaseCampGame = (parent: string | HTMLElement) => {
   return new Phaser.Game({
-    type: Phaser.AUTO,
+    // CANVAS 고정: WebGL 컨텍스트 소진 없이 여러 번 생성/파기 가능
+    type: Phaser.CANVAS,
     parent,
     width: 960,
     height: 540,
@@ -26,7 +27,7 @@ export const createBaseCampGame = (parent: string | HTMLElement) => {
 
 export const createBattleGame = (parent: HTMLElement) => {
   return new Phaser.Game({
-    type: Phaser.AUTO,
+    type: Phaser.CANVAS,
     parent,
     width: 960,
     height: 540,
