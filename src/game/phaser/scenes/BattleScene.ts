@@ -57,7 +57,8 @@ function torchPalette(floor: number, isBoss: boolean) {
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
 
-type LogState = "idle" | "log" | "result_overlay" | "result_prompt";
+/** idle: 기술 선택 대기 | showing: 로그 표시 중 (Q 대기) | result: 결과 오버레이 표시 */
+type LogState = "idle" | "showing" | "result";
 
 export default class BattleScene extends Phaser.Scene {
   // ── 스프라이트 ──
@@ -75,9 +76,7 @@ export default class BattleScene extends Phaser.Scene {
   private playerStatusBadge!: Phaser.GameObjects.Text;
 
   // ── 로그 알림 ──
-  private logQueue: string[] = [];
   private logState: LogState = "idle";
-  private pendingResult: BattleResultPayload | null = null;
 
   private notifBox!: Phaser.GameObjects.Graphics;
   private notifText!: Phaser.GameObjects.Text;
@@ -87,7 +86,10 @@ export default class BattleScene extends Phaser.Scene {
   // ── 결과 오버레이 ──
   private resultVeil!: Phaser.GameObjects.Graphics;
   private resultTitle!: Phaser.GameObjects.Text;
-  private resultSub!: Phaser.GameObjects.Text;
+
+  // ── HP 변화 추적 (shake 판정) ──
+  private prevPlayerHp = -1;
+  private prevEnemyHp  = -1;
 
   constructor() {
     super("BattleScene");
@@ -493,13 +495,9 @@ export default class BattleScene extends Phaser.Scene {
     this.resultVeil.fillRect(0, 0, W, BATTLE_H);
     this.resultVeil.setVisible(false);
 
-    this.resultTitle = this.add.text(W / 2, BATTLE_H / 2 - 30, "", {
-      fontSize: "64px", fontFamily: "monospace", fontStyle: "bold",
+    this.resultTitle = this.add.text(W / 2, BATTLE_H / 2 - 10, "", {
+      fontSize: "72px", fontFamily: "monospace", fontStyle: "bold",
       stroke: "#000000", strokeThickness: 6,
-    }).setOrigin(0.5, 0.5).setDepth(31).setVisible(false);
-
-    this.resultSub = this.add.text(W / 2, BATTLE_H / 2 + 42, "", {
-      fontSize: "20px", fontFamily: "monospace", color: "#d0c090",
     }).setOrigin(0.5, 0.5).setDepth(31).setVisible(false);
   }
 
@@ -510,10 +508,9 @@ export default class BattleScene extends Phaser.Scene {
   private registerInput() {
     this.input.keyboard!.on("keydown-Q", this.onAdvance, this);
     this.input.keyboard!.on("keydown-SPACE", this.onAdvance, this);
+    // 로그 박스 영역(하단) 클릭 또는 "showing" 상태면 어디 클릭해도 진행
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
-      if (p.y > LOG_Y || this.logState === "result_overlay" || this.logState === "result_prompt") {
-        this.onAdvance();
-      }
+      if (p.y > LOG_Y || this.logState === "showing") this.onAdvance();
     });
   }
 
@@ -521,89 +518,56 @@ export default class BattleScene extends Phaser.Scene {
   // 로그 상태 머신
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 로그 표시: BattlePage가 1개씩 보내고 Q ack를 기다린다
+  // ─────────────────────────────────────────────────────────────────────────────
+
   private onBattleLog(message: string) {
-    this.logQueue.push(message);
-    if (this.logState === "idle") this.showNextLog();
+    this.logState = "showing";
+    this.idleText.setVisible(false);
+    this.notifBox.setVisible(true);
+    this.notifText.setText(message).setVisible(true);
+    this.notifHint.setVisible(true);
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 결과 오버레이: BattlePage가 BATTLE_RESULT 이벤트를 보내면 즉시 표시
+  // 이후 네비게이션은 React(BattlePage) 버튼이 담당
+  // ─────────────────────────────────────────────────────────────────────────────
 
   private onBattleResult(payload: BattleResultPayload) {
-    this.pendingResult = payload;
-    // 로그 큐가 비어있으면 바로 결과 오버레이 표시
-    if (this.logState === "idle") this.showResultOverlay();
-  }
-
-  private showNextLog() {
-    if (this.logQueue.length > 0) {
-      this.logState = "log";
-      const msg = this.logQueue.shift()!;
-      this.idleText.setVisible(false);
-      this.notifBox.setVisible(true);
-      this.notifText.setText(msg).setVisible(true);
-      this.notifHint.setVisible(this.logQueue.length > 0 || this.pendingResult !== null);
-      return;
-    }
-    // 큐 빈 상태
-    if (this.pendingResult) {
-      this.showResultOverlay();
-    } else {
-      this.logState = "idle";
-      this.notifBox.setVisible(false);
-      this.notifText.setVisible(false);
-      this.notifHint.setVisible(false);
-      this.idleText.setVisible(true);
-    }
-  }
-
-  private showResultOverlay() {
-    const r = this.pendingResult!;
-    this.logState = "result_overlay";
-
-    // 로그 박스 숨김
+    this.logState = "result";
     this.notifBox.setVisible(false);
     this.notifText.setVisible(false);
     this.notifHint.setVisible(false);
     this.idleText.setVisible(false);
 
-    // 오버레이
     this.resultVeil.setVisible(true);
-    if (r.outcome === "win") {
+    if (payload.outcome === "win") {
       this.resultTitle.setText("승리!").setColor("#66ffaa").setVisible(true);
     } else {
       this.resultTitle.setText("패배...").setColor("#ff6666").setVisible(true);
     }
     this.resultTitle.setScale(0);
     this.tweens.add({ targets: this.resultTitle, scale: 1, duration: 400, ease: "Back.Out" });
-
-    // 로그 영역에 "Q를 눌러 계속" 표시
-    this.notifBox.setVisible(true);
-    this.notifText.setText("Q / 클릭으로 계속").setVisible(true);
-    this.notifHint.setVisible(false);
   }
 
-  private showResultPrompt() {
-    const r = this.pendingResult!;
-    this.logState = "result_prompt";
-    if (r.outcome === "win") {
-      this.resultSub.setText(`${r.floor + 1}층으로 이동`).setVisible(true);
-      this.notifText.setText(`${r.floor + 1}층으로 이동하시겠습니까?  [Q / 클릭]`);
-    } else {
-      this.notifText.setText(`${r.floor}층을 다시 도전하시겠습니까?  [Q / 클릭]`);
-    }
-  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Q / 클릭 처리: "showing" 상태에서만 ACK를 발행한다
+  // ─────────────────────────────────────────────────────────────────────────────
 
   private onAdvance() {
-    if (this.logState === "log") {
-      this.showNextLog();
-    } else if (this.logState === "result_overlay") {
-      this.showResultPrompt();
-    } else if (this.logState === "result_prompt") {
-      const r = this.pendingResult!;
-      if (r.outcome === "win") {
-        gameEvents.emit(GAME_EVENT.BATTLE_NEXT_FLOOR, { floor: r.floor + 1 });
-      } else {
-        gameEvents.emit(GAME_EVENT.BATTLE_RETRY, { floor: r.floor });
-      }
-    }
+    if (this.logState !== "showing") return;
+
+    // 로그 박스 숨기고 idle로 복귀
+    this.logState = "idle";
+    this.notifBox.setVisible(false);
+    this.notifText.setVisible(false);
+    this.notifHint.setVisible(false);
+    this.idleText.setVisible(true);
+
+    // BattlePage의 sendLogAndWait 프로미스를 해제
+    gameEvents.emit(GAME_EVENT.BATTLE_LOG_ACK);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -622,8 +586,11 @@ export default class BattleScene extends Phaser.Scene {
     if (p.enemyStatus) this.enemyStatusBadge.setColor(this.statusColor(p.enemyStatus));
     if (p.playerStatus) this.playerStatusBadge.setColor(this.statusColor(p.playerStatus));
 
-    if (p.enemyHp < p.enemyMaxHp) this.shake(this.enemySprite);
-    if (p.playerHp < p.playerMaxHp) this.shake(this.playerSprite);
+    // HP 감소 시에만 쉐이크 (prevHP < 0 이면 초기화 직후이므로 스킵)
+    if (this.prevEnemyHp  >= 0 && p.enemyHp  < this.prevEnemyHp)  this.shake(this.enemySprite);
+    if (this.prevPlayerHp >= 0 && p.playerHp < this.prevPlayerHp) this.shake(this.playerSprite);
+    this.prevEnemyHp  = p.enemyHp;
+    this.prevPlayerHp = p.playerHp;
   }
 
   private onBattleEnd() {
@@ -675,9 +642,9 @@ export default class BattleScene extends Phaser.Scene {
 
   shutdown() {
     gameEvents.off(GAME_EVENT.BATTLE_STATE_UPDATE, this.onStateUpdate, this);
-    gameEvents.off(GAME_EVENT.BATTLE_LOG, this.onBattleLog, this);
-    gameEvents.off(GAME_EVENT.BATTLE_RESULT, this.onBattleResult, this);
-    gameEvents.off(GAME_EVENT.BATTLE_END, this.onBattleEnd, this);
+    gameEvents.off(GAME_EVENT.BATTLE_LOG,          this.onBattleLog,   this);
+    gameEvents.off(GAME_EVENT.BATTLE_RESULT,       this.onBattleResult,this);
+    gameEvents.off(GAME_EVENT.BATTLE_END,          this.onBattleEnd,   this);
   }
 }
 
