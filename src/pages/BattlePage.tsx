@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { monsters } from "../data/monsters";
 import { getFloorEnemy, getFloorEnemySkill, isBossFloor } from "../data/floorTable";
 import { MONSTER_IMAGE_MAP } from "../data/monsterImages";
 import type { Move } from "../types/game";
+import { usePlayerStore } from "../store/playerStore";
 
 import {
   applyDamage,
@@ -65,14 +65,28 @@ export default function BattlePage() {
 
   const gameRef = useRef<HTMLDivElement | null>(null);
 
+  // ─── playerStore 연동 ───────────────────────────────────────────────────────────
+  const { updateBestFloor, updatePartyMember, addCapturedMonster, addToDex } =
+    usePlayerStore();
+
+  // 마운트 시 파티 스냅샷 (전투 도중 store 변경 무시)
+  const [initialParty] = useState(() => usePlayerStore.getState().party);
+  const [activePartyIndex, setActivePartyIndex] = useState(0);
+  const [showPartySwap, setShowPartySwap] = useState(false);
+
   // ─── 초기 몬스터 ────────────────────────────────────────────────────────────────
 
-  const initialPlayer = monsters[0];
+  const initialPlayer = initialParty[0] ?? usePlayerStore.getState().party[0];
   const initialEnemy  = getFloorEnemy(floor, initialPlayer.id);
 
   // ─── 전투 상태 ──────────────────────────────────────────────────────────────────
 
-  const [player,     setPlayer]     = useState<BattleMonster>(() => createBattleMonster(initialPlayer));
+  const [player, setPlayer] = useState<BattleMonster>(() => ({
+    ...initialPlayer,
+    currentHp: initialPlayer.currentHp,
+    status: null,
+    skipNextTurn: false,
+  }));
   const [enemyState, setEnemyState] = useState<BattleMonster>(() => createBattleMonster(initialEnemy));
   const [isProcessing, setIsProcessing] = useState(false);
   const [battleOutcome, setBattleOutcome] = useState<"win" | "lose" | null>(null);
@@ -133,7 +147,7 @@ export default function BattlePage() {
     setBattleInitData({
       playerImageUrl: MONSTER_IMAGE_MAP[initialPlayer.id] ?? "",
       playerName:     initialPlayer.name,
-      playerLevel:    createBattleMonster(initialPlayer).level,
+      playerLevel:    initialPlayer.level,
       enemyImageUrl:  MONSTER_IMAGE_MAP[initialEnemy.id]  ?? "",
       enemyName:      initialEnemy.name,
       enemyLevel:     initialEnemy.level,
@@ -281,6 +295,13 @@ export default function BattlePage() {
       np = expResult.updatedMonster;
       await sendLogAndWait(`경험치 ${ne.rewardExp}를 획득했다!`);
       if (expResult.leveledUp) await sendLogAndWait(`레벨이 ${np.level}(으)로 올랐다!`);
+      // playerStore 업데이트: 경험치/레벨 반영 + 최고층 기록
+      const ownedOriginal = initialParty[activePartyIndex];
+      if (ownedOriginal) {
+        updatePartyMember({ ...ownedOriginal, ...np, uid: ownedOriginal.uid });
+      }
+      updateBestFloor(floor);
+      addToDex(ne.id);
       setPlayer(np);
       setEnemyState(ne);
       finishBattle("win");
@@ -304,6 +325,49 @@ export default function BattlePage() {
     floor, resolveAttack, syncHpToPhaser, sendLogAndWait, finishBattle,
   ]);
 
+  // ─── 파티 교체 ──────────────────────────────────────────────────────────────────
+
+  const handlePartySwap = useCallback(async (partyIdx: number) => {
+    if (isProcessing || battleOutcome !== null || partyIdx === activePartyIndex) return;
+    const nextOwned = initialParty[partyIdx];
+    if (!nextOwned) return;
+
+    setIsProcessing(true);
+    setShowPartySwap(false);
+
+    await sendLogAndWait(`${player.name}을(를) 교체한다!`);
+
+    // 교체된 몬스터로 상태 전환
+    const nextPlayer: BattleMonster = {
+      ...nextOwned,
+      currentHp: nextOwned.currentHp,
+      status: null,
+      skipNextTurn: false,
+    };
+    setActivePartyIndex(partyIdx);
+    setPlayer(nextPlayer);
+    syncHpToPhaser(nextPlayer, enemyState);
+
+    // 교체는 적이 1회 반격
+    let ne = enemyState;
+    const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, nextPlayer);
+    const attackRes = await resolveAttack(ne, nextPlayer, eMove, nextPlayer, ne, false);
+    const np2 = attackRes.updated;
+    ne = attackRes.fainted ? ne : ne;
+    enemyTurnRef.current += 1;
+
+    setPlayer(np2);
+    setEnemyState(ne);
+
+    if (attackRes.fainted) {
+      finishBattle("lose");
+    }
+    setIsProcessing(false);
+  }, [
+    isProcessing, battleOutcome, activePartyIndex, initialParty, player,
+    enemyState, floor, resolveAttack, syncHpToPhaser, sendLogAndWait, finishBattle,
+  ]);
+
   // ─── 포획 ────────────────────────────────────────────────────────────────────────
 
   const handleCatch = useCallback(async () => {
@@ -319,6 +383,15 @@ export default function BattlePage() {
     }
 
     if (res.success) {
+      // 포획 성공: playerStore에 추가 + 도감 등록
+      const captureResult = addCapturedMonster(enemyState);
+      addToDex(enemyState.id);
+      const captureMsg = captureResult === "party"
+        ? "파티에 추가되었다!"
+        : captureResult === "storage"
+          ? "보관함에 저장되었다!"
+          : "보관함이 가득 차서 놓아줬다...";
+      await sendLogAndWait(captureMsg);
       finishBattle("win");
       setIsProcessing(false);
       return;
@@ -401,6 +474,50 @@ export default function BattlePage() {
         {/* ── 기술 버튼 (전투 중일 때) ── */}
         {battleOutcome === null && (
           <>
+            {/* ── 파티 교체 패널 ── */}
+            {showPartySwap ? (
+              <div className="mb-2 flex gap-2 items-center">
+                <span className="text-xs text-zinc-500 shrink-0">교체:</span>
+                {initialParty.map((m, idx) => {
+                  const isActive = idx === activePartyIndex;
+                  const hpPct = Math.round((m.currentHp / m.maxHp) * 100);
+                  return (
+                    <button
+                      key={m.uid}
+                      disabled={isActive || isProcessing}
+                      onClick={() => handlePartySwap(idx)}
+                      className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs transition
+                        ${isActive
+                          ? "border-zinc-700 bg-zinc-900/40 text-zinc-600 cursor-default opacity-50"
+                          : "border-blue-700 bg-blue-950/50 text-blue-300 hover:bg-blue-900/50"
+                        }`}
+                    >
+                      <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.name} className="h-6 w-6 object-contain" />
+                      <span>{m.nickname ?? m.name}</span>
+                      <span className="text-zinc-500">{hpPct}%</span>
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setShowPartySwap(false)}
+                  className="ml-auto text-xs text-zinc-600 hover:text-zinc-400"
+                >
+                  닫기
+                </button>
+              </div>
+            ) : (
+              initialParty.length > 1 && !isProcessing && (
+                <div className="mb-2 flex justify-end">
+                  <button
+                    onClick={() => setShowPartySwap(true)}
+                    className="text-xs text-blue-500 hover:text-blue-300 border border-blue-800/50 rounded px-2 py-0.5"
+                  >
+                    파티 교체
+                  </button>
+                </div>
+              )
+            )}
+
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {player.moves.map((move) => {
                 const mult = getTypeMultiplier(move.type, enemyState.type);

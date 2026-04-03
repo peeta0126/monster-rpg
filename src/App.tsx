@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import BaseCampPage from "./pages/BaseCampPage";
 import BattlePage from "./pages/BattlePage";
+import FarmPage from "./pages/FarmPage";
 
 function BattlePageWrapper() {
   const location = useLocation();
@@ -15,6 +16,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<BaseCampPage />} />
         <Route path="/battle" element={<BattlePageWrapper />} />
+        <Route path="/farm" element={<FarmPage />} />
       </Routes>
     </BrowserRouter>
   );

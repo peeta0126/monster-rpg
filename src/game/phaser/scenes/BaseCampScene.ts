@@ -119,7 +119,7 @@ export default class BaseCampScene extends Phaser.Scene {
 
     // ── 포획 가능 구역 (풀숲) ──
     const CZ_X = 350, CZ_Y = 850;
-    const catchBg = this.add.rectangle(CZ_X, CZ_Y, 240, 160, 0x2e7d32, 0.55).setDepth(1);
+    this.add.rectangle(CZ_X, CZ_Y, 240, 160, 0x2e7d32, 0.55).setDepth(1);
     // 테두리
     const catchBorder = this.add.graphics().setDepth(2);
     catchBorder.lineStyle(2, 0x55cc55, 0.8);
@@ -154,6 +154,32 @@ export default class BaseCampScene extends Phaser.Scene {
       }
     });
 
+    // ── 농장/파티 관리 구역 ──
+    const FARM_X = 700, FARM_Y = 900;
+    this.add.rectangle(FARM_X, FARM_Y, 180, 130, 0x6d4c41, 0.7).setDepth(1);
+    const farmBorder = this.add.graphics().setDepth(2);
+    farmBorder.lineStyle(2, 0xd7a86e, 0.8);
+    farmBorder.strokeRect(FARM_X - 90, FARM_Y - 65, 180, 130);
+    this.add.text(FARM_X, FARM_Y - 55, "🏠 농장", {
+      fontSize: "13px", color: "#e8c99a", backgroundColor: "#1a0a00",
+      padding: { x: 6, y: 3 },
+    }).setOrigin(0.5, 0.5).setDepth(3);
+    this.add.text(FARM_X, FARM_Y - 35, "파티 · 보관함 관리", {
+      fontSize: "11px", color: "#c8a870",
+    }).setOrigin(0.5, 0.5).setDepth(3);
+
+    const farmZone = this.add.zone(FARM_X, FARM_Y, 180, 130);
+    this.physics.add.existing(farmZone, true);
+
+    this.physics.add.overlap(this.player, farmZone, () => {
+      if (!this.children.getByName("farmHint")) {
+        this.add.text(this.player.x - 50, this.player.y - 52, "F: 내 몬스터", {
+          fontSize: "13px", color: "#e8c99a",
+          backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
+        }).setName("farmHint").setDepth(10);
+      }
+    });
+
     // E 키: 포탈 / 포획 구역
     keyboard.on("keydown-E", () => {
       const distPortal = Phaser.Math.Distance.Between(this.player.x, this.player.y, PORTAL_X, PORTAL_Y);
@@ -176,6 +202,14 @@ export default class BaseCampScene extends Phaser.Scene {
       }
     });
 
+    // F 키: 농장 페이지
+    keyboard.on("keydown-F", () => {
+      const distFarm = Phaser.Math.Distance.Between(this.player.x, this.player.y, FARM_X, FARM_Y);
+      if (distFarm < 120) {
+        gameEvents.emit(GAME_EVENT.ENTER_FARM);
+      }
+    });
+
     // Phaser가 포커스를 가져가므로 P 키는 gameEvents로 전달
     keyboard.on("keydown-P", () => {
       gameEvents.emit("open-dex");
@@ -185,10 +219,13 @@ export default class BaseCampScene extends Phaser.Scene {
     this.physics.world.on("overlap", () => {
       const ph = this.children.getByName("portalHint");
       const ch = this.children.getByName("catchHint");
+      const fh = this.children.getByName("farmHint");
       const distPortal = Phaser.Math.Distance.Between(this.player.x, this.player.y, PORTAL_X, PORTAL_Y);
       const distCatch  = Phaser.Math.Distance.Between(this.player.x, this.player.y, CZ_X, CZ_Y);
+      const distFarm   = Phaser.Math.Distance.Between(this.player.x, this.player.y, FARM_X, FARM_Y);
       if (ph && distPortal >= 120) { ph.destroy(); }
       if (ch && distCatch  >= 160) { ch.destroy(); }
+      if (fh && distFarm   >= 140) { fh.destroy(); }
     });
   }
 

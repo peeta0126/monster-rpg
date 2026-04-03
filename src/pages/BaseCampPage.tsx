@@ -4,6 +4,7 @@ import { createBaseCampGame } from "../game/phaser/phaserConfig";
 import { gameEvents, GAME_EVENT } from "../game/phaser/events";
 import { monsters } from "../data/monsters";
 import { MONSTER_IMAGE_MAP } from "../data/monsterImages";
+import { usePlayerStore } from "../store/playerStore";
 
 // ─── 도감 모달 ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,8 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 function DexModal({ onClose }: { onClose: () => void }) {
+  const dex = usePlayerStore((s) => s.dex);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
@@ -32,7 +35,12 @@ function DexModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-zinc-100">몬스터 도감</h2>
+          <div>
+            <h2 className="text-xl font-bold text-zinc-100">몬스터 도감</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              발견 {dex.length}/{monsters.length}
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200"
@@ -42,40 +50,68 @@ function DexModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {monsters.map((m) => (
-            <div
-              key={m.id}
-              className="rounded-xl border border-zinc-700 bg-zinc-900 p-3 flex flex-col items-center gap-2"
-            >
-              <img
-                src={MONSTER_IMAGE_MAP[m.id]}
-                alt={m.name}
-                className="h-20 w-20 object-contain"
-              />
-              <div className="text-center">
-                <p className="font-bold text-zinc-100">{m.name}</p>
-                <span
-                  className={`mt-0.5 inline-block rounded border px-2 py-0.5 text-xs ${TYPE_COLOR[m.type] ?? TYPE_COLOR.normal}`}
-                >
-                  {TYPE_KO[m.type] ?? m.type}
-                </span>
+          {monsters.map((m) => {
+            const discovered = dex.includes(m.id);
+            return (
+              <div
+                key={m.id}
+                className={`rounded-xl border p-3 flex flex-col items-center gap-2
+                  ${discovered ? "border-zinc-700 bg-zinc-900" : "border-zinc-800 bg-zinc-900/50"}`}
+              >
+                {discovered ? (
+                  <img
+                    src={MONSTER_IMAGE_MAP[m.id]}
+                    alt={m.name}
+                    className="h-20 w-20 object-contain"
+                  />
+                ) : (
+                  <div className="h-20 w-20 flex items-center justify-center">
+                    <img
+                      src={MONSTER_IMAGE_MAP[m.id]}
+                      alt="???"
+                      className="h-20 w-20 object-contain"
+                      style={{ filter: "brightness(0) invert(0.1)", opacity: 0.5 }}
+                    />
+                  </div>
+                )}
+                <div className="text-center">
+                  {discovered ? (
+                    <>
+                      <p className="font-bold text-zinc-100">{m.name}</p>
+                      <span
+                        className={`mt-0.5 inline-block rounded border px-2 py-0.5 text-xs ${TYPE_COLOR[m.type] ?? TYPE_COLOR.normal}`}
+                      >
+                        {TYPE_KO[m.type] ?? m.type}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-bold text-zinc-600">???</p>
+                      <span className="mt-0.5 inline-block rounded border px-2 py-0.5 text-xs border-zinc-700 bg-zinc-800/50 text-zinc-600">
+                        미발견
+                      </span>
+                    </>
+                  )}
+                </div>
+                {discovered && (
+                  <div className="w-full text-xs text-zinc-500 space-y-0.5">
+                    <div className="flex justify-between">
+                      <span>HP</span><span className="text-zinc-300">{m.maxHp}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>공격</span><span className="text-zinc-300">{m.attack}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>방어</span><span className="text-zinc-300">{m.defense}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>스피드</span><span className="text-zinc-300">{m.speed}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="w-full text-xs text-zinc-500 space-y-0.5">
-                <div className="flex justify-between">
-                  <span>HP</span><span className="text-zinc-300">{m.maxHp}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>공격</span><span className="text-zinc-300">{m.attack}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>방어</span><span className="text-zinc-300">{m.defense}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>스피드</span><span className="text-zinc-300">{m.speed}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -110,13 +146,16 @@ export default function BaseCampPage() {
       });
     };
 
+    const handleEnterFarm = () => navigate("/farm");
     const handleOpenDex = () => setDexOpen(true);
 
     gameEvents.on(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
+    gameEvents.on(GAME_EVENT.ENTER_FARM, handleEnterFarm);
     gameEvents.on("open-dex", handleOpenDex);
 
     return () => {
       gameEvents.off(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
+      gameEvents.off(GAME_EVENT.ENTER_FARM, handleEnterFarm);
       gameEvents.off("open-dex", handleOpenDex);
       game.destroy(true);
     };
