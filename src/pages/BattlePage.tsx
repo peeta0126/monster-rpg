@@ -5,12 +5,7 @@ import { monsters } from "../data/monsters";
 import { getFloorEnemy, isBossFloor } from "../data/floorTable";
 import type { Move, BattlePhase } from "../types/game";
 
-import flamelingImg from "../assets/monsters/flameling.png";
-import aquabeImg from "../assets/monsters/aquabe.png";
-import leafyImg from "../assets/monsters/leafy.png";
-import burnoImg from "../assets/monsters/burno.png";
-import bubbletImg from "../assets/monsters/bubblet.png";
-import mossyImg from "../assets/monsters/mossy.png";
+import { MONSTER_IMAGE_MAP } from "../data/monsterImages";
 
 import {
   applyDamage,
@@ -44,15 +39,6 @@ const STATUS_LABELS: Record<string, string> = {
   poison: "☠ 독",
   freeze: "❄ 빙결",
   burn: "🔥 화상",
-};
-
-const MONSTER_IMAGE_MAP: Record<string, string> = {
-  flameling: flamelingImg,
-  aquabe: aquabeImg,
-  leafy: leafyImg,
-  burno: burnoImg,
-  bubblet: bubbletImg,
-  mossy: mossyImg,
 };
 
 const TYPE_COLORS: Record<string, string> = {

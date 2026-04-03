@@ -97,38 +97,98 @@ export default class BaseCampScene extends Phaser.Scene {
       D: Phaser.Input.Keyboard.Key;
     };
 
-    // 포탈 범위
-    const portalZone = this.add.zone(1100, 250, 100, 100);
+    // ── 탑 포탈 ──
+    const PORTAL_X = 1100, PORTAL_Y = 250;
+    this.add.rectangle(PORTAL_X, PORTAL_Y, 90, 90, 0x5dade2).setDepth(1);
+    this.add.text(PORTAL_X, PORTAL_Y - 56, "무한의 탑", {
+      fontSize: "13px", color: "#aad4f5", backgroundColor: "#05101a",
+      padding: { x: 6, y: 3 },
+    }).setOrigin(0.5, 0.5).setDepth(2);
+
+    const portalZone = this.add.zone(PORTAL_X, PORTAL_Y, 100, 100);
     this.physics.add.existing(portalZone, true);
 
     this.physics.add.overlap(this.player, portalZone, () => {
       if (!this.children.getByName("portalHint")) {
-        this.add
-          .text(this.player.x - 35, this.player.y - 50, "E: Enter", {
-            fontSize: "16px",
-            color: "#ffffff",
-            backgroundColor: "#000000",
-            padding: { x: 6, y: 4 },
-          })
-          .setName("portalHint")
-          .setDepth(10);
+        this.add.text(this.player.x - 40, this.player.y - 52, "E: 탑 입장", {
+          fontSize: "14px", color: "#ffffff",
+          backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
+        }).setName("portalHint").setDepth(10);
       }
     });
 
-    keyboard.on("keydown-E", () => {
-      const distance = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        1100,
-        250,
-      );
+    // ── 포획 가능 구역 (풀숲) ──
+    const CZ_X = 350, CZ_Y = 850;
+    const catchBg = this.add.rectangle(CZ_X, CZ_Y, 240, 160, 0x2e7d32, 0.55).setDepth(1);
+    // 테두리
+    const catchBorder = this.add.graphics().setDepth(2);
+    catchBorder.lineStyle(2, 0x55cc55, 0.8);
+    catchBorder.strokeRect(CZ_X - 120, CZ_Y - 80, 240, 160);
+    this.add.text(CZ_X, CZ_Y - 70, "🌿 풀숲 포획 구역", {
+      fontSize: "13px", color: "#aaffaa", backgroundColor: "#0a1a0a",
+      padding: { x: 6, y: 3 },
+    }).setOrigin(0.5, 0.5).setDepth(3);
+    this.add.text(CZ_X, CZ_Y - 50, "출현: 플레미  아쿠비  리피", {
+      fontSize: "11px", color: "#88ee88",
+    }).setOrigin(0.5, 0.5).setDepth(3);
 
-      if (distance < 80) {
+    // 풀숲 장식 (작은 풀 삼각형들)
+    for (let i = 0; i < 12; i++) {
+      const gx = CZ_X - 100 + Math.random() * 200;
+      const gy = CZ_Y - 60 + Math.random() * 120;
+      const g = this.add.graphics().setDepth(2);
+      g.fillStyle(0x4caf50, 0.6);
+      g.fillTriangle(gx, gy + 10, gx - 5, gy + 10, gx, gy);
+      g.fillTriangle(gx + 4, gy + 10, gx + 9, gy + 10, gx + 4, gy);
+    }
+
+    const catchZone = this.add.zone(CZ_X, CZ_Y, 240, 160);
+    this.physics.add.existing(catchZone, true);
+
+    this.physics.add.overlap(this.player, catchZone, () => {
+      if (!this.children.getByName("catchHint")) {
+        this.add.text(this.player.x - 55, this.player.y - 52, "E: 포획 전투 시작", {
+          fontSize: "13px", color: "#aaffaa",
+          backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
+        }).setName("catchHint").setDepth(10);
+      }
+    });
+
+    // E 키: 포탈 / 포획 구역
+    keyboard.on("keydown-E", () => {
+      const distPortal = Phaser.Math.Distance.Between(this.player.x, this.player.y, PORTAL_X, PORTAL_Y);
+      const distCatch  = Phaser.Math.Distance.Between(this.player.x, this.player.y, CZ_X, CZ_Y);
+
+      if (distPortal < 80) {
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
           from: "basecamp",
           portalId: "dungeon-entrance-1",
+          isCatchZone: false,
+          floor: 1,
+        });
+      } else if (distCatch < 120) {
+        gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
+          from: "basecamp",
+          portalId: "catch-zone",
+          isCatchZone: true,
+          floor: 1,
         });
       }
+    });
+
+    // Phaser가 포커스를 가져가므로 P 키는 gameEvents로 전달
+    keyboard.on("keydown-P", () => {
+      gameEvents.emit("open-dex");
+    });
+
+    // 힌트 텍스트 정리 (겹침 방지)
+    this.physics.world.on("overlap", () => {
+      const ph = this.children.getByName("portalHint");
+      const ch = this.children.getByName("catchHint");
+      const distPortal = Phaser.Math.Distance.Between(this.player.x, this.player.y, PORTAL_X, PORTAL_Y);
+      const distCatch  = Phaser.Math.Distance.Between(this.player.x, this.player.y, CZ_X, CZ_Y);
+      if (ph && distPortal >= 120) { ph.destroy(); }
+      if (ch && distCatch  >= 160) { ch.destroy(); }
     });
   }
 
