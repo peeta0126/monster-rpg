@@ -48,9 +48,11 @@ const P_BAR_Y = E_BAR_Y;
 
 // ─── 층별 횃불 색 ──────────────────────────────────────────────────────────────
 
-function torchPalette(floor: number) {
-  if (floor <= 10) return { base: 0xff3300, mid: 0xff8820, tip: 0xffdd44, glow: 0xff6610 };
-  return { base: 0xff3300, mid: 0xff8820, tip: 0xffdd44, glow: 0xff6610 };
+function torchPalette(floor: number, isBoss: boolean) {
+  if (isBoss) return { base: 0x8800cc, mid: 0xcc33ff, tip: 0xee99ff, glow: 0x660099 };
+  if (floor <= 10)  return { base: 0xff3300, mid: 0xff8820, tip: 0xffdd44, glow: 0xff6610 };
+  if (floor <= 20)  return { base: 0xcc2200, mid: 0xff5500, tip: 0xffaa22, glow: 0xaa3300 };
+  return { base: 0x991100, mid: 0xdd3300, tip: 0xff7711, glow: 0x770011 };
 }
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
@@ -103,8 +105,9 @@ export default class BattleScene extends Phaser.Scene {
   create() {
     const d = getBattleInitData();
     const floor = d?.floor ?? 1;
+    const isBoss = d?.isBoss ?? false;
 
-    this.buildBackground(floor);
+    this.buildBackground(floor, isBoss);
     this.buildMonsterSprites();
     this.buildHudPanels();
     this.buildLogArea();
@@ -114,6 +117,16 @@ export default class BattleScene extends Phaser.Scene {
     // 이름/레벨 초기 표시
     if (d) {
       this.updateNames(d.playerName, d.playerLevel, d.enemyName, d.enemyLevel);
+    }
+
+    // 보스층 뱃지
+    if (isBoss) {
+      const bossBg = this.add.graphics().setDepth(20);
+      bossBg.fillStyle(0x660099, 0.85);
+      bossBg.fillRoundedRect(ENEMY_X - 36, PANEL_CY - PANEL_H / 2 - 22, 72, 18, 5);
+      this.add.text(ENEMY_X, PANEL_CY - PANEL_H / 2 - 13, "★  BOSS  ★", {
+        fontSize: "11px", fontFamily: "monospace", color: "#ee99ff", fontStyle: "bold",
+      }).setOrigin(0.5, 0.5).setDepth(21);
     }
 
     gameEvents.on(GAME_EVENT.BATTLE_STATE_UPDATE, this.onStateUpdate, this);
@@ -128,12 +141,12 @@ export default class BattleScene extends Phaser.Scene {
   // 배경: 따뜻한 모험의 탑 내부
   // ─────────────────────────────────────────────────────────────────────────────
 
-  private buildBackground(floor: number) {
-    const palette = torchPalette(floor);
+  private buildBackground(floor: number, isBoss = false) {
+    const palette = torchPalette(floor, isBoss);
 
-    // ── 벽 기반색 (따뜻한 갈색) ──
+    // ── 벽 기반색 (보스층: 어두운 보라, 일반: 따뜻한 갈색) ──
     const wall = this.add.graphics().setDepth(0);
-    wall.fillStyle(0x3e2e1a, 1);
+    wall.fillStyle(isBoss ? 0x1e1030 : 0x3e2e1a, 1);
     wall.fillRect(0, 0, W, BATTLE_H);
 
     // ── 돌 블록 그리드 ──

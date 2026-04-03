@@ -6,6 +6,7 @@ export interface BattleSceneInitData {
   enemyName: string;
   enemyLevel: number;
   floor: number;
+  isBoss: boolean;
 }
 
 let _data: BattleSceneInitData | null = null;

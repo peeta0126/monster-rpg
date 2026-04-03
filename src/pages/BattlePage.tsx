@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { monsters } from "../data/monsters";
+import { getFloorEnemy, isBossFloor } from "../data/floorTable";
 import type { Move, BattlePhase } from "../types/game";
 
 import flamelingImg from "../assets/monsters/flameling.png";
@@ -82,11 +83,7 @@ export default function BattlePage() {
   // ─── 초기 몬스터 ────────────────────────────────────────────────────────────────
 
   const initialPlayer = monsters[0];
-  const getRandomEnemy = () => {
-    const pool = monsters.filter((m) => m.id !== initialPlayer.id);
-    return pool[Math.floor(Math.random() * pool.length)];
-  };
-  const initialEnemy = getRandomEnemy();
+  const initialEnemy = getFloorEnemy(floor, initialPlayer.id);
 
   // ─── 전투 상태 ──────────────────────────────────────────────────────────────────
 
@@ -107,8 +104,9 @@ export default function BattlePage() {
       playerLevel: createBattleMonster(initialPlayer).level,
       enemyImageUrl: MONSTER_IMAGE_MAP[initialEnemy.id] ?? "",
       enemyName: initialEnemy.name,
-      enemyLevel: createBattleMonster(initialEnemy).level,
+      enemyLevel: initialEnemy.level,
       floor,
+      isBoss: isBossFloor(floor),
     });
 
     const game = createBattleGame(gameRef.current);
