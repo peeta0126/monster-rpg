@@ -639,31 +639,25 @@ export default class BattleScene extends Phaser.Scene {
     const key = `party-mon-${payload.partyIndex}`;
     this.tweens.killTweensOf(this.playerSprite);
 
-    // 사라지기
+    // ── 페이드 아웃 → 텍스처 교체 → 페이드 인 (scale 건드리지 않음) ──
     this.tweens.add({
       targets: this.playerSprite,
       alpha: 0,
-      scaleX: 0.4,
-      scaleY: 0.8,
-      duration: 160,
+      duration: 150,
       ease: "Power2.In",
       onComplete: () => {
-        // 텍스처 교체
         if (this.textures.exists(key)) {
           this.playerSprite.setTexture(key);
         }
+        // displaySize를 항상 고정 크기로 재설정 (새 텍스처 원본 크기와 무관하게)
         this.playerSprite.setDisplaySize(MONSTER_SIZE, MONSTER_SIZE);
-        this.playerSprite.setY(MONSTER_Y + 16);
+        this.playerSprite.setY(MONSTER_Y);
 
-        // 등장
         this.tweens.add({
           targets: this.playerSprite,
           alpha: 1,
-          scaleX: 1,
-          scaleY: 1,
-          y: MONSTER_Y,
-          duration: 240,
-          ease: "Back.Out",
+          duration: 220,
+          ease: "Power2.Out",
           onComplete: () => {
             this.addFloat(this.playerSprite, MONSTER_Y, 5, 1950);
           },
@@ -673,7 +667,7 @@ export default class BattleScene extends Phaser.Scene {
 
     // HUD 이름/레벨 즉시 업데이트
     this.playerNameText?.setText(`${payload.name}  Lv.${payload.level}`);
-    this.prevPlayerHp = -1; // shake 리셋
+    this.prevPlayerHp = -1;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
