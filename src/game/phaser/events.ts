@@ -19,7 +19,16 @@ export const GAME_EVENT = {
   BATTLE_RESULT: "battle:result",
   /** BattlePage → BattleScene: 전투 종료 (언마운트) */
   BATTLE_END: "battle:end",
+  /** BattlePage → BattleScene: 플레이어 몬스터 교체 (스프라이트 변경) */
+  BATTLE_PLAYER_SWITCH: "battle:player-switch",
 } as const;
+
+export interface BattlePlayerSwitchPayload {
+  /** 파티 인덱스 (preload된 party-mon-{i} 텍스처 키 결정) */
+  partyIndex: number;
+  name: string;
+  level: number;
+}
 
 export interface BattleResultPayload {
   outcome: "win" | "lose";

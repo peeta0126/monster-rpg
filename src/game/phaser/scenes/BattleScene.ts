@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../events";
 import { getBattleInitData } from "../battleInitStore";
 import type { StatusEffect } from "../../../types/game";
-import type { BattleResultPayload } from "../events";
+import type { BattleResultPayload, BattlePlayerSwitchPayload } from "../events";
 
 export interface BattleSceneUpdatePayload {
   playerHp: number;
@@ -103,8 +103,11 @@ export default class BattleScene extends Phaser.Scene {
   preload() {
     const d = getBattleInitData();
     if (!d) return;
-    this.load.image("player-mon", d.playerImageUrl);
     this.load.image("enemy-mon", d.enemyImageUrl);
+    // 파티 전체 이미지를 party-mon-{i} 키로 미리 로드 (교체 즉시 텍스처 전환 가능)
+    (d.partyImageUrls ?? [d.playerImageUrl]).forEach((url, i) => {
+      if (url) this.load.image(`party-mon-${i}`, url);
+    });
   }
 
   create() {
@@ -140,10 +143,11 @@ export default class BattleScene extends Phaser.Scene {
       }).setOrigin(0.5, 0.5).setDepth(21);
     }
 
-    gameEvents.on(GAME_EVENT.BATTLE_STATE_UPDATE, this.onStateUpdate, this);
-    gameEvents.on(GAME_EVENT.BATTLE_LOG, this.onBattleLog, this);
-    gameEvents.on(GAME_EVENT.BATTLE_RESULT, this.onBattleResult, this);
-    gameEvents.on(GAME_EVENT.BATTLE_END, this.onBattleEnd, this);
+    gameEvents.on(GAME_EVENT.BATTLE_STATE_UPDATE,  this.onStateUpdate,   this);
+    gameEvents.on(GAME_EVENT.BATTLE_LOG,           this.onBattleLog,     this);
+    gameEvents.on(GAME_EVENT.BATTLE_RESULT,        this.onBattleResult,  this);
+    gameEvents.on(GAME_EVENT.BATTLE_END,           this.onBattleEnd,     this);
+    gameEvents.on(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.onPlayerSwitch,  this);
 
     this.cameras.main.fadeIn(500, 0, 0, 0);
   }
@@ -364,9 +368,9 @@ export default class BattleScene extends Phaser.Scene {
       this.enemySprite = this.makeFallback(ENEMY_X, MONSTER_Y, 0xcc3333, MONSTER_SIZE);
     }
 
-    // 플레이어 (좌, 기본)
-    if (this.textures.exists("player-mon")) {
-      this.playerSprite = this.add.image(PLAYER_X, MONSTER_Y, "player-mon")
+    // 플레이어 — 파티 0번 슬롯 이미지 사용 (party-mon-0)
+    if (this.textures.exists("party-mon-0")) {
+      this.playerSprite = this.add.image(PLAYER_X, MONSTER_Y, "party-mon-0")
         .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setDepth(6);
     } else {
       this.playerSprite = this.makeFallback(PLAYER_X, MONSTER_Y, 0x3366cc, MONSTER_SIZE);
@@ -618,10 +622,58 @@ export default class BattleScene extends Phaser.Scene {
   private _removeGameListeners() {
     if (!this._isActive) return;
     this._isActive = false;
-    gameEvents.off(GAME_EVENT.BATTLE_STATE_UPDATE, this.onStateUpdate, this);
-    gameEvents.off(GAME_EVENT.BATTLE_LOG,          this.onBattleLog,   this);
-    gameEvents.off(GAME_EVENT.BATTLE_RESULT,       this.onBattleResult,this);
-    gameEvents.off(GAME_EVENT.BATTLE_END,          this.onBattleEnd,   this);
+    gameEvents.off(GAME_EVENT.BATTLE_STATE_UPDATE,  this.onStateUpdate,  this);
+    gameEvents.off(GAME_EVENT.BATTLE_LOG,           this.onBattleLog,    this);
+    gameEvents.off(GAME_EVENT.BATTLE_RESULT,        this.onBattleResult, this);
+    gameEvents.off(GAME_EVENT.BATTLE_END,           this.onBattleEnd,    this);
+    gameEvents.off(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.onPlayerSwitch, this);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 플레이어 몬스터 교체: 페이드 아웃 → 텍스처 변경 → 페이드 인
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  private onPlayerSwitch(payload: BattlePlayerSwitchPayload) {
+    if (!this._isActive) return;
+
+    const key = `party-mon-${payload.partyIndex}`;
+    this.tweens.killTweensOf(this.playerSprite);
+
+    // 사라지기
+    this.tweens.add({
+      targets: this.playerSprite,
+      alpha: 0,
+      scaleX: 0.4,
+      scaleY: 0.8,
+      duration: 160,
+      ease: "Power2.In",
+      onComplete: () => {
+        // 텍스처 교체
+        if (this.textures.exists(key)) {
+          this.playerSprite.setTexture(key);
+        }
+        this.playerSprite.setDisplaySize(MONSTER_SIZE, MONSTER_SIZE);
+        this.playerSprite.setY(MONSTER_Y + 16);
+
+        // 등장
+        this.tweens.add({
+          targets: this.playerSprite,
+          alpha: 1,
+          scaleX: 1,
+          scaleY: 1,
+          y: MONSTER_Y,
+          duration: 240,
+          ease: "Back.Out",
+          onComplete: () => {
+            this.addFloat(this.playerSprite, MONSTER_Y, 5, 1950);
+          },
+        });
+      },
+    });
+
+    // HUD 이름/레벨 즉시 업데이트
+    this.playerNameText?.setText(`${payload.name}  Lv.${payload.level}`);
+    this.prevPlayerHp = -1; // shake 리셋
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
