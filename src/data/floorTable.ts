@@ -1,6 +1,6 @@
 import type { Monster, Move } from "../types/game";
 import { monsters } from "./monsters";
-import { ember, tackle, vineWhip, waterGun, thunderbolt, toxic, iceLeaf } from "./moves";
+import { ember, tackle, vineWhip, waterGun, thunderbolt, toxic, iceLeaf, spark, iceBeam, blizzard, bodySlam, flamethrower, surf, solarBeam } from "./moves";
 
 // ─── 1~10층 고정 구성 ─────────────────────────────────────────────────────────────
 
@@ -62,17 +62,92 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["ember", "ember", "thunderbolt", "ember"],
   },
   // 10층은 보스: BOSS 강화 로직(아래 getFloorEnemy)에서 처리
+  11: {
+    monsterId: "voltiny",
+    moves: [tackle, spark],
+    skillOrder: ["spark", "tackle", "spark", "spark"],
+  },
+  12: {
+    monsterId: "frostlet",
+    moves: [tackle, iceBeam],
+    skillOrder: ["ice-beam", "tackle", "ice-beam", "ice-beam"],
+  },
+  13: {
+    monsterId: "fluffin",
+    moves: [tackle, bodySlam],
+    skillOrder: ["tackle", "body-slam", "tackle", "body-slam"],
+  },
+  14: {
+    monsterId: "zapbear",
+    moves: [tackle, spark, thunderbolt],
+    skillOrder: ["spark", "thunderbolt", "spark", "tackle"],
+  },
+  15: {
+    monsterId: "blizzwolf",
+    moves: [tackle, iceBeam, blizzard],
+    skillOrder: ["ice-beam", "blizzard", "ice-beam", "tackle"],
+  },
+  16: {
+    monsterId: "voltiny",
+    moves: [tackle, spark, thunderbolt],
+    skillOrder: ["thunderbolt", "spark", "thunderbolt", "tackle"],
+  },
+  17: {
+    monsterId: "frostlet",
+    moves: [tackle, iceBeam, blizzard],
+    skillOrder: ["blizzard", "ice-beam", "blizzard", "tackle"],
+  },
+  18: {
+    monsterId: "stonepup",
+    moves: [tackle, bodySlam, surf],
+    skillOrder: ["body-slam", "body-slam", "surf", "tackle"],
+  },
+  19: {
+    monsterId: "zapbear",
+    moves: [tackle, thunderbolt, flamethrower],
+    skillOrder: ["thunderbolt", "flamethrower", "thunderbolt", "tackle"],
+  },
+  // 20층은 보스: getFloorEnemy에서 처리
+  21: {
+    monsterId: "burno",
+    moves: [tackle, ember, flamethrower],
+    skillOrder: ["flamethrower", "ember", "flamethrower", "tackle"],
+  },
+  22: {
+    monsterId: "bubblet",
+    moves: [tackle, waterGun, surf],
+    skillOrder: ["surf", "water-gun", "surf", "tackle"],
+  },
+  23: {
+    monsterId: "mossy",
+    moves: [tackle, vineWhip, solarBeam],
+    skillOrder: ["solar-beam", "vine-whip", "solar-beam", "tackle"],
+  },
+  24: {
+    monsterId: "blizzwolf",
+    moves: [tackle, blizzard, iceBeam],
+    skillOrder: ["blizzard", "blizzard", "ice-beam", "tackle"],
+  },
+  25: {
+    monsterId: "zapbear",
+    moves: [tackle, thunderbolt, spark],
+    skillOrder: ["thunderbolt", "thunderbolt", "spark", "tackle"],
+  },
 };
 
 // ─── 층 티어별 랜덤 풀 (11층+) ──────────────────────────────────────────────────
 
-const POOL_TIER_1 = ["flameling", "aquabe", "leafy"];
-const POOL_TIER_2 = ["burno", "bubblet", "mossy"];
-const POOL_ALL    = [...POOL_TIER_1, ...POOL_TIER_2];
+const POOL_TIER_1  = ["flameling", "aquabe", "leafy"];
+const POOL_TIER_2  = ["burno", "bubblet", "mossy"];
+const POOL_TIER_3  = ["voltiny", "frostlet", "fluffin"];
+const POOL_TIER_4  = ["zapbear", "blizzwolf", "stonepup"];
+const POOL_ALL     = [...POOL_TIER_1, ...POOL_TIER_2, ...POOL_TIER_3, ...POOL_TIER_4];
 
 function getPool(floor: number): string[] {
   if (floor <= 13) return POOL_TIER_1;
   if (floor <= 19) return POOL_TIER_2;
+  if (floor <= 29) return [...POOL_TIER_2, ...POOL_TIER_3];
+  if (floor <= 39) return [...POOL_TIER_3, ...POOL_TIER_4];
   return POOL_ALL;
 }
 
@@ -121,7 +196,7 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
     }
   }
 
-  // ── 10층 보스 ──
+  // ── 보스층 고정 구성 ──
   if (floor === 10) {
     const base = monsters.find((m) => m.id === "mossy")!;
     const scaled = scaleToLevel(base, 15);
@@ -132,6 +207,32 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
       maxHp: Math.floor(scaled.maxHp * 1.5),
       attack: Math.floor(scaled.attack * 1.3),
       defense: Math.floor(scaled.defense * 1.3),
+      rewardExp: Math.floor(scaled.rewardExp * 2),
+    };
+  }
+  if (floor === 20) {
+    const base = monsters.find((m) => m.id === "zapbear")!;
+    const scaled = scaleToLevel(base, 25);
+    return {
+      ...scaled,
+      name: "뇌전의 잽베어",
+      moves: [spark, thunderbolt, flamethrower, bodySlam],
+      maxHp: Math.floor(scaled.maxHp * 1.5),
+      attack: Math.floor(scaled.attack * 1.35),
+      defense: Math.floor(scaled.defense * 1.35),
+      rewardExp: Math.floor(scaled.rewardExp * 2),
+    };
+  }
+  if (floor === 30) {
+    const base = monsters.find((m) => m.id === "blizzwolf")!;
+    const scaled = scaleToLevel(base, 35);
+    return {
+      ...scaled,
+      name: "빙하의 블리자울프",
+      moves: [iceBeam, blizzard, bodySlam, surf],
+      maxHp: Math.floor(scaled.maxHp * 1.5),
+      attack: Math.floor(scaled.attack * 1.4),
+      defense: Math.floor(scaled.defense * 1.4),
       rewardExp: Math.floor(scaled.rewardExp * 2),
     };
   }
@@ -170,10 +271,20 @@ export function getFloorEnemySkill(
   turnIndex: number,
   enemyMoves: Move[]
 ): Move | null {
-  // 10층 보스 스킬 순서
+  // 보스층 스킬 순서
   if (floor === 10) {
-    const bossOrder = ["vine-whip", "ice-leaf", "toxic", "vine-whip", "ice-leaf"];
-    const id = bossOrder[turnIndex % bossOrder.length];
+    const order = ["vine-whip", "ice-leaf", "toxic", "vine-whip", "ice-leaf"];
+    const id = order[turnIndex % order.length];
+    return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
+  }
+  if (floor === 20) {
+    const order = ["thunderbolt", "spark", "flamethrower", "thunderbolt", "body-slam"];
+    const id = order[turnIndex % order.length];
+    return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
+  }
+  if (floor === 30) {
+    const order = ["blizzard", "ice-beam", "body-slam", "blizzard", "surf"];
+    const id = order[turnIndex % order.length];
     return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
   }
 

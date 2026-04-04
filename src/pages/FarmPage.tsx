@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, type OwnedMonster } from "../store/playerStore";
-import { MONSTER_IMAGE_MAP } from "../data/monsterImages";
+import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../data/monsterImages";
 import { MATERIALS, POTIONS, getMaterial } from "../data/items";
 
 // ─── 공통 상수 ───────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ function MonsterCard({ monster, selected, onClick, dimmed }: {
             ? "border-zinc-700 bg-zinc-900/40 opacity-50"
             : "border-zinc-700 bg-zinc-900 hover:border-zinc-500 hover:bg-zinc-800"}`}
     >
-      <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.name} className="h-16 w-16 object-contain" />
+      <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.name} className="h-16 w-16 object-contain" style={monsterImgStyle(monster.id)} />
       <div className="text-center">
         <p className="font-bold text-sm text-zinc-100 leading-tight">{monster.nickname ?? monster.name}</p>
         <p className="text-xs text-zinc-500">Lv.{monster.level}</p>

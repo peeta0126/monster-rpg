@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../events";
+import { getCampPosition, setCampPosition } from "../campPositionStore";
 
 export default class BaseCampScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -68,8 +69,9 @@ export default class BaseCampScene extends Phaser.Scene {
     // 임시 포탈 표시
     this.add.rectangle(1100, 250, 90, 90, 0x5dade2);
 
-    // 플레이어
-    this.player = this.physics.add.sprite(200, 200, "player-down");
+    // 플레이어 (마지막 위치에서 재시작)
+    const initPos = getCampPosition();
+    this.player = this.physics.add.sprite(initPos.x, initPos.y, "player-down");
     this.player.setCollideWorldBounds(true);
     this.player.setScale(2);
 
@@ -185,6 +187,7 @@ export default class BaseCampScene extends Phaser.Scene {
       const distForest = Phaser.Math.Distance.Between(this.player.x, this.player.y, FOREST_X, FOREST_Y);
 
       if (distPortal < 80) {
+        setCampPosition(this.player.x, this.player.y);
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
           from: "basecamp",
           portalId: "dungeon-entrance-1",
@@ -192,6 +195,7 @@ export default class BaseCampScene extends Phaser.Scene {
           floor: 1,
         });
       } else if (distForest < 100) {
+        setCampPosition(this.player.x, this.player.y);
         gameEvents.emit(GAME_EVENT.ENTER_FOREST);
       }
     });
@@ -200,6 +204,7 @@ export default class BaseCampScene extends Phaser.Scene {
     keyboard.on("keydown-F", () => {
       const distFarm = Phaser.Math.Distance.Between(this.player.x, this.player.y, FARM_X, FARM_Y);
       if (distFarm < 120) {
+        setCampPosition(this.player.x, this.player.y);
         gameEvents.emit(GAME_EVENT.ENTER_FARM);
       }
     });
