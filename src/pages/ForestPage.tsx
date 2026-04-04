@@ -5,6 +5,7 @@ import { MONSTER_IMAGE_MAP } from "../data/monsterImages";
 import { usePlayerStore } from "../store/playerStore";
 import { RpsIcon, RPS_KO, type RpsChoice } from "../components/rps/RpsIcon";
 import { scaleToLevel } from "../data/floorTable";
+import { MATERIALS, getMaterial } from "../data/items";
 
 // ─── 숲 탐험 상태 머신 ────────────────────────────────────────────────────────────
 
@@ -229,9 +230,19 @@ function RpsSelectButton({
 
 // ─── ForestPage ───────────────────────────────────────────────────────────────────
 
+// 재료 드랍 풀 (탐험 시 랜덤 지급)
+const MATERIAL_DROP_POOL = MATERIALS.map((m) => m.id);
+
+function rollMaterialDrop(): { id: string; count: number } | null {
+  if (Math.random() > 0.7) return null; // 30% 확률로 드랍 없음
+  const id = MATERIAL_DROP_POOL[Math.floor(Math.random() * MATERIAL_DROP_POOL.length)];
+  const count = Math.floor(Math.random() * 2) + 1; // 1~2개
+  return { id, count };
+}
+
 export default function ForestPage() {
   const navigate = useNavigate();
-  const { addCapturedMonster, addToDex } = usePlayerStore();
+  const { addCapturedMonster, addToDexSeen, addToDexCaught, addMaterial } = usePlayerStore();
 
   const [phase, setPhase] = useState<ForestPhase>("enter");
   const [wildMonster, setWildMonster] = useState<ReturnType<typeof pickForestMonster> | null>(null);
@@ -239,8 +250,9 @@ export default function ForestPage() {
   const [computerChoice, setComputerChoice] = useState<RpsChoice | null>(null);
   const [rpsResult, setRpsResult] = useState<RpsResult | null>(null);
   const [catchSuccess, setCatchSuccess] = useState<boolean | null>(null);
-  const [catchPlace, setCatchPlace] = useState<"party" | "storage" | "full" | null>(null);
-  // 가위바위보 공개 애니메이션 (컴퓨터 선택 1초 후 공개)
+  const [catchPlace, setCatchPlace] = useState<"storage" | "full" | null>(null);
+  const [droppedMaterial, setDroppedMaterial] = useState<{ id: string; count: number } | null>(null);
+  // 가위바위보 공개 애니메이션
   const [showComputer, setShowComputer] = useState(false);
 
   // 탐험 시작
@@ -252,21 +264,29 @@ export default function ForestPage() {
     if (phase !== "exploring") return;
     const t = setTimeout(() => {
       const roll = Math.random();
-      if (roll < 0.65) {
-        // 몬스터 출현
+      if (roll < 0.60) {
+        // 몬스터 출현 (+ 재료 드랍 가능)
         const mon = pickForestMonster();
         setWildMonster(mon);
-        addToDex(mon.id); // 도감 등록 (조우)
+        addToDexSeen(mon.id); // 도감: 조우 등록
+        const drop = rollMaterialDrop();
+        if (drop) {
+          addMaterial(drop.id, drop.count);
+          setDroppedMaterial(drop);
+        }
         setPhase("encounter");
-      } else if (roll < 0.80) {
-        // 아이템 (추후)
+      } else if (roll < 0.85) {
+        // 재료 드랍
+        const drop = rollMaterialDrop() ?? { id: MATERIAL_DROP_POOL[0], count: 1 };
+        addMaterial(drop.id, drop.count);
+        setDroppedMaterial(drop);
         setPhase("item_drop");
       } else {
         setPhase("no_encounter");
       }
     }, 1800);
     return () => clearTimeout(t);
-  }, [phase, addToDex]);
+  }, [phase, addToDexSeen, addMaterial]);
 
   // RPS 선택
   const handleRpsSelect = (choice: RpsChoice) => {
@@ -278,15 +298,14 @@ export default function ForestPage() {
     setShowComputer(false);
     setPhase("rps_result");
 
-    // 컴퓨터 선택을 0.8초 후 공개
     setTimeout(() => setShowComputer(true), 800);
 
-    // 1.8초 후 포획 시도
     setTimeout(() => {
       const rate = CATCH_RATE[result];
       const success = Math.random() < rate;
       setCatchSuccess(success);
       if (success && wildMonster) {
+        addToDexCaught(wildMonster.id); // 도감: 포획 등록
         const place = addCapturedMonster(wildMonster);
         setCatchPlace(place);
       }
@@ -303,6 +322,7 @@ export default function ForestPage() {
     setRpsResult(null);
     setCatchSuccess(null);
     setCatchPlace(null);
+    setDroppedMaterial(null);
     setShowComputer(false);
   };
 
@@ -380,9 +400,20 @@ export default function ForestPage() {
       {/* ═══════════════ ITEM DROP ═══════════════ */}
       {phase === "item_drop" && (
         <div className="relative z-10 flex flex-col items-center gap-6 rounded-2xl border border-yellow-900/50 bg-black/55 px-10 py-8 backdrop-blur">
-          <span className="text-4xl">🌿</span>
-          <p className="text-yellow-400 text-lg font-semibold">약초를 발견했다!</p>
-          <p className="text-sm text-zinc-500">재료 시스템은 추후 구현 예정입니다.</p>
+          {droppedMaterial ? (
+            <>
+              <span className="text-4xl">{getMaterial(droppedMaterial.id)?.emoji ?? "🌿"}</span>
+              <p className="text-yellow-400 text-lg font-semibold">
+                {getMaterial(droppedMaterial.id)?.name ?? droppedMaterial.id} ×{droppedMaterial.count} 발견!
+              </p>
+              <p className="text-sm text-zinc-500">농장 → 제작 탭에서 물약을 만들 수 있습니다.</p>
+            </>
+          ) : (
+            <>
+              <span className="text-4xl">🌿</span>
+              <p className="text-yellow-400 text-lg font-semibold">아무것도 없었다...</p>
+            </>
+          )}
           <button
             onClick={resetForest}
             className="rounded-xl border border-yellow-700 bg-yellow-950/60 px-6 py-2 text-yellow-300 hover:bg-yellow-900/70"
@@ -446,6 +477,11 @@ export default function ForestPage() {
             <div>
               <p className="font-bold text-green-300">{wildMonster.name} Lv.{wildMonster.level}</p>
               <p className="text-sm text-zinc-400">가위, 바위, 보 중 선택하세요!</p>
+              {droppedMaterial && (
+                <p className="text-xs text-yellow-400 mt-0.5">
+                  {getMaterial(droppedMaterial.id)?.emoji} {getMaterial(droppedMaterial.id)?.name} ×{droppedMaterial.count} 획득!
+                </p>
+              )}
             </div>
           </div>
 
@@ -515,7 +551,7 @@ export default function ForestPage() {
                     포획 성공! 🎉
                   </p>
                   <p className="text-sm text-zinc-400 mt-1">
-                    {wildMonster?.name}이(가) {catchPlace === "party" ? "파티에 추가되었다!" : catchPlace === "storage" ? "보관함에 저장되었다!" : "보관함이 가득 차서 놓아줬다..."}
+                    {wildMonster?.name}이(가) {catchPlace === "storage" ? "농장(보관함)에 저장되었다!" : "농장이 가득 차서 놓아줬다..."}
                   </p>
                 </>
               ) : (

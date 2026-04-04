@@ -10,6 +10,10 @@ export interface BattleMonster extends Monster {
   status: StatusEffect;
   /** 이번 턴에 행동을 건너뛸지 여부 (빙결/마비 처리 후 설정) */
   skipNextTurn: boolean;
+  /** 공격 버프 배율 (1.0 = 없음) */
+  attackBuffMult: number;
+  /** 공격 버프 남은 턴 (0 = 없음) */
+  attackBuffTurns: number;
 }
 
 /** Monster → BattleMonster 변환 (전투 시작 시 사용) */
@@ -19,6 +23,19 @@ export function createBattleMonster(monster: Monster): BattleMonster {
     currentHp: monster.maxHp,
     status: null,
     skipNextTurn: false,
+    attackBuffMult: 1.0,
+    attackBuffTurns: 0,
+  };
+}
+
+/** OwnedMonster의 currentHp를 유지하면서 BattleMonster로 변환 */
+export function createBattleMonsterFromOwned(monster: Monster & { currentHp: number }): BattleMonster {
+  return {
+    ...monster,
+    status: null,
+    skipNextTurn: false,
+    attackBuffMult: 1.0,
+    attackBuffTurns: 0,
   };
 }
 
@@ -62,8 +79,9 @@ export function calculateDamage(
     return { damage: 0, isHit: true, multiplier };
   }
 
-  // 명세 공식 적용
-  const baseDamage = (attacker.attack * move.power) / defender.defense;
+  // 명세 공식 적용 (공격 버프 반영)
+  const effectiveAttack = attacker.attack * (attacker.attackBuffMult ?? 1.0);
+  const baseDamage = (effectiveAttack * move.power) / defender.defense;
   const damage = Math.max(1, Math.floor(baseDamage * multiplier));
 
   return { damage, isHit: true, multiplier };
