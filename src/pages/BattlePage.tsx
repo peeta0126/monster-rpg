@@ -13,6 +13,7 @@ import {
   checkCatchCondition,
   checkStatusEffects,
   createBattleMonster,
+  createBattleMonsterFromOwned,
   gainExp,
   getAIAction,
   getTypeMultiplier,
@@ -66,7 +67,7 @@ export default function BattlePage() {
   const gameRef = useRef<HTMLDivElement | null>(null);
 
   // ─── playerStore 연동 ───────────────────────────────────────────────────────────
-  const { updateBestFloor, updatePartyMember, addCapturedMonster, addToDex } =
+  const { updateBestFloor, updatePartyMember, addCapturedMonster, addToDexSeen, addToDexCaught } =
     usePlayerStore();
 
   // 마운트 시 파티 스냅샷 (전투 도중 store 변경 무시)
@@ -81,12 +82,7 @@ export default function BattlePage() {
 
   // ─── 전투 상태 ──────────────────────────────────────────────────────────────────
 
-  const [player, setPlayer] = useState<BattleMonster>(() => ({
-    ...initialPlayer,
-    currentHp: initialPlayer.currentHp,
-    status: null,
-    skipNextTurn: false,
-  }));
+  const [player, setPlayer] = useState<BattleMonster>(() => createBattleMonsterFromOwned(initialPlayer));
   const [enemyState, setEnemyState] = useState<BattleMonster>(() => createBattleMonster(initialEnemy));
   const [isProcessing, setIsProcessing] = useState(false);
   const [battleOutcome, setBattleOutcome] = useState<"win" | "lose" | null>(null);
@@ -301,7 +297,7 @@ export default function BattlePage() {
         updatePartyMember({ ...ownedOriginal, ...np, uid: ownedOriginal.uid });
       }
       updateBestFloor(floor);
-      addToDex(ne.id);
+      addToDexSeen(ne.id);
       setPlayer(np);
       setEnemyState(ne);
       finishBattle("win");
@@ -338,12 +334,7 @@ export default function BattlePage() {
     await sendLogAndWait(`${player.name}을(를) 교체한다!`);
 
     // 교체된 몬스터로 상태 전환
-    const nextPlayer: BattleMonster = {
-      ...nextOwned,
-      currentHp: nextOwned.currentHp,
-      status: null,
-      skipNextTurn: false,
-    };
+    const nextPlayer: BattleMonster = createBattleMonsterFromOwned(nextOwned);
     setActivePartyIndex(partyIdx);
     setPlayer(nextPlayer);
     syncHpToPhaser(nextPlayer, enemyState);
@@ -385,12 +376,10 @@ export default function BattlePage() {
     if (res.success) {
       // 포획 성공: playerStore에 추가 + 도감 등록
       const captureResult = addCapturedMonster(enemyState);
-      addToDex(enemyState.id);
-      const captureMsg = captureResult === "party"
-        ? "파티에 추가되었다!"
-        : captureResult === "storage"
-          ? "보관함에 저장되었다!"
-          : "보관함이 가득 차서 놓아줬다...";
+      addToDexCaught(enemyState.id);
+      const captureMsg = captureResult === "storage"
+        ? "보관함에 저장되었다!"
+        : "보관함이 가득 차서 놓아줬다...";
       await sendLogAndWait(captureMsg);
       finishBattle("win");
       setIsProcessing(false);

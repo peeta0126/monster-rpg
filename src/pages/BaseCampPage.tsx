@@ -23,7 +23,7 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 function DexModal({ onClose }: { onClose: () => void }) {
-  const dex = usePlayerStore((s) => s.dex);
+  const dex = usePlayerStore((s) => s.dexSeen);
 
   return (
     <div
