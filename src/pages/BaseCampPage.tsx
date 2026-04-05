@@ -109,10 +109,10 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
       <div className="overflow-y-auto flex-1 p-5 space-y-5">
         {/* 이미지 + 스탯 */}
         <div className="flex gap-5 items-start">
-          <div className="w-28 h-28 flex items-center justify-center bg-white rounded-xl border border-zinc-300 shrink-0">
+          <div className="w-28 h-28 flex items-center justify-center bg-white rounded-xl border border-zinc-200 shrink-0 overflow-hidden">
             <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.name}
               className="w-24 h-24 object-contain"
-              style={seen ? monsterImgStyle(m.id) : { filter: "brightness(0)", opacity: 0.3 }}/>
+              style={seen ? { ...monsterImgStyle(m.id), mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.4 }}/>
           </div>
           {caught && (
             <div className="flex-1 grid grid-cols-2 gap-2">
@@ -153,12 +153,12 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                           ? "border-yellow-600 bg-yellow-950/40 cursor-default"
                           : "border-zinc-700 bg-zinc-900 hover:border-zinc-500 active:scale-95"}`}
                     >
-                      <div className="w-14 h-14 flex items-center justify-center bg-white rounded-lg">
+                      <div className="w-14 h-14 flex items-center justify-center bg-white rounded-lg overflow-hidden">
                         <img
                           src={MONSTER_IMAGE_MAP[cm.id]}
                           alt={isSeen ? cm.name : "???"}
                           className="w-12 h-12 object-contain"
-                          style={isSeen ? monsterImgStyle(cm.id) : { filter: "brightness(0)", opacity: 0.4 }}
+                          style={isSeen ? { ...monsterImgStyle(cm.id), mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.5 }}
                         />
                       </div>
                       <span className={`text-[11px] font-semibold ${isCurrent ? "text-yellow-300" : isSeen ? "text-zinc-200" : "text-zinc-600"}`}>
@@ -328,24 +328,23 @@ function DexModal({ onClose }: { onClose: () => void }) {
                             ? "border-zinc-700 bg-zinc-900/60"
                             : "border-zinc-800 bg-zinc-900/30"}`}
                     >
-                      {caught && (
-                        <span className="self-end text-xs text-emerald-400 font-bold -mb-1">포획</span>
-                      )}
+                      {/* 포획 뱃지 고정 높이 영역 - 없어도 공간 유지 */}
+                      <span className={`self-end text-xs font-bold h-4 leading-none ${caught ? "text-emerald-400" : "invisible"}`}>포획</span>
 
-                      <div className="relative h-20 w-20 flex items-center justify-center bg-white rounded-lg">
+                      <div className="relative h-20 w-20 flex items-center justify-center bg-white rounded-lg overflow-hidden">
                         {seen ? (
                           <img
                             src={MONSTER_IMAGE_MAP[m.id]}
                             alt={m.name}
                             className="h-20 w-20 object-contain"
-                            style={monsterImgStyle(m.id)}
+                            style={{ ...monsterImgStyle(m.id), mixBlendMode: "multiply" }}
                           />
                         ) : (
                           <img
                             src={MONSTER_IMAGE_MAP[m.id]}
                             alt="???"
                             className="h-20 w-20 object-contain"
-                            style={{ filter: "brightness(0)", opacity: 0.4 }}
+                            style={{ filter: "brightness(0)", opacity: 0.5 }}
                           />
                         )}
                       </div>

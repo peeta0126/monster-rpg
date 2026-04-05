@@ -10,13 +10,12 @@ import frostletImg   from "../assets/monsters/frostlet.svg";
 import blizzwolfImg  from "../assets/monsters/blizzwolf.svg";
 import fluffinImg    from "../assets/monsters/fluffin.svg";
 import stonepupImg   from "../assets/monsters/stonepup.svg";
-// 신규 몬스터 - 유저 제공 fakemon 이미지 사용
-import leafyImg      from "../assets/monsters/fakemon6.png";
-import mossevoImg    from "../assets/monsters/fakemon1.png";
-import mossyfinalImg from "../assets/monsters/fakemon4.png";
-import crystafoxImg  from "../assets/monsters/fakemon2.png";
-import frostorbImg   from "../assets/monsters/fakemon3.png";
-import aquavernImg   from "../assets/monsters/fakemon5.png";
+import leafyImg      from "../assets/monsters/leafy.png";
+import mossevoImg    from "../assets/monsters/mossevo.png";
+import mossyfinalImg from "../assets/monsters/mossyfinal.png";
+import crystafoxImg  from "../assets/monsters/crystafox.png";
+import frostorbImg   from "../assets/monsters/frostorb.png";
+import aquavernImg   from "../assets/monsters/aquavern.png";
 
 export const MONSTER_IMAGE_MAP: Record<string, string> = {
   flameling:  flamelingImg,
