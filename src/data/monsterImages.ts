@@ -38,11 +38,8 @@ export const MONSTER_IMAGE_MAP: Record<string, string> = {
   aquavern:   aquavernImg,
 };
 
-/** 흰 배경 PNG 몬스터 - mix-blend-mode: multiply 로 배경 제거 */
-export const MONSTER_BLEND_MULTIPLY = new Set<string>([
-  "flameling", "aquabe", "burno", "bubblet", "mossy",
-  "leafy", "mossevo", "mossyfinal", "crystafox", "frostorb", "aquavern",
-]);
+/** mix-blend-mode: multiply 가 필요한 몬스터 */
+export const MONSTER_BLEND_MULTIPLY = new Set<string>();
 
 /** img 태그에 적용할 style 반환 헬퍼 */
 export function monsterImgStyle(id: string): React.CSSProperties {

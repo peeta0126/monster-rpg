@@ -109,7 +109,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
       <div className="overflow-y-auto flex-1 p-5 space-y-5">
         {/* 이미지 + 스탯 */}
         <div className="flex gap-5 items-start">
-          <div className="w-28 h-28 flex items-center justify-center bg-zinc-900 rounded-xl border border-zinc-800 shrink-0">
+          <div className="w-28 h-28 flex items-center justify-center bg-white rounded-xl border border-zinc-300 shrink-0">
             <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.name}
               className="w-24 h-24 object-contain"
               style={seen ? monsterImgStyle(m.id) : { filter: "brightness(0)", opacity: 0.3 }}/>
@@ -153,7 +153,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                           ? "border-yellow-600 bg-yellow-950/40 cursor-default"
                           : "border-zinc-700 bg-zinc-900 hover:border-zinc-500 active:scale-95"}`}
                     >
-                      <div className="w-14 h-14 flex items-center justify-center">
+                      <div className="w-14 h-14 flex items-center justify-center bg-white rounded-lg">
                         <img
                           src={MONSTER_IMAGE_MAP[cm.id]}
                           alt={isSeen ? cm.name : "???"}
@@ -332,7 +332,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                         <span className="self-end text-xs text-emerald-400 font-bold -mb-1">포획</span>
                       )}
 
-                      <div className="relative h-20 w-20 flex items-center justify-center">
+                      <div className="relative h-20 w-20 flex items-center justify-center bg-white rounded-lg">
                         {seen ? (
                           <img
                             src={MONSTER_IMAGE_MAP[m.id]}
