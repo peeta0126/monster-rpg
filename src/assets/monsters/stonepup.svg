@@ -1,40 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- tail -->
-  <ellipse cx="68" cy="54" rx="9" ry="7" fill="#8A8A9A" transform="rotate(20,68,54)"/>
-  <ellipse cx="68" cy="54" rx="5" ry="4" fill="#AAAABC" transform="rotate(20,68,54)"/>
-  <!-- body rock -->
-  <ellipse cx="42" cy="53" rx="22" ry="17" fill="#7A7A8A"/>
-  <!-- rock cracks on body -->
-  <path d="M32,46 L36,52 L34,58" stroke="#555566" stroke-width="1.5" fill="none"/>
-  <path d="M46,44 L50,50 L48,56" stroke="#555566" stroke-width="1.5" fill="none"/>
-  <!-- belly lighter stone -->
-  <ellipse cx="41" cy="57" rx="13" ry="9" fill="#9A9AAA"/>
-  <!-- head rock -->
-  <ellipse cx="26" cy="36" rx="17" ry="15" fill="#8A8A9A"/>
-  <!-- head cracks -->
-  <path d="M20,30 L24,36" stroke="#606070" stroke-width="1.2" fill="none"/>
-  <path d="M34,28 L36,34" stroke="#606070" stroke-width="1.2" fill="none"/>
-  <!-- ears (rocky) -->
-  <polygon points="16,24 12,10 22,22" fill="#8A8A9A" stroke="#666677" stroke-width="1"/>
-  <polygon points="36,24 40,10 30,22" fill="#8A8A9A" stroke="#666677" stroke-width="1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- rocky ears -->
+  <rect x="1" y="0" width="2" height="1" fill="#888888"/>
+  <rect x="10" y="0" width="2" height="1" fill="#888888"/>
+  <!-- ear inner light -->
+  <rect x="0" y="1" width="1" height="1" fill="#888888"/>
+  <rect x="1" y="1" width="1" height="1" fill="#aaaaaa"/>
+  <rect x="2" y="1" width="1" height="1" fill="#888888"/>
+  <rect x="10" y="1" width="1" height="1" fill="#888888"/>
+  <rect x="11" y="1" width="1" height="1" fill="#aaaaaa"/>
+  <rect x="12" y="1" width="1" height="1" fill="#888888"/>
+  <!-- ear base -->
+  <rect x="0" y="2" width="1" height="1" fill="#888888"/>
+  <rect x="1" y="2" width="1" height="1" fill="#aaaaaa"/>
+  <rect x="2" y="2" width="1" height="1" fill="#888888"/>
+  <rect x="10" y="2" width="1" height="1" fill="#888888"/>
+  <rect x="11" y="2" width="1" height="1" fill="#aaaaaa"/>
+  <rect x="12" y="2" width="1" height="1" fill="#888888"/>
+  <!-- head connect + rock crack -->
+  <rect x="0" y="3" width="2" height="1" fill="#888888"/>
+  <rect x="3" y="3" width="7" height="1" fill="#888888"/>
+  <rect x="11" y="3" width="2" height="1" fill="#888888"/>
+  <!-- head -->
+  <rect x="2" y="4" width="10" height="1" fill="#888888"/>
   <!-- eyes -->
-  <circle cx="21" cy="33" r="5" fill="white"/>
-  <circle cx="33" cy="33" r="5" fill="white"/>
-  <circle cx="21.5" cy="34" r="2.5" fill="#333"/>
-  <circle cx="33.5" cy="34" r="2.5" fill="#333"/>
-  <circle cx="22.2" cy="33.2" r="1" fill="white"/>
-  <circle cx="34.2" cy="33.2" r="1" fill="white"/>
+  <rect x="2" y="5" width="1" height="1" fill="#888888"/>
+  <rect x="3" y="5" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="4" y="5" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="5" y="5" width="4" height="1" fill="#888888"/>
+  <rect x="9" y="5" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="10" y="5" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="11" y="5" width="1" height="1" fill="#888888"/>
+  <!-- eyes row 2 -->
+  <rect x="2" y="6" width="1" height="1" fill="#888888"/>
+  <rect x="3" y="6" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="4" y="6" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="5" y="6" width="4" height="1" fill="#888888"/>
+  <rect x="9" y="6" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="10" y="6" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="11" y="6" width="1" height="1" fill="#888888"/>
+  <!-- snout area -->
+  <rect x="2" y="7" width="3" height="1" fill="#888888"/>
+  <rect x="5" y="7" width="1" height="1" fill="#aaaaaa"/>
+  <rect x="6" y="7" width="2" height="1" fill="#888888"/>
+  <rect x="8" y="7" width="1" height="1" fill="#aaaaaa"/>
+  <rect x="9" y="7" width="3" height="1" fill="#888888"/>
   <!-- nose -->
-  <ellipse cx="27" cy="41" rx="5" ry="3.5" fill="#AAAABC"/>
-  <ellipse cx="27" cy="39.5" rx="2.5" ry="2" fill="#555"/>
-  <!-- mouth -->
-  <path d="M23,44 Q27,47 31,44" stroke="#666677" stroke-width="1.2" fill="none"/>
-  <!-- stubby rock legs -->
-  <ellipse cx="24" cy="68" rx="9" ry="6" fill="#7A7A8A"/>
-  <ellipse cx="40" cy="70" rx="9" ry="5" fill="#7A7A8A"/>
-  <ellipse cx="54" cy="68" rx="8" ry="5" fill="#6A6A7A"/>
-  <!-- small rocks orbiting -->
-  <circle cx="10" cy="30" r="3.5" fill="#8A8A9A" stroke="#666" stroke-width="0.8"/>
-  <circle cx="8" cy="50" r="2.5" fill="#9A9AAA" stroke="#777" stroke-width="0.8"/>
-  <circle cx="65" cy="30" r="3" fill="#8A8A9A" stroke="#666" stroke-width="0.8"/>
+  <rect x="2" y="8" width="1" height="1" fill="#888888"/>
+  <rect x="4" y="8" width="1" height="1" fill="#888888"/>
+  <rect x="5" y="8" width="2" height="1" fill="#aaaaaa"/>
+  <rect x="7" y="8" width="1" height="1" fill="#555555"/>
+  <rect x="8" y="8" width="2" height="1" fill="#aaaaaa"/>
+  <rect x="10" y="8" width="1" height="1" fill="#888888"/>
+  <rect x="13" y="8" width="1" height="1" fill="#888888"/>
+  <!-- side paws -->
+  <rect x="0" y="9" width="1" height="1" fill="#888888"/>
+  <rect x="4" y="9" width="7" height="1" fill="#888888"/>
+  <rect x="14" y="9" width="1" height="1" fill="#888888"/>
+  <!-- body -->
+  <rect x="4" y="10" width="7" height="1" fill="#888888"/>
+  <!-- body with crack texture -->
+  <rect x="4" y="11" width="1" height="1" fill="#555555"/>
+  <rect x="5" y="11" width="5" height="1" fill="#888888"/>
+  <rect x="10" y="11" width="1" height="1" fill="#555555"/>
+  <!-- body -->
+  <rect x="4" y="12" width="7" height="1" fill="#888888"/>
+  <!-- rock texture row -->
+  <rect x="4" y="13" width="1" height="1" fill="#555555"/>
+  <rect x="5" y="13" width="1" height="1" fill="#888888"/>
+  <rect x="6" y="13" width="1" height="1" fill="#555555"/>
+  <rect x="7" y="13" width="1" height="1" fill="#888888"/>
+  <rect x="8" y="13" width="1" height="1" fill="#555555"/>
+  <rect x="9" y="13" width="1" height="1" fill="#888888"/>
+  <rect x="10" y="13" width="1" height="1" fill="#555555"/>
+  <!-- feet -->
+  <rect x="3" y="14" width="3" height="1" fill="#888888"/>
+  <rect x="8" y="14" width="3" height="1" fill="#888888"/>
+  <!-- feet bottom -->
+  <rect x="2" y="15" width="2" height="1" fill="#888888"/>
+  <rect x="10" y="15" width="2" height="1" fill="#888888"/>
 </svg>

@@ -202,15 +202,15 @@ export default class BattleScene extends Phaser.Scene {
     ceiling.fillStyle(0x281a0c, 1);
     ceiling.fillRect(0, 28, W, 12);
 
-    // ── 배경 중앙 아치/통로 암시 (원근감) ──
+    // ── 배경 중앙 아치/통로 (픽셀아트: 계단형 아치) ──
     const arch = this.add.graphics().setDepth(1);
     arch.fillStyle(0x1a1008, 1);
+    // 계단형 아치 (픽셀아트 스타일)
     arch.fillRect(W / 2 - 70, 40, 140, 270);
-    // 아치 상단 라운드
-    arch.fillStyle(0x1a1008, 1);
-    arch.fillCircle(W / 2, 110, 70);
-    // 아치 테두리 하이라이트
-    arch.lineStyle(2, 0x5a4028, 0.7);
+    arch.fillRect(W / 2 - 90, 60, 180, 250);
+    arch.fillRect(W / 2 - 80, 48, 160, 8);
+    // 아치 테두리
+    arch.lineStyle(2, 0x5a4028, 0.8);
     arch.strokeRect(W / 2 - 70, 40, 140, 270);
 
     // ── 횃불 앰비언트 빛 (벽에 퍼지는 따뜻한 빛) ──
@@ -255,11 +255,11 @@ export default class BattleScene extends Phaser.Scene {
     pillar.strokeRect(0, 0, 18, BATTLE_H);
     pillar.strokeRect(W - 18, 0, 18, BATTLE_H);
 
-    // ── 그림자 타원 (몬스터 발판) ──
+    // ── 발판 그림자 (픽셀아트: 사각형) ──
     const shadow = this.add.graphics().setDepth(3);
     shadow.fillStyle(0x0a0804, 0.55);
-    shadow.fillEllipse(ENEMY_X, FLOOR_Y + 8, 130, 20);
-    shadow.fillEllipse(PLAYER_X, FLOOR_Y + 8, 130, 20);
+    shadow.fillRect(ENEMY_X - 65, FLOOR_Y + 2, 130, 14);
+    shadow.fillRect(PLAYER_X - 65, FLOOR_Y + 2, 130, 14);
 
     // ── 횃불 ──
     this.buildTorch(115, FLOOR_Y - 52, palette);
@@ -420,12 +420,12 @@ export default class BattleScene extends Phaser.Scene {
     const px = cx - pw / 2;
     const py = cy - ph / 2;
 
-    // 패널 배경
+    // 패널 배경 (픽셀아트: sharp corner)
     const bg = this.add.graphics().setDepth(8);
-    bg.fillStyle(0x0a0804, 0.82);
-    bg.fillRoundedRect(px, py, pw, ph, 7);
-    bg.lineStyle(1, isEnemy ? 0x7a3020 : 0x2a5a7a, 0.8);
-    bg.strokeRoundedRect(px, py, pw, ph, 7);
+    bg.fillStyle(0x0a0804, 0.88);
+    bg.fillRect(px, py, pw, ph);
+    bg.lineStyle(2, isEnemy ? 0x7a3020 : 0x2a5a7a, 1);
+    bg.strokeRect(px, py, pw, ph);
 
     // 이름 + 레벨 텍스트
     if (isEnemy) {
@@ -478,9 +478,9 @@ export default class BattleScene extends Phaser.Scene {
     // 알림 박스 (기본 숨김)
     this.notifBox = this.add.graphics().setDepth(20);
     this.notifBox.fillStyle(0x1e1610, 0.96);
-    this.notifBox.fillRoundedRect(20, LOG_Y + 14, W - 40, 104, 6);
-    this.notifBox.lineStyle(1, 0x6a4e28, 0.8);
-    this.notifBox.strokeRoundedRect(20, LOG_Y + 14, W - 40, 104, 6);
+    this.notifBox.fillRect(20, LOG_Y + 14, W - 40, 104);
+    this.notifBox.lineStyle(2, 0x6a4e28, 0.9);
+    this.notifBox.strokeRect(20, LOG_Y + 14, W - 40, 104);
     this.notifBox.setVisible(false);
 
     this.notifText = this.add.text(48, LOG_Y + 34, "", {
@@ -649,7 +649,9 @@ export default class BattleScene extends Phaser.Scene {
         if (this.textures.exists(key)) {
           this.playerSprite.setTexture(key);
         }
-        // displaySize를 항상 고정 크기로 재설정 (새 텍스처 원본 크기와 무관하게)
+        // setTexture 후 반드시 origin + displaySize 재설정
+        // (Phaser가 새 텍스처의 natural size로 리셋하기 때문)
+        this.playerSprite.setOrigin(0.5, 0.5);
         this.playerSprite.setDisplaySize(MONSTER_SIZE, MONSTER_SIZE);
         this.playerSprite.setY(MONSTER_Y);
 
@@ -659,6 +661,8 @@ export default class BattleScene extends Phaser.Scene {
           duration: 220,
           ease: "Power2.Out",
           onComplete: () => {
+            // fade-in 완료 후에도 한 번 더 고정 (tween이 scale 건드릴 경우 대비)
+            this.playerSprite.setDisplaySize(MONSTER_SIZE, MONSTER_SIZE);
             this.addFloat(this.playerSprite, MONSTER_Y, 5, 1950);
           },
         });
@@ -687,14 +691,15 @@ export default class BattleScene extends Phaser.Scene {
     g.clear();
     const r = Math.max(0, Math.min(1, ratio));
     const col = r > 0.5 ? 0x44ee66 : r > 0.2 ? 0xeecc22 : 0xff4444;
+    // 픽셀아트: sharp rect
     g.fillStyle(0x1a1408, 1);
-    g.fillRoundedRect(x, y, w, h, 3);
+    g.fillRect(x, y, w, h);
     if (r > 0) {
       g.fillStyle(col, 1);
-      g.fillRoundedRect(x, y, Math.floor(w * r), h, 3);
+      g.fillRect(x, y, Math.floor(w * r), h);
     }
-    g.lineStyle(1, 0x3a2818, 0.6);
-    g.strokeRoundedRect(x, y, w, h, 3);
+    g.lineStyle(1, 0x3a2818, 0.8);
+    g.strokeRect(x, y, w, h);
   }
 
   private statusLabel(s: StatusEffect): string {

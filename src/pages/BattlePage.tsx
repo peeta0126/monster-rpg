@@ -627,14 +627,15 @@ export default function BattlePage() {
                     </button>
                   </div>
 
-                  {/* 기술 2×2 — 항상 4슬롯 */}
-                  <div className="grid grid-cols-2 gap-1.5 flex-1">
+                  {/* 기술 2×2 — 항상 4슬롯, 높이 균일 */}
+                  <div className="grid grid-cols-2 grid-rows-2 gap-1.5 flex-1">
                     {[0, 1, 2, 3].map(i => {
                       const move = player.moves[i];
                       if (!move) {
                         return (
                           <div key={`empty-${i}`}
-                            className="rounded-lg border border-zinc-800/40 bg-zinc-900/10 flex items-center justify-center">
+                            className="border border-zinc-800/40 bg-zinc-900/10 flex items-center justify-center min-h-[52px]"
+                            style={{ borderRadius: 0 }}>
                             <span className="text-zinc-800 text-xs">—</span>
                           </div>
                         );
@@ -644,7 +645,8 @@ export default function BattlePage() {
                         <button key={move.id}
                           onClick={() => handleMoveClick(move)}
                           disabled={isProcessing}
-                          className={`rounded-lg border px-2 py-1.5 text-left transition disabled:opacity-30 ${typeClass(move.type)}`}
+                          style={{ borderRadius: 0 }}
+                          className={`border px-2 py-1.5 text-left transition disabled:opacity-30 min-h-[52px] ${typeClass(move.type)}`}
                         >
                           <div className="flex items-center justify-between gap-1">
                             <span className="font-semibold text-xs leading-tight">{move.name}</span>
@@ -679,18 +681,19 @@ export default function BattlePage() {
 
       {/* 승리 오버레이 */}
       {showResultUI && battleOutcome === "win" && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm">
-          <div className="text-center px-8 py-10 rounded-2xl border border-green-800/60 bg-zinc-950/90 shadow-2xl max-w-sm w-full mx-4">
-            <p className="text-5xl font-bold text-green-400 mb-2 drop-shadow-[0_0_24px_rgba(74,222,128,0.6)]">승리!</p>
-            <p className="text-base text-zinc-400 mb-6">다음 스테이지로 넘어가시겠습니까?</p>
-            <div className="flex flex-col gap-3">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65">
+          <div className="text-center px-8 py-10 border-2 border-green-600 bg-zinc-950/95 shadow-2xl max-w-sm w-full mx-4"
+            style={{ fontFamily: "'Press Start 2P', monospace" }}>
+            <p className="text-3xl font-bold text-green-400 mb-4">WIN!</p>
+            <p className="text-xs text-zinc-400 mb-6 leading-relaxed">다음 스테이지로?</p>
+            <div className="flex flex-col gap-2">
               <button onClick={() => navigate("/battle", { state: { floor: floor + 1, isCatchZone: false } })}
-                className="w-full rounded-xl bg-green-800/70 border border-green-600 py-3 text-base font-bold text-green-200 hover:bg-green-700/70 transition active:scale-95">
-                다음 스테이지 ({floor + 1}층)
+                className="w-full border-2 border-green-600 bg-green-900/70 py-3 text-xs font-bold text-green-200 hover:bg-green-800/70 transition active:scale-95">
+                &gt; 다음층 ({floor + 1}F)
               </button>
               <button onClick={() => navigate("/")}
-                className="w-full rounded-xl bg-zinc-800/80 border border-zinc-600 py-3 text-base font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95">
-                베이스캠프로
+                className="w-full border-2 border-zinc-600 bg-zinc-800/80 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95">
+                &gt; 베이스캠프
               </button>
             </div>
           </div>
@@ -699,18 +702,19 @@ export default function BattlePage() {
 
       {/* 패배 오버레이 */}
       {showResultUI && battleOutcome === "lose" && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm">
-          <div className="text-center px-8 py-10 rounded-2xl border border-red-800/60 bg-zinc-950/90 shadow-2xl max-w-sm w-full mx-4">
-            <p className="text-5xl font-bold text-red-400 mb-2 drop-shadow-[0_0_24px_rgba(248,113,113,0.5)]">패배...</p>
-            <p className="text-base text-zinc-400 mb-6">{floor}층을 재도전하시겠습니까?</p>
-            <div className="flex flex-col gap-3">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65">
+          <div className="text-center px-8 py-10 border-2 border-red-700 bg-zinc-950/95 shadow-2xl max-w-sm w-full mx-4"
+            style={{ fontFamily: "'Press Start 2P', monospace" }}>
+            <p className="text-3xl font-bold text-red-400 mb-4">LOSE...</p>
+            <p className="text-xs text-zinc-400 mb-6 leading-relaxed">{floor}층 재도전?</p>
+            <div className="flex flex-col gap-2">
               <button onClick={() => navigate("/battle", { state: { floor, isCatchZone } })}
-                className="w-full rounded-xl bg-red-900/70 border border-red-700 py-3 text-base font-bold text-red-200 hover:bg-red-800/70 transition active:scale-95">
-                재도전 ({floor}층)
+                className="w-full border-2 border-red-700 bg-red-900/70 py-3 text-xs font-bold text-red-200 hover:bg-red-800/70 transition active:scale-95">
+                &gt; 재도전 ({floor}F)
               </button>
               <button onClick={() => navigate("/")}
-                className="w-full rounded-xl bg-zinc-800/80 border border-zinc-600 py-3 text-base font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95">
-                베이스캠프로
+                className="w-full border-2 border-zinc-600 bg-zinc-800/80 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95">
+                &gt; 베이스캠프
               </button>
             </div>
           </div>

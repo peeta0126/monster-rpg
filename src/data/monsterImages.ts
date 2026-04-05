@@ -35,8 +35,9 @@ export const MONSTER_BLEND_MULTIPLY = new Set<string>(["leafy"]);
 
 /** img 태그에 적용할 style 반환 헬퍼 */
 export function monsterImgStyle(id: string): React.CSSProperties {
+  const base: React.CSSProperties = { imageRendering: "pixelated" };
   if (MONSTER_BLEND_MULTIPLY.has(id)) {
-    return { mixBlendMode: "multiply" as const };
+    return { ...base, mixBlendMode: "multiply" as const };
   }
-  return {};
+  return base;
 }

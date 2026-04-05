@@ -1,35 +1,85 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- ears -->
-  <circle cx="22" cy="22" r="9" fill="#3A3A4A"/>
-  <circle cx="58" cy="22" r="9" fill="#3A3A4A"/>
-  <circle cx="22" cy="22" r="5" fill="#FFD700"/>
-  <circle cx="58" cy="22" r="5" fill="#FFD700"/>
-  <!-- body -->
-  <ellipse cx="40" cy="52" rx="24" ry="22" fill="#3A3A4A"/>
-  <!-- lightning stripes -->
-  <polygon points="32,34 38,44 34,44 40,56 26,44 30,44" fill="#FFD700"/>
-  <polygon points="46,36 50,46 47,46 52,55 40,46 43,46" fill="#FFD700" opacity="0.7"/>
-  <!-- belly -->
-  <ellipse cx="40" cy="56" rx="14" ry="12" fill="#5A5A6E"/>
-  <!-- eyes -->
-  <circle cx="32" cy="46" r="5" fill="white"/>
-  <circle cx="48" cy="46" r="5" fill="white"/>
-  <circle cx="33" cy="47" r="2.5" fill="#222"/>
-  <circle cx="49" cy="47" r="2.5" fill="#222"/>
-  <circle cx="33.5" cy="46" r="1" fill="white"/>
-  <circle cx="49.5" cy="46" r="1" fill="white"/>
-  <!-- snout -->
-  <ellipse cx="40" cy="53" rx="7" ry="5" fill="#555565"/>
-  <ellipse cx="40" cy="50" rx="3.5" ry="2.5" fill="#333"/>
-  <!-- arms -->
-  <ellipse cx="16" cy="54" rx="7" ry="10" fill="#3A3A4A" transform="rotate(-15,16,54)"/>
-  <ellipse cx="64" cy="54" rx="7" ry="10" fill="#3A3A4A" transform="rotate(15,64,54)"/>
-  <!-- lightning on arms -->
-  <line x1="13" y1="50" x2="18" y2="58" stroke="#FFD700" stroke-width="1.5"/>
-  <line x1="67" y1="50" x2="62" y2="58" stroke="#FFD700" stroke-width="1.5"/>
-  <!-- feet -->
-  <ellipse cx="30" cy="73" rx="10" ry="5" fill="#3A3A4A"/>
-  <ellipse cx="50" cy="73" rx="10" ry="5" fill="#3A3A4A"/>
-  <!-- electric aura -->
-  <circle cx="40" cy="45" r="27" fill="none" stroke="#FFD700" stroke-width="1" stroke-dasharray="4,6" opacity="0.4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- row 0: ears outer -->
+  <rect x="0" y="0" width="2" height="1" fill="#3A3A4A"/>
+  <rect x="12" y="0" width="2" height="1" fill="#3A3A4A"/>
+  <!-- row 1: ears with lightning yellow -->
+  <rect x="0" y="1" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="1" y="1" width="1" height="1" fill="#FFD700"/>
+  <rect x="2" y="1" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="11" y="1" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="12" y="1" width="1" height="1" fill="#FFD700"/>
+  <rect x="13" y="1" width="1" height="1" fill="#3A3A4A"/>
+  <!-- row 2: ears same -->
+  <rect x="0" y="2" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="1" y="2" width="1" height="1" fill="#FFD700"/>
+  <rect x="2" y="2" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="11" y="2" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="12" y="2" width="1" height="1" fill="#FFD700"/>
+  <rect x="13" y="2" width="1" height="1" fill="#3A3A4A"/>
+  <!-- row 3: ear base + head connect -->
+  <rect x="0" y="3" width="2" height="1" fill="#3A3A4A"/>
+  <rect x="3" y="3" width="8" height="1" fill="#3A3A4A"/>
+  <rect x="12" y="3" width="2" height="1" fill="#3A3A4A"/>
+  <!-- row 4: head top -->
+  <rect x="2" y="4" width="10" height="1" fill="#3A3A4A"/>
+  <!-- row 5: eyes -->
+  <rect x="2" y="5" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="3" y="5" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="4" y="5" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="5" y="5" width="2" height="1" fill="#3A3A4A"/>
+  <rect x="7" y="5" width="1" height="1" fill="#5A5A6E"/>
+  <rect x="8" y="5" width="2" height="1" fill="#3A3A4A"/>
+  <rect x="10" y="5" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="11" y="5" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="12" y="5" width="1" height="1" fill="#3A3A4A"/>
+  <!-- row 6: eyes + snout -->
+  <rect x="2" y="6" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="3" y="6" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="4" y="6" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="5" y="6" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="6" y="6" width="3" height="1" fill="#5A5A6E"/>
+  <rect x="9" y="6" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="10" y="6" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="11" y="6" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="12" y="6" width="1" height="1" fill="#3A3A4A"/>
+  <!-- row 7: snout/belly -->
+  <rect x="2" y="7" width="3" height="1" fill="#3A3A4A"/>
+  <rect x="5" y="7" width="5" height="1" fill="#5A5A6E"/>
+  <rect x="10" y="7" width="3" height="1" fill="#3A3A4A"/>
+  <!-- row 8: nose + lightning stripes -->
+  <rect x="0" y="8" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="4" y="8" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="5" y="8" width="1" height="1" fill="#5A5A6E"/>
+  <rect x="6" y="8" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="7" y="8" width="1" height="1" fill="#5A5A6E"/>
+  <rect x="8" y="8" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="9" y="8" width="1" height="1" fill="#5A5A6E"/>
+  <rect x="10" y="8" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="14" y="8" width="1" height="1" fill="#3A3A4A"/>
+  <!-- row 9: body -->
+  <rect x="4" y="9" width="7" height="1" fill="#3A3A4A"/>
+  <!-- row 10: arms + body -->
+  <rect x="1" y="10" width="2" height="1" fill="#3A3A4A"/>
+  <rect x="4" y="10" width="7" height="1" fill="#3A3A4A"/>
+  <rect x="12" y="10" width="2" height="1" fill="#3A3A4A"/>
+  <!-- row 11: arms extended + body -->
+  <rect x="0" y="11" width="2" height="1" fill="#3A3A4A"/>
+  <rect x="4" y="11" width="7" height="1" fill="#3A3A4A"/>
+  <rect x="13" y="11" width="2" height="1" fill="#3A3A4A"/>
+  <!-- row 12: body lower -->
+  <rect x="4" y="12" width="7" height="1" fill="#3A3A4A"/>
+  <!-- row 13: body bottom + lightning marks -->
+  <rect x="4" y="13" width="1" height="1" fill="#FFD700"/>
+  <rect x="5" y="13" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="6" y="13" width="1" height="1" fill="#FFD700"/>
+  <rect x="7" y="13" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="8" y="13" width="1" height="1" fill="#FFD700"/>
+  <rect x="9" y="13" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="10" y="13" width="1" height="1" fill="#FFD700"/>
+  <!-- row 14: feet -->
+  <rect x="4" y="14" width="2" height="1" fill="#3A3A4A"/>
+  <rect x="8" y="14" width="2" height="1" fill="#3A3A4A"/>
+  <!-- row 15: feet bottom -->
+  <rect x="4" y="15" width="1" height="1" fill="#3A3A4A"/>
+  <rect x="9" y="15" width="1" height="1" fill="#3A3A4A"/>
 </svg>

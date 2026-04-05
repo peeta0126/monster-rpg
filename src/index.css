@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+/* ── 픽셀 아트 전역 설정 ───────────────────────────────────────── */
+:root {
+  --pixel-font: 'Press Start 2P', monospace;
+}
+
+/* 게임 내 몬스터/아이템 이미지 → 픽셀아트 렌더링 */
+.pixel-img,
+img[class*="monster"],
+img[class*="pixel"] {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Phaser 캔버스 픽셀아트 */
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 @keyframes float-player {
   0% {
     transform: translateY(0px);

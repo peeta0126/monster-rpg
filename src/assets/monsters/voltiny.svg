@@ -1,34 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-  <!-- ears/spikes -->
-  <polygon points="22,34 14,14 30,26" fill="#FFD700" stroke="#FFA500" stroke-width="1.5"/>
-  <polygon points="58,34 66,14 50,26" fill="#FFD700" stroke="#FFA500" stroke-width="1.5"/>
-  <polygon points="22,34 14,14 30,26" fill="#FFEB00" opacity="0.5"/>
-  <!-- body -->
-  <ellipse cx="40" cy="50" rx="22" ry="20" fill="#FFD700"/>
-  <!-- belly -->
-  <ellipse cx="40" cy="53" rx="13" ry="11" fill="#FFF0A0"/>
-  <!-- lightning bolt on belly -->
-  <polygon points="38,43 44,51 40,51 46,61 34,51 38,51" fill="#FF8C00"/>
-  <!-- eyes -->
-  <circle cx="32" cy="46" r="4" fill="white"/>
-  <circle cx="48" cy="46" r="4" fill="white"/>
-  <circle cx="33" cy="47" r="2" fill="#222"/>
-  <circle cx="49" cy="47" r="2" fill="#222"/>
-  <circle cx="33.5" cy="46" r="0.8" fill="white"/>
-  <circle cx="49.5" cy="46" r="0.8" fill="white"/>
-  <!-- cheek sparks -->
-  <ellipse cx="27" cy="52" rx="4" ry="3" fill="#FFA500" opacity="0.7"/>
-  <ellipse cx="53" cy="52" rx="4" ry="3" fill="#FFA500" opacity="0.7"/>
-  <!-- small spark lines on cheeks -->
-  <line x1="24" y1="50" x2="22" y2="48" stroke="#FF8C00" stroke-width="1.2"/>
-  <line x1="24" y1="52" x2="21" y2="52" stroke="#FF8C00" stroke-width="1.2"/>
-  <line x1="56" y1="50" x2="58" y2="48" stroke="#FF8C00" stroke-width="1.2"/>
-  <line x1="56" y1="52" x2="59" y2="52" stroke="#FF8C00" stroke-width="1.2"/>
-  <!-- mouth -->
-  <path d="M36,56 Q40,59 44,56" stroke="#CC8800" stroke-width="1.5" fill="none"/>
-  <!-- feet -->
-  <ellipse cx="32" cy="70" rx="9" ry="5" fill="#FFC400"/>
-  <ellipse cx="48" cy="70" rx="9" ry="5" fill="#FFC400"/>
-  <!-- tail lightning -->
-  <polyline points="60,55 66,50 62,46 68,42" stroke="#FFD700" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- row 0: ear tips -->
+  <rect x="4" y="0" width="1" height="1" fill="#FFD700"/>
+  <rect x="10" y="0" width="1" height="1" fill="#FFD700"/>
+  <!-- row 1: ears -->
+  <rect x="3" y="1" width="3" height="1" fill="#FFD700"/>
+  <rect x="9" y="1" width="3" height="1" fill="#FFD700"/>
+  <!-- row 2: ears -->
+  <rect x="3" y="2" width="3" height="1" fill="#FFD700"/>
+  <rect x="9" y="2" width="3" height="1" fill="#FFD700"/>
+  <!-- row 3: ear base + head connect -->
+  <rect x="4" y="3" width="1" height="1" fill="#FFD700"/>
+  <rect x="6" y="3" width="3" height="1" fill="#FFD700"/>
+  <rect x="10" y="3" width="1" height="1" fill="#FFD700"/>
+  <!-- row 4: head top -->
+  <rect x="2" y="4" width="11" height="1" fill="#FFD700"/>
+  <!-- row 5: eyes row -->
+  <rect x="1" y="5" width="2" height="1" fill="#FFD700"/>
+  <rect x="3" y="5" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="4" y="5" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="5" y="5" width="5" height="1" fill="#FFD700"/>
+  <rect x="10" y="5" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="11" y="5" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="12" y="5" width="2" height="1" fill="#FFD700"/>
+  <!-- row 6: eyes row 2 -->
+  <rect x="1" y="6" width="2" height="1" fill="#FFD700"/>
+  <rect x="3" y="6" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="4" y="6" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="5" y="6" width="5" height="1" fill="#FFD700"/>
+  <rect x="10" y="6" width="1" height="1" fill="#1a1a1a"/>
+  <rect x="11" y="6" width="1" height="1" fill="#FFFFFF"/>
+  <rect x="12" y="6" width="2" height="1" fill="#FFD700"/>
+  <!-- row 7: cheeks (orange sparks) -->
+  <rect x="1" y="7" width="4" height="1" fill="#FFD700"/>
+  <rect x="5" y="7" width="1" height="1" fill="#FF8C00"/>
+  <rect x="6" y="7" width="3" height="1" fill="#FFD700"/>
+  <rect x="9" y="7" width="1" height="1" fill="#FF8C00"/>
+  <rect x="10" y="7" width="4" height="1" fill="#FFD700"/>
+  <!-- row 8: belly top -->
+  <rect x="2" y="8" width="2" height="1" fill="#FFD700"/>
+  <rect x="4" y="8" width="7" height="1" fill="#FFF0A0"/>
+  <rect x="11" y="8" width="2" height="1" fill="#FFD700"/>
+  <!-- row 9: lightning bolt belly -->
+  <rect x="3" y="9" width="1" height="1" fill="#FFD700"/>
+  <rect x="4" y="9" width="2" height="1" fill="#FFF0A0"/>
+  <rect x="6" y="9" width="1" height="1" fill="#FF8C00"/>
+  <rect x="7" y="9" width="2" height="1" fill="#FFF0A0"/>
+  <rect x="9" y="9" width="1" height="1" fill="#FF8C00"/>
+  <rect x="10" y="9" width="2" height="1" fill="#FFF0A0"/>
+  <rect x="12" y="9" width="1" height="1" fill="#FFD700"/>
+  <!-- row 10: lightning -->
+  <rect x="3" y="10" width="1" height="1" fill="#FFD700"/>
+  <rect x="4" y="10" width="3" height="1" fill="#FFF0A0"/>
+  <rect x="7" y="10" width="1" height="1" fill="#FF8C00"/>
+  <rect x="8" y="10" width="4" height="1" fill="#FFF0A0"/>
+  <rect x="12" y="10" width="1" height="1" fill="#FFD700"/>
+  <!-- row 11: belly bottom -->
+  <rect x="3" y="11" width="1" height="1" fill="#FFD700"/>
+  <rect x="4" y="11" width="8" height="1" fill="#FFF0A0"/>
+  <rect x="12" y="11" width="1" height="1" fill="#FFD700"/>
+  <!-- row 12: body -->
+  <rect x="4" y="12" width="8" height="1" fill="#FFD700"/>
+  <!-- row 13: body -->
+  <rect x="4" y="13" width="8" height="1" fill="#FFD700"/>
+  <!-- row 14: feet -->
+  <rect x="3" y="14" width="3" height="1" fill="#FFC400"/>
+  <rect x="10" y="14" width="3" height="1" fill="#FFC400"/>
+  <!-- row 15: feet bottom -->
+  <rect x="2" y="15" width="2" height="1" fill="#FFC400"/>
+  <rect x="12" y="15" width="2" height="1" fill="#FFC400"/>
 </svg>
