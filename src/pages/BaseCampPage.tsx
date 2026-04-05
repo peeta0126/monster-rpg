@@ -130,26 +130,28 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
         {chain && (
           <div className="bg-zinc-900/60 rounded-xl border border-zinc-800 p-4">
             <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-3">진화 계열</p>
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-1">
               {chain.map((cm, i) => {
                 const isCurrent = cm.id === monsterId;
                 const isSeen    = dexSeen.includes(cm.id);
+                // 이전 몬스터의 evolvesAtLevel = 이 화살표에 표시할 레벨
+                const evoLevel  = i > 0 ? chain[i - 1].evolvesAtLevel : undefined;
                 return (
-                  <div key={cm.id} className="flex items-center gap-2">
+                  <div key={cm.id} className="flex items-center gap-1">
                     {i > 0 && (
-                      <div className="flex flex-col items-center">
-                        <span className="text-yellow-500 text-base">→</span>
-                        {cm.evolvesAtLevel && (
-                          <span className="text-[9px] text-yellow-700">Lv.{cm.evolvesAtLevel - (chain[i-1].evolvesAtLevel ?? 0) > 0 ? cm.evolvesFrom ? monsters.find(x=>x.id===cm.evolvesFrom)?.evolvesAtLevel ?? cm.evolvesAtLevel : cm.evolvesAtLevel : cm.evolvesAtLevel}</span>
+                      <div className="flex flex-col items-center px-1">
+                        <span className="text-yellow-500 text-sm leading-none">→</span>
+                        {evoLevel && (
+                          <span className="text-[9px] text-yellow-700 leading-none mt-0.5">Lv.{evoLevel}</span>
                         )}
                       </div>
                     )}
                     <button
-                      onClick={() => cm.id !== monsterId && onGoTo(cm.id)}
+                      onClick={() => !isCurrent && onGoTo(cm.id)}
                       className={`flex flex-col items-center gap-1 rounded-xl p-2 border transition
                         ${isCurrent
                           ? "border-yellow-600 bg-yellow-950/40 cursor-default"
-                          : "border-zinc-700 bg-zinc-900 hover:border-zinc-500 cursor-pointer"}`}
+                          : "border-zinc-700 bg-zinc-900 hover:border-zinc-500 active:scale-95"}`}
                     >
                       <div className="w-14 h-14 flex items-center justify-center">
                         <img
@@ -159,12 +161,9 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                           style={isSeen ? monsterImgStyle(cm.id) : { filter: "brightness(0)", opacity: 0.4 }}
                         />
                       </div>
-                      <span className={`text-xs font-semibold ${isCurrent ? "text-yellow-300" : isSeen ? "text-zinc-200" : "text-zinc-600"}`}>
+                      <span className={`text-[11px] font-semibold ${isCurrent ? "text-yellow-300" : isSeen ? "text-zinc-200" : "text-zinc-600"}`}>
                         {isSeen ? cm.name : "???"}
                       </span>
-                      {cm.evolvesAtLevel && cm.evolvesFrom && (
-                        <span className="text-[9px] text-zinc-600">Lv.{cm.evolvesAtLevel}</span>
-                      )}
                     </button>
                   </div>
                 );

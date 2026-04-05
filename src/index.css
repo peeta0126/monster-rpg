@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* ── 전역 스크롤바 숨김 (스크롤은 가능, 바 없음) ─────────────────── */
+* {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE / Edge */
+}
+*::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari / Opera */
+}
+
 /* ── 픽셀 아트 전역 설정 ───────────────────────────────────────── */
 :root {
   --pixel-font: 'Press Start 2P', monospace;
