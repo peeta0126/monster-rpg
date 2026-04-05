@@ -43,6 +43,7 @@ const MONSTER_DEX_DESC: Record<string, string> = {
   mossyfinal: "모치가 극한의 전기 에너지를 흡수해 완성된 전설의 전기 늑대 왕이다. 온몸의 네온 라인은 억제된 번개의 흔적이며, 한번 울부짖으면 폭풍이 일어난다.",
   crystafox:  "이마에 박힌 다이아몬드 수정이 빛을 굴절시켜 주변을 무지갯빛으로 물들인다. 위기를 감지하면 수정 날개를 펼쳐 얼음 파편을 흩뿌린다.",
   frostorb:   "거대한 수정 원반을 달고 천천히 떠다니는 얼음 생물이다. 원반은 주변 수분을 흡수해 얼음으로 바꾸며, 근처에 가면 숨이 하얗게 변한다.",
+  nobi:       "어디서나 볼 수 있는 친근한 생물이다. 특별한 능력은 없지만 균형 잡힌 신체 능력으로 어떤 환경에서도 살아남는다. 무리를 이루면 의외의 강함을 발휘한다.",
   voltiny:    "볼에 전기를 저장하는 전기 쥐다. 꼬리를 흔들면 불꽃이 튄다. 무리를 지어 살며 서로의 전기로 통신한다.",
   zapbear:    "어두운 숲속에 사는 전기 곰이다. 몸 표면의 줄무늬를 통해 전기를 방전한다. 겨울잠을 자지 않고 연중 전기를 모은다.",
   frostlet:   "얼음 수정으로 이루어진 신비로운 생물이다. 팔에서 날카로운 크리스탈을 발사하며, 배의 눈꽃 무늬는 기온이 낮을수록 밝게 빛난다.",
@@ -156,13 +157,13 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                       <div className="w-14 h-14 flex items-center justify-center bg-white rounded-lg overflow-hidden">
                         <img
                           src={MONSTER_IMAGE_MAP[cm.id]}
-                          alt={isSeen ? cm.name : "???"}
+                          alt={cm.name}
                           className="w-12 h-12 object-contain"
                           style={isSeen ? { ...monsterImgStyle(cm.id), mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.5 }}
                         />
                       </div>
-                      <span className={`text-[11px] font-semibold ${isCurrent ? "text-yellow-300" : isSeen ? "text-zinc-200" : "text-zinc-600"}`}>
-                        {isSeen ? cm.name : "???"}
+                      <span className={`text-[11px] font-semibold ${isCurrent ? "text-yellow-300" : isSeen ? "text-zinc-200" : "text-zinc-500"}`}>
+                        {cm.name}
                       </span>
                     </button>
                   </div>

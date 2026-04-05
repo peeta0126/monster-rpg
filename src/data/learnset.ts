@@ -219,6 +219,16 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 33, move: hyperBeam },
     { level: 42, move: giga_impact },
   ],
+
+  // ─── 노비 (노말 타입) ──────────────────────────────────────────────────────────
+  nobi: [
+    { level:  1, move: tackle },
+    { level:  4, move: quickAttack },
+    { level: 10, move: headbutt },
+    { level: 18, move: bodySlam },
+    { level: 28, move: hyperBeam },
+    { level: 38, move: giga_impact },
+  ],
 };
 
 /** 레벨에서 새로 배울 수 있는 스킬 목록 반환 */

@@ -172,6 +172,20 @@ export const monsters: Monster[] = [
     rewardExp: 50,
   },
 
+  // ─── 노말 ────────────────────────────────────────────────────────────────────
+  {
+    id: "nobi",
+    name: "노비",
+    type: "normal",
+    maxHp: 118,
+    attack: 28,
+    defense: 24,
+    speed: 22,
+    moves: [tackle, quickAttack],
+    level: 1, exp: 0, expToNextLevel: 100,
+    rewardExp: 38,
+  },
+
   // ─── 더미 데이터 (미구현 - 추후 추가 예정) ────────────────────────────────────
   {
     id: "voltiny",

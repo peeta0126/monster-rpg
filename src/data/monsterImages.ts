@@ -16,6 +16,7 @@ import mossyfinalImg from "../assets/monsters/mossyfinal.png";
 import crystafoxImg  from "../assets/monsters/crystafox.png";
 import frostorbImg   from "../assets/monsters/frostorb.png";
 import aquavernImg   from "../assets/monsters/aquavern.png";
+import nobiImg       from "../assets/monsters/nobi.png";
 
 export const MONSTER_IMAGE_MAP: Record<string, string> = {
   flameling:  flamelingImg,
@@ -35,6 +36,7 @@ export const MONSTER_IMAGE_MAP: Record<string, string> = {
   crystafox:  crystafoxImg,
   frostorb:   frostorbImg,
   aquavern:   aquavernImg,
+  nobi:       nobiImg,
 };
 
 /** mix-blend-mode: multiply 가 필요한 몬스터 */
