@@ -155,7 +155,7 @@ const FOREST_AREAS: ForestArea[] = [
     id: "shallow", name: "얕은 숲", subtitle: "SHALLOW WOODS",
     description: "햇빛이 스며드는 고요한 숲. 초보 탐험가도 부담 없이 도전할 수 있습니다.",
     monsterPool: ["flameling", "aquabe", "leafy", "fluffin"],
-    levelRange: [1, 5], encounterRate: 0.55, materialRate: 0.40, materialBonus: 0,
+    levelRange: [1, 8], encounterRate: 0.55, materialRate: 0.40, materialBonus: 0,
     exploreTime: 1400, danger: 1,
     particleType: "leaf",
     skyTop: "#061a06", skyBottom: "#0d2e0d",
@@ -168,7 +168,7 @@ const FOREST_AREAS: ForestArea[] = [
     id: "deep", name: "깊은 숲", subtitle: "DEEP FOREST",
     description: "빛이 닿지 않는 울창한 구역. 강한 몬스터와 희귀 재료가 기다립니다.",
     monsterPool: ["burno", "bubblet", "mossy", "voltiny", "frostlet", "stonepup"],
-    levelRange: [5, 12], encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
+    levelRange: [8, 18], encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
     exploreTime: 1800, danger: 3,
     particleType: "firefly",
     skyTop: "#020d08", skyBottom: "#051a10",
@@ -180,8 +180,8 @@ const FOREST_AREAS: ForestArea[] = [
   {
     id: "ancient", name: "고대 숲", subtitle: "ANCIENT DEPTHS",
     description: "마력이 깃든 태고의 숲. 전설적인 몬스터가 출몰하며, 생환을 장담할 수 없습니다.",
-    monsterPool: ["zapbear", "blizzwolf", "stonepup", "burno", "mossy"],
-    levelRange: [12, 22], encounterRate: 0.75, materialRate: 0.65, materialBonus: 2,
+    monsterPool: ["zapbear", "blizzwolf", "fluffin", "burno", "mossy"],
+    levelRange: [18, 32], encounterRate: 0.75, materialRate: 0.65, materialBonus: 2,
     exploreTime: 2200, danger: 5,
     particleType: "crystal",
     skyTop: "#05020f", skyBottom: "#0e0520",
@@ -455,12 +455,14 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
   return (
     <button
       onClick={onClick}
-      className="relative w-full overflow-hidden rounded-2xl border text-left transition-all
+      className="relative w-full overflow-hidden border-2 text-left transition-all
         hover:scale-[1.01] active:scale-[.99] group"
       style={{
         borderColor: area.borderGlow,
-        boxShadow: `0 0 0 1px ${area.glowColor}, inset 0 0 40px ${area.glowColor}`,
+        borderRadius: 0,
+        boxShadow: `4px 4px 0px ${area.glowColor}, inset 0 0 40px ${area.glowColor}`,
         background: `linear-gradient(135deg, ${area.skyTop}f0 0%, ${area.skyBottom}e0 100%)`,
+        imageRendering: "pixelated",
         animationDelay: `${index*0.1}s`,
         animation: "slideInUp .5s ease both",
       }}
@@ -508,7 +510,8 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
           <div className="flex flex-wrap gap-1 mt-1">
             {monsterTypes.map((t)=>(
               <span key={t}
-                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${TYPE_COLOR[t]??TYPE_COLOR.normal}`}>
+                className={`border px-2 py-0.5 text-[9px] font-bold ${TYPE_COLOR[t]??TYPE_COLOR.normal}`}
+                style={{ borderRadius:0, fontFamily:"var(--pixel-font, monospace)" }}>
                 {TYPE_KO[t]??t}
               </span>
             ))}
@@ -535,11 +538,15 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
             </p>
           </div>
           {/* 진입 버튼 */}
-          <div className="mt-1 rounded-lg px-3 py-1.5 text-xs font-bold transition group-hover:opacity-100"
+          <div className="mt-1 px-3 py-1.5 text-xs font-bold transition group-hover:opacity-100"
             style={{
               background:`linear-gradient(135deg, ${area.accentColor}30, ${area.accentColor}18)`,
-              border:`1px solid ${area.accentColor}60`,
+              border:`2px solid ${area.accentColor}`,
+              borderRadius: 0,
               color: area.accentColor,
+              fontFamily: "var(--pixel-font, monospace)",
+              fontSize: 9,
+              boxShadow: `2px 2px 0 ${area.accentColor}60`,
             }}>
             탐험하기 →
           </div>
@@ -1119,7 +1126,7 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
 
 export default function ForestPage() {
   const navigate = useNavigate();
-  const { addCapturedMonster, addToDexSeen, addToDexCaught, addMaterial, potions } = usePlayerStore();
+  const { addCapturedMonster, addToDexSeen, addToDexCaught, addMaterial, potions, bestFloor } = usePlayerStore();
 
   const [phase, setPhase]             = useState<ForestPhase>("enter");
   const [area, setArea]               = useState<ForestArea|null>(null);
@@ -1228,9 +1235,33 @@ export default function ForestPage() {
               <h1 className="text-3xl font-black text-zinc-100">숲 탐험</h1>
               <p className="text-sm text-zinc-500 mt-1">탐험할 구역을 선택하세요</p>
             </div>
-            {FOREST_AREAS.map((a,i)=>(
-              <AreaCard key={a.id} area={a} index={i} onClick={()=>handleExplore(a)}/>
-            ))}
+            {FOREST_AREAS.map((a,i)=>{
+              const locked =
+                (a.id === "deep"    && bestFloor < 11) ||
+                (a.id === "ancient" && bestFloor < 21);
+              return (
+                <div key={a.id} className="relative">
+                  <AreaCard area={a} index={i} onClick={()=>{ if(!locked) handleExplore(a); }}/>
+                  {locked && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+                      style={{
+                        background:"rgba(0,0,0,.72)",
+                        border:"2px solid rgba(100,80,20,.3)",
+                        borderRadius:0,
+                      }}>
+                      <span className="text-2xl">🔒</span>
+                      <p className="text-xs font-bold text-zinc-400"
+                        style={{ fontFamily:"var(--pixel-font,monospace)", fontSize:9 }}>
+                        {a.id==="deep" ? "무한의 탑 11층 도달 시 해금" : "무한의 탑 21층 도달 시 해금"}
+                      </p>
+                      <p className="text-[9px] text-zinc-600">
+                        현재 최고 층: {bestFloor}층
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

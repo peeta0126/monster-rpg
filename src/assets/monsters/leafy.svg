@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" shape-rendering="crispEdges">
+  <!-- LEAFY - Grass sprite/fairy, Pokemon BW style, 20x20 grid @ 4px -->
+  <!-- ── 머리 잎사귀 (왕관처럼) ── -->
+  <!-- 왼쪽 잎 -->
+  <rect x="4"  y="0"  width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="4"  y="0"  width="4"  height="4"  fill="#55cc44"/>
+  <rect x="4"  y="4"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="4"  width="4"  height="4"  fill="#44aa33"/>
+  <rect x="4"  y="4"  width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 중앙 잎 -->
+  <rect x="28" y="0"  width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="28" y="0"  width="4"  height="4"  fill="#88ee44"/>
+  <rect x="24" y="4"  width="16" height="4"  fill="#1a1a1a"/>
+  <rect x="24" y="4"  width="12" height="4"  fill="#66cc33"/>
+  <!-- 오른쪽 잎 -->
+  <rect x="52" y="0"  width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="56" y="0"  width="4"  height="4"  fill="#55cc44"/>
+  <rect x="56" y="4"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="52" y="4"  width="4"  height="4"  fill="#44aa33"/>
+  <!-- ── 머리 ── -->
+  <rect x="8"  y="8"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="8"  width="40" height="4"  fill="#88ee66"/>
+  <rect x="16" y="8"  width="8"  height="4"  fill="#aaff88"/>
+  <rect x="52" y="8"  width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 머리 폭 -->
+  <rect x="4"  y="12" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="12" width="48" height="4"  fill="#88ee66"/>
+  <rect x="12" y="12" width="8"  height="4"  fill="#aaff88"/>
+  <rect x="56" y="12" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- ── 눈 (초롱초롱한 초록 눈) ── -->
+  <rect x="4"  y="16" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="16" width="8"  height="4"  fill="#88ee66"/>
+  <rect x="16" y="16" width="4"  height="4"  fill="#ffffff"/>
+  <rect x="20" y="16" width="4"  height="4"  fill="#227722"/>
+  <rect x="24" y="16" width="12" height="4"  fill="#88ee66"/>
+  <rect x="36" y="16" width="4"  height="4"  fill="#227722"/>
+  <rect x="40" y="16" width="4"  height="4"  fill="#ffffff"/>
+  <rect x="44" y="16" width="8"  height="4"  fill="#88ee66"/>
+  <rect x="52" y="16" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 눈 2줄 -->
+  <rect x="4"  y="20" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="20" width="8"  height="4"  fill="#88ee66"/>
+  <rect x="16" y="20" width="4"  height="4"  fill="#ffffff"/>
+  <rect x="20" y="20" width="4"  height="4"  fill="#227722"/>
+  <rect x="24" y="20" width="12" height="4"  fill="#88ee66"/>
+  <rect x="36" y="20" width="4"  height="4"  fill="#227722"/>
+  <rect x="40" y="20" width="4"  height="4"  fill="#ffffff"/>
+  <rect x="44" y="20" width="8"  height="4"  fill="#88ee66"/>
+  <rect x="52" y="20" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 눈 하이라이트 -->
+  <rect x="18" y="16" width="2"  height="2"  fill="#ffffff"/>
+  <rect x="42" y="16" width="2"  height="2"  fill="#ffffff"/>
+  <!-- ── 입 + 볼 ── -->
+  <rect x="4"  y="24" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="24" width="44" height="4"  fill="#88ee66"/>
+  <rect x="52" y="24" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 볼 (연두 볼터치) -->
+  <rect x="8"  y="24" width="8"  height="4"  fill="#66cc44"/>
+  <rect x="48" y="24" width="4"  height="4"  fill="#66cc44"/>
+  <!-- 작은 입 -->
+  <rect x="28" y="24" width="8"  height="4"  fill="#44aa33"/>
+  <!-- ── 몸통 ── -->
+  <rect x="8"  y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="28" width="40" height="4"  fill="#66cc44"/>
+  <rect x="52" y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 배 (밝은 연두) -->
+  <rect x="4"  y="32" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="32" width="8"  height="4"  fill="#66cc44"/>
+  <rect x="16" y="32" width="32" height="4"  fill="#aaff88"/>
+  <rect x="48" y="32" width="8"  height="4"  fill="#66cc44"/>
+  <rect x="56" y="32" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 잎맥 패턴 (배) -->
+  <rect x="4"  y="36" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="36" width="8"  height="4"  fill="#66cc44"/>
+  <rect x="16" y="36" width="4"  height="4"  fill="#aaff88"/>
+  <rect x="20" y="36" width="4"  height="4"  fill="#44aa33"/>
+  <rect x="24" y="36" width="8"  height="4"  fill="#aaff88"/>
+  <rect x="32" y="36" width="4"  height="4"  fill="#44aa33"/>
+  <rect x="36" y="36" width="8"  height="4"  fill="#aaff88"/>
+  <rect x="44" y="36" width="4"  height="4"  fill="#44aa33"/>
+  <rect x="48" y="36" width="8"  height="4"  fill="#66cc44"/>
+  <rect x="56" y="36" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- ── 잎사귀 팔 (옆으로 돌출) ── -->
+  <!-- 왼쪽 잎 팔 -->
+  <rect x="0"  y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="4"  y="28" width="4"  height="4"  fill="#44aa33"/>
+  <rect x="0"  y="32" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="4"  y="32" width="4"  height="4"  fill="#55cc44"/>
+  <!-- 오른쪽 잎 팔 -->
+  <rect x="60" y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="56" y="28" width="4"  height="4"  fill="#44aa33"/>
+  <rect x="56" y="32" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="56" y="32" width="4"  height="4"  fill="#55cc44"/>
+  <!-- ── 몸통 하단 ── -->
+  <rect x="8"  y="40" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="40" width="40" height="4"  fill="#66cc44"/>
+  <rect x="52" y="40" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="44" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="16" y="44" width="32" height="4"  fill="#66cc44"/>
+  <rect x="48" y="44" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- ── 다리 ── -->
+  <rect x="12" y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="16" y="48" width="12" height="4"  fill="#66cc44"/>
+  <rect x="28" y="48" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="48" width="12" height="4"  fill="#66cc44"/>
+  <rect x="48" y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="52" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="16" y="52" width="12" height="4"  fill="#55bb33"/>
+  <rect x="28" y="52" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="52" width="12" height="4"  fill="#55bb33"/>
+  <rect x="48" y="52" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 발 (잎사귀 모양) -->
+  <rect x="8"  y="56" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="56" width="16" height="4"  fill="#44aa33"/>
+  <rect x="28" y="56" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="56" width="16" height="4"  fill="#44aa33"/>
+  <rect x="52" y="56" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="60" width="24" height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="60" width="20" height="4"  fill="#1a1a1a"/>
+</svg>

@@ -1,7 +1,7 @@
 import type React from "react";
 import flamelingImg from "../assets/monsters/flameling.png";
 import aquabeImg    from "../assets/monsters/aquabe.png";
-import leafyImg     from "../assets/monsters/leafy.png";
+import leafyImg     from "../assets/monsters/leafy.svg";
 import burnoImg     from "../assets/monsters/burno.png";
 import bubbletImg   from "../assets/monsters/bubblet.png";
 import mossyImg     from "../assets/monsters/mossy.png";
@@ -27,11 +27,8 @@ export const MONSTER_IMAGE_MAP: Record<string, string> = {
   stonepup:  stonepupImg,
 };
 
-/**
- * leafy PNG 이미지는 배경이 불투명하므로 어두운 UI에서
- * mix-blend-mode: multiply 를 적용해 배경을 시각적으로 제거한다.
- */
-export const MONSTER_BLEND_MULTIPLY = new Set<string>(["leafy"]);
+/** mix-blend-mode: multiply 가 필요한 몬스터 (배경 제거용) */
+export const MONSTER_BLEND_MULTIPLY = new Set<string>();
 
 /** img 태그에 적용할 style 반환 헬퍼 */
 export function monsterImgStyle(id: string): React.CSSProperties {

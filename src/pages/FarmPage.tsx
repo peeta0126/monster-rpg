@@ -4,6 +4,32 @@ import { usePlayerStore, type OwnedMonster } from "../store/playerStore";
 import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../data/monsterImages";
 import { MATERIALS, POTIONS, type Potion, getMaterial } from "../data/items";
 
+// ── pixel art assets ──────────────────────────────────────────────────────────
+import herbImg      from "../assets/materials/herb.svg";
+import berryImg     from "../assets/materials/berry.svg";
+import rootImg      from "../assets/materials/root.svg";
+import crystalImg   from "../assets/materials/crystal.svg";
+import potionImg         from "../assets/potions/potion.svg";
+import superPotionImg    from "../assets/potions/super_potion.svg";
+import maxPotionImg      from "../assets/potions/max_potion.svg";
+import antidoteImg       from "../assets/potions/antidote.svg";
+import attackBuffImg     from "../assets/potions/attack_buff.svg";
+import strongAttackImg   from "../assets/potions/strong_attack_buff.svg";
+import tabMonstersImg    from "../assets/icons/tab_monsters.svg";
+import tabBagImg         from "../assets/icons/tab_bag.svg";
+import tabCraftImg       from "../assets/icons/tab_craft.svg";
+
+const MATERIAL_IMG: Record<string, string> = {
+  herb: herbImg, berry: berryImg, root: rootImg, crystal: crystalImg,
+};
+const POTION_IMG: Record<string, string> = {
+  potion: potionImg, super_potion: superPotionImg, max_potion: maxPotionImg,
+  antidote: antidoteImg, attack_buff: attackBuffImg, strong_attack_buff: strongAttackImg,
+};
+const TAB_ICON_IMG: Record<string, string> = {
+  monsters: tabMonstersImg, potions: tabBagImg, craft: tabCraftImg,
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // CSS 애니메이션
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -428,7 +454,8 @@ function BagTab() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6">
         <div className="relative">
-          <div className="text-6xl opacity-15">🎒</div>
+          <img src={tabBagImg} alt="" className="w-16 h-16 pixel-img opacity-15"
+            style={{ imageRendering:"pixelated" }}/>
           <div className="absolute inset-0 rounded-full opacity-10"
             style={{ background:"radial-gradient(circle, #f59e0b, transparent)" }}/>
         </div>
@@ -442,7 +469,8 @@ function BagTab() {
           {POTIONS.slice(0,3).map(p => (
             <div key={p.id} className="flex items-center gap-3 rounded-xl px-4 py-2.5 opacity-35"
               style={{ background:"rgba(20,12,4,.6)", border:"1px solid rgba(140,90,20,.15)" }}>
-              <span className="text-xl">{p.emoji}</span>
+              <img src={POTION_IMG[p.id]} alt={p.name} className="w-6 h-6 pixel-img"
+                style={{ imageRendering:"pixelated", opacity:.6 }}/>
               <div>
                 <p className="text-xs font-bold text-zinc-400">{p.name}</p>
                 <p className="text-[10px] text-zinc-600">{effectLabel(p)}</p>
@@ -498,8 +526,9 @@ function BagTab() {
                         animation:`farmIn .35s ease ${pi*.07}s both`,
                       }}>
                       <div className="p-4 flex items-center gap-3">
-                        <div className="text-3xl flex-shrink-0 relative">
-                          {p.emoji}
+                        <div className="w-10 h-10 flex-shrink-0 relative">
+                          <img src={POTION_IMG[p.id]} alt={p.name} className="w-10 h-10 pixel-img"
+                            style={{ imageRendering:"pixelated" }}/>
                           {/* count badge */}
                           <div className="absolute -top-1 -right-1 rounded-full w-5 h-5 flex items-center justify-center"
                             style={{
@@ -581,10 +610,9 @@ function CraftTab() {
                   border: cnt>0 ? "1px solid rgba(34,197,94,.25)" : "1px solid rgba(80,50,10,.2)",
                   animation: `farmIn .35s ease ${i*.08}s both`,
                 }}>
-                <span className="text-2xl"
-                  style={{ filter: cnt>0?"drop-shadow(0 0 6px rgba(34,197,94,.4))":"grayscale(.8) opacity(.4)" }}>
-                  {mat.emoji}
-                </span>
+                <img src={MATERIAL_IMG[mat.id]} alt={mat.name} className="w-10 h-10 pixel-img"
+                  style={{ imageRendering:"pixelated", filter: cnt>0?"drop-shadow(0 0 6px rgba(34,197,94,.4))":"grayscale(.8) opacity(.4)" }}
+                />
                 <p className="text-[10px] font-bold text-zinc-300 text-center">{mat.name}</p>
                 <p className="text-[9px] text-zinc-600 text-center leading-tight">{mat.description}</p>
                 <p className={`text-xl font-black font-mono mt-1 transition-all ${cnt>0?"":"opacity-25"}`}
@@ -652,7 +680,8 @@ function CraftTab() {
                   {/* 헤더 */}
                   <div className="flex items-start gap-3">
                     <div className="relative flex-shrink-0">
-                      <span className="text-3xl">{potion.emoji}</span>
+                      <img src={POTION_IMG[potion.id]} alt={potion.name} className="w-10 h-10 pixel-img"
+                        style={{ imageRendering:"pixelated" }}/>
                       {owned > 0 && (
                         <div className="absolute -top-1 -right-1 rounded-full w-5 h-5 flex items-center justify-center"
                           style={{ background:pStyle.accent, fontSize:9, fontWeight:900, color:"#000" }}>
@@ -696,7 +725,8 @@ function CraftTab() {
                               background: ok ? "rgba(16,60,20,.6)" : "rgba(30,10,10,.5)",
                               border: `1px solid ${ok?"rgba(34,197,94,.4)":"rgba(239,68,68,.3)"}`,
                             }}>
-                            <span>{mat?.emoji??""}</span>
+                            {mat && <img src={MATERIAL_IMG[mat.id]} alt={mat.name}
+                              className="w-4 h-4 pixel-img" style={{ imageRendering:"pixelated" }}/>}
                             <span style={{ color: ok?"#86efac":"#fca5a5" }}>{mat?.name??matId}</span>
                             <span className="font-black font-mono" style={{ color: ok?"#4ade80":"#ef4444" }}>
                               {have}/{need}
@@ -727,7 +757,13 @@ function CraftTab() {
                   }}>
                   {isMsg
                     ? craftMsg?.ok ? `✓ ${potion.name} 제작 완료!` : "재료가 부족합니다"
-                    : canCraft ? `${potion.emoji} 제작하기` : "재료 부족"
+                    : canCraft ? (
+                      <span className="flex items-center gap-1.5 justify-center">
+                        <img src={POTION_IMG[potion.id]} alt="" className="w-4 h-4 pixel-img"
+                          style={{ imageRendering:"pixelated" }}/>
+                        제작하기
+                      </span>
+                    ) : "재료 부족"
                   }
                   {/* shimmer on can-craft */}
                   {canCraft && !isMsg && (
@@ -753,10 +789,10 @@ function CraftTab() {
 
 type FarmTab = "monsters" | "potions" | "craft";
 
-const TAB_DATA: { id: FarmTab; label: string; icon: string; subtitle: string }[] = [
-  { id:"monsters", label:"내 몬스터",  icon:"🐾", subtitle:"파티 & 보관함" },
-  { id:"potions",  label:"가방",       icon:"🎒", subtitle:"물약 인벤토리" },
-  { id:"craft",    label:"제작소",     icon:"⚗️", subtitle:"재료 & 레시피" },
+const TAB_DATA: { id: FarmTab; label: string; subtitle: string }[] = [
+  { id:"monsters", label:"내 몬스터",  subtitle:"파티 & 보관함" },
+  { id:"potions",  label:"가방",       subtitle:"물약 인벤토리" },
+  { id:"craft",    label:"제작소",     subtitle:"재료 & 레시피" },
 ];
 
 export default function FarmPage() {
@@ -873,7 +909,8 @@ export default function FarmPage() {
                   borderBottom: isActive ? "2px solid #f59e0b" : "2px solid transparent",
                   background: isActive ? "rgba(245,158,11,.06)" : "transparent",
                 }}>
-                <span>{tab.icon}</span>
+                <img src={TAB_ICON_IMG[tab.id]} alt="" className="w-4 h-4 pixel-img"
+                  style={{ imageRendering:"pixelated", filter: isActive ? "none" : "brightness(.5)" }}/>
                 <span>{tab.label}</span>
                 {badge > 0 && (
                   <span className="rounded-full px-1.5 text-[9px] font-black"

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- ATTACK BUFF - 전투 물약, red/orange bottle with sword icon -->
+  <!-- Cork -->
+  <rect x="12" y="0" width="8" height="4" fill="#1a1a1a"/>
+  <rect x="12" y="0" width="6" height="2" fill="#b8864a"/>
+  <!-- Neck -->
+  <rect x="12" y="4" width="8" height="4" fill="#1a1a1a"/>
+  <rect x="12" y="4" width="6" height="2" fill="#5a1a00"/>
+  <rect x="14" y="4" width="2" height="2" fill="#cc3300"/>
+  <!-- Shoulder -->
+  <rect x="8" y="8" width="16" height="4" fill="#1a1a1a"/>
+  <rect x="8" y="8" width="14" height="2" fill="#cc3300"/>
+  <rect x="12" y="8" width="4" height="2" fill="#ee5522"/>
+  <!-- Body top -->
+  <rect x="6" y="12" width="20" height="4" fill="#1a1a1a"/>
+  <rect x="6" y="12" width="18" height="2" fill="#dd4411"/>
+  <rect x="8" y="12" width="6" height="2" fill="#ff6633"/>
+  <!-- Body -->
+  <rect x="4" y="16" width="24" height="4" fill="#1a1a1a"/>
+  <rect x="4" y="16" width="22" height="2" fill="#ee5522"/>
+  <!-- Sword symbol -->
+  <rect x="15" y="14" width="2" height="10" fill="#ffcc44"/>
+  <rect x="12" y="20" width="8" height="2" fill="#ffcc44"/>
+  <rect x="15" y="24" width="2" height="2" fill="#cc9900"/>
+  <!-- Body lower -->
+  <rect x="4" y="24" width="24" height="4" fill="#1a1a1a"/>
+  <rect x="4" y="24" width="22" height="2" fill="#cc3300"/>
+  <rect x="6" y="24" width="4" height="2" fill="#ee5522"/>
+  <!-- Bottom -->
+  <rect x="6" y="28" width="20" height="4" fill="#1a1a1a"/>
+  <rect x="6" y="28" width="18" height="2" fill="#5a1a00"/>
+  <!-- Shine -->
+  <rect x="8" y="14" width="4" height="4" fill="#ffaa88"/>
+</svg>

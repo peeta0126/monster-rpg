@@ -204,14 +204,20 @@ export default class BattleScene extends Phaser.Scene {
 
     // ── 배경 중앙 아치/통로 (픽셀아트: 계단형 아치) ──
     const arch = this.add.graphics().setDepth(1);
-    arch.fillStyle(0x1a1008, 1);
-    // 계단형 아치 (픽셀아트 스타일)
-    arch.fillRect(W / 2 - 70, 40, 140, 270);
-    arch.fillRect(W / 2 - 90, 60, 180, 250);
-    arch.fillRect(W / 2 - 80, 48, 160, 8);
-    // 아치 테두리
-    arch.lineStyle(2, 0x5a4028, 0.8);
-    arch.strokeRect(W / 2 - 70, 40, 140, 270);
+    arch.fillStyle(0x0d0906, 1);
+    // 픽셀아트 계단형 아치 - 각 단계가 4px 블록 단위
+    arch.fillRect(W / 2 - 56, 40, 112, 260);  // 내부 통로
+    arch.fillRect(W / 2 - 72, 56, 144, 244);
+    arch.fillRect(W / 2 - 88, 72, 176, 228);
+    arch.fillRect(W / 2 - 76, 44, 152, 12);   // 아치 상단 가로
+    // 아치 내부 원근감 (더 밝은 원거리)
+    arch.fillStyle(0x180f05, 1);
+    arch.fillRect(W / 2 - 80, 76, 160, 224);
+    // 아치 테두리 픽셀 강조
+    arch.lineStyle(3, 0x6a4828, 1);
+    arch.strokeRect(W / 2 - 56, 40, 112, 260);
+    arch.lineStyle(2, 0x4a3018, 0.7);
+    arch.strokeRect(W / 2 - 72, 56, 144, 244);
 
     // ── 횃불 앰비언트 빛 (벽에 퍼지는 따뜻한 빛) ──
     const ambLeft = this.add.graphics().setDepth(1);
@@ -246,14 +252,32 @@ export default class BattleScene extends Phaser.Scene {
     floorBg.lineStyle(2, 0x7a5a30, 0.5);
     floorBg.beginPath(); floorBg.moveTo(0, FLOOR_Y); floorBg.lineTo(W, FLOOR_Y); floorBg.strokePath();
 
-    // ── 양쪽 기둥 ──
+    // ── 양쪽 기둥 (픽셀아트 블록) ──
     const pillar = this.add.graphics().setDepth(2);
+    // 좌기둥
     pillar.fillStyle(0x1e1408, 1);
-    pillar.fillRect(0, 0, 18, BATTLE_H);
-    pillar.fillRect(W - 18, 0, 18, BATTLE_H);
-    pillar.lineStyle(1, 0x4a3418, 0.6);
-    pillar.strokeRect(0, 0, 18, BATTLE_H);
-    pillar.strokeRect(W - 18, 0, 18, BATTLE_H);
+    pillar.fillRect(0, 0, 24, BATTLE_H);
+    pillar.fillStyle(0x2e2010, 1);
+    pillar.fillRect(0, 0, 8, BATTLE_H);
+    pillar.fillStyle(0x140e04, 1);
+    pillar.fillRect(16, 0, 8, BATTLE_H);
+    // 우기둥
+    pillar.fillStyle(0x1e1408, 1);
+    pillar.fillRect(W - 24, 0, 24, BATTLE_H);
+    pillar.fillStyle(0x2e2010, 1);
+    pillar.fillRect(W - 8, 0, 8, BATTLE_H);
+    pillar.fillStyle(0x140e04, 1);
+    pillar.fillRect(W - 24, 0, 8, BATTLE_H);
+    // 기둥 경계선
+    pillar.lineStyle(2, 0x5a4028, 0.8);
+    pillar.strokeRect(0, 0, 24, BATTLE_H);
+    pillar.strokeRect(W - 24, 0, 24, BATTLE_H);
+    // 픽셀 블록 구분선 (수평)
+    pillar.lineStyle(1, 0x2e1e0a, 0.5);
+    for (let y = 28; y < BATTLE_H; y += 28) {
+      pillar.beginPath(); pillar.moveTo(0, y); pillar.lineTo(24, y); pillar.strokePath();
+      pillar.beginPath(); pillar.moveTo(W - 24, y); pillar.lineTo(W, y); pillar.strokePath();
+    }
 
     // ── 발판 그림자 (픽셀아트: 사각형) ──
     const shadow = this.add.graphics().setDepth(3);

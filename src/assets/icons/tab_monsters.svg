@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" shape-rendering="crispEdges">
+  <!-- 내 몬스터 탭 - 발바닥 아이콘 pixel art -->
+  <!-- Main pad -->
+  <rect x="8" y="10" width="8" height="8" fill="#1a1a1a"/>
+  <rect x="8" y="10" width="6" height="6" fill="#cc8866"/>
+  <rect x="10" y="12" width="2" height="2" fill="#ee9977"/>
+  <!-- Top left toe -->
+  <rect x="4" y="6" width="4" height="4" fill="#1a1a1a"/>
+  <rect x="4" y="6" width="2" height="2" fill="#cc8866"/>
+  <!-- Top right toe -->
+  <rect x="16" y="6" width="4" height="4" fill="#1a1a1a"/>
+  <rect x="16" y="6" width="2" height="2" fill="#cc8866"/>
+  <!-- Mid left toe -->
+  <rect x="2" y="10" width="4" height="4" fill="#1a1a1a"/>
+  <rect x="2" y="10" width="2" height="2" fill="#cc8866"/>
+  <!-- Mid right toe -->
+  <rect x="18" y="10" width="4" height="4" fill="#1a1a1a"/>
+  <rect x="18" y="10" width="2" height="2" fill="#cc8866"/>
+</svg>

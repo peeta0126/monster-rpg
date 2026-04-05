@@ -1,71 +1,126 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
-  <!-- row 0: ear tips -->
-  <rect x="4" y="0" width="1" height="1" fill="#FFD700"/>
-  <rect x="10" y="0" width="1" height="1" fill="#FFD700"/>
-  <!-- row 1: ears -->
-  <rect x="3" y="1" width="3" height="1" fill="#FFD700"/>
-  <rect x="9" y="1" width="3" height="1" fill="#FFD700"/>
-  <!-- row 2: ears -->
-  <rect x="3" y="2" width="3" height="1" fill="#FFD700"/>
-  <rect x="9" y="2" width="3" height="1" fill="#FFD700"/>
-  <!-- row 3: ear base + head connect -->
-  <rect x="4" y="3" width="1" height="1" fill="#FFD700"/>
-  <rect x="6" y="3" width="3" height="1" fill="#FFD700"/>
-  <rect x="10" y="3" width="1" height="1" fill="#FFD700"/>
-  <!-- row 4: head top -->
-  <rect x="2" y="4" width="11" height="1" fill="#FFD700"/>
-  <!-- row 5: eyes row -->
-  <rect x="1" y="5" width="2" height="1" fill="#FFD700"/>
-  <rect x="3" y="5" width="1" height="1" fill="#FFFFFF"/>
-  <rect x="4" y="5" width="1" height="1" fill="#1a1a1a"/>
-  <rect x="5" y="5" width="5" height="1" fill="#FFD700"/>
-  <rect x="10" y="5" width="1" height="1" fill="#1a1a1a"/>
-  <rect x="11" y="5" width="1" height="1" fill="#FFFFFF"/>
-  <rect x="12" y="5" width="2" height="1" fill="#FFD700"/>
-  <!-- row 6: eyes row 2 -->
-  <rect x="1" y="6" width="2" height="1" fill="#FFD700"/>
-  <rect x="3" y="6" width="1" height="1" fill="#FFFFFF"/>
-  <rect x="4" y="6" width="1" height="1" fill="#1a1a1a"/>
-  <rect x="5" y="6" width="5" height="1" fill="#FFD700"/>
-  <rect x="10" y="6" width="1" height="1" fill="#1a1a1a"/>
-  <rect x="11" y="6" width="1" height="1" fill="#FFFFFF"/>
-  <rect x="12" y="6" width="2" height="1" fill="#FFD700"/>
-  <!-- row 7: cheeks (orange sparks) -->
-  <rect x="1" y="7" width="4" height="1" fill="#FFD700"/>
-  <rect x="5" y="7" width="1" height="1" fill="#FF8C00"/>
-  <rect x="6" y="7" width="3" height="1" fill="#FFD700"/>
-  <rect x="9" y="7" width="1" height="1" fill="#FF8C00"/>
-  <rect x="10" y="7" width="4" height="1" fill="#FFD700"/>
-  <!-- row 8: belly top -->
-  <rect x="2" y="8" width="2" height="1" fill="#FFD700"/>
-  <rect x="4" y="8" width="7" height="1" fill="#FFF0A0"/>
-  <rect x="11" y="8" width="2" height="1" fill="#FFD700"/>
-  <!-- row 9: lightning bolt belly -->
-  <rect x="3" y="9" width="1" height="1" fill="#FFD700"/>
-  <rect x="4" y="9" width="2" height="1" fill="#FFF0A0"/>
-  <rect x="6" y="9" width="1" height="1" fill="#FF8C00"/>
-  <rect x="7" y="9" width="2" height="1" fill="#FFF0A0"/>
-  <rect x="9" y="9" width="1" height="1" fill="#FF8C00"/>
-  <rect x="10" y="9" width="2" height="1" fill="#FFF0A0"/>
-  <rect x="12" y="9" width="1" height="1" fill="#FFD700"/>
-  <!-- row 10: lightning -->
-  <rect x="3" y="10" width="1" height="1" fill="#FFD700"/>
-  <rect x="4" y="10" width="3" height="1" fill="#FFF0A0"/>
-  <rect x="7" y="10" width="1" height="1" fill="#FF8C00"/>
-  <rect x="8" y="10" width="4" height="1" fill="#FFF0A0"/>
-  <rect x="12" y="10" width="1" height="1" fill="#FFD700"/>
-  <!-- row 11: belly bottom -->
-  <rect x="3" y="11" width="1" height="1" fill="#FFD700"/>
-  <rect x="4" y="11" width="8" height="1" fill="#FFF0A0"/>
-  <rect x="12" y="11" width="1" height="1" fill="#FFD700"/>
-  <!-- row 12: body -->
-  <rect x="4" y="12" width="8" height="1" fill="#FFD700"/>
-  <!-- row 13: body -->
-  <rect x="4" y="13" width="8" height="1" fill="#FFD700"/>
-  <!-- row 14: feet -->
-  <rect x="3" y="14" width="3" height="1" fill="#FFC400"/>
-  <rect x="10" y="14" width="3" height="1" fill="#FFC400"/>
-  <!-- row 15: feet bottom -->
-  <rect x="2" y="15" width="2" height="1" fill="#FFC400"/>
-  <rect x="12" y="15" width="2" height="1" fill="#FFC400"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" shape-rendering="crispEdges">
+  <!-- VOLTINY - Electric mouse, Pokemon BW style, 20x20 grid @ 4px -->
+  <!-- ── 귀 (위쪽 뾰족한 귀) ── -->
+  <!-- 왼쪽 귀 -->
+  <rect x="8"  y="0"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="4"  y="4"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="4"  y="8"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="4"  width="4"  height="8"  fill="#f8d030"/>
+  <rect x="12" y="4"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="10" y="6"  width="2"  height="4"  fill="#f07030"/>
+  <!-- 오른쪽 귀 -->
+  <rect x="52" y="0"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="56" y="4"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="56" y="8"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="52" y="4"  width="4"  height="8"  fill="#f8d030"/>
+  <rect x="48" y="4"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="52" y="6"  width="2"  height="4"  fill="#f07030"/>
+  <!-- ── 머리 ── -->
+  <rect x="8"  y="12" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="12" width="4"  height="4"  fill="#f8d030"/>
+  <rect x="16" y="8"  width="28" height="4"  fill="#1a1a1a"/>
+  <rect x="16" y="12" width="28" height="4"  fill="#f8d030"/>
+  <rect x="44" y="12" width="4"  height="4"  fill="#f8d030"/>
+  <rect x="48" y="12" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 머리 폭 -->
+  <rect x="4"  y="16" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="16" width="48" height="4"  fill="#f8d030"/>
+  <rect x="56" y="16" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 머리 위 하이라이트 -->
+  <rect x="12" y="12" width="8"  height="4"  fill="#fff080"/>
+  <!-- ── 눈 ── -->
+  <rect x="4"  y="20" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="20" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="16" y="20" width="4"  height="4"  fill="#ffffff"/>
+  <rect x="20" y="20" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="24" y="20" width="12" height="4"  fill="#f8d030"/>
+  <rect x="36" y="20" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="40" y="20" width="4"  height="4"  fill="#ffffff"/>
+  <rect x="44" y="20" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="52" y="20" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 눈 아래줄 -->
+  <rect x="4"  y="24" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="24" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="16" y="24" width="4"  height="4"  fill="#ffffff"/>
+  <rect x="20" y="24" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="24" y="24" width="12" height="4"  fill="#f8d030"/>
+  <rect x="36" y="24" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="40" y="24" width="4"  height="4"  fill="#ffffff"/>
+  <rect x="44" y="24" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="52" y="24" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- ── 볼 전기 무늬 + 코 ── -->
+  <rect x="4"  y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="28" width="8"  height="4"  fill="#f07030"/>
+  <rect x="16" y="28" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="24" y="28" width="4"  height="4"  fill="#c89010"/>
+  <rect x="28" y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="32" y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="28" width="4"  height="4"  fill="#c89010"/>
+  <rect x="40" y="28" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="48" y="28" width="8"  height="4"  fill="#f07030"/>
+  <rect x="56" y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- ── 몸통 ── -->
+  <rect x="8"  y="32" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="32" width="40" height="4"  fill="#f8d030"/>
+  <rect x="52" y="32" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 배 (흰/노랑) -->
+  <rect x="4"  y="36" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="36" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="16" y="36" width="28" height="4"  fill="#fff0a0"/>
+  <rect x="44" y="36" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="52" y="36" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 번개 무늬 배 -->
+  <rect x="4"  y="40" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="40" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="16" y="40" width="4"  height="4"  fill="#fff0a0"/>
+  <rect x="20" y="40" width="4"  height="4"  fill="#f8d030"/>
+  <rect x="24" y="40" width="4"  height="4"  fill="#fff0a0"/>
+  <rect x="28" y="40" width="4"  height="4"  fill="#f8d030"/>
+  <rect x="32" y="40" width="4"  height="4"  fill="#fff0a0"/>
+  <rect x="36" y="40" width="4"  height="4"  fill="#f8d030"/>
+  <rect x="40" y="40" width="4"  height="4"  fill="#fff0a0"/>
+  <rect x="44" y="40" width="8"  height="4"  fill="#f8d030"/>
+  <rect x="52" y="40" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 몸통 하단 -->
+  <rect x="4"  y="44" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="8"  y="44" width="44" height="4"  fill="#f8d030"/>
+  <rect x="52" y="44" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- ── 팔 + 몸통 ── -->
+  <rect x="0"  y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="4"  y="48" width="8"  height="4"  fill="#c89010"/>
+  <rect x="12" y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="16" y="48" width="24" height="4"  fill="#f8d030"/>
+  <rect x="40" y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="44" y="48" width="8"  height="4"  fill="#c89010"/>
+  <rect x="52" y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 손 -->
+  <rect x="0"  y="52" width="12" height="4"  fill="#1a1a1a"/>
+  <rect x="40" y="52" width="12" height="4"  fill="#1a1a1a"/>
+  <!-- ── 다리 ── -->
+  <rect x="8"  y="52" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="12" y="52" width="36" height="4"  fill="#f8d030"/>
+  <rect x="48" y="52" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 다리 분리 -->
+  <rect x="12" y="56" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="16" y="56" width="12" height="4"  fill="#f8d030"/>
+  <rect x="28" y="56" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="56" width="12" height="4"  fill="#f8d030"/>
+  <rect x="48" y="56" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 발 -->
+  <rect x="12" y="60" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="16" y="60" width="12" height="4"  fill="#c89010"/>
+  <rect x="28" y="60" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="60" width="12" height="4"  fill="#c89010"/>
+  <rect x="48" y="60" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 발 바닥 -->
+  <rect x="12" y="64" width="20" height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="64" width="16" height="4"  fill="#1a1a1a"/>
+  <!-- ── 꼬리 (번개 모양) ── -->
+  <rect x="56" y="32" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="60" y="32" width="4"  height="4"  fill="#c89010"/>
+  <rect x="60" y="36" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="64" y="36" width="4"  height="4"  fill="#f8d030"/>
+  <rect x="64" y="40" width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="68" y="40" width="4"  height="4"  fill="#c89010"/>
+  <rect x="68" y="44" width="4"  height="4"  fill="#1a1a1a"/>
 </svg>

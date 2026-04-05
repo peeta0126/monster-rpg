@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" shape-rendering="crispEdges">
+  <!-- 제작소 탭 - cauldron/mortar pixel art -->
+  <!-- Mortar bowl top opening -->
+  <rect x="4" y="6" width="16" height="2" fill="#1a1a1a"/>
+  <!-- Bowl upper -->
+  <rect x="2" y="8" width="20" height="2" fill="#1a1a1a"/>
+  <rect x="2" y="8" width="18" height="2" fill="#556677"/>
+  <!-- Bowl body -->
+  <rect x="2" y="10" width="20" height="2" fill="#1a1a1a"/>
+  <rect x="2" y="10" width="18" height="2" fill="#667788"/>
+  <!-- Liquid inside -->
+  <rect x="4" y="8" width="16" height="4" fill="#33cc88"/>
+  <rect x="6" y="8" width="4" height="2" fill="#55ffaa"/>
+  <!-- Bowl lower -->
+  <rect x="4" y="12" width="16" height="2" fill="#1a1a1a"/>
+  <rect x="4" y="12" width="14" height="2" fill="#556677"/>
+  <!-- Bowl bottom -->
+  <rect x="6" y="14" width="12" height="2" fill="#1a1a1a"/>
+  <rect x="6" y="14" width="10" height="2" fill="#445566"/>
+  <!-- Stand -->
+  <rect x="8" y="16" width="8" height="2" fill="#1a1a1a"/>
+  <rect x="8" y="16" width="6" height="2" fill="#556677"/>
+  <!-- Base -->
+  <rect x="4" y="18" width="16" height="2" fill="#1a1a1a"/>
+  <rect x="4" y="18" width="14" height="2" fill="#445566"/>
+  <!-- Pestle -->
+  <rect x="14" y="2" width="4" height="2" fill="#1a1a1a"/>
+  <rect x="14" y="2" width="2" height="2" fill="#aaaaaa"/>
+  <rect x="14" y="4" width="4" height="4" fill="#1a1a1a"/>
+  <rect x="14" y="4" width="2" height="4" fill="#999999"/>
+  <!-- Steam bubbles -->
+  <rect x="8" y="4" width="2" height="2" fill="#55ffaa"/>
+  <rect x="12" y="2" width="2" height="2" fill="#33cc88"/>
+</svg>

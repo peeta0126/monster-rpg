@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- STRONG ATTACK BUFF - 강화 전투 물약, dark red with double sword + glow -->
+  <!-- Gem stopper on top -->
+  <rect x="14" y="0" width="4" height="4" fill="#1a1a1a"/>
+  <rect x="14" y="0" width="2" height="2" fill="#ff4444"/>
+  <!-- Cork -->
+  <rect x="12" y="4" width="8" height="4" fill="#1a1a1a"/>
+  <rect x="12" y="4" width="6" height="2" fill="#c8864a"/>
+  <!-- Neck -->
+  <rect x="12" y="8" width="8" height="4" fill="#1a1a1a"/>
+  <rect x="12" y="8" width="6" height="2" fill="#5a0000"/>
+  <rect x="14" y="8" width="2" height="2" fill="#aa0000"/>
+  <!-- Shoulder -->
+  <rect x="8" y="12" width="16" height="4" fill="#1a1a1a"/>
+  <rect x="8" y="12" width="14" height="2" fill="#aa0000"/>
+  <rect x="12" y="12" width="4" height="2" fill="#cc2222"/>
+  <!-- Body top -->
+  <rect x="6" y="16" width="20" height="4" fill="#1a1a1a"/>
+  <rect x="6" y="16" width="18" height="2" fill="#bb1111"/>
+  <rect x="8" y="16" width="6" height="2" fill="#dd3333"/>
+  <!-- Double sword symbol -->
+  <rect x="12" y="16" width="2" height="10" fill="#ffdd66"/>
+  <rect x="18" y="16" width="2" height="10" fill="#ffdd66"/>
+  <rect x="10" y="22" width="6" height="2" fill="#ffdd66"/>
+  <rect x="16" y="22" width="6" height="2" fill="#ffdd66"/>
+  <!-- Body center glow -->
+  <rect x="4" y="20" width="24" height="4" fill="#1a1a1a"/>
+  <rect x="4" y="20" width="22" height="2" fill="#cc1111"/>
+  <!-- Body lower -->
+  <rect x="4" y="24" width="24" height="4" fill="#1a1a1a"/>
+  <rect x="4" y="24" width="22" height="2" fill="#aa0000"/>
+  <rect x="6" y="24" width="4" height="2" fill="#bb1111"/>
+  <!-- Bottom -->
+  <rect x="6" y="28" width="20" height="4" fill="#1a1a1a"/>
+  <rect x="6" y="28" width="18" height="2" fill="#5a0000"/>
+  <!-- Shine + glow sparks -->
+  <rect x="8" y="14" width="4" height="4" fill="#ff8888"/>
+  <rect x="4" y="18" width="2" height="2" fill="#ffaa44"/>
+  <rect x="26" y="18" width="2" height="2" fill="#ffaa44"/>
+</svg>

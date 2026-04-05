@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- BERRY - 열매, pixel art 8x8 grid @ 4px -->
+  <!-- Stem + leaf -->
+  <rect x="14" y="0" width="4" height="4" fill="#1a1a1a"/>
+  <rect x="14" y="0" width="2" height="4" fill="#5a8a20"/>
+  <rect x="16" y="2" width="6" height="2" fill="#1a1a1a"/>
+  <rect x="16" y="2" width="4" height="2" fill="#6ab830"/>
+  <!-- Berry top -->
+  <rect x="10" y="4" width="12" height="4" fill="#1a1a1a"/>
+  <rect x="10" y="4" width="10" height="2" fill="#ff4444"/>
+  <!-- Berry middle highlight -->
+  <rect x="8" y="8" width="16" height="4" fill="#1a1a1a"/>
+  <rect x="8" y="8" width="14" height="2" fill="#ff6666"/>
+  <rect x="10" y="8" width="4" height="2" fill="#ff9999"/>
+  <!-- Berry center -->
+  <rect x="8" y="12" width="16" height="4" fill="#1a1a1a"/>
+  <rect x="8" y="12" width="14" height="2" fill="#ff4444"/>
+  <!-- Berry bottom -->
+  <rect x="8" y="16" width="16" height="4" fill="#1a1a1a"/>
+  <rect x="8" y="16" width="14" height="2" fill="#cc2222"/>
+  <!-- Berry lower -->
+  <rect x="10" y="20" width="12" height="4" fill="#1a1a1a"/>
+  <rect x="10" y="20" width="10" height="2" fill="#cc2222"/>
+  <!-- Berry bottom tip -->
+  <rect x="12" y="24" width="8" height="4" fill="#1a1a1a"/>
+  <rect x="12" y="24" width="6" height="2" fill="#aa1111"/>
+  <!-- Shine -->
+  <rect x="12" y="10" width="4" height="2" fill="#ffaaaa"/>
+</svg>

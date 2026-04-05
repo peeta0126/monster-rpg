@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- SUPER POTION - 슈퍼 물약 (HP 120), blue bottle pixel art -->
+  <!-- Cork -->
+  <rect x="12" y="0" width="8" height="4" fill="#1a1a1a"/>
+  <rect x="12" y="0" width="6" height="2" fill="#b8864a"/>
+  <!-- Neck -->
+  <rect x="12" y="4" width="8" height="4" fill="#1a1a1a"/>
+  <rect x="12" y="4" width="6" height="2" fill="#1a2a5a"/>
+  <rect x="14" y="4" width="2" height="2" fill="#2244aa"/>
+  <!-- Shoulder -->
+  <rect x="8" y="8" width="16" height="4" fill="#1a1a1a"/>
+  <rect x="8" y="8" width="14" height="2" fill="#2244aa"/>
+  <rect x="12" y="8" width="4" height="2" fill="#3366cc"/>
+  <!-- Body top -->
+  <rect x="6" y="12" width="20" height="4" fill="#1a1a1a"/>
+  <rect x="6" y="12" width="18" height="2" fill="#3366cc"/>
+  <rect x="8" y="12" width="6" height="2" fill="#5588ee"/>
+  <!-- Body -->
+  <rect x="4" y="16" width="24" height="4" fill="#1a1a1a"/>
+  <rect x="4" y="16" width="22" height="2" fill="#4477dd"/>
+  <rect x="8" y="16" width="6" height="2" fill="#7799ff"/>
+  <!-- Body center -->
+  <rect x="4" y="20" width="24" height="4" fill="#1a1a1a"/>
+  <rect x="4" y="20" width="22" height="2" fill="#3366cc"/>
+  <rect x="6" y="20" width="4" height="2" fill="#5588ee"/>
+  <!-- Body lower -->
+  <rect x="6" y="24" width="20" height="4" fill="#1a1a1a"/>
+  <rect x="6" y="24" width="18" height="2" fill="#2244aa"/>
+  <!-- Bottom -->
+  <rect x="8" y="28" width="16" height="4" fill="#1a1a1a"/>
+  <rect x="8" y="28" width="14" height="2" fill="#1a2a5a"/>
+  <!-- Label star -->
+  <rect x="14" y="16" width="4" height="2" fill="#ffffff"/>
+  <rect x="12" y="18" width="8" height="2" fill="#ffffff"/>
+  <rect x="14" y="20" width="4" height="2" fill="#ffffff"/>
+  <!-- Shine highlight -->
+  <rect x="8" y="14" width="4" height="4" fill="#aaccff"/>
+</svg>
