@@ -9,10 +9,11 @@
 import {
   tackle, ember, waterGun, vineWhip, spark, iceBeam,
   quickAttack, bodySlam, flamethrower, surf, solarBeam,
-  thunderbolt, blizzard, toxic, iceLeaf,
+  thunderbolt, blizzard, iceLeaf,
   firePunch, headbutt, poisonPowder, waterPulse, seedBomb,
   icePunch, thunderPunch, hyperBeam, overheat, hydropump,
   poisonJab, thunder, sheerCold, giga_impact,
+  voltCrash, thunderStrike, aquaWhirl, tidalCrash, crystalBurst,
 } from "./moves";
 import type { Move } from "../types/game";
 
@@ -27,143 +28,194 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
   flameling: [
     { level:  1, move: tackle },
     { level:  3, move: ember },
-    { level:  7, move: quickAttack },     // 초원 달리기 = 빠른 기동
-    { level: 12, move: headbutt },        // 말의 박치기
-    { level: 18, move: firePunch },       // 불꽃 발굽
-    { level: 25, move: flamethrower },    // 화염방사
-    { level: 33, move: bodySlam },        // 전신으로 돌진
-    { level: 42, move: overheat },        // 최강 불꽃
+    { level:  7, move: quickAttack },
+    { level: 12, move: headbutt },
+    { level: 18, move: firePunch },
+    { level: 25, move: flamethrower },
+    { level: 33, move: bodySlam },
+    { level: 42, move: overheat },
   ],
 
   // ─── 버노 (불꽃 황소) ── 화산 근처 거친 황소 ────────────────────────────────
   burno: [
     { level:  1, move: tackle },
     { level:  3, move: ember },
-    { level:  8, move: bodySlam },        // 황소 돌진
+    { level:  8, move: bodySlam },
     { level: 14, move: firePunch },
     { level: 20, move: headbutt },
     { level: 27, move: flamethrower },
-    { level: 35, move: thunderPunch },    // 황소의 전격 뿔
+    { level: 35, move: thunderPunch },
     { level: 44, move: overheat },
   ],
 
-  // ─── 아쿠비 (물 도롱뇽) ── 맑은 물 속 미끄러운 도롱뇽 ───────────────────────
+  // ─── 아쿠비 (물 도롱뇽) ── 맑은 물 속 도롱뇽 ───────────────────────────────
   aquabe: [
     { level:  1, move: tackle },
     { level:  3, move: waterGun },
-    { level:  7, move: waterPulse },      // 물 소용돌이
-    { level: 13, move: iceBeam },         // 도롱뇽 한기
-    { level: 19, move: poisonPowder },    // 피부 독소 (도롱뇽 특성)
+    { level:  7, move: waterPulse },
+    { level: 13, move: iceBeam },
+    { level: 19, move: poisonPowder },    // 피부 독소
     { level: 26, move: surf },
-    { level: 34, move: icePunch },        // 얼음 발톱
+    { level: 34, move: icePunch },
     { level: 43, move: hydropump },
+  ],
+
+  // ─── 아쿠사 (물 도마뱀) ── 아쿠비 진화체, 강력한 물 파충류 ────────────────────
+  aquavern: [
+    { level:  1, move: tackle },
+    { level:  1, move: waterGun },
+    { level:  5, move: waterPulse },
+    { level: 10, move: aquaWhirl },
+    { level: 16, move: icePunch },
+    { level: 23, move: surf },
+    { level: 30, move: bodySlam },
+    { level: 38, move: hydropump },
+    { level: 48, move: tidalCrash },
   ],
 
   // ─── 버블릿 (물+벌레) ── 거품 뿜는 물 벌레 ──────────────────────────────────
   bubblet: [
     { level:  1, move: tackle },
     { level:  3, move: waterGun },
-    { level:  6, move: poisonPowder },    // 벌레의 독 가루
-    { level: 11, move: vineWhip },        // 벌레 더듬이/풀 이미지
+    { level:  6, move: poisonPowder },
+    { level: 11, move: vineWhip },
     { level: 17, move: waterPulse },
-    { level: 23, move: seedBomb },        // 풀-벌레 연계
+    { level: 23, move: seedBomb },
     { level: 30, move: surf },
-    { level: 38, move: poisonJab },       // 벌레 독침
+    { level: 38, move: poisonJab },
     { level: 47, move: hydropump },
   ],
 
-  // ─── 리피 (풀 새싹) ── 숲 속 새싹 요정 ──────────────────────────────────────
+  // ─── 리피 (풀 곰) ── 숲 속 잎사귀 등짝을 가진 풀 곰 ────────────────────────
   leafy: [
     { level:  1, move: tackle },
     { level:  3, move: vineWhip },
-    { level:  7, move: quickAttack },     // 새싹의 민첩함
-    { level: 12, move: iceLeaf },         // 얼음잎새 (풀+얼음 복합)
+    { level:  7, move: quickAttack },
+    { level: 12, move: iceLeaf },
     { level: 18, move: seedBomb },
-    { level: 24, move: poisonJab },       // 독성 가시
+    { level: 24, move: poisonJab },
     { level: 31, move: solarBeam },
-    { level: 40, move: hyperBeam },       // 빛 에너지 집중
+    { level: 40, move: hyperBeam },
   ],
 
-  // ─── 모시 (풀 이끼 골렘) ── 이끼 덮인 돌 골렘 ───────────────────────────────
+  // ─── 모시 (전기 늑대 기초) ── 전기 기운을 품은 야생 늑대 ────────────────────
   mossy: [
     { level:  1, move: tackle },
-    { level:  3, move: vineWhip },
-    { level:  8, move: headbutt },        // 돌 머리 박치기
-    { level: 14, move: iceLeaf },
-    { level: 20, move: bodySlam },        // 무거운 몸통
-    { level: 27, move: seedBomb },
-    { level: 35, move: toxic },           // 이끼 독소
-    { level: 44, move: solarBeam },
-  ],
-
-  // ─── 볼티 (전기 쥐) ── 볼에 전기 저장, 빠른 쥐 ─────────────────────────────
-  voltiny: [
-    { level:  1, move: tackle },
     { level:  3, move: spark },
-    { level:  6, move: quickAttack },     // 쥐의 빠른 발
-    { level: 11, move: thunderPunch },    // 전기 발
-    { level: 17, move: thunderbolt },
-    { level: 23, move: headbutt },
-    { level: 30, move: bodySlam },        // 전기 방전 돌진
-    { level: 39, move: thunder },
-  ],
-
-  // ─── 잽베어 (전기 곰) ── 전기 몸통의 어두운 곰 ─────────────────────────────
-  zapbear: [
-    { level:  1, move: tackle },
-    { level:  3, move: spark },
-    { level:  8, move: bodySlam },        // 곰의 강한 몸통
-    { level: 14, move: thunderPunch },
+    { level:  8, move: quickAttack },
+    { level: 14, move: headbutt },
     { level: 20, move: thunderbolt },
-    { level: 27, move: headbutt },
-    { level: 35, move: ember },           // 곰 분노 = 불꽃 기운 (속성 유연)
-    { level: 44, move: thunder },
+    { level: 28, move: bodySlam },
+    { level: 36, move: thunder },
   ],
 
-  // ─── 프로스틀릿 (얼음 수정 생물) ── 크리스탈 팔, 눈꽃 ──────────────────────
-  frostlet: [
+  // ─── 모치 (전기 늑대 1차 진화) ── 날카로운 전기 갈기 ────────────────────────
+  mossevo: [
+    { level:  1, move: tackle },
+    { level:  1, move: spark },
+    { level:  5, move: quickAttack },
+    { level: 10, move: thunderbolt },
+    { level: 16, move: headbutt },
+    { level: 22, move: voltCrash },
+    { level: 30, move: bodySlam },
+    { level: 40, move: thunder },
+    { level: 50, move: thunderStrike },
+  ],
+
+  // ─── 모왕 (전기 늑대 최종 진화) ── 전기의 왕 ──────────────────────────────
+  mossyfinal: [
+    { level:  1, move: spark },
+    { level:  1, move: thunderbolt },
+    { level:  5, move: voltCrash },
+    { level: 10, move: quickAttack },
+    { level: 18, move: thunder },
+    { level: 25, move: bodySlam },
+    { level: 35, move: hyperBeam },
+    { level: 45, move: thunderStrike },
+  ],
+
+  // ─── 크리샤 (얼음 수정 여우) ── 이마의 다이아몬드, 수정 날개 ────────────────
+  crystafox: [
     { level:  1, move: tackle },
     { level:  3, move: iceBeam },
-    { level:  7, move: quickAttack },     // 크리스탈 순간이동 느낌
+    { level:  7, move: quickAttack },
     { level: 12, move: icePunch },
-    { level: 18, move: waterPulse },      // 얼음 녹은 물
-    { level: 25, move: blizzard },
-    { level: 33, move: bodySlam },        // 수정 충돌
+    { level: 18, move: crystalBurst },
+    { level: 25, move: waterPulse },
+    { level: 33, move: blizzard },
     { level: 42, move: sheerCold },
   ],
 
-  // ─── 블리자울프 (얼음 늑대) ── 4족 보행, 맹렬한 얼음 이빨 ──────────────────
+  // ─── 프리로 (얼음 디스크 생물) ── 파란 수정 원반을 달고 다니는 둔한 생물 ──────
+  frostorb: [
+    { level:  1, move: tackle },
+    { level:  3, move: iceBeam },
+    { level:  6, move: waterPulse },
+    { level: 11, move: crystalBurst },
+    { level: 17, move: icePunch },
+    { level: 24, move: bodySlam },
+    { level: 32, move: blizzard },
+    { level: 41, move: sheerCold },
+  ],
+
+  // ─── 더미 몬스터들 (미구현) ──────────────────────────────────────────────────
+  voltiny: [
+    { level:  1, move: tackle },
+    { level:  3, move: spark },
+    { level:  6, move: quickAttack },
+    { level: 11, move: thunderPunch },
+    { level: 17, move: thunderbolt },
+    { level: 23, move: headbutt },
+    { level: 30, move: bodySlam },
+    { level: 39, move: thunder },
+  ],
+  zapbear: [
+    { level:  1, move: tackle },
+    { level:  3, move: spark },
+    { level:  8, move: bodySlam },
+    { level: 14, move: thunderPunch },
+    { level: 20, move: thunderbolt },
+    { level: 27, move: headbutt },
+    { level: 35, move: ember },
+    { level: 44, move: thunder },
+  ],
+  frostlet: [
+    { level:  1, move: tackle },
+    { level:  3, move: iceBeam },
+    { level:  7, move: quickAttack },
+    { level: 12, move: icePunch },
+    { level: 18, move: waterPulse },
+    { level: 25, move: blizzard },
+    { level: 33, move: bodySlam },
+    { level: 42, move: sheerCold },
+  ],
   blizzwolf: [
     { level:  1, move: tackle },
     { level:  3, move: iceBeam },
-    { level:  7, move: quickAttack },     // 늑대 질주
+    { level:  7, move: quickAttack },
     { level: 13, move: icePunch },
-    { level: 19, move: bodySlam },        // 늑대 돌진
+    { level: 19, move: bodySlam },
     { level: 26, move: blizzard },
     { level: 34, move: headbutt },
     { level: 43, move: sheerCold },
   ],
-
-  // ─── 플러핀 (노말 솜털) ── 분홍 솜사탕 같은 노말 ───────────────────────────
   fluffin: [
     { level:  1, move: tackle },
     { level:  3, move: quickAttack },
     { level:  7, move: headbutt },
     { level: 12, move: bodySlam },
-    { level: 18, move: waterPulse },      // 솜털 수분 흡수 (유연)
-    { level: 25, move: poisonPowder },    // 달콤한 독가루
+    { level: 18, move: waterPulse },
+    { level: 25, move: poisonPowder },
     { level: 33, move: hyperBeam },
     { level: 42, move: giga_impact },
   ],
-
-  // ─── 스톤퍼프 (바위+노말 강아지) ── 돌처럼 단단한 강아지 ───────────────────
   stonepup: [
     { level:  1, move: tackle },
     { level:  3, move: bodySlam },
-    { level:  7, move: headbutt },        // 돌 머리 박치기
+    { level:  7, move: headbutt },
     { level: 12, move: quickAttack },
-    { level: 18, move: iceLeaf },         // 바위 속 차가운 기운 (유연)
-    { level: 25, move: thunderPunch },    // 돌 + 전격 (유연)
+    { level: 18, move: iceLeaf },
+    { level: 25, move: thunderPunch },
     { level: 33, move: hyperBeam },
     { level: 42, move: giga_impact },
   ],

@@ -36,4 +36,8 @@ export const typeChart: Record<ElementType, Partial<Record<ElementType, number>>
     ice: 0.5,
   },
   normal: {},
+  poison: {
+    grass: 2,    // 독 → 풀: 2배
+    poison: 0.5, // 독 → 독: 0.5배
+  },
 };

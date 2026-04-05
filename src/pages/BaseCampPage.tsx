@@ -7,11 +7,11 @@ import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../data/monsterImages";
 import { usePlayerStore } from "../store/playerStore";
 import { LEARNSET } from "../data/learnset";
 
-// ─── 속성 한글/색상 ────────────────────────────────────────────────────────────────
+// ── 속성 한글/색상 ──────────────────────────────────────────────────────────────
 
 const TYPE_KO: Record<string, string> = {
   fire: "불꽃", water: "물", grass: "풀",
-  electric: "전기", ice: "얼음", normal: "노말",
+  electric: "전기", ice: "얼음", normal: "노말", poison: "독",
 };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -21,28 +21,34 @@ const TYPE_COLOR: Record<string, string> = {
   electric: "bg-yellow-900/70 text-yellow-200 border-yellow-700",
   ice:      "bg-cyan-900/70 text-cyan-200 border-cyan-700",
   normal:   "bg-zinc-800/70 text-zinc-200 border-zinc-600",
+  poison:   "bg-purple-900/70 text-purple-200 border-purple-700",
 };
 
 const TYPE_GROUP_LABEL: Record<string, string> = {
-  fire: "🔥 불꽃", water: "💧 물", grass: "🌿 풀",
-  electric: "⚡ 전기", ice: "❄️ 얼음", normal: "⬜ 노말",
+  fire: "불꽃", water: "물", grass: "풀",
+  electric: "전기", ice: "얼음", normal: "노말",
 };
 
-// ─── 몬스터 설명문 ────────────────────────────────────────────────────────────��───
+// ── 몬스터 설명문 ────────────────────────────────────────────────────────────────
 
 const MONSTER_DEX_DESC: Record<string, string> = {
-  flameling: "드넓은 초원을 무리지어 뛰어다닌다. 흥분하면 갈기에서 불꽃이 피어오르며, 가끔 초원을 태우기도 한다. ��꽃 에너지를 발굽에 모아 강력한 킥을 날린다.",
-  burno:     "화산 근처 용암 지대에서 생활한다. 몸통이 뜨거운 돌처럼 단단하고, 콧김에서 연기가 피어오른다. 화가 나면 뿔에서 불꽃이 폭발한다.",
-  aquabe:    "맑은 시냇가와 연못가에 서식하는 물 도롱뇽이다. 피부에서 미끌미끌한 점액을 분비하며, 독성 성분이 있어 함부로 만지면 안 된다.",
-  bubblet:   "수면 위를 떠다니는 거품 속에 산다. 물벌레처럼 빠르게 헤엄치며 독 가시를 쏜다. 거품이 터지는 소리로 의사소통한다.",
-  leafy:     "숲 속 나뭇가지 사이에서 새싹처럼 자란다. 몸 색깔이 주변 식물과 똑같아 찾기 어렵다. 차가운 이슬을 머금은 잎새를 날려 공격한다.",
-  mossy:     "오래된 숲의 바위에 이끼처럼 달라붙어 잠든다. 깨어나면 엄청난 힘으로 움직이며 독성 포자를 뿜는다. 수백 년 된 개체도 있다고 전해진다.",
-  voltiny:   "볼에 전기를 저장하는 전기 쥐. 꼬리를 흔들면 불꽃이 튄다. 무리를 지어 살며 서로의 전기로 통신한다. 흥분 시 주변 기기가 오작동한다.",
-  zapbear:   "어두운 숲속에 사는 전기 곰. 몸 표면의 노란 줄무늬를 통해 전기를 방전한다. 겨울잠을 자지 않고 연중 전기를 모은다.",
-  frostlet:  "얼음 수정으로 이루어진 신비로운 생물. 팔에서 날카로운 크리스탈을 발사하며, 배의 눈꽃 무늬는 기온이 낮을수록 밝게 빛난다.",
-  blizzwolf: "눈보라가 몰아치는 설원을 4족으로 달리는 얼음 늑대. 얼음 이빨은 강철도 부순다. 무리의 우두머리는 절대영도의 숨결을 내뿜는다.",
-  fluffin:   "솜사탕 같은 분홍빛 털로 뒤덮인 온순한 생물. 천적을 만나면 털을 부풀려 두 배로 커 보인다. 달콤한 향기가 나지만 독가루를 품고 있다.",
-  stonepup:  "돌처럼 단단한 피부를 가진 강아지 몬스터. 바위 틈새에서 자고, 돌 머리로 박치기를 즐긴다. 오래된 개체일수록 피부에 깊은 균열이 생긴다.",
+  flameling:  "드넓은 초원을 무리지어 뛰어다닌다. 흥분하면 갈기에서 불꽃이 피어오르며, 가끔 초원을 태우기도 한다. 불꽃 에너지를 발굽에 모아 강력한 킥을 날린다.",
+  burno:      "화산 근처 용암 지대에서 생활한다. 몸통이 뜨거운 돌처럼 단단하고, 콧김에서 연기가 피어오른다. 화가 나면 뿔에서 불꽃이 폭발한다.",
+  aquabe:     "맑은 시냇가와 연못가에 서식하는 물 도롱뇽이다. 피부에서 미끌미끌한 점액을 분비하며, 독성 성분이 있어 함부로 만지면 안 된다.",
+  aquavern:   "아쿠비가 성장하여 강인한 파충류로 진화한 모습이다. 등의 비늘은 강철처럼 단단하며, 거대한 꼬리에서 뿜어내는 물 소용돌이는 바위도 뚫는다.",
+  bubblet:    "수면 위를 떠다니는 거품 속에 산다. 물벌레처럼 빠르게 헤엄치며 독 가시를 쏜다. 거품이 터지는 소리로 의사소통한다.",
+  leafy:      "등에 무성한 잎사귀 덤불을 달고 다니는 풀 곰이다. 온화한 성격이지만 위협을 받으면 등의 잎에서 날카로운 씨앗을 뿜어낸다.",
+  mossy:      "희미한 전기를 머금은 야생 늑대다. 분노할수록 체내 전기가 강해지며, 성장하면서 갈기에 전기 불꽃이 피어오른다. 수백 킬로미터 밖에서도 뇌우를 감지한다.",
+  mossevo:    "모시가 진화한 전기 늑대다. 갈기가 날카로운 전기 스파이크로 변했으며, 가슴의 번개 문양에서 고압 전류를 방출한다. 접근하는 것만으로도 털이 곤두선다.",
+  mossyfinal: "모치가 극한의 전기 에너지를 흡수해 완성된 전설의 전기 늑대 왕이다. 온몸의 네온 라인은 억제된 번개의 흔적이며, 한번 울부짖으면 폭풍이 일어난다.",
+  crystafox:  "이마에 박힌 다이아몬드 수정이 빛을 굴절시켜 주변을 무지갯빛으로 물들인다. 위기를 감지하면 수정 날개를 펼쳐 얼음 파편을 흩뿌린다.",
+  frostorb:   "거대한 수정 원반을 달고 천천히 떠다니는 얼음 생물이다. 원반은 주변 수분을 흡수해 얼음으로 바꾸며, 근처에 가면 숨이 하얗게 변한다.",
+  voltiny:    "볼에 전기를 저장하는 전기 쥐다. 꼬리를 흔들면 불꽃이 튄다. 무리를 지어 살며 서로의 전기로 통신한다.",
+  zapbear:    "어두운 숲속에 사는 전기 곰이다. 몸 표면의 줄무늬를 통해 전기를 방전한다. 겨울잠을 자지 않고 연중 전기를 모은다.",
+  frostlet:   "얼음 수정으로 이루어진 신비로운 생물이다. 팔에서 날카로운 크리스탈을 발사하며, 배의 눈꽃 무늬는 기온이 낮을수록 밝게 빛난다.",
+  blizzwolf:  "눈보라가 몰아치는 설원을 4족으로 달리는 얼음 늑대다. 얼음 이빨은 강철도 부순다. 무리의 우두머리는 극한냉기의 숨결을 내뿜는다.",
+  fluffin:    "솜사탕 같은 분홍빛 털로 뒤덮인 온순한 생물이다. 달콤한 향기가 나지만 독가루를 품고 있다.",
+  stonepup:   "돌처럼 단단한 피부를 가진 강아지다. 바위 틈새에서 자고, 돌 머리로 박치기를 즐긴다. 오래된 개체일수록 피부에 깊은 균열이 생긴다.",
 };
 
 const MOVE_TYPE_COLOR: Record<string, string> = {
@@ -52,16 +58,34 @@ const MOVE_TYPE_COLOR: Record<string, string> = {
   electric: "bg-yellow-900/60 text-yellow-300 border-yellow-800",
   ice:      "bg-cyan-900/60 text-cyan-300 border-cyan-800",
   normal:   "bg-zinc-800/60 text-zinc-300 border-zinc-700",
+  poison:   "bg-purple-900/60 text-purple-300 border-purple-800",
 };
 
-// ─── 도감 세부 뷰 ────────────────────────────────────────────────────────────────
+// ── 진화 체인 헬퍼 ───────────────────────────────────────────────────────────────
 
-function DexDetail({ monsterId, seen, caught, onBack }: {
-  monsterId: string; seen: boolean; caught: boolean; onBack: () => void;
+function getEvolutionChain(monsterId: string) {
+  const m = monsters.find(x => x.id === monsterId);
+  if (!m?.evolutionChainId) return null;
+  const chain = monsters
+    .filter(x => x.evolutionChainId === m.evolutionChainId)
+    .sort((a, b) => (a.evolutionStage ?? 1) - (b.evolutionStage ?? 1));
+  return chain.length >= 2 ? chain : null;
+}
+
+// ── 도감 세부 뷰 ──────────────────────────────────────────────────────────────────
+
+function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
+  monsterId: string;
+  seen: boolean;
+  caught: boolean;
+  onBack: () => void;
+  onGoTo: (id: string) => void;
 }) {
   const m = monsters.find(x => x.id === monsterId);
   if (!m) return null;
   const learnset = LEARNSET[monsterId] ?? [];
+  const dexSeen   = usePlayerStore((s) => s.dexSeen);
+  const chain     = getEvolutionChain(monsterId);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -88,11 +112,11 @@ function DexDetail({ monsterId, seen, caught, onBack }: {
           <div className="w-28 h-28 flex items-center justify-center bg-zinc-900 rounded-xl border border-zinc-800 shrink-0">
             <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.name}
               className="w-24 h-24 object-contain"
-              style={seen ? monsterImgStyle(m.id) : { filter:"brightness(0)", opacity:0.3 }}/>
+              style={seen ? monsterImgStyle(m.id) : { filter: "brightness(0)", opacity: 0.3 }}/>
           </div>
           {caught && (
             <div className="flex-1 grid grid-cols-2 gap-2">
-              {([["HP", m.maxHp], ["공격", m.attack], ["방어", m.defense], ["속도", m.speed]] as [string,number][]).map(([label, val]) => (
+              {([["HP", m.maxHp], ["공격", m.attack], ["방어", m.defense], ["속도", m.speed]] as [string, number][]).map(([label, val]) => (
                 <div key={label} className="bg-zinc-900 rounded-lg p-2.5 border border-zinc-800">
                   <p className="text-[10px] text-zinc-600 uppercase tracking-wider">{label}</p>
                   <p className="text-lg font-black text-zinc-100">{val}</p>
@@ -101,6 +125,53 @@ function DexDetail({ monsterId, seen, caught, onBack }: {
             </div>
           )}
         </div>
+
+        {/* 진화 체인 */}
+        {chain && (
+          <div className="bg-zinc-900/60 rounded-xl border border-zinc-800 p-4">
+            <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-3">진화 계열</p>
+            <div className="flex items-center justify-center gap-2">
+              {chain.map((cm, i) => {
+                const isCurrent = cm.id === monsterId;
+                const isSeen    = dexSeen.includes(cm.id);
+                return (
+                  <div key={cm.id} className="flex items-center gap-2">
+                    {i > 0 && (
+                      <div className="flex flex-col items-center">
+                        <span className="text-yellow-500 text-base">→</span>
+                        {cm.evolvesAtLevel && (
+                          <span className="text-[9px] text-yellow-700">Lv.{cm.evolvesAtLevel - (chain[i-1].evolvesAtLevel ?? 0) > 0 ? cm.evolvesFrom ? monsters.find(x=>x.id===cm.evolvesFrom)?.evolvesAtLevel ?? cm.evolvesAtLevel : cm.evolvesAtLevel : cm.evolvesAtLevel}</span>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => cm.id !== monsterId && onGoTo(cm.id)}
+                      className={`flex flex-col items-center gap-1 rounded-xl p-2 border transition
+                        ${isCurrent
+                          ? "border-yellow-600 bg-yellow-950/40 cursor-default"
+                          : "border-zinc-700 bg-zinc-900 hover:border-zinc-500 cursor-pointer"}`}
+                    >
+                      <div className="w-14 h-14 flex items-center justify-center">
+                        <img
+                          src={MONSTER_IMAGE_MAP[cm.id]}
+                          alt={isSeen ? cm.name : "???"}
+                          className="w-12 h-12 object-contain"
+                          style={isSeen ? monsterImgStyle(cm.id) : { filter: "brightness(0)", opacity: 0.4 }}
+                        />
+                      </div>
+                      <span className={`text-xs font-semibold ${isCurrent ? "text-yellow-300" : isSeen ? "text-zinc-200" : "text-zinc-600"}`}>
+                        {isSeen ? cm.name : "???"}
+                      </span>
+                      {cm.evolvesAtLevel && cm.evolvesFrom && (
+                        <span className="text-[9px] text-zinc-600">Lv.{cm.evolvesAtLevel}</span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 설명문 */}
         {seen && (
@@ -163,19 +234,22 @@ function DexDetail({ monsterId, seen, caught, onBack }: {
   );
 }
 
-// ─── 도감 모달 ────────────────────────────────────────────────────────────────────
+// ── 도감 모달 ──────────────────────────────────────────────────────────────────────
 
 function DexModal({ onClose }: { onClose: () => void }) {
   const dexSeen   = usePlayerStore((s) => s.dexSeen);
   const dexCaught = usePlayerStore((s) => s.dexCaught);
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter]     = useState<string>("all");
   const [detailId, setDetailId] = useState<string | null>(null);
 
   const typeGroups = ["fire", "water", "grass", "electric", "ice", "normal"];
 
+  // 더미 몬스터 제외
+  const visibleMonsters = monsters.filter(m => !m.isDummy);
+
   const filteredMonsters = filter === "all"
-    ? monsters
-    : monsters.filter((m) => m.type === filter);
+    ? visibleMonsters
+    : visibleMonsters.filter((m) => m.type === filter);
 
   return (
     <div
@@ -193,6 +267,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
             seen={dexSeen.includes(detailId)}
             caught={dexCaught.includes(detailId)}
             onBack={() => setDetailId(null)}
+            onGoTo={(id) => setDetailId(id)}
           />
         ) : (
           /* ── 목록 뷰 ── */
@@ -202,7 +277,9 @@ function DexModal({ onClose }: { onClose: () => void }) {
               <div>
                 <h2 className="text-xl font-bold text-zinc-100">몬스터 도감</h2>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  조우 {dexSeen.length}/{monsters.length} &nbsp;·&nbsp; 포획 {dexCaught.length}/{monsters.length}
+                  조우 {dexSeen.filter(id => !monsters.find(m=>m.id===id)?.isDummy).length}/{visibleMonsters.length}
+                  &nbsp;·&nbsp;
+                  포획 {dexCaught.filter(id => !monsters.find(m=>m.id===id)?.isDummy).length}/{visibleMonsters.length}
                 </p>
               </div>
               <button
@@ -252,12 +329,10 @@ function DexModal({ onClose }: { onClose: () => void }) {
                             ? "border-zinc-700 bg-zinc-900/60"
                             : "border-zinc-800 bg-zinc-900/30"}`}
                     >
-                      {/* 포획 뱃지 */}
                       {caught && (
                         <span className="self-end text-xs text-emerald-400 font-bold -mb-1">포획</span>
                       )}
 
-                      {/* 이미지 */}
                       <div className="relative h-20 w-20 flex items-center justify-center">
                         {seen ? (
                           <img
@@ -276,7 +351,6 @@ function DexModal({ onClose }: { onClose: () => void }) {
                         )}
                       </div>
 
-                      {/* 이름/속성 */}
                       <div className="text-center w-full">
                         {seen ? (
                           <>
@@ -295,7 +369,6 @@ function DexModal({ onClose }: { onClose: () => void }) {
                         )}
                       </div>
 
-                      {/* 클릭 힌트 */}
                       {seen && (
                         <span className="text-[9px] text-zinc-700 mt-auto">탭하여 상세보기</span>
                       )}
@@ -311,7 +384,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── 탑 층수 선택 모달 ────────────────────────────────────────────────────────────
+// ── 탑 층수 선택 모달 ──────────────────────────────────────────────────────────────
 
 function TowerModal({
   bestFloor,
@@ -323,7 +396,6 @@ function TowerModal({
   onClose: () => void;
 }) {
   const maxSelectable = bestFloor + 1;
-  // 5층 단위 체크포인트 목록
   const checkpoints: number[] = [1];
   for (let f = 5; f <= maxSelectable; f += 5) checkpoints.push(f);
   if (!checkpoints.includes(maxSelectable)) checkpoints.push(maxSelectable);
@@ -382,12 +454,12 @@ function TowerModal({
   );
 }
 
-// ─── BaseCampPage ─────────────────────────────────────────────────────────────────
+// ── BaseCampPage ───────────────────────────────────────────────────────────────────
 
 export default function BaseCampPage() {
   const gameRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
-  const [dexOpen, setDexOpen] = useState(false);
+  const [dexOpen, setDexOpen]           = useState(false);
   const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string; isCatchZone: boolean } | null>(null);
   const bestFloor = usePlayerStore((s) => s.bestFloor);
 
@@ -402,7 +474,6 @@ export default function BaseCampPage() {
       isCatchZone?: boolean;
       floor?: number;
     }) => {
-      // 탑 입구: 층 선택 모달 표시
       setTowerPayload({
         from: payload?.from ?? "basecamp",
         portalId: payload?.portalId ?? "none",
@@ -428,7 +499,6 @@ export default function BaseCampPage() {
     };
   }, [navigate]);
 
-  // ESC/P 키 핸들링
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === "p" || e.key === "P") && !dexOpen) setDexOpen(true);
@@ -458,7 +528,6 @@ export default function BaseCampPage() {
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#111" }}>
       <div ref={gameRef} style={{ width: "100%", height: "100%" }} />
 
-      {/* 도감 버튼 (우하단) */}
       <button
         onClick={() => setDexOpen(true)}
         className="fixed bottom-4 right-4 z-40 rounded-xl border border-zinc-600 bg-zinc-900/90 px-4 py-2 text-sm font-semibold text-zinc-300 shadow-lg hover:bg-zinc-800 hover:text-zinc-100 backdrop-blur"

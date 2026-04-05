@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" shape-rendering="crispEdges">
+  <!-- FROSTORB - Round white ice disc creature, 20x20 grid @ 4px -->
+
+  <!-- ── 크리스탈 핀 (위쪽 안테나) ── -->
+  <rect x="36" y="0"  width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="0"  width="4"  height="4"  fill="#88ddff"/>
+  <rect x="36" y="4"  width="8"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="4"  width="4"  height="4"  fill="#55aaee"/>
+  <rect x="32" y="8"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="8"  width="8"  height="4"  fill="#3399dd"/>
+  <rect x="44" y="8"  width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="8"  width="4"  height="4"  fill="#aaeeff"/>
+  <rect x="32" y="12" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="12" width="8"  height="4"  fill="#2288cc"/>
+  <rect x="44" y="12" width="4"  height="4"  fill="#1a1a1a"/>
+
+  <!-- ── 파란 사이드 디스크 (헤드폰처럼) ── -->
+  <!-- 왼쪽 디스크 -->
+  <rect x="0"  y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="4"  y="28" width="20" height="4"  fill="#3388bb"/>
+  <rect x="24" y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="0"  y="32" width="4"  height="16" fill="#1a1a1a"/>
+  <rect x="4"  y="32" width="20" height="16" fill="#2277aa"/>
+  <rect x="8"  y="34" width="12" height="12" fill="#44aacc"/>
+  <rect x="10" y="36" width="8"  height="8"  fill="#77ccee"/>
+  <rect x="24" y="32" width="4"  height="16" fill="#1a1a1a"/>
+  <rect x="0"  y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="4"  y="48" width="20" height="4"  fill="#3388bb"/>
+  <rect x="24" y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 오른쪽 디스크 -->
+  <rect x="52" y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="56" y="28" width="20" height="4"  fill="#3388bb"/>
+  <rect x="76" y="28" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="52" y="32" width="4"  height="16" fill="#1a1a1a"/>
+  <rect x="56" y="32" width="20" height="16" fill="#2277aa"/>
+  <rect x="60" y="34" width="12" height="12" fill="#44aacc"/>
+  <rect x="62" y="36" width="8"  height="8"  fill="#77ccee"/>
+  <rect x="76" y="32" width="4"  height="16" fill="#1a1a1a"/>
+  <rect x="52" y="48" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="56" y="48" width="20" height="4"  fill="#3388bb"/>
+  <rect x="76" y="48" width="4"  height="4"  fill="#1a1a1a"/>
+
+  <!-- ── 둥근 하얀 몸통 ── -->
+  <!-- 상단 -->
+  <rect x="24" y="16" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="28" y="16" width="20" height="4"  fill="#eef8ff"/>
+  <rect x="48" y="16" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="20" y="20" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="24" y="20" width="28" height="4"  fill="#f4faff"/>
+  <rect x="52" y="20" width="4"  height="4"  fill="#1a1a1a"/>
+
+  <!-- 눈 행 -->
+  <rect x="20" y="24" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="24" y="24" width="28" height="4"  fill="#f4faff"/>
+  <rect x="52" y="24" width="4"  height="4"  fill="#1a1a1a"/>
+
+  <!-- 중간 (눈 포함) -->
+  <rect x="20" y="28" width="4"  height="8"  fill="#1a1a1a"/>
+  <rect x="24" y="28" width="28" height="8"  fill="#f4faff"/>
+  <rect x="52" y="28" width="4"  height="8"  fill="#1a1a1a"/>
+  <!-- 눈 (빨간) -->
+  <rect x="28" y="28" width="8"  height="8"  fill="#cc2222"/>
+  <rect x="44" y="28" width="8"  height="8"  fill="#cc2222"/>
+  <!-- 눈 하이라이트 -->
+  <rect x="30" y="29" width="3"  height="3"  fill="#ff6666"/>
+  <rect x="46" y="29" width="3"  height="3"  fill="#ff6666"/>
+  <!-- 눈 사이 (흰) -->
+  <rect x="36" y="28" width="8"  height="8"  fill="#f4faff"/>
+
+  <!-- 하단 (입) -->
+  <rect x="20" y="36" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="24" y="36" width="28" height="4"  fill="#f4faff"/>
+  <rect x="52" y="36" width="4"  height="4"  fill="#1a1a1a"/>
+  <!-- 미소 -->
+  <rect x="32" y="38" width="12" height="2"  fill="#1a1a1a"/>
+  <rect x="30" y="37" width="2"  height="2"  fill="#1a1a1a"/>
+  <rect x="44" y="37" width="2"  height="2"  fill="#1a1a1a"/>
+
+  <!-- 몸통 하단 -->
+  <rect x="20" y="40" width="4"  height="12" fill="#1a1a1a"/>
+  <rect x="24" y="40" width="28" height="12" fill="#eef8ff"/>
+  <rect x="52" y="40" width="4"  height="12" fill="#1a1a1a"/>
+
+  <!-- ── 바닥 꼬리/몸체 ── -->
+  <rect x="20" y="52" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="24" y="52" width="28" height="4"  fill="#cce8f8"/>
+  <rect x="52" y="52" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="24" y="56" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="28" y="56" width="20" height="4"  fill="#aad4ee"/>
+  <rect x="48" y="56" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="28" y="60" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="32" y="60" width="12" height="4"  fill="#88bbdd"/>
+  <rect x="44" y="60" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="32" y="64" width="4"  height="4"  fill="#1a1a1a"/>
+  <rect x="36" y="64" width="4"  height="4"  fill="#3388bb"/>
+  <rect x="40" y="64" width="4"  height="4"  fill="#1a1a1a"/>
+</svg>
