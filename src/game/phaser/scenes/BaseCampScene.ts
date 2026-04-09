@@ -128,17 +128,10 @@ export default class BaseCampScene extends Phaser.Scene {
       fontSize: "10px", color: "#66cc33",
     }).setOrigin(0.5).setDepth(3);
 
-    // 숲 충돌 오브젝트: 개별 나무 기둥만 막고 경로(아래쪽)는 통행 가능
-    const treePositions = trees;
-    const treeColliders: Phaser.GameObjects.Rectangle[] = [];
-    for (const [tx, ty] of treePositions) {
-      const trunk = this.add.rectangle(tx, ty + 24, 14, 30, 0x000000, 0);
-      this.physics.add.existing(trunk, true);
-      treeColliders.push(trunk);
-    }
-    // 숲 상단 보이지 않는 경계 (경로 위쪽만)
-    const forestTopWall = this.add.rectangle(FOREST_X, FOREST_Y - 80, 280, 60, 0x000000, 0);
-    this.physics.add.existing(forestTopWall, true);
+    // 숲 충돌: 경로(y≥600) 아래는 열어두고 숲 상단부만 막음
+    // bottom edge = FOREST_Y - 80 + 90 = 610 → 경로(600~720) 진입 가능
+    const forestBlock = this.add.rectangle(FOREST_X, FOREST_Y - 125, 260, 90, 0x000000, 0);
+    this.physics.add.existing(forestBlock, true);
 
     // ── 집 (중앙) ────────────────────────────────────────────────────────────────
     // 집 외벽
@@ -245,8 +238,7 @@ export default class BaseCampScene extends Phaser.Scene {
     this.player.setCollideWorldBounds(true);
     this.player.setScale(2);
 
-    for (const trunk of treeColliders) this.physics.add.collider(this.player, trunk);
-    this.physics.add.collider(this.player, forestTopWall);
+    this.physics.add.collider(this.player, forestBlock);
     this.physics.add.collider(this.player, houseWall);
     this.physics.add.collider(this.player, towerBlock);
 
@@ -265,7 +257,7 @@ export default class BaseCampScene extends Phaser.Scene {
     keyboard.on("keydown-E", () => {
       const px = this.player.x, py = this.player.y;
       const distTower  = Phaser.Math.Distance.Between(px, py, TOWER_X, TOWER_Y + 100);
-      const distForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y + 80);
+      const distForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
       const distHouse  = Phaser.Math.Distance.Between(px, py, HOUSE_X, HOUSE_DOOR_Y);
 
       if (distTower < 90) {
@@ -274,7 +266,7 @@ export default class BaseCampScene extends Phaser.Scene {
           from: "basecamp", portalId: "dungeon-entrance-1",
           isCatchZone: false, floor: 1,
         });
-      } else if (distForest < 120) {
+      } else if (distForest < 130) {
         setCampPosition(px, py);
         gameEvents.emit(GAME_EVENT.ENTER_FOREST);
       } else if (distHouse < 90) {
@@ -297,7 +289,7 @@ export default class BaseCampScene extends Phaser.Scene {
       const distForest = Phaser.Math.Distance.Between(this.player.x, this.player.y, FOREST_X, FOREST_Y);
       const distHouse  = Phaser.Math.Distance.Between(this.player.x, this.player.y, HOUSE_X, HOUSE_DOOR_Y);
       if (ph && distTower  >= 120) ph.destroy();
-      if (fh && distForest >= 140) fh.destroy();
+      if (fh && distForest >= 160) fh.destroy();
       if (hh && distHouse  >= 120) hh.destroy();
     });
   }
@@ -337,7 +329,7 @@ export default class BaseCampScene extends Phaser.Scene {
 
     const px = this.player.x, py = this.player.y;
     const distTower  = Phaser.Math.Distance.Between(px, py, TOWER_X, TOWER_Y + 100);
-    const distForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y + 80);
+    const distForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
     const distHouse  = Phaser.Math.Distance.Between(px, py, HOUSE_X, HOUSE_DOOR_Y);
 
     // 힌트 표시
@@ -352,12 +344,12 @@ export default class BaseCampScene extends Phaser.Scene {
       }).setName("portalHint").setDepth(10);
     } else if (distTower >= 120 && ph) ph.destroy();
 
-    if (distForest < 120 && !fh) {
+    if (distForest < 130 && !fh) {
       this.add.text(px - 46, py - 56, "E: 숲 입장", {
         fontSize: "13px", color: "#88ee44",
         backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
       }).setName("forestHint").setDepth(10);
-    } else if (distForest >= 150 && fh) fh.destroy();
+    } else if (distForest >= 160 && fh) fh.destroy();
 
     if (distHouse < 90 && !hh) {
       this.add.text(px - 46, py - 56, "E: 집 입장", {

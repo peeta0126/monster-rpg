@@ -425,13 +425,12 @@ export default function HousingPage() {
   }, []);
 
   return (
-    // position:relative + 명시적 크기 → Phaser가 부모 크기를 올바르게 인식
-    <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden", background: "#111" }}>
+    <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#111" }}>
 
-      {/* Phaser 캔버스 */}
+      {/* Phaser 캔버스 — BaseCampPage와 동일한 구조 */}
       <div
         ref={gameRef}
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%" }}
       />
 
       {/* UI 버튼들 (우하단) */}
