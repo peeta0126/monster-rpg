@@ -365,7 +365,7 @@ export default function HousingPage() {
       const key = e.key.toLowerCase();
       if (key === "e") {
         const p = posRef.current;
-        if (dist(p, FARM_DOOR) < DOOR_RADIUS)  navigate("/farm");
+        if (dist(p, FARM_DOOR) < DOOR_RADIUS)  navigate("/farm", { state: { from: "housing" } });
         if (dist(p, EXIT_DOOR) < DOOR_RADIUS)  navigate("/");
       }
       if ((key === "h") && !editModeRef.current) setEditMode(true);
@@ -485,7 +485,7 @@ export default function HousingPage() {
       {/* 상단 버튼 */}
       <div style={{ position:"fixed", top:"12px", left:"12px", zIndex:40, display:"flex", gap:"8px" }}>
         <button onClick={()=>navigate("/")} style={btnStyle("#3f3f46","#a1a1aa")}>← 바깥</button>
-        <button onClick={()=>navigate("/farm")} style={btnStyle("#14532d","#4ade80")}>🌾 농장</button>
+        <button onClick={()=>navigate("/farm", { state: { from: "housing" } })} style={btnStyle("#14532d","#4ade80")}>🌾 농장</button>
       </div>
 
       {/* 우하단: 편집 버튼 + 세트 알림 */}

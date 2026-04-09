@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore, type OwnedMonster } from "../store/playerStore";
 import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../data/monsterImages";
 import { MATERIALS, POTIONS, type Potion, getMaterial } from "../data/items";
@@ -797,6 +797,8 @@ const TAB_DATA: { id: FarmTab; label: string; subtitle: string }[] = [
 
 export default function FarmPage() {
   const navigate  = useNavigate();
+  const location  = useLocation();
+  const backPath  = (location.state as { from?: string } | null)?.from === "housing" ? "/housing" : "/";
   const { party, storage, bestFloor, potions, materials, restorePartyHp } = usePlayerStore();
   const [activeTab, setActiveTab] = useState<FarmTab>("monsters");
   const [restoreAnim, setRestoreAnim] = useState(false);
@@ -828,7 +830,7 @@ export default function FarmPage() {
         <div className="flex items-center justify-between px-6 py-3">
           {/* 왼쪽 */}
           <div className="flex items-center gap-4">
-            <button onClick={()=>navigate("/")}
+            <button onClick={()=>navigate(backPath)}
               className="rounded-xl px-3 py-1.5 text-sm font-semibold transition"
               style={{
                 background:"rgba(20,12,4,.8)",
