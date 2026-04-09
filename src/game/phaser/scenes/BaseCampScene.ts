@@ -2,6 +2,13 @@ import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../events";
 import { getCampPosition, setCampPosition } from "../campPositionStore";
 
+// ─── 맵 구성 위치 ──────────────────────────────────────────────────────────────
+// 레이아웃: 숲(왼쪽) ── 집(중앙) ── 무한의 탑(오른쪽)
+const FOREST_X = 230,  FOREST_Y = 600;
+const HOUSE_X  = 780,  HOUSE_Y  = 540;
+const HOUSE_DOOR_Y = HOUSE_Y + 120;   // 집 문 Y 위치
+const TOWER_X  = 1340, TOWER_Y  = 440;
+
 export default class BaseCampScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -21,210 +28,268 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image("player-up", "/assets/basecamp/player-up.png");
-    this.load.image("player-up-1", "/assets/basecamp/player-up-1.png");
-    this.load.image("player-up-2", "/assets/basecamp/player-up-2.png");
-
-    this.load.image("player-down", "/assets/basecamp/player-down.png");
-    this.load.image("player-down-1", "/assets/basecamp/player-down-1.png");
-    this.load.image("player-down-2", "/assets/basecamp/player-down-2.png");
-
-    this.load.image("player-left", "/assets/basecamp/player-left.png");
-    this.load.image("player-left-1", "/assets/basecamp/player-left-1.png");
-    this.load.image("player-left-2", "/assets/basecamp/player-left-2.png");
-
-    this.load.image("player-right", "/assets/basecamp/player-right.png");
+    this.load.image("player-up",      "/assets/basecamp/player-up.png");
+    this.load.image("player-up-1",    "/assets/basecamp/player-up-1.png");
+    this.load.image("player-up-2",    "/assets/basecamp/player-up-2.png");
+    this.load.image("player-down",    "/assets/basecamp/player-down.png");
+    this.load.image("player-down-1",  "/assets/basecamp/player-down-1.png");
+    this.load.image("player-down-2",  "/assets/basecamp/player-down-2.png");
+    this.load.image("player-left",    "/assets/basecamp/player-left.png");
+    this.load.image("player-left-1",  "/assets/basecamp/player-left-1.png");
+    this.load.image("player-left-2",  "/assets/basecamp/player-left-2.png");
+    this.load.image("player-right",   "/assets/basecamp/player-right.png");
     this.load.image("player-right-1", "/assets/basecamp/player-right-1.png");
     this.load.image("player-right-2", "/assets/basecamp/player-right-2.png");
-
-    // 나중에 실제 이미지 넣으면 주석 해제
-    // this.load.image("house", "/assets/basecamp/house.png");
-    // this.load.image("tree", "/assets/basecamp/tree.png");
-    // this.load.image("portal", "/assets/basecamp/portal.png");
-    // this.load.image("ground", "/assets/basecamp/ground.png");
   }
 
   create() {
-    const mapWidth = 1600;
-    const mapHeight = 1200;
+    const mapW = 1600, mapH = 1200;
+    this.cameras.main.setBounds(0, 0, mapW, mapH);
+    this.physics.world.setBounds(0, 0, mapW, mapH);
 
-    this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
-    this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
-    this.cameras.main.setBackgroundColor("#87b567");
+    const g = this.add.graphics();
 
-    // 배경
-    this.add.rectangle(
-      mapWidth / 2,
-      mapHeight / 2,
-      mapWidth,
-      mapHeight,
-      0x87b567,
+    // ── 기본 잔디 배경 ──────────────────────────────────────────────────────────
+    g.fillStyle(0x78a84a);
+    g.fillRect(0, 0, mapW, mapH);
+
+    // 잔디 질감 (랜덤 짧은 선)
+    g.lineStyle(1, 0x5a8a35, 0.25);
+    for (let i = 0; i < 400; i++) {
+      const rx = Math.random() * mapW;
+      const ry = Math.random() * mapH;
+      g.lineBetween(rx, ry, rx + 4, ry - 5);
+    }
+
+    // ── 흙길 (숲 → 집 → 탑 연결) ──────────────────────────────────────────────
+    // 메인 수평 경로
+    g.fillStyle(0xc4a265, 0.8);
+    g.fillRect(80, HOUSE_DOOR_Y - 60, 1500, 120); // 넓은 흙길
+
+    // 경로 테두리
+    g.lineStyle(2, 0xa0824a, 0.4);
+    g.lineBetween(80, HOUSE_DOOR_Y - 60, 1520, HOUSE_DOOR_Y - 60);
+    g.lineBetween(80, HOUSE_DOOR_Y + 60, 1520, HOUSE_DOOR_Y + 60);
+
+    // 집 진입로 (문 앞 수직 경로)
+    g.fillStyle(0xc4a265, 0.7);
+    g.fillRect(HOUSE_X - 50, HOUSE_DOOR_Y - 200, 100, 200);
+
+    // 탑 진입로
+    g.fillStyle(0xb8956e, 0.6);
+    g.fillRect(TOWER_X - 45, TOWER_Y + 80, 90, 180);
+
+    // ── 장식 돌 & 꽃 ──────────────────────────────────────────────────────────
+    // 경로 양옆 돌
+    const stonePos = [
+      [150, HOUSE_DOOR_Y - 80], [350, HOUSE_DOOR_Y + 80],
+      [550, HOUSE_DOOR_Y - 70], [900, HOUSE_DOOR_Y + 85],
+      [1050, HOUSE_DOOR_Y - 75], [1200, HOUSE_DOOR_Y + 80],
+    ];
+    g.fillStyle(0x9e9e9e, 0.7);
+    for (const [sx, sy] of stonePos) {
+      g.fillEllipse(sx, sy, 18, 12);
+    }
+
+    // ── 숲 입구 (왼쪽) ──────────────────────────────────────────────────────────
+    // 숲 바닥
+    g.fillStyle(0x1b4d0a, 0.55);
+    g.fillEllipse(FOREST_X, FOREST_Y, 320, 260);
+
+    // 나무들
+    const trees = [
+      [FOREST_X - 80, FOREST_Y - 70], [FOREST_X + 70, FOREST_Y - 80],
+      [FOREST_X - 100, FOREST_Y + 40], [FOREST_X + 90, FOREST_Y + 50],
+      [FOREST_X - 20, FOREST_Y - 100], [FOREST_X + 10, FOREST_Y + 80],
+      [FOREST_X - 130, FOREST_Y - 20], [FOREST_X + 130, FOREST_Y - 10],
+    ];
+    for (const [tx, ty] of trees) {
+      // 나무 기둥
+      g.fillStyle(0x6d4c1f);
+      g.fillRect(tx - 6, ty + 10, 12, 28);
+      // 나무 잎
+      g.fillStyle(0x2e7d32, 0.85);
+      g.fillTriangle(tx, ty - 28, tx - 22, ty + 14, tx + 22, ty + 14);
+      g.fillStyle(0x388e3c, 0.7);
+      g.fillTriangle(tx, ty - 14, tx - 18, ty + 20, tx + 18, ty + 20);
+    }
+
+    // 숲 입구 표시판
+    g.fillStyle(0x6d4c1f, 0.9);
+    g.fillRect(FOREST_X - 55, FOREST_Y - 130, 110, 40);
+    g.lineStyle(2, 0x44aa22, 0.8);
+    g.strokeRect(FOREST_X - 55, FOREST_Y - 130, 110, 40);
+
+    this.add.text(FOREST_X, FOREST_Y - 110, "🌲 숲 탐험", {
+      fontSize: "14px", color: "#88ee44",
+      padding: { x: 4, y: 2 },
+    }).setOrigin(0.5).setDepth(3);
+    this.add.text(FOREST_X, FOREST_Y - 90, "포획 & 재료", {
+      fontSize: "10px", color: "#66cc33",
+    }).setOrigin(0.5).setDepth(3);
+
+    // 숲 충돌 오브젝트 (진입 불가 나무들)
+    const forestBlock = this.add.rectangle(FOREST_X - 10, FOREST_Y - 40, 260, 200, 0x000000, 0);
+    this.physics.add.existing(forestBlock, true);
+
+    // ── 집 (중앙) ────────────────────────────────────────────────────────────────
+    // 집 외벽
+    g.fillStyle(0xd4a96a);
+    g.fillRect(HOUSE_X - 110, HOUSE_Y - 110, 220, 220);
+
+    // 지붕
+    g.fillStyle(0x8b2500);
+    g.fillTriangle(
+      HOUSE_X, HOUSE_Y - 170,
+      HOUSE_X - 140, HOUSE_Y - 90,
+      HOUSE_X + 140, HOUSE_Y - 90,
+    );
+    // 지붕 그림자
+    g.fillStyle(0x6a1b00, 0.4);
+    g.fillTriangle(
+      HOUSE_X + 20, HOUSE_Y - 150,
+      HOUSE_X + 140, HOUSE_Y - 90,
+      HOUSE_X + 80, HOUSE_Y - 90,
     );
 
-    // 임시 장애물
-    const house = this.add.rectangle(500, 300, 180, 140, 0x8b5a2b);
-    const tree = this.add.rectangle(800, 500, 80, 80, 0x2e7d32);
-    const pond = this.add.rectangle(1000, 650, 140, 100, 0x4aa3d8);
+    // 굴뚝
+    g.fillStyle(0x8b5e3c);
+    g.fillRect(HOUSE_X + 55, HOUSE_Y - 180, 28, 60);
+    g.fillStyle(0x555555, 0.6);
+    g.fillRect(HOUSE_X + 50, HOUSE_Y - 188, 38, 14);
 
-    // 임시 포탈 표시
-    this.add.rectangle(1100, 250, 90, 90, 0x5dade2);
+    // 집 창문 (두 개)
+    g.fillStyle(0x87ceeb, 0.75);
+    g.fillRect(HOUSE_X - 90, HOUSE_Y - 70, 50, 50);
+    g.fillRect(HOUSE_X + 40, HOUSE_Y - 70, 50, 50);
+    g.lineStyle(2, 0xd4a060, 0.9);
+    g.strokeRect(HOUSE_X - 90, HOUSE_Y - 70, 50, 50);
+    g.strokeRect(HOUSE_X + 40, HOUSE_Y - 70, 50, 50);
+    // 창문 십자
+    g.lineStyle(1, 0xd4a060, 0.6);
+    g.lineBetween(HOUSE_X - 65, HOUSE_Y - 70, HOUSE_X - 65, HOUSE_Y - 20);
+    g.lineBetween(HOUSE_X - 90, HOUSE_Y - 45, HOUSE_X - 40, HOUSE_Y - 45);
+    g.lineBetween(HOUSE_X + 65, HOUSE_Y - 70, HOUSE_X + 65, HOUSE_Y - 20);
+    g.lineBetween(HOUSE_X + 40, HOUSE_Y - 45, HOUSE_X + 90, HOUSE_Y - 45);
 
+    // 집 문
+    g.fillStyle(0x5a3010);
+    g.fillRect(HOUSE_X - 25, HOUSE_Y + 30, 50, 80);
+    g.fillStyle(0xf0c040);
+    g.fillCircle(HOUSE_X + 18, HOUSE_Y + 70, 5);
+    g.lineStyle(2, 0x3a1f00);
+    g.strokeRect(HOUSE_X - 25, HOUSE_Y + 30, 50, 80);
+
+    // 집 이름표
+    this.add.text(HOUSE_X, HOUSE_Y - 195, "🏠 나의 집", {
+      fontSize: "14px", color: "#ffe4b5",
+      backgroundColor: "#2a1000cc", padding: { x: 8, y: 4 },
+    }).setOrigin(0.5).setDepth(4);
+
+    // 집 충돌 (외벽, 문 빼고)
+    const houseWall = this.add.rectangle(HOUSE_X, HOUSE_Y - 30, 220, 140, 0x000000, 0);
+    this.physics.add.existing(houseWall, true);
+
+    // ── 무한의 탑 (오른쪽) ─────────────────────────────────────────────────────
+    // 탑 바닥 플랫폼
+    g.fillStyle(0x616161, 0.6);
+    g.fillEllipse(TOWER_X, TOWER_Y + 120, 180, 60);
+
+    // 탑 메인 몸통
+    g.fillStyle(0x37474f);
+    g.fillRect(TOWER_X - 50, TOWER_Y - 180, 100, 300);
+
+    // 탑 상단 (뾰족)
+    g.fillStyle(0x263238);
+    g.fillTriangle(
+      TOWER_X, TOWER_Y - 260,
+      TOWER_X - 65, TOWER_Y - 180,
+      TOWER_X + 65, TOWER_Y - 180,
+    );
+
+    // 탑 창문들 (여러 층)
+    g.fillStyle(0x5dade2, 0.7);
+    for (let row = 0; row < 4; row++) {
+      const wy = TOWER_Y - 130 + row * 60;
+      g.fillRect(TOWER_X - 14, wy, 28, 30);
+      g.lineStyle(1, 0x4aa3d8, 0.5);
+      g.strokeRect(TOWER_X - 14, wy, 28, 30);
+    }
+
+    // 탑 빛 이펙트
+    g.fillStyle(0x5dade2, 0.08);
+    g.fillEllipse(TOWER_X, TOWER_Y - 200, 100, 80);
+
+    // 탑 이름표
+    this.add.text(TOWER_X, TOWER_Y - 285, "⚔️ 무한의 탑", {
+      fontSize: "13px", color: "#aad4f5",
+      backgroundColor: "#05101a", padding: { x: 6, y: 3 },
+    }).setOrigin(0.5).setDepth(4);
+
+    // 탑 충돌
+    const towerBlock = this.add.rectangle(TOWER_X, TOWER_Y - 60, 100, 280, 0x000000, 0);
+    this.physics.add.existing(towerBlock, true);
+
+    // ── 물리 충돌 ─────────────────────────────────────────────────────────────
     // 플레이어 (마지막 위치에서 재시작)
     const initPos = getCampPosition();
     this.player = this.physics.add.sprite(initPos.x, initPos.y, "player-down");
     this.player.setCollideWorldBounds(true);
     this.player.setScale(2);
 
-    // 물리 충돌
-    this.physics.add.existing(house, true);
-    this.physics.add.existing(tree, true);
-    this.physics.add.existing(pond, true);
+    this.physics.add.collider(this.player, forestBlock);
+    this.physics.add.collider(this.player, houseWall);
+    this.physics.add.collider(this.player, towerBlock);
 
-    this.physics.add.collider(this.player, house);
-    this.physics.add.collider(this.player, tree);
-    this.physics.add.collider(this.player, pond);
-
-    // 카메라
+    // ── 카메라 ──────────────────────────────────────────────────────────────────
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-    // 키보드
-    const keyboard = this.input.keyboard;
-    if (!keyboard) return;
-
+    // ── 키보드 ──────────────────────────────────────────────────────────────────
+    const keyboard = this.input.keyboard!;
     this.cursors = keyboard.createCursorKeys();
     this.wasd = keyboard.addKeys("W,A,S,D") as {
-      W: Phaser.Input.Keyboard.Key;
-      A: Phaser.Input.Keyboard.Key;
-      S: Phaser.Input.Keyboard.Key;
-      D: Phaser.Input.Keyboard.Key;
+      W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key;
+      S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key;
     };
 
-    // ── 탑 포탈 ──
-    const PORTAL_X = 1100, PORTAL_Y = 250;
-    this.add.rectangle(PORTAL_X, PORTAL_Y, 90, 90, 0x5dade2).setDepth(1);
-    this.add.text(PORTAL_X, PORTAL_Y - 56, "무한의 탑", {
-      fontSize: "13px", color: "#aad4f5", backgroundColor: "#05101a",
-      padding: { x: 6, y: 3 },
-    }).setOrigin(0.5, 0.5).setDepth(2);
-
-    const portalZone = this.add.zone(PORTAL_X, PORTAL_Y, 100, 100);
-    this.physics.add.existing(portalZone, true);
-
-    this.physics.add.overlap(this.player, portalZone, () => {
-      if (!this.children.getByName("portalHint")) {
-        this.add.text(this.player.x - 40, this.player.y - 52, "E: 탑 입장", {
-          fontSize: "14px", color: "#ffffff",
-          backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
-        }).setName("portalHint").setDepth(10);
-      }
-    });
-
-    // ── 숲 입구 ──
-    const FOREST_X = 300, FOREST_Y = 200;
-    // 나무 그룹으로 표현
-    this.add.rectangle(FOREST_X, FOREST_Y, 160, 130, 0x1a4a0a, 0.75).setDepth(1);
-    const forestBorder = this.add.graphics().setDepth(2);
-    forestBorder.lineStyle(2, 0x44aa22, 0.8);
-    forestBorder.strokeRect(FOREST_X - 80, FOREST_Y - 65, 160, 130);
-    this.add.text(FOREST_X, FOREST_Y - 55, "🌲 숲", {
-      fontSize: "14px", color: "#88ee44", backgroundColor: "#051005",
-      padding: { x: 7, y: 3 },
-    }).setOrigin(0.5, 0.5).setDepth(3);
-    this.add.text(FOREST_X, FOREST_Y - 33, "탐험 · 포획", {
-      fontSize: "11px", color: "#66cc33",
-    }).setOrigin(0.5, 0.5).setDepth(3);
-
-    // 나무 장식
-    for (let i = 0; i < 6; i++) {
-      const tx = FOREST_X - 55 + i * 22;
-      const ty = FOREST_Y + 10 + Math.sin(i) * 12;
-      const g = this.add.graphics().setDepth(2);
-      g.fillStyle(0x2e7d32, 0.7);
-      g.fillTriangle(tx, ty - 18, tx - 9, ty + 4, tx + 9, ty + 4);
-    }
-
-    const forestZone = this.add.zone(FOREST_X, FOREST_Y, 160, 130);
-    this.physics.add.existing(forestZone, true);
-
-    this.physics.add.overlap(this.player, forestZone, () => {
-      if (!this.children.getByName("forestHint")) {
-        this.add.text(this.player.x - 45, this.player.y - 52, "E: 숲 입장", {
-          fontSize: "13px", color: "#88ee44",
-          backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
-        }).setName("forestHint").setDepth(10);
-      }
-    });
-
-    // ── 농장/파티 관리 구역 ──
-    const FARM_X = 700, FARM_Y = 900;
-    this.add.rectangle(FARM_X, FARM_Y, 180, 130, 0x6d4c41, 0.7).setDepth(1);
-    const farmBorder = this.add.graphics().setDepth(2);
-    farmBorder.lineStyle(2, 0xd7a86e, 0.8);
-    farmBorder.strokeRect(FARM_X - 90, FARM_Y - 65, 180, 130);
-    this.add.text(FARM_X, FARM_Y - 55, "🏠 농장", {
-      fontSize: "13px", color: "#e8c99a", backgroundColor: "#1a0a00",
-      padding: { x: 6, y: 3 },
-    }).setOrigin(0.5, 0.5).setDepth(3);
-    this.add.text(FARM_X, FARM_Y - 35, "파티 · 보관함 관리", {
-      fontSize: "11px", color: "#c8a870",
-    }).setOrigin(0.5, 0.5).setDepth(3);
-
-    const farmZone = this.add.zone(FARM_X, FARM_Y, 180, 130);
-    this.physics.add.existing(farmZone, true);
-
-    this.physics.add.overlap(this.player, farmZone, () => {
-      if (!this.children.getByName("farmHint")) {
-        this.add.text(this.player.x - 50, this.player.y - 52, "F: 내 몬스터", {
-          fontSize: "13px", color: "#e8c99a",
-          backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
-        }).setName("farmHint").setDepth(10);
-      }
-    });
-
-    // E 키: 탑 포탈 / 숲
+    // ── E 키: 탑 / 숲 / 집 ───────────────────────────────────────────────────
     keyboard.on("keydown-E", () => {
-      const distPortal = Phaser.Math.Distance.Between(this.player.x, this.player.y, PORTAL_X, PORTAL_Y);
-      const distForest = Phaser.Math.Distance.Between(this.player.x, this.player.y, FOREST_X, FOREST_Y);
+      const px = this.player.x, py = this.player.y;
+      const distTower  = Phaser.Math.Distance.Between(px, py, TOWER_X, TOWER_Y + 100);
+      const distForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
+      const distHouse  = Phaser.Math.Distance.Between(px, py, HOUSE_X, HOUSE_DOOR_Y);
 
-      if (distPortal < 80) {
-        setCampPosition(this.player.x, this.player.y);
+      if (distTower < 90) {
+        setCampPosition(px, py);
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
-          from: "basecamp",
-          portalId: "dungeon-entrance-1",
-          isCatchZone: false,
-          floor: 1,
+          from: "basecamp", portalId: "dungeon-entrance-1",
+          isCatchZone: false, floor: 1,
         });
-      } else if (distForest < 100) {
-        setCampPosition(this.player.x, this.player.y);
+      } else if (distForest < 110) {
+        setCampPosition(px, py);
         gameEvents.emit(GAME_EVENT.ENTER_FOREST);
+      } else if (distHouse < 90) {
+        setCampPosition(px, py);
+        gameEvents.emit(GAME_EVENT.ENTER_HOUSING);
       }
     });
 
-    // F 키: 농장 페이지
-    keyboard.on("keydown-F", () => {
-      const distFarm = Phaser.Math.Distance.Between(this.player.x, this.player.y, FARM_X, FARM_Y);
-      if (distFarm < 120) {
-        setCampPosition(this.player.x, this.player.y);
-        gameEvents.emit(GAME_EVENT.ENTER_FARM);
-      }
-    });
-
-    // Phaser가 포커스를 가져가므로 P 키는 gameEvents로 전달
     keyboard.on("keydown-P", () => {
       gameEvents.emit("open-dex");
     });
 
-    // 힌트 텍스트 정리 (겹침 방지)
+    // ── 근접 힌트 텍스트 관리 ──────────────────────────────────────────────────
     this.physics.world.on("overlap", () => {
       const ph  = this.children.getByName("portalHint");
-      const fh  = this.children.getByName("farmHint");
-      const frh = this.children.getByName("forestHint");
-      const distPortal = Phaser.Math.Distance.Between(this.player.x, this.player.y, PORTAL_X, PORTAL_Y);
-      const distFarm   = Phaser.Math.Distance.Between(this.player.x, this.player.y, FARM_X, FARM_Y);
+      const fh  = this.children.getByName("forestHint");
+      const hh  = this.children.getByName("houseHint");
+      if (!ph && !fh && !hh) return;
+      const distTower  = Phaser.Math.Distance.Between(this.player.x, this.player.y, TOWER_X, TOWER_Y + 100);
       const distForest = Phaser.Math.Distance.Between(this.player.x, this.player.y, FOREST_X, FOREST_Y);
-      if (ph  && distPortal >= 120) { ph.destroy(); }
-      if (fh  && distFarm   >= 140) { fh.destroy(); }
-      if (frh && distForest >= 130) { frh.destroy(); }
+      const distHouse  = Phaser.Math.Distance.Between(this.player.x, this.player.y, HOUSE_X, HOUSE_DOOR_Y);
+      if (ph && distTower  >= 120) ph.destroy();
+      if (fh && distForest >= 140) fh.destroy();
+      if (hh && distHouse  >= 120) hh.destroy();
     });
   }
 
@@ -232,43 +297,28 @@ export default class BaseCampScene extends Phaser.Scene {
     if (!this.player || !this.cursors || !this.wasd) return;
 
     const speed = 180;
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-
+    const body  = this.player.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(0);
 
-    const left = this.cursors.left.isDown || this.wasd.A.isDown;
+    const left  = this.cursors.left.isDown  || this.wasd.A.isDown;
     const right = this.cursors.right.isDown || this.wasd.D.isDown;
-    const up = this.cursors.up.isDown || this.wasd.W.isDown;
-    const down = this.cursors.down.isDown || this.wasd.S.isDown;
-
+    const up    = this.cursors.up.isDown    || this.wasd.W.isDown;
+    const down  = this.cursors.down.isDown  || this.wasd.S.isDown;
     const isMoving = left || right || up || down;
 
-    if (left) {
-      body.setVelocityX(-speed);
-      this.facing = "left";
-    } else if (right) {
-      body.setVelocityX(speed);
-      this.facing = "right";
-    }
-
-    if (up) {
-      body.setVelocityY(-speed);
-      this.facing = "up";
-    } else if (down) {
-      body.setVelocityY(speed);
-      this.facing = "down";
-    }
+    if (left)       { body.setVelocityX(-speed); this.facing = "left"; }
+    else if (right) { body.setVelocityX(speed);  this.facing = "right"; }
+    if (up)         { body.setVelocityY(-speed); this.facing = "up"; }
+    else if (down)  { body.setVelocityY(speed);  this.facing = "down"; }
 
     body.velocity.normalize().scale(speed);
 
     if (isMoving) {
       this.walkTimer += delta;
-
       if (this.walkTimer >= 160) {
         this.walkTimer = 0;
         this.walkFrame = this.walkFrame === 1 ? 2 : 1;
       }
-
       this.player.setTexture(`player-${this.facing}-${this.walkFrame}`);
     } else {
       this.walkTimer = 0;
@@ -276,18 +326,35 @@ export default class BaseCampScene extends Phaser.Scene {
       this.player.setTexture(`player-${this.facing}`);
     }
 
-    const oldHint = this.children.getByName("portalHint");
-    if (oldHint) {
-      const distance = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        1100,
-        250,
-      );
+    const px = this.player.x, py = this.player.y;
+    const distTower  = Phaser.Math.Distance.Between(px, py, TOWER_X, TOWER_Y + 100);
+    const distForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
+    const distHouse  = Phaser.Math.Distance.Between(px, py, HOUSE_X, HOUSE_DOOR_Y);
 
-      if (distance > 80) {
-        oldHint.destroy();
-      }
-    }
+    // 힌트 표시
+    const ph  = this.children.getByName("portalHint");
+    const fh  = this.children.getByName("forestHint");
+    const hh  = this.children.getByName("houseHint");
+
+    if (distTower < 90 && !ph) {
+      this.add.text(px - 46, py - 56, "E: 탑 입장", {
+        fontSize: "13px", color: "#aad4f5",
+        backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
+      }).setName("portalHint").setDepth(10);
+    } else if (distTower >= 120 && ph) ph.destroy();
+
+    if (distForest < 110 && !fh) {
+      this.add.text(px - 46, py - 56, "E: 숲 입장", {
+        fontSize: "13px", color: "#88ee44",
+        backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
+      }).setName("forestHint").setDepth(10);
+    } else if (distForest >= 140 && fh) fh.destroy();
+
+    if (distHouse < 90 && !hh) {
+      this.add.text(px - 46, py - 56, "E: 집 입장", {
+        fontSize: "13px", color: "#ffe4b5",
+        backgroundColor: "#000000aa", padding: { x: 6, y: 3 },
+      }).setName("houseHint").setDepth(10);
+    } else if (distHouse >= 120 && hh) hh.destroy();
   }
 }

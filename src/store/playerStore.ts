@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Monster } from "../types/game";
+import type { Monster, HousingBonuses } from "../types/game";
 import { monsters } from "../data/monsters";
 import { POTIONS } from "../data/items";
+import { FURNITURE, calcHousingBonuses } from "../data/furniture";
 
 // ─── OwnedMonster ────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,12 @@ interface PlayerState {
   /** 최고 도달 층 */
   bestFloor: number;
 
+  // ── 하우징 ────────────────────────────────────────────────────────────────────
+  /** 보유 가구 { furnitureId: count } */
+  furnitureInventory: Record<string, number>;
+  /** 배치된 가구 슬롯 (6칸, null = 빈 칸) */
+  placedFurniture: (string | null)[];
+
   // ── 도감 ──────────────────────────────────────────────────────────────────────
   addToDexSeen:   (id: string) => void;
   addToDexCaught: (id: string) => void;
@@ -71,18 +78,30 @@ interface PlayerState {
   craftPotion:  (potionId: string) => boolean;
   /** 물약 1개 소모. 성공(있었으면) true 반환. */
   usePotion:    (potionId: string) => boolean;
+
+  // ── 하우징 ────────────────────────────────────────────────────────────────────
+  /** 레시피에 맞는 재료가 있으면 소모 후 가구 인벤토리에 추가. 성공 여부 반환. */
+  craftFurniture:  (furnitureId: string) => boolean;
+  /** 인벤토리의 가구를 지정 슬롯에 배치. */
+  placeFurniture:  (slotIndex: number, furnitureId: string) => void;
+  /** 슬롯의 가구를 제거하고 인벤토리로 반환. */
+  removeFurniture: (slotIndex: number) => void;
+  /** 현재 배치된 가구에서 계산된 총 하우징 보너스 반환. */
+  getHousingBonuses: () => HousingBonuses;
 }
 
 export const usePlayerStore = create<PlayerState>()(
   persist(
     (set, get) => ({
-      party:     [initialFlameling],
-      storage:   [],
-      dexSeen:   ["flameling"],
-      dexCaught: ["flameling"],
-      materials: {},
-      potions:   {},
-      bestFloor: 0,
+      party:              [initialFlameling],
+      storage:            [],
+      dexSeen:            ["flameling"],
+      dexCaught:          ["flameling"],
+      materials:          {},
+      potions:            {},
+      bestFloor:          0,
+      furnitureInventory: {},
+      placedFurniture:    [null, null, null, null, null, null],
 
       // ── 도감 ──
       addToDexSeen: (id) =>
@@ -206,7 +225,86 @@ export const usePlayerStore = create<PlayerState>()(
         set({ potions: { ...s.potions, [potionId]: s.potions[potionId] - 1 } });
         return true;
       },
+
+      // ── 하우징 ──
+      craftFurniture: (furnitureId) => {
+        const furniture = FURNITURE.find((f) => f.id === furnitureId);
+        if (!furniture) return false;
+        const s = get();
+        // 재료 충분한지 확인
+        for (const [matId, needed] of Object.entries(furniture.recipe)) {
+          if ((s.materials[matId] ?? 0) < needed) return false;
+        }
+        // 재료 소모 + 가구 추가
+        const newMats = { ...s.materials };
+        for (const [matId, needed] of Object.entries(furniture.recipe)) {
+          newMats[matId] = (newMats[matId] ?? 0) - needed;
+        }
+        set({
+          materials: newMats,
+          furnitureInventory: {
+            ...s.furnitureInventory,
+            [furnitureId]: (s.furnitureInventory[furnitureId] ?? 0) + 1,
+          },
+        });
+        return true;
+      },
+
+      placeFurniture: (slotIndex, furnitureId) => {
+        const s = get();
+        if ((s.furnitureInventory[furnitureId] ?? 0) <= 0) return;
+        if (slotIndex < 0 || slotIndex >= 6) return;
+        const newSlots = [...s.placedFurniture] as (string | null)[];
+        const oldId = newSlots[slotIndex];
+        // 슬롯에 이미 다른 가구가 있으면 인벤토리로 반환
+        if (oldId) {
+          set((prev) => ({
+            furnitureInventory: {
+              ...prev.furnitureInventory,
+              [oldId]: (prev.furnitureInventory[oldId] ?? 0) + 1,
+            },
+          }));
+        }
+        newSlots[slotIndex] = furnitureId;
+        set((prev) => ({
+          placedFurniture: newSlots,
+          furnitureInventory: {
+            ...prev.furnitureInventory,
+            [furnitureId]: Math.max(0, (prev.furnitureInventory[furnitureId] ?? 0) - 1),
+          },
+        }));
+      },
+
+      removeFurniture: (slotIndex) => {
+        const s = get();
+        if (slotIndex < 0 || slotIndex >= 6) return;
+        const id = s.placedFurniture[slotIndex];
+        if (!id) return;
+        const newSlots = [...s.placedFurniture] as (string | null)[];
+        newSlots[slotIndex] = null;
+        set((prev) => ({
+          placedFurniture: newSlots,
+          furnitureInventory: {
+            ...prev.furnitureInventory,
+            [id]: (prev.furnitureInventory[id] ?? 0) + 1,
+          },
+        }));
+      },
+
+      getHousingBonuses: () => calcHousingBonuses(get().placedFurniture),
     }),
-    { name: "monster-rpg-player" }
+    {
+      name: "monster-rpg-player",
+      // placedFurniture 길이 보장 (구버전 저장 데이터 호환)
+      onRehydrateStorage: () => (state) => {
+        if (state && (!state.placedFurniture || state.placedFurniture.length !== 6)) {
+          state.placedFurniture = [null, null, null, null, null, null];
+        }
+        if (state && !state.furnitureInventory) {
+          state.furnitureInventory = {};
+        }
+      },
+    }
   )
 );
+

@@ -5,7 +5,7 @@ import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../data/monsterImages";
 import { usePlayerStore } from "../store/playerStore";
 import { RpsIcon, RPS_KO, type RpsChoice } from "../components/rps/RpsIcon";
 import { scaleToLevel } from "../data/floorTable";
-import { MATERIALS, getMaterial } from "../data/items";
+import { getMaterial } from "../data/items";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CSS 애니메이션 키프레임
@@ -229,7 +229,9 @@ const RPS_RESULT_DATA: Record<RpsResult,{text:string; color:string; desc:string;
   lose: { text:"패배...", color:"text-red-300",   desc:"포획 확률 18%", bg:"from-red-950/80 to-red-900/40" },
 };
 
-const MATERIAL_POOL = MATERIALS.map((m)=>m.id);
+// 숲에서 드랍 가능한 재료 (물약 재료 + 가구 재료 중 일부)
+// wood_plank, leather는 숲에서 드랍 / iron_fragment는 탑에서만
+const MATERIAL_POOL = ["herb", "berry", "root", "crystal", "wood_plank", "leather"];
 
 function pickMonster(area: ForestArea) {
   const id = area.monsterPool[Math.floor(Math.random()*area.monsterPool.length)];
@@ -734,7 +736,7 @@ function ItemDropScreen({ drops, area, onReset, onExit }: {
         </div>
 
         <div className="px-6 py-3 text-xs text-zinc-600 text-center">
-          농장 → 제작소 탭에서 물약으로 변환할 수 있습니다
+          농장 → 제작소 탭에서 물약으로 변환 / 집 → 인테리어에서 가구 제작에 활용하세요
         </div>
 
         {/* 버튼 */}

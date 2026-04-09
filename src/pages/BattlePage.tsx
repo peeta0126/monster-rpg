@@ -3,9 +3,35 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { getFloorEnemy, getFloorEnemySkill, isBossFloor } from "../data/floorTable";
 import { MONSTER_IMAGE_MAP } from "../data/monsterImages";
-import { POTIONS } from "../data/items";
+import { POTIONS, getMaterial } from "../data/items";
 import type { Move } from "../types/game";
 import { usePlayerStore } from "../store/playerStore";
+
+// ─── 전투 승리 시 재료 드랍 ───────────────────────────────────────────────────────
+
+function rollBattleDrop(floor: number): { id: string; count: number }[] {
+  const drops: { id: string; count: number }[] = [];
+  const rollChance = isBossFloor(floor) ? 0.95 : 0.45;
+  if (Math.random() > rollChance) return drops;
+
+  // 층수별 드랍 테이블
+  const pool: string[] =
+    floor >= 21 ? ["iron_fragment", "crystal", "wood_plank"] :
+    floor >= 11 ? ["iron_fragment", "wood_plank", "leather"] :
+                  ["wood_plank", "leather", "herb"];
+
+  const count = isBossFloor(floor) ? 2 + (Math.random() < 0.5 ? 1 : 0) : 1;
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  drops.push({ id: picked, count });
+
+  // 보스 층은 추가 드랍
+  if (isBossFloor(floor) && Math.random() < 0.6) {
+    const extra = pool.filter((p) => p !== picked)[Math.floor(Math.random() * (pool.length - 1))];
+    drops.push({ id: extra, count: 1 });
+  }
+
+  return drops;
+}
 
 import {
   applyDamage,
@@ -62,7 +88,11 @@ export default function BattlePage() {
   const gameRef = useRef<HTMLDivElement | null>(null);
 
   const { updateBestFloor, updatePartyMember, addCapturedMonster,
-          addToDexSeen, addToDexCaught, usePotion: consumePotion } = usePlayerStore();
+          addToDexSeen, addToDexCaught, usePotion: consumePotion,
+          addMaterial, getHousingBonuses } = usePlayerStore();
+
+  // 하우징 보너스 (배틀 시작 시 1회 계산)
+  const [housingBonuses] = useState(() => getHousingBonuses());
 
   const [initialParty] = useState(() => usePlayerStore.getState().party);
   const [activePartyIndex, setActivePartyIndex] = useState(0);
@@ -84,11 +114,23 @@ export default function BattlePage() {
   const initialPlayer = initialParty[0] ?? usePlayerStore.getState().party[0];
   const initialEnemy  = getFloorEnemy(floor, initialPlayer.id);
 
-  const [player,       setPlayer]       = useState<BattleMonster>(() => createBattleMonsterFromOwned(initialPlayer));
+  // 하우징 보너스를 플레이어 몬스터 스탯에 적용
+  const [player,       setPlayer]       = useState<BattleMonster>(() => {
+    const base = createBattleMonsterFromOwned(initialPlayer);
+    return {
+      ...base,
+      maxHp:     base.maxHp     + (housingBonuses?.hp       ?? 0),
+      currentHp: base.currentHp + (housingBonuses?.hp       ?? 0),
+      attack:    base.attack    + (housingBonuses?.attack    ?? 0),
+      defense:   base.defense   + (housingBonuses?.defense   ?? 0),
+      speed:     base.speed     + (housingBonuses?.speed     ?? 0),
+    };
+  });
   const [enemyState,   setEnemyState]   = useState<BattleMonster>(() => createBattleMonster(initialEnemy));
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing,  setIsProcessing]  = useState(false);
   const [battleOutcome, setBattleOutcome] = useState<"win" | "lose" | null>(null);
   const [showResultUI,  setShowResultUI]  = useState(false);
+  const [battleDrops,   setBattleDrops]   = useState<{ id: string; count: number }[]>([]);
 
   const enemyTurnRef = useRef(0);
   const cancelledRef = useRef(false);
@@ -194,10 +236,16 @@ export default function BattlePage() {
     else if (res.multiplier < 1) await sendLogAndWait("효과가 별로인 듯하다...");
 
     if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
-      const before = next.status;
-      next = applyStatusEffect(next, move.statusEffect);
-      if (before === null && next.status !== null) {
-        await sendLogAndWait(`${next.name}에게 ${STATUS_LABELS[next.status] ?? next.status} 상태이상이 걸렸다!`);
+      // 플레이어가 방어자일 때 (적이 공격) → 상태이상 저항 체크
+      const resistChance = (!isPlayerAttacking) ? (housingBonuses?.statusResist ?? 0) : 0;
+      if (resistChance > 0 && Math.random() * 100 < resistChance) {
+        await sendLogAndWait(`${next.name}이(가) 상태이상을 저항했다!`);
+      } else {
+        const before = next.status;
+        next = applyStatusEffect(next, move.statusEffect);
+        if (before === null && next.status !== null) {
+          await sendLogAndWait(`${next.name}에게 ${STATUS_LABELS[next.status] ?? next.status} 상태이상이 걸렸다!`);
+        }
       }
     }
 
@@ -254,15 +302,29 @@ export default function BattlePage() {
     enemyTurnRef.current += 1;
 
     if (playerWon) {
-      const expResult = gainExp(np, ne.rewardExp);
+      // 경험치 (하우징 expBonus 적용)
+      const expBonus  = housingBonuses?.expBonus ?? 0;
+      const earnedExp = Math.round(ne.rewardExp * (1 + expBonus / 100));
+      const expResult = gainExp(np, earnedExp);
       np = expResult.updatedMonster;
-      await sendLogAndWait(`경험치 ${ne.rewardExp}를 획득했다!`);
+      const expMsg = expBonus > 0
+        ? `경험치 ${earnedExp}를 획득했다! (+${expBonus}% 보너스)`
+        : `경험치 ${earnedExp}를 획득했다!`;
+      await sendLogAndWait(expMsg);
       if (expResult.leveledUp) await sendLogAndWait(`레벨이 ${np.level}(으)로 올랐다!`);
+
+      // 재료 드랍
+      const battleDrops = rollBattleDrop(floor);
+      for (const drop of battleDrops) {
+        addMaterial(drop.id, drop.count);
+      }
+
       const owned = initialParty[activePartyIndex];
       if (owned) updatePartyMember({ ...owned, ...np, uid: owned.uid });
       updateBestFloor(floor);
       addToDexSeen(ne.id);
       setPlayer(np); setEnemyState(ne);
+      setBattleDrops(battleDrops);
       finishBattle("win"); setIsProcessing(false); return;
     }
 
@@ -349,9 +411,14 @@ export default function BattlePage() {
     // 효과 적용
     let np = player;
     const eff = potion.effect;
+    const potBonus = housingBonuses?.potionBonus ?? 0;
     if (eff.type === "heal") {
-      const restored = Math.min(np.maxHp, np.currentHp + eff.amount);
-      await sendLogAndWait(`${np.name}의 HP가 ${restored - np.currentHp} 회복됐다!`);
+      const baseAmount = Math.round(eff.amount * (1 + potBonus / 100));
+      const restored = Math.min(np.maxHp, np.currentHp + baseAmount);
+      const healMsg = potBonus > 0
+        ? `${np.name}의 HP가 ${restored - np.currentHp} 회복됐다! (+${potBonus}% 보너스)`
+        : `${np.name}의 HP가 ${restored - np.currentHp} 회복됐다!`;
+      await sendLogAndWait(healMsg);
       np = { ...np, currentHp: restored };
     } else if (eff.type === "full_heal") {
       await sendLogAndWait(`${np.name}의 HP가 완전히 회복됐다!`);
@@ -682,10 +749,28 @@ export default function BattlePage() {
       {/* 승리 오버레이 */}
       {showResultUI && battleOutcome === "win" && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65">
-          <div className="text-center px-8 py-10 border-2 border-green-600 bg-zinc-950/95 shadow-2xl max-w-sm w-full mx-4"
+          <div className="text-center px-8 py-8 border-2 border-green-600 bg-zinc-950/95 shadow-2xl max-w-sm w-full mx-4"
             style={{ fontFamily: "'Press Start 2P', monospace" }}>
-            <p className="text-3xl font-bold text-green-400 mb-4">WIN!</p>
-            <p className="text-xs text-zinc-400 mb-6 leading-relaxed">다음 스테이지로?</p>
+            <p className="text-3xl font-bold text-green-400 mb-3">WIN!</p>
+            <p className="text-xs text-zinc-400 mb-3 leading-relaxed">다음 스테이지로?</p>
+
+            {/* 드랍 재료 표시 */}
+            {battleDrops.length > 0 && (
+              <div className="mb-4 rounded-lg border border-amber-800/50 bg-amber-950/30 p-3">
+                <p className="text-[9px] text-amber-600 mb-2">── 재료 획득 ──</p>
+                <div className="flex flex-col gap-1">
+                  {battleDrops.map((d, i) => {
+                    const mat = getMaterial(d.id);
+                    return (
+                      <p key={i} className="text-[9px] text-amber-300">
+                        {mat?.emoji ?? "?"} {mat?.name ?? d.id} ×{d.count}
+                      </p>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <button onClick={() => navigate("/battle", { state: { floor: floor + 1, isCatchZone: false } })}
                 className="w-full border-2 border-green-600 bg-green-900/70 py-3 text-xs font-bold text-green-200 hover:bg-green-800/70 transition active:scale-95">

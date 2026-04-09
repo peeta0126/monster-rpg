@@ -116,6 +116,23 @@ export type BattleOutcome =
   | "caught"
   | "fled";
 
+// ─── 하우징 보너스 ────────────────────────────────────────────────────────────────
+
+export interface HousingBonuses {
+  hp: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  /** 경험치 획득 보너스 (%) */
+  expBonus: number;
+  /** 물약 회복량 보너스 (%) */
+  potionBonus: number;
+  /** 상태이상 저항률 (%) */
+  statusResist: number;
+  /** 현재 활성화된 조합 세트 이름 목록 */
+  activeCombinations: string[];
+}
+
 /** 전투 전체 상태 인터페이스 */
 export interface BattleState {
   phase: BattlePhase;

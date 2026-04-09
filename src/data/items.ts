@@ -8,10 +8,14 @@ export interface Material {
 }
 
 export const MATERIALS: Material[] = [
-  { id: "herb",    name: "약초",      emoji: "🌿", description: "숲에서 자라는 약초. 회복 물약의 재료." },
-  { id: "berry",   name: "열매",      emoji: "🍓", description: "새콤달콤한 열매. 해독에 효과적." },
-  { id: "root",    name: "나무뿌리",  emoji: "🪵", description: "단단한 나무뿌리. 여러 물약에 쓰인다." },
-  { id: "crystal", name: "빛의 수정", emoji: "💎", description: "숲 깊숙이서 발견되는 수정." },
+  { id: "herb",          name: "약초",      emoji: "🌿", description: "숲에서 자라는 약초. 회복 물약의 재료." },
+  { id: "berry",         name: "열매",      emoji: "🍓", description: "새콤달콤한 열매. 해독에 효과적." },
+  { id: "root",          name: "나무뿌리",  emoji: "🪵", description: "단단한 나무뿌리. 여러 물약에 쓰인다." },
+  { id: "crystal",       name: "빛의 수정", emoji: "💎", description: "숲 깊숙이서 발견되는 수정." },
+  // ── 가구 제작 재료 ─────────────────────────────────────────────────────────────
+  { id: "wood_plank",    name: "나무판자",  emoji: "🪓", description: "튼튼한 목재 조각. 가구 제작에 쓰인다." },
+  { id: "iron_fragment", name: "철 조각",   emoji: "⚙️", description: "단단한 철 파편. 금속 가구의 재료." },
+  { id: "leather",       name: "가죽",      emoji: "🟫", description: "부드러운 가죽. 여러 용도로 활용된다." },
 ];
 
 // ─── 물약 효과 타입 ────────────────────────────────────────────────────────────────
