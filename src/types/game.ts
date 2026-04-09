@@ -119,18 +119,28 @@ export type BattleOutcome =
 // ─── 하우징 보너스 ────────────────────────────────────────────────────────────────
 
 export interface HousingBonuses {
-  hp: number;
-  attack: number;
-  defense: number;
-  speed: number;
+  /** 최대 HP % 증가 */
+  hpPercent: number;
+  /** 공격력 % 증가 */
+  attackPercent: number;
+  /** 방어력 % 증가 */
+  defensePercent: number;
+  /** 속도 % 증가 */
+  speedPercent: number;
   /** 경험치 획득 보너스 (%) */
-  expBonus: number;
+  expBonusPercent: number;
   /** 물약 회복량 보너스 (%) */
-  potionBonus: number;
+  potionBonusPercent: number;
   /** 상태이상 저항률 (%) */
-  statusResist: number;
-  /** 현재 활성화된 조합 세트 이름 목록 */
-  activeCombinations: string[];
+  statusResistPercent: number;
+  /** 포획률 보너스 (%) */
+  catchRateBonus: number;
+  /** 풀타입 기술 위력 보너스 (%) */
+  grassTypePower: number;
+  /** 탑 재료 드랍 보너스 (%) */
+  towerDropBonus: number;
+  /** 현재 활성화된 세트 이름 목록 */
+  activeSets: string[];
 }
 
 /** 전투 전체 상태 인터페이스 */

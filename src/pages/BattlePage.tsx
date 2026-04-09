@@ -114,16 +114,20 @@ export default function BattlePage() {
   const initialPlayer = initialParty[0] ?? usePlayerStore.getState().party[0];
   const initialEnemy  = getFloorEnemy(floor, initialPlayer.id);
 
-  // 하우징 보너스를 플레이어 몬스터 스탯에 적용
+  // 하우징 보너스를 플레이어 몬스터 스탯에 % 적용
   const [player,       setPlayer]       = useState<BattleMonster>(() => {
     const base = createBattleMonsterFromOwned(initialPlayer);
+    const hpBonus  = Math.round(base.maxHp  * ((housingBonuses?.hpPercent      ?? 0) / 100));
+    const atkBonus = Math.round(base.attack  * ((housingBonuses?.attackPercent  ?? 0) / 100));
+    const defBonus = Math.round(base.defense * ((housingBonuses?.defensePercent ?? 0) / 100));
+    const spdBonus = Math.round(base.speed   * ((housingBonuses?.speedPercent   ?? 0) / 100));
     return {
       ...base,
-      maxHp:     base.maxHp     + (housingBonuses?.hp       ?? 0),
-      currentHp: base.currentHp + (housingBonuses?.hp       ?? 0),
-      attack:    base.attack    + (housingBonuses?.attack    ?? 0),
-      defense:   base.defense   + (housingBonuses?.defense   ?? 0),
-      speed:     base.speed     + (housingBonuses?.speed     ?? 0),
+      maxHp:     base.maxHp     + hpBonus,
+      currentHp: base.currentHp + hpBonus,
+      attack:    base.attack    + atkBonus,
+      defense:   base.defense   + defBonus,
+      speed:     base.speed     + spdBonus,
     };
   });
   const [enemyState,   setEnemyState]   = useState<BattleMonster>(() => createBattleMonster(initialEnemy));
@@ -217,7 +221,13 @@ export default function BattlePage() {
   ): Promise<{ updated: BattleMonster; fainted: boolean }> => {
 
     await sendLogAndWait(`${attacker.name}의 ${move.name}!`);
-    const res = calculateDamage(attacker, defender, move);
+    // 플레이어 공격 + 풀타입 기술 위력 보너스 적용
+    const typePowerBonus = (isPlayerAttacking && move.type === "grass" && housingBonuses)
+      ? housingBonuses.grassTypePower : 0;
+    const boostedMove = typePowerBonus > 0
+      ? { ...move, power: Math.round(move.power * (1 + typePowerBonus / 100)) }
+      : move;
+    const res = calculateDamage(attacker, defender, boostedMove);
 
     if (!res.isHit) {
       await sendLogAndWait("공격이 빗나갔다!");
@@ -237,7 +247,7 @@ export default function BattlePage() {
 
     if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
       // 플레이어가 방어자일 때 (적이 공격) → 상태이상 저항 체크
-      const resistChance = (!isPlayerAttacking) ? (housingBonuses?.statusResist ?? 0) : 0;
+      const resistChance = (!isPlayerAttacking) ? (housingBonuses?.statusResistPercent ?? 0) : 0;
       if (resistChance > 0 && Math.random() * 100 < resistChance) {
         await sendLogAndWait(`${next.name}이(가) 상태이상을 저항했다!`);
       } else {
@@ -302,8 +312,8 @@ export default function BattlePage() {
     enemyTurnRef.current += 1;
 
     if (playerWon) {
-      // 경험치 (하우징 expBonus 적용)
-      const expBonus  = housingBonuses?.expBonus ?? 0;
+      // 경험치 (하우징 expBonusPercent 적용)
+      const expBonus  = housingBonuses?.expBonusPercent ?? 0;
       const earnedExp = Math.round(ne.rewardExp * (1 + expBonus / 100));
       const expResult = gainExp(np, earnedExp);
       np = expResult.updatedMonster;
@@ -411,7 +421,7 @@ export default function BattlePage() {
     // 효과 적용
     let np = player;
     const eff = potion.effect;
-    const potBonus = housingBonuses?.potionBonus ?? 0;
+    const potBonus = housingBonuses?.potionBonusPercent ?? 0;
     if (eff.type === "heal") {
       const baseAmount = Math.round(eff.amount * (1 + potBonus / 100));
       const restored = Math.min(np.maxHp, np.currentHp + baseAmount);
@@ -469,7 +479,8 @@ export default function BattlePage() {
   const handleCatch = useCallback(async () => {
     if (isProcessing || battleOutcome !== null) return;
     setIsProcessing(true);
-    const res = checkCatchCondition(enemyState, isCatchZone);
+    const catchBonus = housingBonuses?.catchRateBonus ?? 0;
+    const res = checkCatchCondition(enemyState, isCatchZone, catchBonus);
     await sendLogAndWait(res.message);
     if (!res.canAttempt) { setIsProcessing(false); return; }
 
