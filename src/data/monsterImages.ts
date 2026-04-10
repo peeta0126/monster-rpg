@@ -1,4 +1,3 @@
-import type React from "react";
 import flamelingImg  from "../assets/monsters/flameling.png";
 import aquabeImg     from "../assets/monsters/aquabe.png";
 import burnoImg      from "../assets/monsters/burno.png";
@@ -39,14 +38,7 @@ export const MONSTER_IMAGE_MAP: Record<string, string> = {
   nobi:       nobiImg,
 };
 
-/** mix-blend-mode: multiply 가 필요한 몬스터 */
-export const MONSTER_BLEND_MULTIPLY = new Set<string>();
-
 /** img 태그에 적용할 style 반환 헬퍼 */
-export function monsterImgStyle(id: string): React.CSSProperties {
-  const base: React.CSSProperties = { imageRendering: "pixelated" };
-  if (MONSTER_BLEND_MULTIPLY.has(id)) {
-    return { ...base, mixBlendMode: "multiply" as const };
-  }
-  return base;
+export function monsterImgStyle(_id: string): { imageRendering: "pixelated" } {
+  return { imageRendering: "pixelated" };
 }

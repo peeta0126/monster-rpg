@@ -42,47 +42,6 @@ export interface Monster {
   isDummy?: boolean;
 }
 
-/** 진화 정보를 포함한 확장 몬스터 타입 */
-export interface ExtendedMonster extends Monster {
-  /** 진화 단계: 1(기초), 2(1차 진화), 3(2차 진화) */
-  evolutionStage: number;
-  /** 같은 진화 계열 ID */
-  evolutionChainId?: string;
-  /** 다음 진화 몬스터 ID */
-  evolvesTo?: string;
-  /** 이전 단계 몬스터 ID */
-  evolvesFrom?: string;
-  /** 이 레벨 이상이면 진화 가능 */
-  evolvesAtLevel?: number;
-}
-
-// ─── 베이스캠프 타입 ──────────────────────────────────────────────────────────────
-
-export type Position = { x: number; y: number };
-
-export type CampMonsterData = {
-  id: string;
-  name: string;
-  image: string;
-  position: Position;
-};
-
-export type PortalData = {
-  id: string;
-  label: string;
-  position: Position;
-  target: "battle" | "forest" | "volcano";
-};
-
-export type UnlockZoneData = {
-  id: string;
-  name: string;
-  position: Position;
-  width: number;
-  height: number;
-  unlocked: boolean;
-};
-
 // ─── 전투 시스템 타입 ────────────────────────────────────────────────────────────
 
 /** 상태이상 종류. null은 정상 상태를 의미한다. */

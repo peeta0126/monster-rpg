@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import type { Monster, HousingBonuses } from "../types/game";
 import { monsters } from "../data/monsters";
 import { POTIONS } from "../data/items";
-import { calcHousingBonuses } from "../data/furniture";
+import { FURNITURE, calcHousingBonuses } from "../data/furniture";
 
 // ─── OwnedMonster ────────────────────────────────────────────────────────────────
 
