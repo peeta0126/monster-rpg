@@ -10,7 +10,6 @@ const TOWER_X  = 278,  TOWER_Y  = 1010;
 
 const CAM_ZOOM     = 0.5;
 const PLAYER_SCALE = 2.5;
-const WALL_THICK   = 16; // 충돌 벽 두께 (px)
 
 export default class BaseCampScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -21,7 +20,6 @@ export default class BaseCampScene extends Phaser.Scene {
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
   };
-  private wallBodies: Phaser.GameObjects.Rectangle[] = [];
   private facing: "up" | "down" | "left" | "right" = "down";
   private walkFrame: 1 | 2 = 1;
   private walkTimer = 0;
@@ -56,102 +54,6 @@ export default class BaseCampScene extends Phaser.Scene {
     this.add.image(HOUSE_X - 55, HOUSE_Y - 80, "dragon")
       .setScale(0.088).setDepth(HOUSE_Y - 80);
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // 충돌 벽 생성 헬퍼 + 검정 디버그 선 동시 그리기
-    // ─────────────────────────────────────────────────────────────────────────────
-    const debugG = this.add.graphics().setDepth(9998);
-    debugG.lineStyle(3, 0x000000, 1.0);
-
-    const seg = (x1: number, y1: number, x2: number, y2: number, t = WALL_THICK) => {
-      const dx = x2 - x1, dy = y2 - y1;
-      const isH = Math.abs(dy) <= 2;
-      const isV = Math.abs(dx) <= 2;
-
-      // 디버그 선 그리기
-      debugG.beginPath();
-      debugG.moveTo(x1, y1);
-      debugG.lineTo(x2, y2);
-      debugG.strokePath();
-
-      const addRect = (x: number, y: number, w: number, h: number) => {
-        const r = this.add.rectangle(x, y, w, h, 0x000000, 0);
-        this.physics.add.existing(r, true);
-        this.wallBodies.push(r);
-      };
-      if (isH) {
-        addRect((x1 + x2) / 2, (y1 + y2) / 2, Math.abs(dx), t);
-      } else if (isV) {
-        addRect((x1 + x2) / 2, (y1 + y2) / 2, t, Math.abs(dy));
-      } else {
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const steps = Math.ceil(len / t);
-        for (let i = 0; i <= steps; i++) {
-          const f = i / steps;
-          addRect(x1 + dx * f, y1 + dy * f, t, t);
-        }
-      }
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // 유저 지정 좌표 세그먼트 (이것만 적용 / 추정 벽 없음)
-    // ─────────────────────────────────────────────────────────────────────────────
-    seg(204,992,  397,992);
-    seg(397,992,  347,1170);
-    seg(347,1170, 488,1170);
-    seg(488,1170, 488,1205);
-    seg(488,1205, 684,1205);
-    seg(684,1205, 684,1245);
-    seg(684,1245, 733,1245);
-    seg(733,1245, 733,1117);
-    seg(733,1117, 843,1117);
-    seg(843,1117, 843,1242);
-    seg(843,1242, 875,1242);
-    seg(875,1242, 940,1267);
-    seg(940,1267,  1020,1321);
-    seg(1020,1321, 1009,1355);
-    seg(1009,1355,  894,1397);
-    // 894→984 통로 (벽 없음)
-    seg(984,1397,  984,1472);
-    seg(984,1472,  820,1472);
-    seg(820,1472,  820,1644);
-    seg(820,1644,  1050,1580);
-    seg(1050,1580,  878,1715);
-    seg(878,1718,   946,1718);
-    seg(946,1718,   946,1756);
-    seg(946,1718,  1017,1758);
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // ② 경로 외곽 경계
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    // 탑 통로 위 닫기
-    seg(150,  992, 204,  992);
-    seg(397,  992, 1050, 992);
-
-    // 과일상점 지붕 봉쇄 (y=992~1117 사이 x=733/843 수직 연장)
-    seg(733,  992, 733,  1117);
-    seg(843,  992, 843,  1117);
-
-    // 왼쪽 외벽: y=992 → (134,1378) 자연스럽게 이어짐
-    seg(150,  992, 134,  1378);
-
-    // 오른쪽 외벽
-    seg(1050, 992, 1050, 1580);
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // ③ 우물 · 하단 구역 (유저 지정 좌표 그대로)
-    // ─────────────────────────────────────────────────────────────────────────────
-    seg(134,  1378, 457,  1464);
-    seg(457,  1464, 574,  1464);
-    seg(574,  1464, 506,  1863);
-    seg(506,  1863, 106,  1863);
-    seg(106,  1863, 106,  1964);
-    seg(106,  1964, 529,  1969);
-    seg(529,  1969, 529,  2289);
-    seg(529,  2289, 1250, 2289);
-    seg(1250, 2289, 1250, 1985);
-    seg(1250, 1985, 1527, 1987);
-    seg(1527, 1987, 1527, 1580);
 
     // ─────────────────────────────────────────────────────────────────────────────
     // 플레이어
@@ -166,8 +68,6 @@ export default class BaseCampScene extends Phaser.Scene {
     // 64×64 스프라이트 중앙에 위치: offset = (64-10)/2 = 27
     (this.player.body as Phaser.Physics.Arcade.Body).setSize(10, 10);
     (this.player.body as Phaser.Physics.Arcade.Body).setOffset(27, 27);
-
-    this.wallBodies.forEach(w => this.physics.add.collider(this.player, w));
 
     // ── 카메라 ──────────────────────────────────────────────────────────────────
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
