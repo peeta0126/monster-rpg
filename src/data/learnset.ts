@@ -12,7 +12,7 @@ import {
   thunderbolt, blizzard, iceLeaf,
   firePunch, headbutt, poisonPowder, waterPulse, seedBomb,
   icePunch, thunderPunch, hyperBeam, overheat, hydropump,
-  poisonJab, thunder, sheerCold,
+  poisonJab, thunder, sheerCold, giga_impact,
   voltCrash, thunderStrike, aquaWhirl, tidalCrash, crystalBurst,
 } from "./moves";
 import type { Move } from "../types/game";

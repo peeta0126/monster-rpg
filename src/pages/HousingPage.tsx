@@ -325,7 +325,7 @@ function EditPanel({ selectedId, onSelect, tab, onTabChange }: {
 
 export default function HousingPage() {
   const navigate = useNavigate();
-  const { placedFurniture, furnitureInventory, placeFurniture, removeFurniture, getHousingBonuses } = usePlayerStore();
+  const { placedFurniture, placeFurniture, removeFurniture, getHousingBonuses } = usePlayerStore();
 
   // ── 플레이어 상태 ────────────────────────────────────────────────────────────
   const posRef  = useRef({ x: 50, y: 60 });
@@ -342,7 +342,6 @@ export default function HousingPage() {
   const [editTab,    setEditTab]    = useState<EditTab>("inventory");
 
   const bonuses = getHousingBonuses();
-  const counts  = countMaterials(placedFurniture);
 
   // ── 키 이벤트 등록 ───────────────────────────────────────────────────────────
   useEffect(() => {

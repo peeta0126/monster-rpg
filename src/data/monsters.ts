@@ -2,8 +2,8 @@ import type { Monster } from "../types/game";
 import {
   ember, tackle, vineWhip, waterGun,
   spark, thunderbolt, voltCrash, thunderStrike,
-  iceBeam, blizzard,
-  quickAttack, bodySlam,
+  iceBeam,
+  quickAttack,
   flamethrower, surf,
   aquaWhirl,
   crystalBurst,
