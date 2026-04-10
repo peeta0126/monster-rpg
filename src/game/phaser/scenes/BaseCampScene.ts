@@ -101,11 +101,97 @@ export default class BaseCampScene extends Phaser.Scene {
         gameEvents.emit(GAME_EVENT.ENTER_HOUSING);
       }
     });
+    //-------충돌 관리 선------------
+    const wallBodies: Phaser.GameObjects.Rectangle[] = [];
+
+    const addStaticRect = (x: number, y: number, w: number, h: number) => {
+      const r = this.add.rectangle(x, y, w, h, 0x000000, 0);
+      this.physics.add.existing(r, true);
+      wallBodies.push(r);
+
+      const debug = true;
+      if (debug) {
+        const g = this.add.graphics().setDepth(9999);
+        g.lineStyle(2, 0x00ff88, 1);
+        g.strokeRect(x - w / 2, y - h / 2, w, h);
+      }
+
+      this.physics.add.collider(this.player, r);
+      return r;
+    };
+
+    const seg = (
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      t = 16
+    ) => {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+
+      const isH = Math.abs(dy) <= 2;
+      const isV = Math.abs(dx) <= 2;
+
+      if (isH) {
+        addStaticRect((x1 + x2) / 2, (y1 + y2) / 2, Math.abs(dx), t);
+      } else if (isV) {
+        addStaticRect((x1 + x2) / 2, (y1 + y2) / 2, t, Math.abs(dy));
+      } else {
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const steps = Math.ceil(len / t);
+
+        for (let i = 0; i <= steps; i++) {
+          const f = i / steps;
+          addStaticRect(x1 + dx * f, y1 + dy * f, t, t);
+        }
+      }
+    };
+
+    seg(380, 900, 380, 1200);
+    seg(380, 1200, 690, 1200);
+    seg(900, 1200, 1000, 1200);
+    seg(1000,1200, 1000, 1480);
+    seg(830,1480, 1000, 1480);
+    seg(1030, 1800, 830,1480, 5)
+    seg(1530, 1800, 1030,1800)
+    seg(980 ,2430, 1530, 2430)
+    seg(100, 1850, 580, 1850)
+    seg(100,1850, 100,1960)
+    seg(540,1960, 100,1960)
+    seg(540,2290, 540,1960)
+    seg(660, 2290, 540,2290)
+    seg(580, 1400, 580, 1850)
+    seg(170,1400, 580, 1400)
+    seg(170,920, 170, 1400)
+    seg(170,1400, 580, 1400)
+    //좌표 확인용
+    const pointerText = this.add
+    .text(20, 20, "x: 0, y: 0", {
+      fontSize: "24px",
+      color: "#ffffff",
+      backgroundColor: "#000000aa",
+      padding: { x: 8, y: 4 },
+    })
+    .setScrollFactor(0)
+    .setDepth(10000)
+    .setName("pointerText");
+
 
     keyboard.on("keydown-P", () => gameEvents.emit("open-dex"));
   }
 
   update(_time: number, delta: number) {
+    //좌표 확인용
+    const pointer = this.input.activePointer;
+    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+
+    const pointerText = this.children.getByName("pointerText") as Phaser.GameObjects.Text;
+    if (pointerText) {
+      pointerText.setText(`x: ${Math.round(worldPoint.x)}, y: ${Math.round(worldPoint.y)}`);
+    }
+    //-----
+
     if (!this.player || !this.cursors || !this.wasd) return;
 
     const speed = 220;
