@@ -44,12 +44,6 @@ const MONSTER_DEX_DESC: Record<string, string> = {
   crystafox:  "이마에 박힌 다이아몬드 수정이 빛을 굴절시켜 주변을 무지갯빛으로 물들인다. 위기를 감지하면 수정 날개를 펼쳐 얼음 파편을 흩뿌린다.",
   frostorb:   "거대한 수정 원반을 달고 천천히 떠다니는 얼음 생물이다. 원반은 주변 수분을 흡수해 얼음으로 바꾸며, 근처에 가면 숨이 하얗게 변한다.",
   nobi:       "어디서나 볼 수 있는 친근한 생물이다. 특별한 능력은 없지만 균형 잡힌 신체 능력으로 어떤 환경에서도 살아남는다. 무리를 이루면 의외의 강함을 발휘한다.",
-  voltiny:    "볼에 전기를 저장하는 전기 쥐다. 꼬리를 흔들면 불꽃이 튄다. 무리를 지어 살며 서로의 전기로 통신한다.",
-  zapbear:    "어두운 숲속에 사는 전기 곰이다. 몸 표면의 줄무늬를 통해 전기를 방전한다. 겨울잠을 자지 않고 연중 전기를 모은다.",
-  frostlet:   "얼음 수정으로 이루어진 신비로운 생물이다. 팔에서 날카로운 크리스탈을 발사하며, 배의 눈꽃 무늬는 기온이 낮을수록 밝게 빛난다.",
-  blizzwolf:  "눈보라가 몰아치는 설원을 4족으로 달리는 얼음 늑대다. 얼음 이빨은 강철도 부순다. 무리의 우두머리는 극한냉기의 숨결을 내뿜는다.",
-  fluffin:    "솜사탕 같은 분홍빛 털로 뒤덮인 온순한 생물이다. 달콤한 향기가 나지만 독가루를 품고 있다.",
-  stonepup:   "돌처럼 단단한 피부를 가진 강아지다. 바위 틈새에서 자고, 돌 머리로 박치기를 즐긴다. 오래된 개체일수록 피부에 깊은 균열이 생긴다.",
 };
 
 const MOVE_TYPE_COLOR: Record<string, string> = {
@@ -244,8 +238,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
 
   const typeGroups = ["fire", "water", "grass", "electric", "ice", "normal"];
 
-  // 더미 몬스터 제외
-  const visibleMonsters = monsters.filter(m => !m.isDummy);
+  const visibleMonsters = monsters;
 
   const filteredMonsters = filter === "all"
     ? visibleMonsters
@@ -277,9 +270,9 @@ function DexModal({ onClose }: { onClose: () => void }) {
               <div>
                 <h2 className="text-xl font-bold text-zinc-100">몬스터 도감</h2>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  조우 {dexSeen.filter(id => !monsters.find(m=>m.id===id)?.isDummy).length}/{visibleMonsters.length}
+                  조우 {dexSeen.filter(id => monsters.find(m=>m.id===id)).length}/{visibleMonsters.length}
                   &nbsp;·&nbsp;
-                  포획 {dexCaught.filter(id => !monsters.find(m=>m.id===id)?.isDummy).length}/{visibleMonsters.length}
+                  포획 {dexCaught.filter(id => monsters.find(m=>m.id===id)).length}/{visibleMonsters.length}
                 </p>
               </div>
               <button

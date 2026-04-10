@@ -154,7 +154,7 @@ const FOREST_AREAS: ForestArea[] = [
   {
     id: "shallow", name: "얕은 숲", subtitle: "SHALLOW WOODS",
     description: "햇빛이 스며드는 고요한 숲. 초보 탐험가도 부담 없이 도전할 수 있습니다.",
-    monsterPool: ["flameling", "aquabe", "leafy", "fluffin"],
+    monsterPool: ["flameling", "aquabe", "leafy", "nobi"],
     levelRange: [1, 8], encounterRate: 0.55, materialRate: 0.40, materialBonus: 0,
     exploreTime: 1400, danger: 1,
     particleType: "leaf",
@@ -167,7 +167,7 @@ const FOREST_AREAS: ForestArea[] = [
   {
     id: "deep", name: "깊은 숲", subtitle: "DEEP FOREST",
     description: "빛이 닿지 않는 울창한 구역. 강한 몬스터와 희귀 재료가 기다립니다.",
-    monsterPool: ["burno", "bubblet", "mossy", "voltiny", "frostlet", "stonepup"],
+    monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb"],
     levelRange: [8, 18], encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
     exploreTime: 1800, danger: 3,
     particleType: "firefly",
@@ -180,7 +180,7 @@ const FOREST_AREAS: ForestArea[] = [
   {
     id: "ancient", name: "고대 숲", subtitle: "ANCIENT DEPTHS",
     description: "마력이 깃든 태고의 숲. 전설적인 몬스터가 출몰하며, 생환을 장담할 수 없습니다.",
-    monsterPool: ["zapbear", "blizzwolf", "fluffin", "burno", "mossy"],
+    monsterPool: ["mossevo", "mossyfinal", "aquavern", "crystafox", "frostorb"],
     levelRange: [18, 32], encounterRate: 0.75, materialRate: 0.65, materialBonus: 2,
     exploreTime: 2200, danger: 5,
     particleType: "crystal",

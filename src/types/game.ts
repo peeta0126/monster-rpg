@@ -38,8 +38,6 @@ export interface Monster {
   evolvesFrom?: string;
   /** 이 레벨 이상이면 진화 가능 */
   evolvesAtLevel?: number;
-  /** 더미 데이터 여부 (미구현 몬스터) */
-  isDummy?: boolean;
 }
 
 // ─── 전투 시스템 타입 ────────────────────────────────────────────────────────────
