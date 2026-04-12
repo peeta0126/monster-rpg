@@ -148,6 +148,7 @@ export default class BaseCampScene extends Phaser.Scene {
       }
     };
 
+    seg(380, 900, 170, 900)
     seg(380, 900, 380, 1200);
     seg(380, 1200, 690, 1200);
     seg(900, 1200, 1000, 1200);
@@ -155,7 +156,8 @@ export default class BaseCampScene extends Phaser.Scene {
     seg(830,1480, 1000, 1480);
     seg(1030, 1800, 830,1480, 5)
     seg(1530, 1800, 1030,1800)
-    seg(980 ,2430, 1530, 2430)
+    seg(890 ,2430, 1530, 2430)
+    seg(890, 2430, 890, 2900)
     seg(100, 1850, 580, 1850)
     seg(100,1850, 100,1960)
     seg(540,1960, 100,1960)
@@ -165,6 +167,11 @@ export default class BaseCampScene extends Phaser.Scene {
     seg(170,1400, 580, 1400)
     seg(170,920, 170, 1400)
     seg(170,1400, 580, 1400)
+    seg(700,1100, 700, 1200)
+    seg(880, 1100, 880, 1200)
+    seg(700, 1100, 880,1100)
+    seg(660, 2300, 660, 2900)
+
     //좌표 확인용
     const pointerText = this.add
     .text(20, 20, "x: 0, y: 0", {
