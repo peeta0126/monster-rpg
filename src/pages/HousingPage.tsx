@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { useNavigate } from "react-router-dom";
 import HousingBgCanvas from "./HousingBgCanvas";
 import { usePlayerStore, isTileWalkable } from "../store/playerStore";
@@ -344,7 +344,7 @@ function FloorSVG({
   const FLOOR = "440,0 0,220 440,440 880,220";
 
   // 타일 그리드선 (k=1..9): tx 열선 + ty 행선
-  const lines: JSX.Element[] = [];
+  const lines: ReactElement[] = [];
   const gc = toOpaque(floorStyle.normalOutline);
   for (let k = 1; k < ROOM_COLS; k++) {
     // tx=k 열선: (440+44k, 22k) → (44k, 220+22k)
@@ -546,7 +546,7 @@ function IsoRoomGrid({
 
   void buildOccupiedSet(placedFurniture, FURNITURE);
 
-  const tiles: JSX.Element[] = [];
+  const tiles: ReactElement[] = [];
   for (let ty = 0; ty < ROOM_ROWS; ty++) {
     for (let tx = 0; tx < ROOM_COLS; tx++) {
       const key = getTileKey(tx, ty);

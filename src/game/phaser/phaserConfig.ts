@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import BaseCampScene from "./scenes/BaseCampScene";
 import BattleScene from "./scenes/BattleScene";
-import HousingScene from "./scenes/HousingScene";
 export type { BattleSceneInitData } from "./battleInitStore";
 export { setBattleInitData, getBattleInitData } from "./battleInitStore";
 
@@ -19,26 +18,6 @@ export const createBaseCampGame = (parent: string | HTMLElement) => {
       arcade: { debug: false },
     },
     scene: [BaseCampScene],
-    scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-    },
-  });
-};
-
-export const createHousingGame = (parent: HTMLElement) => {
-  return new Phaser.Game({
-    type: Phaser.CANVAS,
-    parent,
-    width: 960,
-    height: 540,
-    backgroundColor: "#c8a87a",
-    pixelArt: true,
-    physics: {
-      default: "arcade",
-      arcade: { debug: false },
-    },
-    scene: [HousingScene],
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

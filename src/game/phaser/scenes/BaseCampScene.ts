@@ -33,7 +33,6 @@ export default class BaseCampScene extends Phaser.Scene {
 
   preload() {
     this.load.image("basecamp-bg", "/assets/basecamp/basecamp-bg.png");
-    this.load.image("dragon", "/assets/basecamp/dragon.png");
     this.load.image("player-up", "/assets/basecamp/player-up.png");
     this.load.image("player-up-1", "/assets/basecamp/player-up-1.png");
     this.load.image("player-up-2", "/assets/basecamp/player-up-2.png");
@@ -61,10 +60,6 @@ export default class BaseCampScene extends Phaser.Scene {
 
     // ── 배경 / 드래곤 배너 ────────────────────────────────────────────────────────
     this.add.image(mapW / 2, mapH / 2, "basecamp-bg").setDepth(0);
-    this.add
-      .image(HOUSE_X - 55, HOUSE_Y - 80, "dragon")
-      .setScale(0.088)
-      .setDepth(HOUSE_Y - 80);
 
     // ─────────────────────────────────────────────────────────────────────────────
     // 플레이어

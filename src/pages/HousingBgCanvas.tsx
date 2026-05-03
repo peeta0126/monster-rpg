@@ -5,7 +5,7 @@
 
 import { useEffect, useRef } from "react";
 
-const TW = 88, TH = 44, HW = 44, HH = 22;
+const TH = 44, HW = 44, HH = 22;
 const ROOM_COLS = 10, ROOM_ROWS = 10;
 
 // ─── PRNG ─────────────────────────────────────────────────────────────────────

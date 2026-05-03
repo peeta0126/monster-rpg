@@ -164,11 +164,12 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 1,
     size: { width: 2, height: 2 },
     visual: {
-      asset: "/assets/housing/iron_trainer.svg",
+      asset: "/assets/housing/floor_lamp.png",
       width: 150,
       height: 130,
       offsetX: 0,
       offsetY: 0,
+      rotatedAsset: "/assets/housing/floor_lamp1.png",
     },
   },
   {
@@ -183,11 +184,12 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 1,
     size: { width: 2, height: 2 },
     visual: {
-      asset: "/assets/housing/magic_forge.svg",
+      asset: "/assets/housing/wooden_table.png",
       width: 150,
       height: 150,
       offsetX: 0,
       offsetY: 0,
+      rotatedAsset: "/assets/housing/wooden_table1.png",
     },
   },
 
