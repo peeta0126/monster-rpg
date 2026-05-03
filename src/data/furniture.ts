@@ -1,3 +1,5 @@
+import type { FurnitureSize, FurnitureVisual } from "../types/housing";
+
 // ─── 재질 / 등급 타입 ──────────────────────────────────────────────────────────
 
 export type FurnitureMaterial = "wood" | "iron" | "crystal" | "leather";
@@ -39,9 +41,13 @@ export interface Furniture {
   recipe: Record<string, number>;
   /** 방 안에 배치 가능한 최대 수 */
   maxInRoom: number;
+  /** 타일 점유 크기 (기본 1×1) */
+  size: FurnitureSize;
+  /** 화면 렌더링 시각 정보 */
+  visual: FurnitureVisual;
 }
 
-// ─── 가구 10종 ──────────────────────────────────────────────────────────────────
+// ─── 가구 데이터 ──────────────────────────────────────────────────────────────
 
 export const FURNITURE: Furniture[] = [
   // ── 나무(Wood) 4종 ──────────────────────────────────────────────────────────
@@ -55,6 +61,15 @@ export const FURNITURE: Furniture[] = [
     color: 0x8b5e3c,
     recipe: { wood_plank: 2, leather: 1 },
     maxInRoom: 1,
+    size: { width: 2, height: 3 },
+    visual: {
+      asset: "/assets/housing/wooden_bed.png",
+      width: 190,
+      height: 190,
+      offsetX: 0,
+      offsetY: 0,
+      rotatedAsset: "/assets/housing/wooden_bed1.png",
+    },
   },
   {
     id: "wooden_desk",
@@ -66,6 +81,14 @@ export const FURNITURE: Furniture[] = [
     color: 0x6b4226,
     recipe: { wood_plank: 3 },
     maxInRoom: 1,
+    size: { width: 2, height: 1 },
+    visual: {
+      asset: "/assets/housing/wooden_desk.png",
+      width: 160,
+      height: 160,
+      offsetX: 0,
+      offsetY: 0,
+    },
   },
   {
     id: "wooden_dummy",
@@ -77,6 +100,15 @@ export const FURNITURE: Furniture[] = [
     color: 0xbc8a4e,
     recipe: { wood_plank: 4, root: 1 },
     maxInRoom: 1,
+    size: { width: 1, height: 1 },
+    visual: {
+      asset: "/assets/housing/wooden_chair.png",
+      width: 120,
+      height: 120,
+      offsetX: 0,
+      offsetY: 0,
+      rotatedAsset: "/assets/housing/wooden_chair1.png",
+    },
   },
   {
     id: "ancient_altar",
@@ -88,6 +120,15 @@ export const FURNITURE: Furniture[] = [
     color: 0x2e7d32,
     recipe: { wood_plank: 6, crystal: 1 },
     maxInRoom: 1,
+    size: { width: 2, height: 2 },
+    visual: {
+      asset: "/assets/housing/wooden_table.png",
+      width: 150,
+      height: 150,
+      offsetX: 0,
+      offsetY: 0,
+      rotatedAsset: "/assets/housing/wooden_table1.png",
+    },
   },
 
   // ── 철(Iron) 3종 ────────────────────────────────────────────────────────────
@@ -101,6 +142,15 @@ export const FURNITURE: Furniture[] = [
     color: 0x546e7a,
     recipe: { iron_fragment: 2 },
     maxInRoom: 1,
+    size: { width: 1, height: 1 },
+    visual: {
+      asset: "/assets/housing/floor_lamp.png",
+      width: 110,
+      height: 150,
+      offsetX: 0,
+      offsetY: 0,
+      rotatedAsset: "/assets/housing/floor_lamp1.png",
+    },
   },
   {
     id: "iron_trainer",
@@ -112,6 +162,14 @@ export const FURNITURE: Furniture[] = [
     color: 0x37474f,
     recipe: { iron_fragment: 3, leather: 1 },
     maxInRoom: 1,
+    size: { width: 2, height: 2 },
+    visual: {
+      asset: "/assets/housing/iron_trainer.svg",
+      width: 150,
+      height: 130,
+      offsetX: 0,
+      offsetY: 0,
+    },
   },
   {
     id: "magic_forge",
@@ -123,6 +181,14 @@ export const FURNITURE: Furniture[] = [
     color: 0xbf360c,
     recipe: { iron_fragment: 5, crystal: 2 },
     maxInRoom: 1,
+    size: { width: 2, height: 2 },
+    visual: {
+      asset: "/assets/housing/magic_forge.svg",
+      width: 150,
+      height: 150,
+      offsetX: 0,
+      offsetY: 0,
+    },
   },
 
   // ── 수정(Crystal) 2종 ───────────────────────────────────────────────────────
@@ -136,6 +202,15 @@ export const FURNITURE: Furniture[] = [
     color: 0x6a1b9a,
     recipe: { crystal: 3, iron_fragment: 1 },
     maxInRoom: 1,
+    size: { width: 2, height: 1 },
+    visual: {
+      asset: "/assets/housing/wooden_cabinet.png",
+      width: 150,
+      height: 150,
+      offsetX: 0,
+      offsetY: 0,
+      rotatedAsset: "/assets/housing/wooden_cabinet1.png",
+    },
   },
   {
     id: "ancient_orb",
@@ -147,6 +222,15 @@ export const FURNITURE: Furniture[] = [
     color: 0x4a148c,
     recipe: { crystal: 5, wood_plank: 2 },
     maxInRoom: 1,
+    size: { width: 1, height: 1 },
+    visual: {
+      asset: "/assets/housing/potted_plant.png",
+      width: 110,
+      height: 110,
+      offsetX: 0,
+      offsetY: 0,
+      rotatedAsset: "/assets/housing/potted_plant1.png",
+    },
   },
 
   // ── 가죽(Leather) 1종 ───────────────────────────────────────────────────────
@@ -160,17 +244,23 @@ export const FURNITURE: Furniture[] = [
     color: 0x6d4c1f,
     recipe: { leather: 4, herb: 2 },
     maxInRoom: 1,
+    size: { width: 3, height: 2 },
+    visual: {
+      asset: "/assets/housing/decorative_rug.png",
+      width: 210,
+      height: 150,
+      offsetX: 0,
+      offsetY: 0,
+      rotatedAsset: "/assets/housing/decorative_rug1.png",
+    },
   },
 ];
 
 // ─── 재질별 세트 단계 정의 ───────────────────────────────────────────────────────
 
 export interface MaterialSetTier {
-  /** 필요한 동일 재질 가구 수 */
   count: number;
-  /** 세트 단계 이름 */
   name: string;
-  /** 세트 효과 설명 */
   description: string;
 }
 
@@ -199,21 +289,16 @@ export function getFurniture(id: string): Furniture | undefined {
   return FURNITURE.find((f) => f.id === id);
 }
 
-/** 재질별 배치 수 집계 */
-export function countMaterials(
-  placedFurniture: (string | null)[],
-): Record<FurnitureMaterial, number> {
+export function countMaterials(furnitureIds: string[]): Record<FurnitureMaterial, number> {
   const counts: Record<FurnitureMaterial, number> = { wood: 0, iron: 0, crystal: 0, leather: 0 };
-  for (const id of placedFurniture) {
-    if (!id) continue;
+  for (const id of furnitureIds) {
     const f = getFurniture(id);
     if (f) counts[f.material]++;
   }
   return counts;
 }
 
-/** 배치된 가구에서 재질별 세트 보너스 합산 */
-export function calcHousingBonuses(placedFurniture: (string | null)[]): {
+export function calcHousingBonuses(furnitureIds: string[]): {
   hpPercent: number;
   attackPercent: number;
   defensePercent: number;
@@ -227,25 +312,15 @@ export function calcHousingBonuses(placedFurniture: (string | null)[]): {
   activeSets: string[];
 } {
   const bonuses = {
-    hpPercent: 0,
-    attackPercent: 0,
-    defensePercent: 0,
-    speedPercent: 0,
-    expBonusPercent: 0,
-    potionBonusPercent: 0,
-    statusResistPercent: 0,
-    catchRateBonus: 0,
-    grassTypePower: 0,
-    towerDropBonus: 0,
+    hpPercent: 0, attackPercent: 0, defensePercent: 0, speedPercent: 0,
+    expBonusPercent: 0, potionBonusPercent: 0, statusResistPercent: 0,
+    catchRateBonus: 0, grassTypePower: 0, towerDropBonus: 0,
     activeSets: [] as string[],
   };
+  const counts = countMaterials(furnitureIds);
 
-  const counts = countMaterials(placedFurniture);
-
-  // ── 나무 세트 ──
   if (counts.wood >= 4) {
-    bonuses.grassTypePower = 20;
-    bonuses.hpPercent      = 10;
+    bonuses.grassTypePower = 20; bonuses.hpPercent = 10;
     bonuses.activeSets.push("나무 풀세트 ✨");
   } else if (counts.wood >= 3) {
     bonuses.grassTypePower = 20;
@@ -255,30 +330,24 @@ export function calcHousingBonuses(placedFurniture: (string | null)[]): {
     bonuses.activeSets.push("나무 2종 세트");
   }
 
-  // ── 철 세트 ──
   if (counts.iron >= 3) {
-    bonuses.attackPercent  = 10;
-    bonuses.defensePercent = 10;
+    bonuses.attackPercent = 10; bonuses.defensePercent = 10;
     bonuses.activeSets.push("철 풀세트 ✨");
   } else if (counts.iron >= 2) {
     bonuses.attackPercent = 10;
     bonuses.activeSets.push("철 2종 세트");
   }
 
-  // ── 수정 세트 ──
   if (counts.crystal >= 2) {
-    bonuses.towerDropBonus = 30;
-    bonuses.catchRateBonus = 15;
+    bonuses.towerDropBonus = 30; bonuses.catchRateBonus = 15;
     bonuses.activeSets.push("수정 풀세트 ✨");
   } else if (counts.crystal >= 1) {
     bonuses.towerDropBonus = 15;
     bonuses.activeSets.push("수정 1종 세트");
   }
 
-  // ── 가죽 세트 ──
   if (counts.leather >= 1) {
-    bonuses.potionBonusPercent = 15;
-    bonuses.expBonusPercent    = 10;
+    bonuses.potionBonusPercent = 15; bonuses.expBonusPercent = 10;
     bonuses.activeSets.push("가죽 세트");
   }
 

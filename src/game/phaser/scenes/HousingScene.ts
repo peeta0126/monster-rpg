@@ -179,7 +179,7 @@ export default class HousingScene extends Phaser.Scene {
     const placed = usePlayerStore.getState().placedFurniture;
 
     FURNITURE_SLOTS.forEach((slot, i) => {
-      const furnitureId = placed[i];
+      const furnitureId = placed[i]?.furnitureId;
       const furniture   = furnitureId ? getFurniture(furnitureId) : null;
 
       const g = this.add.graphics().setDepth(4);

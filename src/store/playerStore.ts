@@ -1,13 +1,22 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Monster, HousingBonuses } from "../types/game";
+import type { PlacedFurniture, PlacedWallDecoration, WallSide } from "../types/housing";
+import { WALL_DECORATIONS } from "../data/wallDecorations";
+import { WALLPAPERS } from "../data/wallpapers";
+import { FLOOR_TILES } from "../data/floorTiles";
 import { monsters } from "../data/monsters";
 import { POTIONS } from "../data/items";
 import { FURNITURE, calcHousingBonuses } from "../data/furniture";
+import {
+  makeInstanceId,
+  canPlaceFurnitureAt,
+  getRotatedSize,
+} from "../utils/isometric";
+import { ROOM_COLS, ROOM_ROWS } from "../constants/housing";
 
 // ─── OwnedMonster ────────────────────────────────────────────────────────────────
 
-/** 플레이어가 보유한 몬스터 인스턴스 */
 export interface OwnedMonster extends Monster {
   uid: string;
   nickname?: string;
@@ -24,70 +33,59 @@ function monsterToOwned(m: Monster): OwnedMonster {
   return { ...m, uid: makeUid(), currentHp: m.maxHp };
 }
 
-// 초기 파티: 플레미(lv1)
 const initialFlameling = monsterToOwned(monsters[0]);
 
 // ─── Store ────────────────────────────────────────────────────────────────────────
 
 interface PlayerState {
-  /** 전투에 데려가는 몬스터 (최대 3마리) */
   party: OwnedMonster[];
-  /** 농장에 보관 중인 몬스터 (최대 30마리) */
   storage: OwnedMonster[];
-  /** 조우한 적 있는 monsterID (이미지 공개) */
   dexSeen: string[];
-  /** 포획에 성공한 monsterID (전체 정보 공개) */
   dexCaught: string[];
-  /** 보유 재료 { materialId: count } */
   materials: Record<string, number>;
-  /** 보유 물약 { potionId: count } */
   potions: Record<string, number>;
-  /** 최고 도달 층 */
   bestFloor: number;
 
-  // ── 하우징 ────────────────────────────────────────────────────────────────────
-  /** 보유 가구 { furnitureId: count } */
   furnitureInventory: Record<string, number>;
-  /** 배치된 가구 슬롯 (6칸, null = 빈 칸) */
-  placedFurniture: (string | null)[];
+  placedFurniture: PlacedFurniture[];
 
-  // ── 도감 ──────────────────────────────────────────────────────────────────────
+  // ── 방 커스터마이징 ────────────────────────────────────────────────────────────
+  wallpaperId: string;
+  floorTileId: string;
+  wallDecorations: PlacedWallDecoration[];
+  wallDecoInventory: Record<string, number>;
+  unlockedWallpapers: string[];
+  unlockedFloorTiles: string[];
+
   addToDexSeen:   (id: string) => void;
   addToDexCaught: (id: string) => void;
-
-  // ── 탑 ────────────────────────────────────────────────────────────────────────
   updateBestFloor: (floor: number) => void;
-
-  // ── 포획 (항상 보관함/농장으로) ───────────────────────────────────────────────
   addCapturedMonster: (monster: Monster) => "storage" | "full";
-
-  // ── 파티 관리 ─────────────────────────────────────────────────────────────────
   swapWithStorage:  (partyIndex: number, storageUid: string) => void;
   moveToStorage:    (partyIndex: number) => void;
   moveToParty:      (storageUid: string, partyIndex?: number) => void;
   swapPartySlots:   (indexA: number, indexB: number) => void;
-
-  // ── 배틀 동기화 ───────────────────────────────────────────────────────────────
   updatePartyMemberHp:  (uid: string, currentHp: number) => void;
   updatePartyMember:    (updated: OwnedMonster) => void;
   restorePartyHp:       () => void;
-
-  // ── 아이템 ────────────────────────────────────────────────────────────────────
   addMaterial:  (id: string, count?: number) => void;
-  /** 레시피에 맞는 재료가 있으면 소모 후 물약 추가. 성공 여부 반환. */
   craftPotion:  (potionId: string) => boolean;
-  /** 물약 1개 소모. 성공(있었으면) true 반환. */
   usePotion:    (potionId: string) => boolean;
-
-  // ── 하우징 ────────────────────────────────────────────────────────────────────
-  /** 레시피에 맞는 재료가 있으면 소모 후 가구 인벤토리에 추가. 성공 여부 반환. */
   craftFurniture:  (furnitureId: string) => boolean;
-  /** 인벤토리의 가구를 지정 슬롯에 배치. */
-  placeFurniture:  (slotIndex: number, furnitureId: string) => void;
-  /** 슬롯의 가구를 제거하고 인벤토리로 반환. */
-  removeFurniture: (slotIndex: number) => void;
-  /** 현재 배치된 가구에서 계산된 총 하우징 보너스 반환. */
+  placeFurniture:  (x: number, y: number, furnitureId: string) => boolean;
+  moveFurniture:   (instanceId: string, x: number, y: number) => boolean;
+  rotateFurniture: (instanceId: string) => void;
+  removeFurniture: (instanceId: string) => void;
   getHousingBonuses: () => HousingBonuses;
+
+  // ── 방 커스터마이징 메서드 ──────────────────────────────────────────────────────
+  setWallpaper: (id: string) => void;
+  setFloorTile: (id: string) => void;
+  placeWallDecoration: (wall: WallSide, slotIndex: number, decorId: string) => boolean;
+  removeWallDecoration: (instanceId: string) => void;
+  craftWallDecoration: (id: string) => boolean;
+  craftWallpaper: (id: string) => boolean;
+  craftFloorTile: (id: string) => boolean;
 }
 
 export const usePlayerStore = create<PlayerState>()(
@@ -101,9 +99,14 @@ export const usePlayerStore = create<PlayerState>()(
       potions:            {},
       bestFloor:          0,
       furnitureInventory: {},
-      placedFurniture:    [null, null, null, null, null, null],
+      placedFurniture:    [],
+      wallpaperId:         "wood",
+      floorTileId:         "wood",
+      wallDecorations:     [],
+      wallDecoInventory:   {},
+      unlockedWallpapers:  ["wood"],
+      unlockedFloorTiles:  ["wood"],
 
-      // ── 도감 ──
       addToDexSeen: (id) =>
         set((s) => ({
           dexSeen: s.dexSeen.includes(id) ? s.dexSeen : [...s.dexSeen, id],
@@ -115,11 +118,9 @@ export const usePlayerStore = create<PlayerState>()(
           dexCaught: s.dexCaught.includes(id) ? s.dexCaught : [...s.dexCaught, id],
         })),
 
-      // ── 최고층 ──
       updateBestFloor: (floor) =>
         set((s) => ({ bestFloor: Math.max(s.bestFloor, floor) })),
 
-      // ── 포획 → 항상 보관함(농장)으로 ──
       addCapturedMonster: (monster) => {
         let result: "storage" | "full" = "full";
         set((s) => {
@@ -134,13 +135,11 @@ export const usePlayerStore = create<PlayerState>()(
         return result;
       },
 
-      // ── 파티 ↔ 보관함 ──
       swapWithStorage: (partyIndex, storageUid) =>
         set((s) => {
           const si = s.storage.findIndex((m) => m.uid === storageUid);
           if (si === -1 || partyIndex >= s.party.length) return s;
-          const np = [...s.party];
-          const ns = [...s.storage];
+          const np = [...s.party]; const ns = [...s.storage];
           [np[partyIndex], ns[si]] = [ns[si], np[partyIndex]];
           return { party: np, storage: ns };
         }),
@@ -177,7 +176,6 @@ export const usePlayerStore = create<PlayerState>()(
           return { party: p };
         }),
 
-      // ── 배틀 동기화 ──
       updatePartyMemberHp: (uid, currentHp) =>
         set((s) => ({
           party: s.party.map((m) => (m.uid === uid ? { ...m, currentHp } : m)),
@@ -193,7 +191,6 @@ export const usePlayerStore = create<PlayerState>()(
           party: s.party.map((m) => ({ ...m, currentHp: m.maxHp })),
         })),
 
-      // ── 아이템 ──
       addMaterial: (id, count = 1) =>
         set((s) => ({
           materials: { ...s.materials, [id]: (s.materials[id] ?? 0) + count },
@@ -203,19 +200,14 @@ export const usePlayerStore = create<PlayerState>()(
         const potion = POTIONS.find((p) => p.id === potionId);
         if (!potion) return false;
         const s = get();
-        // 재료 충분한지 확인
         for (const [matId, needed] of Object.entries(potion.recipe)) {
           if ((s.materials[matId] ?? 0) < needed) return false;
         }
-        // 재료 소모 + 물약 추가
         const newMats = { ...s.materials };
         for (const [matId, needed] of Object.entries(potion.recipe)) {
           newMats[matId] = (newMats[matId] ?? 0) - needed;
         }
-        set({
-          materials: newMats,
-          potions: { ...s.potions, [potionId]: (s.potions[potionId] ?? 0) + 1 },
-        });
+        set({ materials: newMats, potions: { ...s.potions, [potionId]: (s.potions[potionId] ?? 0) + 1 } });
         return true;
       },
 
@@ -226,85 +218,253 @@ export const usePlayerStore = create<PlayerState>()(
         return true;
       },
 
-      // ── 하우징 ──
       craftFurniture: (furnitureId) => {
         const furniture = FURNITURE.find((f) => f.id === furnitureId);
         if (!furniture) return false;
         const s = get();
-        // 재료 충분한지 확인
         for (const [matId, needed] of Object.entries(furniture.recipe)) {
           if ((s.materials[matId] ?? 0) < needed) return false;
         }
-        // 재료 소모 + 가구 추가
         const newMats = { ...s.materials };
         for (const [matId, needed] of Object.entries(furniture.recipe)) {
           newMats[matId] = (newMats[matId] ?? 0) - needed;
         }
         set({
           materials: newMats,
-          furnitureInventory: {
-            ...s.furnitureInventory,
-            [furnitureId]: (s.furnitureInventory[furnitureId] ?? 0) + 1,
-          },
+          furnitureInventory: { ...s.furnitureInventory, [furnitureId]: (s.furnitureInventory[furnitureId] ?? 0) + 1 },
         });
         return true;
       },
 
-      placeFurniture: (slotIndex, furnitureId) => {
+      placeFurniture: (x, y, furnitureId) => {
         const s = get();
-        if ((s.furnitureInventory[furnitureId] ?? 0) <= 0) return;
-        if (slotIndex < 0 || slotIndex >= 6) return;
-        const newSlots = [...s.placedFurniture] as (string | null)[];
-        const oldId = newSlots[slotIndex];
-        // 슬롯에 이미 다른 가구가 있으면 인벤토리로 반환
-        if (oldId) {
-          set((prev) => ({
-            furnitureInventory: {
-              ...prev.furnitureInventory,
-              [oldId]: (prev.furnitureInventory[oldId] ?? 0) + 1,
-            },
-          }));
-        }
-        newSlots[slotIndex] = furnitureId;
+        if ((s.furnitureInventory[furnitureId] ?? 0) <= 0) return false;
+
+        // maxInRoom 체크
+        const fd = FURNITURE.find((f) => f.id === furnitureId);
+        if (!fd) return false;
+        const alreadyPlaced = s.placedFurniture.filter((p) => p.furnitureId === furnitureId).length;
+        if (alreadyPlaced >= fd.maxInRoom) return false;
+
+        // 다중 타일 배치 가능 여부 확인
+        if (!canPlaceFurnitureAt(furnitureId, x, y, 0, s.placedFurniture, FURNITURE)) return false;
+
+        const newItem: PlacedFurniture = {
+          instanceId: makeInstanceId(),
+          furnitureId, x, y,
+          rotation: 0,
+          placedAt: Date.now(),
+        };
         set((prev) => ({
-          placedFurniture: newSlots,
+          placedFurniture: [...prev.placedFurniture, newItem],
           furnitureInventory: {
             ...prev.furnitureInventory,
             [furnitureId]: Math.max(0, (prev.furnitureInventory[furnitureId] ?? 0) - 1),
           },
         }));
+        return true;
       },
 
-      removeFurniture: (slotIndex) => {
+      moveFurniture: (instanceId, x, y) => {
         const s = get();
-        if (slotIndex < 0 || slotIndex >= 6) return;
-        const id = s.placedFurniture[slotIndex];
-        if (!id) return;
-        const newSlots = [...s.placedFurniture] as (string | null)[];
-        newSlots[slotIndex] = null;
+        const item = s.placedFurniture.find((p) => p.instanceId === instanceId);
+        if (!item) return false;
+
+        if (!canPlaceFurnitureAt(item.furnitureId, x, y, item.rotation, s.placedFurniture, FURNITURE, instanceId)) {
+          return false;
+        }
         set((prev) => ({
-          placedFurniture: newSlots,
+          placedFurniture: prev.placedFurniture.map((p) =>
+            p.instanceId === instanceId ? { ...p, x, y } : p,
+          ),
+        }));
+        return true;
+      },
+
+      rotateFurniture: (instanceId) => {
+        const s = get();
+        const item = s.placedFurniture.find((p) => p.instanceId === instanceId);
+        if (!item) return;
+        // 0 ↔ 90 두 상태만 토글 (1번 이미지 ↔ 원본 이미지)
+        const nextRotation = (item.rotation === 0 ? 90 : 0) as 0 | 90;
+
+        // 회전 후 배치 가능 여부 확인 (크기가 바뀌는 경우 공간 검사)
+        if (!canPlaceFurnitureAt(item.furnitureId, item.x, item.y, nextRotation, s.placedFurniture, FURNITURE, instanceId)) {
+          return; // 회전 불가
+        }
+        set((prev) => ({
+          placedFurniture: prev.placedFurniture.map((p) =>
+            p.instanceId === instanceId ? { ...p, rotation: nextRotation } : p,
+          ),
+        }));
+      },
+
+      removeFurniture: (instanceId) => {
+        const s = get();
+        const item = s.placedFurniture.find((p) => p.instanceId === instanceId);
+        if (!item) return;
+        set((prev) => ({
+          placedFurniture: prev.placedFurniture.filter((p) => p.instanceId !== instanceId),
           furnitureInventory: {
             ...prev.furnitureInventory,
-            [id]: (prev.furnitureInventory[id] ?? 0) + 1,
+            [item.furnitureId]: (prev.furnitureInventory[item.furnitureId] ?? 0) + 1,
           },
         }));
       },
 
-      getHousingBonuses: () => calcHousingBonuses(get().placedFurniture),
+      getHousingBonuses: () =>
+        calcHousingBonuses(get().placedFurniture.map((p) => p.furnitureId)),
+
+      setWallpaper: (id) => set({ wallpaperId: id }),
+
+      setFloorTile: (id) => set({ floorTileId: id }),
+
+      placeWallDecoration: (wall, slotIndex, decorId) => {
+        const s = get();
+        if ((s.wallDecoInventory[decorId] ?? 0) <= 0) return false;
+        // 같은 벽의 같은 슬롯에 이미 배치된 경우 제거 후 교체
+        const existing = s.wallDecorations.find((d) => d.wall === wall && d.slotIndex === slotIndex);
+        const filtered = s.wallDecorations.filter((d) => !(d.wall === wall && d.slotIndex === slotIndex));
+        const newDeco: import("../types/housing").PlacedWallDecoration = {
+          instanceId: makeInstanceId(),
+          decorId, wall, slotIndex,
+          placedAt: Date.now(),
+        };
+        const newInv = { ...s.wallDecoInventory, [decorId]: (s.wallDecoInventory[decorId] ?? 0) - 1 };
+        if (existing) {
+          newInv[existing.decorId] = (newInv[existing.decorId] ?? 0) + 1;
+        }
+        set({ wallDecorations: [...filtered, newDeco], wallDecoInventory: newInv });
+        return true;
+      },
+
+      removeWallDecoration: (instanceId) => {
+        const s = get();
+        const item = s.wallDecorations.find((d) => d.instanceId === instanceId);
+        if (!item) return;
+        set({
+          wallDecorations: s.wallDecorations.filter((d) => d.instanceId !== instanceId),
+          wallDecoInventory: { ...s.wallDecoInventory, [item.decorId]: (s.wallDecoInventory[item.decorId] ?? 0) + 1 },
+        });
+      },
+
+      craftWallpaper: (id) => {
+        const wp = WALLPAPERS.find((w) => w.id === id);
+        if (!wp) return false;
+        const s = get();
+        if (s.unlockedWallpapers.includes(id)) return false; // already unlocked
+        for (const [matId, needed] of Object.entries(wp.recipe)) {
+          if ((s.materials[matId] ?? 0) < needed) return false;
+        }
+        const newMats = { ...s.materials };
+        for (const [matId, needed] of Object.entries(wp.recipe)) {
+          newMats[matId] = (newMats[matId] ?? 0) - needed;
+        }
+        set({ materials: newMats, unlockedWallpapers: [...s.unlockedWallpapers, id] });
+        return true;
+      },
+
+      craftFloorTile: (id) => {
+        const ft = FLOOR_TILES.find((f) => f.id === id);
+        if (!ft) return false;
+        const s = get();
+        if (s.unlockedFloorTiles.includes(id)) return false; // already unlocked
+        for (const [matId, needed] of Object.entries(ft.recipe)) {
+          if ((s.materials[matId] ?? 0) < needed) return false;
+        }
+        const newMats = { ...s.materials };
+        for (const [matId, needed] of Object.entries(ft.recipe)) {
+          newMats[matId] = (newMats[matId] ?? 0) - needed;
+        }
+        set({ materials: newMats, unlockedFloorTiles: [...s.unlockedFloorTiles, id] });
+        return true;
+      },
+
+      craftWallDecoration: (id) => {
+        const decor = WALL_DECORATIONS.find((d) => d.id === id);
+        if (!decor) return false;
+        const s = get();
+        for (const [matId, needed] of Object.entries(decor.recipe)) {
+          if ((s.materials[matId] ?? 0) < needed) return false;
+        }
+        const newMats = { ...s.materials };
+        for (const [matId, needed] of Object.entries(decor.recipe)) {
+          newMats[matId] = (newMats[matId] ?? 0) - needed;
+        }
+        set({
+          materials: newMats,
+          wallDecoInventory: { ...s.wallDecoInventory, [id]: (s.wallDecoInventory[id] ?? 0) + 1 },
+        });
+        return true;
+      },
     }),
     {
       name: "monster-rpg-player",
-      // placedFurniture 길이 보장 (구버전 저장 데이터 호환)
       onRehydrateStorage: () => (state) => {
-        if (state && (!state.placedFurniture || state.placedFurniture.length !== 6)) {
-          state.placedFurniture = [null, null, null, null, null, null];
-        }
-        if (state && !state.furnitureInventory) {
-          state.furnitureInventory = {};
+        if (!state) return;
+        if (!state.furnitureInventory) state.furnitureInventory = {};
+        if (!state.wallpaperId) state.wallpaperId = "wood";
+        if (!state.floorTileId) state.floorTileId = "wood";
+        if (!Array.isArray(state.wallDecorations)) state.wallDecorations = [];
+        if (!state.wallDecoInventory) state.wallDecoInventory = {};
+        if (!Array.isArray(state.unlockedWallpapers)) state.unlockedWallpapers = ["wood"];
+        if (!Array.isArray(state.unlockedFloorTiles)) state.unlockedFloorTiles = ["wood"];
+        if (!Array.isArray(state.placedFurniture)) {
+          state.placedFurniture = [];
+        } else if (
+          state.placedFurniture.length > 0 &&
+          (state.placedFurniture[0] === null || typeof state.placedFurniture[0] === "string")
+        ) {
+          const legacyDefaultPositions = [
+            { x: 1, y: 1 }, { x: 3, y: 1 }, { x: 5, y: 1 },
+            { x: 1, y: 4 }, { x: 3, y: 4 }, { x: 5, y: 4 },
+          ];
+          const migrated: PlacedFurniture[] = [];
+          (state.placedFurniture as unknown as (string | null)[]).forEach((id, i) => {
+            if (!id) return;
+            const pos = legacyDefaultPositions[i] ?? { x: i * 2, y: 0 };
+            migrated.push({
+              instanceId: makeInstanceId(),
+              furnitureId: id,
+              x: pos.x, y: pos.y,
+              rotation: 0,
+              placedAt: Date.now(),
+            });
+          });
+          state.placedFurniture = migrated;
         }
       },
     }
   )
 );
 
+// ─── 타일 이동 가능 여부 ─────────────────────────────────────────────────────────
+
+export function isInsideRoom(x: number, y: number): boolean {
+  return x >= 0 && x < ROOM_COLS && y >= 0 && y < ROOM_ROWS;
+}
+
+export function isTileWalkable(
+  x: number,
+  y: number,
+  placedFurniture: PlacedFurniture[],
+): boolean {
+  if (!isInsideRoom(x, y)) return false;
+  for (const pf of placedFurniture) {
+    const fd = FURNITURE.find((f) => f.id === pf.furnitureId);
+    const size = fd?.size ?? { width: 1, height: 1 };
+    const rSize = getRotatedSize(size, pf.rotation);
+    for (let dy = 0; dy < rSize.height; dy++) {
+      for (let dx = 0; dx < rSize.width; dx++) {
+        if (pf.x + dx === x && pf.y + dy === y) return false;
+      }
+    }
+  }
+  return true;
+}
+
+export function isDoorTile(x: number, y: number): "farm" | "exit" | null {
+  if (x === 0 && y === Math.floor(ROOM_ROWS / 2) - 1) return "farm";
+  if (x === ROOM_COLS - 1 && y === Math.floor(ROOM_ROWS / 2) - 1) return "exit";
+  return null;
+}

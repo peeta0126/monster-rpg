@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(./node_modules/.bin/vite build:*)",
+      "Bash(mkdir -p \"/c/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/public/assets/housing\")",
+      "Bash(mkdir -p \"/c/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/constants\")",
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe -Command \"Set-Location 'C:\\\\Users\\\\leere\\\\OneDrive\\\\바탕 화면\\\\건국대\\\\4-1\\\\소웨종 - 졸업작품\\\\monster-rpg'; npm run build 2>&1\")",
+      "Bash(powershell.exe:*)",
+      "Bash(/c/Program Files/nodejs/node.exe:*)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(npx vite:*)",
+      "Bash(npx.cmd tsc:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)"
+    ]
+  }
+}

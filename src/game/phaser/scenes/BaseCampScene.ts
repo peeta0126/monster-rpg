@@ -51,9 +51,13 @@ export default class BaseCampScene extends Phaser.Scene {
   create() {
     const mapW = 1536,
       mapH = 2730;
-    this.cameras.main.setBounds(0, 0, mapW, mapH);
     this.cameras.main.setZoom(CAM_ZOOM);
     this.physics.world.setBounds(0, 0, mapW, mapH);
+
+    // 맵 가로(1536)가 뷰포트 가로(960/0.5=1920)보다 좁으므로 좌우 패딩을 추가해 중앙 정렬
+    const viewportW = this.scale.width / CAM_ZOOM;
+    const padX = Math.max(0, Math.floor((viewportW - mapW) / 2));
+    this.cameras.main.setBounds(-padX, 0, mapW + padX * 2, mapH);
 
     // ── 배경 / 드래곤 배너 ────────────────────────────────────────────────────────
     this.add.image(mapW / 2, mapH / 2, "basecamp-bg").setDepth(0);
