@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import HousingBgCanvas from "./HousingBgCanvas";
 import { usePlayerStore, isTileWalkable } from "../store/playerStore";
 import {
   FURNITURE, getFurniture, countMaterials,
@@ -20,9 +21,17 @@ import { WALL_DECORATIONS, getWallDecoration } from "../data/wallDecorations";
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
-const WALL_H = 160;
+const WALL_H    = 160;
+const MOLDING_H = 14;   // 상단 몰딩 두께 (SVG px)
+const BASE_H    = 9;    // 하단 걸레받이 두께 (SVG px)
+
 const roomSize = roomPixelSize(ROOM_COLS, ROOM_ROWS);
 // roomSize.width = 880, roomSize.height = 440, roomSize.minX = -440, roomSize.minY = 0
+
+/** rgba(r,g,b,a) 에서 alpha 를 1 로 바꿔 불투명 색 반환 */
+function toOpaque(rgba: string): string {
+  return rgba.replace(/[\d.]+\)$/, "1)");
+}
 
 // 벽 면 꼭짓점 헬퍼 (SVG 좌표계: SVG 원점 = 화면상 (offsetX, offsetY - WALL_H))
 // 방 백코너 = SVG 내 (440, WALL_H), 방 왼쪽코너 = (0, WALL_H+220), 오른쪽코너 = (880, WALL_H+220)
@@ -81,12 +90,13 @@ function IsoTile({
   const hh = TILE_H / 2;
   const clip = `polygon(${hw}px 0px, ${TILE_W}px ${hh}px, ${hw}px ${TILE_H}px, 0px ${hh}px)`;
 
-  const styles: Record<TileState, { bg: string; outline: string }> = {
-    normal:            { bg: floorStyle.normalBg,    outline: floorStyle.normalOutline },
-    hover:             { bg: floorStyle.hoverBg,     outline: floorStyle.hoverOutline },
-    preview_ok:        { bg: "rgba(80,200,120,0.6)", outline: "#4ade80" },
-    preview_block:     { bg: "rgba(220,60,60,0.6)",  outline: "#f87171" },
-    selected_furniture:{ bg: "rgba(250,200,50,0.65)",outline: "#fbbf24" },
+  // normal 상태는 투명 — FloorSVG 가 바닥 시각을 담당
+  const styles: Record<TileState, { bg: string }> = {
+    normal:            { bg: "transparent" },
+    hover:             { bg: floorStyle.hoverBg },
+    preview_ok:        { bg: "rgba(80,200,120,0.55)" },
+    preview_block:     { bg: "rgba(220,60,60,0.55)" },
+    selected_furniture:{ bg: "rgba(250,200,50,0.55)" },
   };
   const s = styles[state];
 
@@ -95,7 +105,6 @@ function IsoTile({
       style={{
         position: "absolute", left, top, width: TILE_W, height: TILE_H,
         clipPath: clip, background: s.bg,
-        outline: `1.5px solid ${s.outline}`,
         cursor: "pointer", zIndex: 1, transition: "background 0.08s",
       }}
       onClick={onClick}
@@ -118,26 +127,26 @@ function WallSVG({
   onSlotClick: (wall: WallSide, slotIndex: number) => void;
 }) {
   const wp = getWallpaper(wallpaperId);
-  // roomPixelSize 외곽 좌표는 타일 diamond의 "top point" 기준이므로
-  // 실제 좌측 바닥 엣지는 TILE_W/2 만큼 오른쪽에 위치 → svgLeft 보정
   const svgLeft = offsetX + TILE_W / 2;
   const svgTop  = offsetY - WALL_H;
-  const svgW    = roomSize.width;      // 880
-  const svgH    = WALL_H + MID_Y;     // 160 + 220 = 380
+  const svgW    = roomSize.width;          // 880
+  const svgH    = WALL_H + MID_Y + 20;    // 여유 20px (shadow)
 
-  // 벽 꼭짓점 (SVG 좌표)
-  const leftWall = [
-    `${BACK_X},${0}`,
-    `${LEFT_X},${MID_Y}`,
-    `${LEFT_X},${WALL_H + MID_Y}`,
-    `${BACK_X},${WALL_H}`,
-  ].join(" ");
-  const rightWall = [
-    `${BACK_X},${0}`,
-    `${RIGHT_X},${MID_Y}`,
-    `${RIGHT_X},${WALL_H + MID_Y}`,
-    `${BACK_X},${WALL_H}`,
-  ].join(" ");
+  // ── 벽 꼭짓점 ───────────────────────────────────────────────────────────────
+  const leftWall   = `${BACK_X},0 ${LEFT_X},${MID_Y} ${LEFT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H}`;
+  const rightWall  = `${BACK_X},0 ${RIGHT_X},${MID_Y} ${RIGHT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H}`;
+
+  // ── 몰딩: 벽 최상단 MOLDING_H 두께 ─────────────────────────────────────────
+  const leftMold   = `${BACK_X},0 ${LEFT_X},${MID_Y} ${LEFT_X},${MID_Y+MOLDING_H} ${BACK_X},${MOLDING_H}`;
+  const rightMold  = `${BACK_X},0 ${RIGHT_X},${MID_Y} ${RIGHT_X},${MID_Y+MOLDING_H} ${BACK_X},${MOLDING_H}`;
+
+  // ── 걸레받이: 벽 최하단 BASE_H 두께 ─────────────────────────────────────────
+  const bs         = WALL_H - BASE_H;
+  const leftBase   = `${BACK_X},${bs} ${LEFT_X},${MID_Y+bs} ${LEFT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H}`;
+  const rightBase  = `${BACK_X},${bs} ${RIGHT_X},${MID_Y+bs} ${RIGHT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H}`;
+
+  // ── 방 실루엣 (shadow용) ─────────────────────────────────────────────────────
+  const silhouette = `${BACK_X},0 ${LEFT_X},${MID_Y} ${LEFT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H} ${RIGHT_X},${WALL_H+MID_Y} ${RIGHT_X},${MID_Y}`;
 
   // 슬롯 위치 맵
   const decoMap = new Map<string, PlacedWallDecoration>();
@@ -152,45 +161,120 @@ function WallSVG({
         left: svgLeft, top: svgTop,
         width: svgW, height: svgH,
         pointerEvents: editMode ? "auto" : "none",
-        zIndex: 2,
+        zIndex: 2, overflow: "visible",
       }}
       viewBox={`0 0 ${svgW} ${svgH}`}
     >
       <defs>
-        {/* 왼쪽 벽 그라디언트 */}
+        {/* 벽 기본 그라디언트 ─ 좌(어둠) / 우(밝음) */}
         <linearGradient id="gradLeft" x1={BACK_X} y1={0} x2={LEFT_X} y2={0} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={wp.leftColor1} />
-          <stop offset="100%" stopColor={wp.leftColor2} />
+          <stop offset="0%" stopColor={wp.leftColor1}/>
+          <stop offset="100%" stopColor={wp.leftColor2}/>
         </linearGradient>
-        {/* 오른쪽 벽 그라디언트 */}
         <linearGradient id="gradRight" x1={BACK_X} y1={0} x2={RIGHT_X} y2={0} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={wp.rightColor1} />
-          <stop offset="100%" stopColor={wp.rightColor2} />
+          <stop offset="0%" stopColor={wp.rightColor1}/>
+          <stop offset="100%" stopColor={wp.rightColor2}/>
         </linearGradient>
-        {/* 몰딩 (상단 테두리) 그라디언트 */}
-        <linearGradient id="gradTrim" x1={LEFT_X} y1={0} x2={RIGHT_X} y2={0} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={wp.trimColor} stopOpacity="0.6" />
-          <stop offset="50%" stopColor={wp.trimColor} stopOpacity="1" />
-          <stop offset="100%" stopColor={wp.trimColor} stopOpacity="0.6" />
+
+        {/* 좌벽: 코너에 가까울수록 약간 어둠 (입체감) */}
+        <linearGradient id="depthLeft" x1={LEFT_X} y1={0} x2={BACK_X} y2={0} gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="rgba(0,0,0,0)"/>
+          <stop offset="100%" stopColor="rgba(0,0,0,0.18)"/>
         </linearGradient>
+        {/* 우벽: 코너에 가까울수록 약간 어둠 */}
+        <linearGradient id="depthRight" x1={RIGHT_X} y1={0} x2={BACK_X} y2={0} gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="rgba(0,0,0,0)"/>
+          <stop offset="100%" stopColor="rgba(0,0,0,0.12)"/>
+        </linearGradient>
+
+        {/* 상단 빛 하이라이트 (천장 근처가 살짝 밝음) */}
+        <linearGradient id="topLit" x1={BACK_X} y1={0} x2={BACK_X} y2={WALL_H} gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.14)"/>
+          <stop offset="40%" stopColor="rgba(255,255,255,0)"/>
+        </linearGradient>
+
+        {/* 수평선 패턴 (벽지 결) */}
+        <pattern id="wallGrain" x="0" y="0" width="1" height="13" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="12" x2="1000" y2="12" stroke="rgba(0,0,0,0.055)" strokeWidth="0.7"/>
+        </pattern>
+
+        {/* 몰딩 그라디언트 */}
+        <linearGradient id="gradMold" x1={LEFT_X} y1={0} x2={RIGHT_X} y2={0} gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor={wp.trimColor} stopOpacity="0.7"/>
+          <stop offset="50%"  stopColor={wp.trimColor} stopOpacity="1"/>
+          <stop offset="100%" stopColor={wp.trimColor} stopOpacity="0.7"/>
+        </linearGradient>
+
+        {/* 클립패스 (텍스처가 벽 밖으로 나가지 않게) */}
+        <clipPath id="clipL"><polygon points={leftWall}/></clipPath>
+        <clipPath id="clipR"><polygon points={rightWall}/></clipPath>
+
+        {/* 실루엣 블러 (방 그림자) */}
+        <filter id="silhouetteBlur" x="-10%" y="-10%" width="120%" height="130%">
+          <feGaussianBlur stdDeviation="13"/>
+        </filter>
       </defs>
 
-      {/* 왼쪽 벽 면 */}
-      <polygon points={leftWall} fill="url(#gradLeft)" />
-      {/* 오른쪽 벽 면 */}
-      <polygon points={rightWall} fill="url(#gradRight)" />
-
-      {/* 몰딩 (상단 능선) */}
-      <polyline
-        points={`${LEFT_X},${MID_Y} ${BACK_X},${0} ${RIGHT_X},${MID_Y}`}
-        fill="none" stroke="url(#gradTrim)" strokeWidth="3"
+      {/* ── 방 외곽 그림자 ─────────────────────────────────────────────── */}
+      <polygon
+        points={silhouette}
+        fill="rgba(0,0,0,0.32)"
+        transform="translate(6,16)"
+        filter="url(#silhouetteBlur)"
       />
-      {/* 중앙 세로 능선 (뒤 코너) */}
-      <line x1={BACK_X} y1={0} x2={BACK_X} y2={WALL_H} stroke={wp.trimColor} strokeWidth="1.5" strokeOpacity="0.5" />
-      {/* 바닥 수평선 */}
+
+      {/* ── 좌측 벽 ───────────────────────────────────────────────────── */}
+      <polygon points={leftWall} fill="url(#gradLeft)"/>
+      <polygon points={leftWall} fill="url(#wallGrain)" clipPath="url(#clipL)"/>
+      <polygon points={leftWall} fill="url(#depthLeft)"/>
+      <polygon points={leftWall} fill="url(#topLit)"    clipPath="url(#clipL)"/>
+      {/* 외곽선 */}
+      <polygon points={leftWall} fill="none" stroke="#17090a" strokeWidth="2.2"/>
+
+      {/* ── 우측 벽 ───────────────────────────────────────────────────── */}
+      <polygon points={rightWall} fill="url(#gradRight)"/>
+      <polygon points={rightWall} fill="url(#wallGrain)" clipPath="url(#clipR)"/>
+      <polygon points={rightWall} fill="url(#depthRight)"/>
+      <polygon points={rightWall} fill="url(#topLit)"    clipPath="url(#clipR)"/>
+      {/* 우벽에 약한 밝기 추가 (빛이 오른쪽에서 반사) */}
+      <polygon points={rightWall} fill="rgba(255,255,255,0.04)"/>
+      {/* 외곽선 */}
+      <polygon points={rightWall} fill="none" stroke="#17090a" strokeWidth="2.2"/>
+
+      {/* ── 상단 능선 (몰딩 바로 위 날카로운 선) ───────────────────────── */}
       <polyline
-        points={`${LEFT_X},${WALL_H + MID_Y} ${BACK_X},${WALL_H} ${RIGHT_X},${WALL_H + MID_Y}`}
-        fill="none" stroke={wp.trimColor} strokeWidth="1" strokeOpacity="0.35"
+        points={`${LEFT_X},${MID_Y} ${BACK_X},0 ${RIGHT_X},${MID_Y}`}
+        fill="none" stroke="#17090a" strokeWidth="2.8"
+      />
+
+      {/* ── 상단 몰딩 ─────────────────────────────────────────────────── */}
+      <polygon points={leftMold}  fill="url(#gradMold)" opacity="0.9"/>
+      <polygon points={leftMold}  fill="rgba(255,255,255,0.1)"/>
+      <polygon points={leftMold}  fill="none" stroke="#17090a" strokeWidth="1.3"/>
+      <polygon points={rightMold} fill="url(#gradMold)" opacity="0.95"/>
+      <polygon points={rightMold} fill="rgba(255,255,255,0.16)"/>
+      <polygon points={rightMold} fill="none" stroke="#17090a" strokeWidth="1.3"/>
+
+      {/* ── 하단 걸레받이 ─────────────────────────────────────────────── */}
+      <polygon points={leftBase}  fill={wp.leftColor2}  opacity="0.92"/>
+      <polygon points={leftBase}  fill="rgba(0,0,0,0.22)"/>
+      <polygon points={leftBase}  fill="none" stroke="#17090a" strokeWidth="1.1"/>
+      <polygon points={rightBase} fill={wp.rightColor2} opacity="0.92"/>
+      <polygon points={rightBase} fill="rgba(0,0,0,0.18)"/>
+      <polygon points={rightBase} fill="none" stroke="#17090a" strokeWidth="1.1"/>
+
+      {/* ── 중앙 코너 기둥 ────────────────────────────────────────────── */}
+      {/* 그림자 사이드 */}
+      <line x1={BACK_X-1} y1={0} x2={BACK_X-1} y2={WALL_H} stroke="rgba(0,0,0,0.3)" strokeWidth="3"/>
+      {/* 하이라이트 사이드 */}
+      <line x1={BACK_X+1} y1={0} x2={BACK_X+1} y2={WALL_H} stroke="rgba(255,255,255,0.18)" strokeWidth="2"/>
+      {/* 중심선 */}
+      <line x1={BACK_X}   y1={0} x2={BACK_X}   y2={WALL_H} stroke={wp.trimColor} strokeWidth="1.4" opacity="0.85"/>
+
+      {/* ── 벽-바닥 접합선 ────────────────────────────────────────────── */}
+      <polyline
+        points={`${LEFT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H} ${RIGHT_X},${WALL_H+MID_Y}`}
+        fill="none" stroke="#17090a" strokeWidth="2"
       />
 
       {/* 벽 장식 슬롯 (편집 모드에서만 표시) */}
@@ -238,6 +322,92 @@ function WallSVG({
           </text>
         );
       })}
+    </svg>
+  );
+}
+
+// ─── 바닥 SVG ────────────────────────────────────────────────────────────────
+// 불투명 아이소메트릭 바닥 + 타일 그리드 + 엣지 쉐이딩 + drop-shadow
+
+function FloorSVG({
+  offsetX, offsetY, floorStyle,
+}: {
+  offsetX: number; offsetY: number; floorStyle: FloorStyle;
+}) {
+  // WallSVG 와 같은 수평 기준점 사용
+  const svgLeft = offsetX + TILE_W / 2;
+  const svgTop  = offsetY;
+  const svgW    = 880;
+  const svgH    = 500; // 440 + 60 shadow room
+
+  // 바닥 다이아몬드 (back, left, front, right)
+  const FLOOR = "440,0 0,220 440,440 880,220";
+
+  // 타일 그리드선 (k=1..9): tx 열선 + ty 행선
+  const lines: JSX.Element[] = [];
+  const gc = toOpaque(floorStyle.normalOutline);
+  for (let k = 1; k < ROOM_COLS; k++) {
+    // tx=k 열선: (440+44k, 22k) → (44k, 220+22k)
+    lines.push(
+      <line key={`tx${k}`}
+        x1={440+44*k} y1={22*k}   x2={44*k}     y2={220+22*k}
+        stroke={gc} strokeWidth="0.85" strokeOpacity="0.38"
+        clipPath="url(#floorClip)"/>,
+    );
+    // ty=k 행선: (440-44k, 22k) → (880-44k, 220+22k)
+    lines.push(
+      <line key={`ty${k}`}
+        x1={440-44*k} y1={22*k}   x2={880-44*k} y2={220+22*k}
+        stroke={gc} strokeWidth="0.85" strokeOpacity="0.38"
+        clipPath="url(#floorClip)"/>,
+    );
+  }
+
+  return (
+    <svg
+      style={{
+        position: "absolute",
+        left: svgLeft, top: svgTop,
+        width: svgW, height: svgH,
+        pointerEvents: "none", zIndex: 0,
+        // 바닥 전체에 CSS drop-shadow (모양 따라 적용)
+        filter: "drop-shadow(3px 18px 22px rgba(0,0,0,0.52))",
+        overflow: "visible",
+      }}
+      viewBox={`0 0 ${svgW} ${svgH}`}
+    >
+      <defs>
+        <clipPath id="floorClip">
+          <polygon points={FLOOR}/>
+        </clipPath>
+
+        {/* 바닥 엣지 어둠 (가장자리가 살짝 어두워 입체감) */}
+        <radialGradient id="floorEdge" cx="440" cy="220" r="310" gradientUnits="userSpaceOnUse">
+          <stop offset="52%" stopColor="rgba(0,0,0,0)"/>
+          <stop offset="100%" stopColor="rgba(0,0,0,0.28)"/>
+        </radialGradient>
+
+        {/* 바닥 뒤쪽 하이라이트 (조명 방향: 좌상단) */}
+        <radialGradient id="floorLight" cx="440" cy="20" r="260" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.13)"/>
+          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+
+      {/* 1. 불투명 바닥 */}
+      <polygon points={FLOOR} fill={toOpaque(floorStyle.normalBg)}/>
+
+      {/* 2. 타일 그리드 */}
+      {lines}
+
+      {/* 3. 엣지 어둠 오버레이 */}
+      <polygon points={FLOOR} fill="url(#floorEdge)"/>
+
+      {/* 4. 뒤쪽 빛 하이라이트 */}
+      <polygon points={FLOOR} fill="url(#floorLight)" clipPath="url(#floorClip)"/>
+
+      {/* 5. 바닥 외곽선 (픽셀아트 스타일 진한 테두리) */}
+      <polygon points={FLOOR} fill="none" stroke="#1a0e06" strokeWidth="2.8"/>
     </svg>
   );
 }
@@ -1225,34 +1395,28 @@ export default function HousingPage() {
       ref={containerRef}
       style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}
     >
-      {/* ── 방 배경 ───────────────────────────────────────────────────────── */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "linear-gradient(160deg, #3b2010 0%, #241408 45%, #160c05 100%)",
-      }}>
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(200,120,40,0.15) 0%, transparent 70%)",
-          pointerEvents: "none",
-        }} />
-        {/* 상단 창문 빛 효과 */}
-        <div style={{
-          position: "absolute",
-          left: offsetX + roomSize.width / 2 - 80,
-          top: offsetY - WALL_H - 10,
-          width: 160, height: 60,
-          background: "radial-gradient(ellipse at 50% 0%, rgba(255,220,100,0.12) 0%, transparent 80%)",
-          pointerEvents: "none",
-        }} />
-      </div>
+      {/* ── 아이소메트릭 배경 캔버스 (z:0) ──────────────────────────────── */}
+      <HousingBgCanvas
+        offsetX={offsetX}
+        offsetY={offsetY}
+        width={containerSize.w}
+        height={containerSize.h}
+      />
 
-      {/* ── 방 스테이지 ───────────────────────────────────────────────────── */}
+      {/* ── 방 스테이지 (배경 위 z:2) ────────────────────────────────────── */}
       <div style={{
         position: "absolute", left: 0, top: 0,
         width: editMode ? containerSize.w - panelWidth : containerSize.w,
         height: containerSize.h,
         overflow: "hidden",
+        zIndex: 2,
       }}>
+        {/* 바닥 SVG (벽보다 아래 레이어: DOM 순서 앞) */}
+        <FloorSVG
+          offsetX={offsetX} offsetY={offsetY}
+          floorStyle={floorStyle}
+        />
+
         {/* 벽 SVG */}
         <WallSVG
           offsetX={offsetX} offsetY={offsetY}
