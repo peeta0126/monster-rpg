@@ -1,7 +1,6 @@
 // ─── 하우징 배경 캔버스 ────────────────────────────────────────────────────────
-// 방 주변을 자연스러운 RPG 야외 환경으로 표현한다.
-// ▸ 타일 경계선/삼각 패턴 없음 — 색상 노이즈로 부드럽게 블렌딩
-// ▸ 중앙은 잔디/흙 질감, 주변부에 나무·울타리·표지판·강 배치
+// 베이스캠프 이미지 스타일 참고 — 아늑한 집 주변 정원 분위기
+// ▸ 따뜻한 밝은 잔디 / 자갈 길 / 정원 꽃밭 / 둥근 수목
 
 import { useEffect, useRef } from "react";
 
@@ -24,62 +23,71 @@ function roomDist(bx: number, by: number): number {
 }
 
 // ─── 바이옴 ───────────────────────────────────────────────────────────────────
-type Biome = "clearing" | "meadow" | "forest" | "path" | "water" | "bridge";
+// yard    : 집 바로 옆 정원 잔디 (밝고 따뜻한)
+// garden  : 꽃밭 / 화단 구역
+// cobble  : 자갈·돌 길
+// lawn    : 더 넓은 잔디 구역
+// hedgerow: 외곽 짙은 수풀 경계
+type Biome = "yard" | "garden" | "cobble" | "lawn" | "hedgerow";
 
 function getBiome(bx: number, by: number): Biome {
-  // 강 (화면 오른쪽 끝)
-  if (bx >= 19 && by >= -10 && by <= 22) return "water";
-  // 다리 (강 위)
-  if (bx === 18 && by >= 2 && by <= 7) return "bridge";
-  // 출구 방향 흙길 (right door → east)
-  if (bx >= 10 && bx <= 18 && by >= 2 && by <= 7) {
-    const edge = by === 2 || by === 7;
-    return edge && rand(bx, by, 50) < 0.45 ? "clearing" : "path";
-  }
-  // 농장 방향 흙길 (left door → west)
-  if (bx >= -9 && bx <= -1 && by >= 2 && by <= 7) {
-    const edge = by === 2 || by === 7;
-    return edge && rand(bx, by, 51) < 0.45 ? "clearing" : "path";
+  const dist = roomDist(bx, by);
+
+  // 왼쪽 문 → 자갈 길 (bx: -10~-1, by: 3~6)
+  if (bx >= -10 && bx <= -1 && by >= 3 && by <= 6) return "cobble";
+  // 오른쪽 문 → 자갈 길 (bx: 10~19, by: 3~6)
+  if (bx >= 10  && bx <= 19 && by >= 3 && by <= 6) return "cobble";
+
+  // 집 앞 중앙 광장 (아래쪽)
+  if (bx >= -2 && bx <= 11 && by >= 10 && by <= 13) return "cobble";
+
+  // 화단: 집 위쪽(북쪽), dist 1~3
+  if (dist >= 1 && dist <= 3 && by < 0) return "garden";
+  // 화단: 집 양쪽 side 코너
+  if (dist >= 2 && dist <= 4 && (bx < 0 || bx >= ROOM_COLS) && by >= 0 && by < ROOM_ROWS) {
+    if (rand(bx, by, 77) < 0.5) return "garden";
   }
 
-  const dist = roomDist(bx, by);
-  if (dist <= 2) return "clearing";
-  if (dist <= 6) return "meadow";
-  return "forest";
+  // 집 바로 옆 yard
+  if (dist <= 3) return "yard";
+  if (dist <= 7) return "lawn";
+  return "hedgerow";
 }
 
-// ─── 바이옴별 베이스 색 [R, G, B] ─────────────────────────────────────────────
+// ─── 바이옴별 베이스 색 ────────────────────────────────────────────────────────
 const BASE_COLOR: Record<Biome, [number, number, number]> = {
-  clearing: [68,  106, 46],   // 밝은 잔디 — 방 근처
-  meadow:   [52,  86,  32],   // 보통 잔디
-  forest:   [36,  62,  20],   // 짙은 잔디
-  path:     [102, 82,  50],   // 흙길 (갈색)
-  water:    [22,  48,  82],   // 강 (어두운 파랑)
-  bridge:   [106, 84,  48],   // 다리 (나무 색)
+  yard:     [108, 168,  68],   // 밝고 따뜻한 잔디
+  garden:   [ 88, 142,  52],   // 화단 잔디 (약간 짙음)
+  cobble:   [162, 146, 122],   // 따뜻한 자갈
+  lawn:     [ 90, 148,  56],   // 중간 잔디
+  hedgerow: [ 56,  96,  30],   // 외곽 짙은 수풀
 };
 
 function clamp(v: number): number { return Math.max(0, Math.min(255, v | 0)); }
 
-// 부드러운 저주파 노이즈 → 타일이 자연스럽게 블렌딩되도록
 function smoothNoise(bx: number, by: number): number {
-  return Math.sin(bx * 0.38 + by * 0.27 + 1.4) * 7
-       + Math.sin(bx * 0.15 - by * 0.43 + 0.9) * 5;
+  return Math.sin(bx * 0.42 + by * 0.31 + 1.2) * 10
+       + Math.sin(bx * 0.17 - by * 0.38 + 0.8) *  7
+       + Math.sin(bx * 0.65 + by * 0.22 + 2.1) *  4;
 }
 
 function getTileColor(bx: number, by: number, biome: Biome): string {
   const [r, g, b] = BASE_COLOR[biome];
-  const n = smoothNoise(bx, by) + (rand(bx, by, 20) - 0.5) * 4;
+  const n = smoothNoise(bx, by) + (rand(bx, by, 20) - 0.5) * 5;
   return `rgb(${clamp(r + n)},${clamp(g + n)},${clamp(b + n)})`;
 }
 
-// ─── 타일 다이아몬드 그리기 ───────────────────────────────────────────────────
-// cx,cy = top-point (꼭대기 점) 좌표
-function fillDiamond(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+// ─── 타일 그리기 ─────────────────────────────────────────────────────────────
+// expand > 0 이면 다이아몬드를 각 방향으로 늘려 인접 타일과 겹치게 한다.
+// 페인터 알고리즘(뒤→앞)으로 그리면 앞 타일이 뒷 타일 경계를 완전히 덮어
+// 타일 이음새(경계선)가 사라진다.
+function fillDiamond(ctx: CanvasRenderingContext2D, cx: number, cy: number, expand = 0) {
+  const e = expand;
   ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + HW, cy + HH);
-  ctx.lineTo(cx, cy + TH);
-  ctx.lineTo(cx - HW, cy + HH);
+  ctx.moveTo(cx,           cy - e);        // 꼭대기
+  ctx.lineTo(cx + HW + e,  cy + HH);       // 오른쪽
+  ctx.lineTo(cx,           cy + TH + e);   // 아래
+  ctx.lineTo(cx - HW - e,  cy + HH);       // 왼쪽
   ctx.closePath();
 }
 
@@ -89,96 +97,110 @@ function drawTile(
   bx: number, by: number,
   biome: Biome,
 ) {
-  // ── 기본 채우기 (단색 + 노이즈) — 삼각 패턴 방지를 위해 half-split 없음 ──
-  fillDiamond(ctx, cx, cy);
+  // expand=2 : 앞 타일이 뒷 타일 경계를 2px 덮어 이음새를 제거
+  fillDiamond(ctx, cx, cy, 2);
   ctx.fillStyle = getTileColor(bx, by, biome);
   ctx.fill();
 
-  // 아주 약한 왼쪽 깊이 힌트 (0.04 α — 거의 안 보임)
+  // 미세한 깊이 힌트 (왼쪽 절반만 살짝 어둡게)
   ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx - HW, cy + HH);
-  ctx.lineTo(cx, cy + TH);
+  ctx.moveTo(cx,          cy - 2);
+  ctx.lineTo(cx - HW - 2, cy + HH);
+  ctx.lineTo(cx,          cy + TH + 2);
   ctx.closePath();
-  ctx.fillStyle = "rgba(0,0,0,0.04)";
+  ctx.fillStyle = "rgba(0,0,0,0.035)";
   ctx.fill();
 
-  // ── 바이옴별 디테일 ──────────────────────────────────────────────────────
-  if (biome === "water") {
-    if (rand(bx, by, 1) < 0.55) {
-      const wx = cx + (rand(bx, by, 2) - 0.5) * 28;
-      const wy = cy + HH + (rand(bx, by, 3) - 0.5) * 10;
-      ctx.strokeStyle = "rgba(100,175,255,0.3)";
-      ctx.lineWidth = 1.5;
+  // 자갈길 디테일
+  if (biome === "cobble") {
+    // 돌 틈 라인
+    if (rand(bx, by, 30) < 0.6) {
+      const px = cx + (rand(bx, by, 31) - 0.5) * 30;
+      const py = cy + HH + (rand(bx, by, 32) - 0.5) * 10;
+      const pw = rand(bx, by, 33) * 14 + 6;
+      ctx.fillStyle = "rgba(100,88,70,0.22)";
       ctx.beginPath();
-      ctx.moveTo(wx - 10, wy);
-      ctx.bezierCurveTo(wx - 4, wy - 3, wx + 4, wy - 3, wx + 10, wy);
-      ctx.stroke();
+      ctx.ellipse(px, py, pw * 0.5, pw * 0.2, rand(bx, by, 34) * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
     }
-  } else if (biome === "bridge") {
-    // 나무 판자 라인
-    ctx.strokeStyle = "rgba(50,32,12,0.28)";
-    ctx.lineWidth = 1.2;
-    for (let i = 1; i <= 3; i++) {
-      const t = i / 4;
-      const x1 = cx - HW * t,     y1 = cy + HH * t;
-      const x2 = cx + HW * (1-t), y2 = cy + HH * (1+t);
-      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-    }
-  } else if (biome === "path") {
-    // 자갈 흔적
-    if (rand(bx, by, 11) < 0.42) {
-      const px = cx + (rand(bx, by, 12) - 0.5) * 20;
-      const py = cy + HH + (rand(bx, by, 13) - 0.5) * 7;
-      ctx.fillStyle = "rgba(255,255,255,0.07)";
-      ctx.fillRect(px, py - 1, rand(bx, by, 14) * 8 + 4, 2);
+    // 돌 하이라이트
+    if (rand(bx, by, 35) < 0.4) {
+      const hx = cx + (rand(bx, by, 36) - 0.5) * 26;
+      const hy = cy + HH + (rand(bx, by, 37) - 0.5) * 8;
+      ctx.fillStyle = "rgba(255,255,255,0.10)";
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, 5, 2, 0.3, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 }
 
-// ─── 풀 이삭 ─────────────────────────────────────────────────────────────────
+// ─── 풀 이삭 (밝은 정원 느낌) ────────────────────────────────────────────────
 function drawGrassTuft(ctx: CanvasRenderingContext2D, cx: number, cy: number, bx: number, by: number) {
-  const gx = cx + (rand(bx, by, 30) - 0.5) * 20;
-  const gy = cy + HH + rand(bx, by, 31) * 4;
-  ctx.fillStyle = "#5ab828";
-  ctx.fillRect(gx,     gy - 5, 2, 5);
-  ctx.fillRect(gx + 4, gy - 7, 2, 7);
-  ctx.fillRect(gx + 8, gy - 4, 2, 4);
+  const gx = cx + (rand(bx, by, 40) - 0.5) * 22;
+  const gy = cy + HH + rand(bx, by, 41) * 5;
+  const col = rand(bx, by, 42) < 0.5 ? "#72c830" : "#5ab022";
+  ctx.fillStyle = col;
+  ctx.fillRect(gx,     gy - 6, 2, 6);
+  ctx.fillRect(gx + 4, gy - 8, 2, 8);
+  ctx.fillRect(gx + 8, gy - 5, 2, 5);
 }
 
-// ─── 꽃 ──────────────────────────────────────────────────────────────────────
-const FLOWER_PAL = ["#ff7799","#ffdd44","#cc88ff","#44ddaa","#ff9933","#88ccff"];
+// ─── 꽃 (정원 화단) ──────────────────────────────────────────────────────────
+const FLOWER_PAL = ["#ff88aa","#ffdd55","#dd88ff","#ff6677","#ffbb33","#88ddff","#ff99cc"];
 function drawFlower(ctx: CanvasRenderingContext2D, cx: number, cy: number, bx: number, by: number) {
-  const fx = cx + (rand(bx, by, 40) - 0.5) * 22;
-  const fy = cy + HH + rand(bx, by, 41) * 4 - 1;
-  ctx.fillStyle = FLOWER_PAL[Math.floor(rand(bx, by, 42) * FLOWER_PAL.length)];
-  ctx.fillRect(fx - 1, fy - 1, 4, 4);
-  ctx.fillStyle = "#4a8a20";
-  ctx.fillRect(fx, fy + 3, 1, 4);
+  const fx = cx + (rand(bx, by, 50) - 0.5) * 24;
+  const fy = cy + HH + rand(bx, by, 51) * 5 - 2;
+  const col = FLOWER_PAL[Math.floor(rand(bx, by, 52) * FLOWER_PAL.length)];
+  // 줄기
+  ctx.fillStyle = "#4a8818";
+  ctx.fillRect(fx + 1, fy + 3, 1, 5);
+  // 꽃잎 (작은 십자)
+  ctx.fillStyle = col;
+  ctx.fillRect(fx,     fy,     3, 3);
+  ctx.fillStyle = "#fff5cc";
+  ctx.fillRect(fx + 1, fy + 1, 1, 1); // 중심
 }
 
-// ─── 나무 ─────────────────────────────────────────────────────────────────────
-function drawTree(ctx: CanvasRenderingContext2D, baseX: number, baseY: number, r: number) {
-  const h = 54 + r * 28, w = 28 + r * 14;
-  const trunkH = 13 + r * 5;
+// ─── 꽃 덤불 (화단 구역용, 더 풍성) ─────────────────────────────────────────
+function drawFlowerCluster(ctx: CanvasRenderingContext2D, cx: number, cy: number, bx: number, by: number) {
+  const n = 3 + Math.floor(rand(bx, by, 60) * 4);
+  for (let i = 0; i < n; i++) {
+    const fx = cx + (rand(bx, by, 61 + i) - 0.5) * 30;
+    const fy = cy + HH + rand(bx, by, 62 + i) * 8 - 4;
+    const col = FLOWER_PAL[Math.floor(rand(bx, by, 63 + i) * FLOWER_PAL.length)];
+    ctx.fillStyle = "#3a7010";
+    ctx.fillRect(fx + 1, fy + 3, 1, 6);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(fx + 1, fy, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillRect(fx + 1, fy - 1, 1, 1);
+  }
+}
+
+// ─── 정원 수목 (둥근 파크 스타일) ─────────────────────────────────────────────
+function drawGardenTree(ctx: CanvasRenderingContext2D, baseX: number, baseY: number, r: number) {
+  const h = 44 + r * 22, w = 26 + r * 16;
+  const trunkH = 12 + r * 4;
 
   // 그림자
   ctx.beginPath();
-  ctx.ellipse(baseX + 7, baseY + 2, w * 0.38, 6, 0.15, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.fill();
+  ctx.ellipse(baseX + 6, baseY + 3, w * 0.45, 7, 0.1, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.fill();
 
   // 기둥
-  ctx.fillStyle = "#5a3c1e";
-  ctx.fillRect(baseX - 3, baseY - trunkH, 7, trunkH);
-  ctx.fillStyle = "#7a5430";
+  ctx.fillStyle = "#6a4820";
+  ctx.fillRect(baseX - 3, baseY - trunkH, 6, trunkH);
+  ctx.fillStyle = "#8a6030";
   ctx.fillRect(baseX - 2, baseY - trunkH + 1, 2, trunkH - 2);
 
-  // 잎 — 4 레이어 (어두움→밝음)
+  // 잎 — 3 레이어, 따뜻하고 밝은 정원 녹색
   const layers: [number, number, number, number, string][] = [
-    [0,          -0.36, 0.44, 0.44, "#1e4c08"],
-    [-w * 0.08,  -0.52, 0.41, 0.41, "#2c6812"],
-    [ w * 0.05,  -0.63, 0.37, 0.37, "#3c881e"],
-    [ w * 0.12,  -0.72, 0.22, 0.22, "#58a82c"],
+    [0,         -0.30, 0.50, 0.50, "#2e7010"],
+    [-w * 0.06, -0.50, 0.44, 0.44, "#3e9018"],
+    [ w * 0.08, -0.66, 0.28, 0.28, "#5ab828"],
   ];
   for (const [ox, oy, rx, ry, col] of layers) {
     ctx.beginPath();
@@ -187,84 +209,151 @@ function drawTree(ctx: CanvasRenderingContext2D, baseX: number, baseY: number, r
   }
   // 하이라이트
   ctx.beginPath();
-  ctx.ellipse(baseX + w * 0.09, baseY - trunkH - h * 0.8, w * 0.1, h * 0.1, 0, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fill();
+  ctx.ellipse(baseX + w * 0.1, baseY - trunkH - h * 0.75, w * 0.12, h * 0.12, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255,255,255,0.14)"; ctx.fill();
 }
 
-// ─── 관목 ─────────────────────────────────────────────────────────────────────
-function drawBush(ctx: CanvasRenderingContext2D, baseX: number, baseY: number, r: number) {
-  const w = 20 + r * 10, h = 14 + r * 8;
+// ─── 벚꽃나무 (핑크 꽃잎) ─────────────────────────────────────────────────────
+function drawCherryTree(ctx: CanvasRenderingContext2D, baseX: number, baseY: number, r: number) {
+  const h = 38 + r * 18, w = 30 + r * 18;
+  const trunkH = 10 + r * 4;
 
   ctx.beginPath();
-  ctx.ellipse(baseX + 4, baseY + 2, w * 0.38, 5, 0.1, 0, Math.PI * 2);
+  ctx.ellipse(baseX + 5, baseY + 3, w * 0.42, 6, 0.1, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(0,0,0,0.12)"; ctx.fill();
 
+  ctx.fillStyle = "#5a3818";
+  ctx.fillRect(baseX - 3, baseY - trunkH, 6, trunkH);
+
+  // 꽃잎 덩어리 — 분홍/흰 그러데이션
   const layers: [number, number, number, number, string][] = [
-    [0,        -0.35, 0.48, 0.48, "#265a10"],
-    [w * 0.1,  -0.50, 0.40, 0.40, "#388a1e"],
-    [w * 0.15, -0.62, 0.20, 0.20, "#52a828"],
+    [0,          -0.28, 0.52, 0.52, "#e8829a"],
+    [-w * 0.10,  -0.48, 0.44, 0.44, "#f2a0b4"],
+    [ w * 0.08,  -0.62, 0.34, 0.34, "#fcc8d8"],
+    [ w * 0.05,  -0.74, 0.18, 0.18, "#ffe0ea"],
+  ];
+  for (const [ox, oy, rx, ry, col] of layers) {
+    ctx.beginPath();
+    ctx.ellipse(baseX + ox, baseY - trunkH + oy * h, w * rx, h * ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = col; ctx.fill();
+  }
+
+  // 꽃잎 파티클
+  const petals = 8 + Math.floor(r * 8);
+  for (let i = 0; i < petals; i++) {
+    const angle = rand(baseX + i, baseY, 80 + i) * Math.PI * 2;
+    const dist  = rand(baseX + i, baseY, 81 + i) * w * 0.55;
+    const px    = baseX + Math.cos(angle) * dist;
+    const py    = baseY - trunkH - h * 0.48 + Math.sin(angle) * dist * 0.45;
+    ctx.fillStyle = "rgba(255,210,220,0.7)";
+    ctx.beginPath();
+    ctx.ellipse(px, py, 3, 2, angle, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ─── 정원 관목 (트리밍된 느낌) ────────────────────────────────────────────────
+function drawTrimmedBush(ctx: CanvasRenderingContext2D, baseX: number, baseY: number, r: number) {
+  const w = 22 + r * 12, h = 13 + r * 7;
+
+  ctx.beginPath();
+  ctx.ellipse(baseX + 3, baseY + 2, w * 0.38, 5, 0.1, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,0,0,0.10)"; ctx.fill();
+
+  // 둥글둥글 트리밍된 형태
+  const layers: [number, number, number, number, string][] = [
+    [0,       -0.30, 0.50, 0.50, "#2e7818"],
+    [w * 0.1, -0.50, 0.38, 0.38, "#42a020"],
+    [w * 0.1, -0.62, 0.20, 0.20, "#5ac030"],
   ];
   for (const [ox, oy, rx, ry, col] of layers) {
     ctx.beginPath();
     ctx.ellipse(baseX + ox, baseY + oy * h, w * rx, h * ry, 0, 0, Math.PI * 2);
     ctx.fillStyle = col; ctx.fill();
   }
+  // 살짝 꽃 달린 관목
+  if (rand(baseX, baseY, 90) < 0.4) {
+    ctx.fillStyle = "#ff88aa";
+    ctx.beginPath();
+    ctx.arc(baseX + w * 0.06, baseY - h * 0.55, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 // ─── 바위 ─────────────────────────────────────────────────────────────────────
 function drawRock(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
-  const w = 12 + r * 10, h = 8 + r * 5;
-
+  const w = 10 + r * 8, h = 7 + r * 4;
   ctx.beginPath();
-  ctx.ellipse(x + 3, y + 2, w * 0.5, h * 0.4, 0.1, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,0.14)"; ctx.fill();
-
+  ctx.ellipse(x + 2, y + 2, w * 0.5, h * 0.4, 0.1, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,0,0,0.10)"; ctx.fill();
   ctx.beginPath();
   ctx.ellipse(x, y, w * 0.5, h * 0.5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = "#625e52"; ctx.fill();
-
+  ctx.fillStyle = "#9a9484"; ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(x - w * 0.08, y - h * 0.12, w * 0.28, h * 0.28, -0.3, 0, Math.PI * 2);
-  ctx.fillStyle = "#88836e"; ctx.fill();
+  ctx.ellipse(x - w * 0.1, y - h * 0.15, w * 0.25, h * 0.25, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = "#bcb8a8"; ctx.fill();
 }
 
-// ─── 울타리 기둥 ──────────────────────────────────────────────────────────────
-// px,py = 기둥 하단 중심. 다음 기둥 방향 벡터 (dx,dy) 로 레일을 그린다.
-function drawFencePost(
+// ─── 정원 돌 울타리 / 낮은 담장 ──────────────────────────────────────────────
+function drawStoneWallPost(
   ctx: CanvasRenderingContext2D,
   px: number, py: number,
   railDx: number, railDy: number,
 ) {
-  // 기둥
-  ctx.fillStyle = "#8a6a3a";
-  ctx.fillRect(px - 2, py - 22, 5, 22);
-  ctx.fillStyle = "#aa8848";
-  ctx.fillRect(px - 3, py - 25, 7, 5);
+  // 돌 기둥
+  ctx.fillStyle = "#8a8070";
+  ctx.fillRect(px - 4, py - 16, 8, 16);
+  ctx.fillStyle = "#a89e8c";
+  ctx.fillRect(px - 5, py - 20, 10, 6);
+  // 이끼
+  ctx.fillStyle = "rgba(80,130,40,0.3)";
+  ctx.fillRect(px - 4, py - 20, 10, 3);
 
-  // 레일 2개 (다음 기둥 방향으로)
+  // 레일 (낮은 돌담)
   if (railDx !== 0 || railDy !== 0) {
-    ctx.strokeStyle = "#7a5a30";
-    ctx.lineWidth = 2;
-    for (const offset of [-15, -8] as const) {
+    ctx.fillStyle = "#9a9080";
+    const steps = 3;
+    for (let s = 0; s < steps; s++) {
+      const t = (s + 0.5) / steps;
+      const rx = px + railDx * t;
+      const ry = py + railDy * t - 10;
       ctx.beginPath();
-      ctx.moveTo(px + 3,              py + offset);
-      ctx.lineTo(px + 3 + railDx - 3, py + offset + railDy);
-      ctx.stroke();
+      ctx.ellipse(rx, ry, 8, 4, 0.1, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 }
 
-// ─── 표지판 ───────────────────────────────────────────────────────────────────
-function drawSignpost(ctx: CanvasRenderingContext2D, px: number, py: number) {
-  ctx.fillStyle = "#8a6a3a";
-  ctx.fillRect(px - 2, py - 34, 5, 34);
-  ctx.fillStyle = "#9a7228";
-  ctx.fillRect(px - 15, py - 46, 32, 17);
-  ctx.fillStyle = "#c49838";
-  ctx.fillRect(px - 14, py - 45, 30, 15);
-  ctx.fillStyle = "#7a5820";
-  ctx.fillRect(px - 10, py - 40, 14, 2);
-  ctx.fillRect(px - 10, py - 36, 10, 2);
+// ─── 석등 / 정원 장식 ─────────────────────────────────────────────────────────
+function drawLantern(ctx: CanvasRenderingContext2D, px: number, py: number) {
+  // 기둥
+  ctx.fillStyle = "#7a7060";
+  ctx.fillRect(px - 2, py - 28, 4, 28);
+  // 기단
+  ctx.fillStyle = "#9a9080";
+  ctx.fillRect(px - 5, py - 2, 10, 4);
+  // 등 본체
+  ctx.fillStyle = "#6a6050";
+  ctx.fillRect(px - 6, py - 26, 12, 12);
+  // 등 지붕
+  ctx.fillStyle = "#5a5040";
+  ctx.beginPath();
+  ctx.moveTo(px - 8, py - 26);
+  ctx.lineTo(px,     py - 32);
+  ctx.lineTo(px + 8, py - 26);
+  ctx.closePath();
+  ctx.fill();
+  // 빛 (노란 광)
+  ctx.fillStyle = "rgba(255, 210, 100, 0.55)";
+  ctx.fillRect(px - 4, py - 24, 8, 8);
+  // 빛 글로우
+  const grd = ctx.createRadialGradient(px, py - 20, 2, px, py - 20, 18);
+  grd.addColorStop(0, "rgba(255,200,80,0.25)");
+  grd.addColorStop(1, "rgba(255,200,80,0)");
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(px, py - 20, 18, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
@@ -284,31 +373,38 @@ export default function HousingBgCanvas({ offsetX, offsetY, width, height }: Hou
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // ── 배경 베이스 ───────────────────────────────────────────────────────────
-    ctx.fillStyle = "#162209";
-    ctx.fillRect(0, 0, width, height);
+    // ── 오프스크린: 지형 타일만 (블러 적용 예정) ────────────────────────────
+    const terrainCanvas = document.createElement("canvas");
+    terrainCanvas.width  = width;
+    terrainCanvas.height = height;
+    const tc = terrainCanvas.getContext("2d")!;
 
-    // ── 타일 + 오브젝트 수집 후 페인터 알고리즘 정렬 ─────────────────────────
+    // 베이스 배경 — 따뜻한 짙은 잔디
+    tc.fillStyle = "#2a5010";
+    tc.fillRect(0, 0, width, height);
+
+    // ── 지형 타일 항목 (정렬 후 그려야 expand 기법이 동작) ──────────────────
     type Item = { sortKey: number; draw: () => void };
-    const items: Item[] = [];
+    const terrainItems: Item[] = [];
 
-    const BX_MIN = -22, BX_MAX = 32;
-    const BY_MIN = -22, BY_MAX = 32;
+    // ── 오브젝트 항목 (블러 없이 메인에 그릴 것들) ──────────────────────────
+    type ObjItem = { sortKey: number; draw: () => void };
+    const objItems: ObjItem[] = [];
+
+    const BX_MIN = -20, BX_MAX = 30;
+    const BY_MIN = -20, BY_MAX = 30;
 
     for (let bx = BX_MIN; bx <= BX_MAX; bx++) {
       for (let by = BY_MIN; by <= BY_MAX; by++) {
-        // 룸 내부 타일은 FloorSVG 가 덮으므로 스킵
         if (bx >= 0 && bx < ROOM_COLS && by >= 0 && by < ROOM_ROWS) continue;
 
-        // 화면 좌표 (top-point)
         const tileLeft = (bx - by) * HW + 440 + offsetX;
         const tileTop  = (bx + by) * HH + offsetY;
         const cx = tileLeft + HW;
         const cy = tileTop;
 
-        // 시야 컬링
         if (cx + HW < -20 || cx - HW > width  + 20) continue;
-        if (cy > height + 40 || cy + TH < -280) continue;
+        if (cy > height + 60 || cy + TH < -300) continue;
 
         const biome = getBiome(bx, by);
         const dist  = roomDist(bx, by);
@@ -316,93 +412,119 @@ export default function HousingBgCanvas({ offsetX, offsetY, width, height }: Hou
 
         const _cx = cx, _cy = cy, _bx = bx, _by = by, _biome = biome;
 
-        // 타일
-        items.push({
-          sortKey: bx + by,
-          draw() { drawTile(ctx, _cx, _cy, _bx, _by, _biome); },
-        });
+        // 지형 타일 → 정렬 후 그리기 위해 수집
+        terrainItems.push({ sortKey: bx + by, draw() { drawTile(tc, _cx, _cy, _bx, _by, _biome); } });
 
-        // ── 잔디·꽃 ─────────────────────────────────────────────────────────
-        const isGrass = biome === "clearing" || biome === "meadow" || biome === "forest";
-        if (isGrass) {
-          if (rand(bx, by, 1) < 0.28) {
-            items.push({ sortKey: bx + by + 0.1, draw() { drawGrassTuft(ctx, _cx, _cy, _bx, _by); } });
-          }
-          if (biome !== "forest" && rand(bx, by, 4) < 0.08) {
-            items.push({ sortKey: bx + by + 0.1, draw() { drawFlower(ctx, _cx, _cy, _bx, _by); } });
-          }
+        const isGrass = biome !== "cobble";
+
+        // ── 풀 이삭 ─────────────────────────────────────────────────────────
+        if (isGrass && rand(bx, by, 1) < 0.20) {
+          objItems.push({ sortKey: bx + by + 0.1, draw() { drawGrassTuft(ctx, _cx, _cy, _bx, _by); } });
+        }
+
+        // ── 화단 꽃 클러스터 ──────────────────────────────────────────────
+        if (biome === "garden" && rand(bx, by, 4) < 0.55) {
+          objItems.push({ sortKey: bx + by + 0.15, draw() { drawFlowerCluster(ctx, _cx, _cy, _bx, _by); } });
+        }
+        // 일반 꽃 (yard/lawn)
+        if ((biome === "yard" || biome === "lawn") && rand(bx, by, 5) < 0.07) {
+          objItems.push({ sortKey: bx + by + 0.1, draw() { drawFlower(ctx, _cx, _cy, _bx, _by); } });
         }
 
         // ── 바위 ────────────────────────────────────────────────────────────
-        if (dist >= 2 && rand(bx, by, 8) < 0.04) {
+        if (dist >= 2 && rand(bx, by, 8) < 0.025) {
           const _r = rand(bx, by, 9);
-          const rx = _cx + (rand(bx, by, 10) - 0.5) * 24;
-          const ry = _cy + HH + rand(bx, by, 11) * 6;
-          items.push({ sortKey: bx + by + 0.3, draw() { drawRock(ctx, rx, ry, _r); } });
+          const rx = _cx + (rand(bx, by, 10) - 0.5) * 20;
+          const ry = _cy + HH + rand(bx, by, 11) * 5;
+          objItems.push({ sortKey: bx + by + 0.3, draw() { drawRock(ctx, rx, ry, _r); } });
         }
 
-        // ── 관목 ────────────────────────────────────────────────────────────
-        if ((biome === "meadow" || biome === "forest") && rand(bx, by, 15) < 0.07) {
+        // ── 트리밍된 관목 ───────────────────────────────────────────────────
+        if ((biome === "yard" || biome === "lawn" || biome === "garden") && rand(bx, by, 15) < 0.06) {
           const _r = rand(bx, by, 16);
-          items.push({ sortKey: bx + by + 0.4, draw() { drawBush(ctx, _cx, _cy + TH, _r); } });
+          objItems.push({ sortKey: bx + by + 0.4, draw() { drawTrimmedBush(ctx, _cx, _cy + TH, _r); } });
         }
 
-        // ── 나무 ────────────────────────────────────────────────────────────
-        if (isGrass && dist >= 3 && r < 0.075) {
+        // ── 벚꽃나무 — 집 근처 외곽에 드문드문 ───────────────────────────
+        if (dist >= 3 && dist <= 7 && rand(bx, by, 96) < 0.04) {
+          const _r = rand(bx, by, 97);
+          objItems.push({ sortKey: bx + by + 0.6, draw() { drawCherryTree(ctx, _cx, _cy + TH, _r); } });
+        }
+
+        // ── 정원 수목 — 외곽 ────────────────────────────────────────────────
+        if ((biome === "lawn" || biome === "hedgerow") && dist >= 4 && r < 0.07) {
           const _r = rand(bx, by, 99);
-          items.push({ sortKey: bx + by + 0.6, draw() { drawTree(ctx, _cx, _cy + TH, _r); } });
+          objItems.push({ sortKey: bx + by + 0.6, draw() { drawGardenTree(ctx, _cx, _cy + TH, _r); } });
         }
 
-        // ── 울타리 (방 좌측 경계: bx=-1, by=0..9) ──────────────────────────
-        if (bx === -1 && by >= 0 && by < ROOM_ROWS) {
-          // 기둥 위치: 타일 오른쪽-앞 꼭짓점 근처
+        // ── 집 앞 석등 (문 좌우 한 쌍) ──────────────────────────────────
+        if ((bx === -1 && (by === 3 || by === 6)) ||
+            (bx === 10 && (by === 3 || by === 6))) {
+          const lpx = _cx + (bx < 0 ? HW - 2 : -HW + 2);
+          const lpy = _cy + TH;
+          objItems.push({ sortKey: bx + by + 0.7, draw() { drawLantern(ctx, lpx, lpy); } });
+        }
+
+        // ── 돌담 (집 좌측 경계: bx=-1, by=0..9) ─────────────────────────
+        if (bx === -1 && by >= 0 && by < ROOM_ROWS && by !== 3 && by !== 4 && by !== 5 && by !== 6) {
           const fpx = _cx + HW - 4;
           const fpy = _cy + TH + 2;
-          // 레일 방향: +by 방향 = screen (−HW, +HH) per tile
-          const hasNext = by < ROOM_ROWS - 1;
-          items.push({
+          const hasNext = by < ROOM_ROWS - 1 && !(by + 1 >= 3 && by + 1 <= 6);
+          objItems.push({
             sortKey: bx + by + 0.5,
-            draw() { drawFencePost(ctx, fpx, fpy, hasNext ? -HW : 0, hasNext ? HH : 0); },
+            draw() { drawStoneWallPost(ctx, fpx, fpy, hasNext ? -HW : 0, hasNext ? HH : 0); },
           });
         }
 
-        // ── 울타리 (방 우측 경계 윗라인: bx=10, by=0..9) ─────────────────
-        if (bx === ROOM_COLS && by >= 0 && by < ROOM_ROWS) {
+        // ── 돌담 (집 우측 경계: bx=10, by=0..9) ─────────────────────────
+        if (bx === ROOM_COLS && by >= 0 && by < ROOM_ROWS && by !== 3 && by !== 4 && by !== 5 && by !== 6) {
           const fpx = _cx - HW + 4;
           const fpy = _cy + TH + 2;
-          const hasNext = by < ROOM_ROWS - 1;
-          items.push({
+          const hasNext = by < ROOM_ROWS - 1 && !(by + 1 >= 3 && by + 1 <= 6);
+          objItems.push({
             sortKey: bx + by + 0.5,
-            draw() { drawFencePost(ctx, fpx, fpy, hasNext ? -HW : 0, hasNext ? HH : 0); },
-          });
-        }
-
-        // ── 표지판 (출구 길 입구) ────────────────────────────────────────────
-        if (bx === 12 && by === 3) {
-          items.push({
-            sortKey: bx + by + 0.7,
-            draw() { drawSignpost(ctx, _cx + 10, _cy + TH); },
+            draw() { drawStoneWallPost(ctx, fpx, fpy, hasNext ? -HW : 0, hasNext ? HH : 0); },
           });
         }
       }
     }
 
-    // 페인터 알고리즘 정렬 후 드로우
-    items.sort((a, b) => a.sortKey - b.sortKey);
-    for (const item of items) item.draw();
+    // ── 지형 타일: 뒤→앞 정렬 후 그리기 (expand 기법으로 이음새 제거) ────────
+    terrainItems.sort((a, b) => a.sortKey - b.sortKey);
+    for (const item of terrainItems) item.draw();
 
-    // ── 비녜트 + 중앙 밝음 ────────────────────────────────────────────────────
-    // 방 위치 기준으로 중앙을 밝게, 주변을 어둡게
+    // ── 오프스크린 → 메인 캔버스 합성 ──────────────────────────────────────
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(terrainCanvas, 0, 0);
+
+    // ── 오브젝트 정렬 후 렌더링 ──────────────────────────────────────────────
+    objItems.sort((a, b) => a.sortKey - b.sortKey);
+    for (const item of objItems) item.draw();
+
+    // ── 따뜻한 햇살 분위기 비녜트 ────────────────────────────────────────────
+    // 중심부를 밝게, 외곽을 자연스럽게 어둡게
     const roomCenterX = 440 + offsetX + (ROOM_COLS / 2) * HW;
     const roomCenterY = offsetY + (ROOM_ROWS / 2) * HH;
 
-    const vg = ctx.createRadialGradient(
-      roomCenterX, roomCenterY, height * 0.12,
-      roomCenterX, roomCenterY, Math.max(width, height) * 0.75,
+    // 따뜻한 햇살 오버레이 (중앙)
+    const sunGlow = ctx.createRadialGradient(
+      roomCenterX - 80, roomCenterY - 60, 0,
+      roomCenterX - 80, roomCenterY - 60, height * 0.55,
     );
-    vg.addColorStop(0,    "rgba(0,0,0,0)");
-    vg.addColorStop(0.5,  "rgba(0,0,0,0.1)");
-    vg.addColorStop(1,    "rgba(0,0,0,0.75)");
+    sunGlow.addColorStop(0,   "rgba(255,230,160,0.10)");
+    sunGlow.addColorStop(0.5, "rgba(255,210,120,0.04)");
+    sunGlow.addColorStop(1,   "rgba(0,0,0,0)");
+    ctx.fillStyle = sunGlow;
+    ctx.fillRect(0, 0, width, height);
+
+    // 외곽 비녜트
+    const vg = ctx.createRadialGradient(
+      roomCenterX, roomCenterY, height * 0.15,
+      roomCenterX, roomCenterY, Math.max(width, height) * 0.72,
+    );
+    vg.addColorStop(0,   "rgba(0,0,0,0)");
+    vg.addColorStop(0.45,"rgba(0,0,0,0.06)");
+    vg.addColorStop(1,   "rgba(0,0,0,0.65)");
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, width, height);
 
@@ -416,7 +538,7 @@ export default function HousingBgCanvas({ offsetX, offsetY, width, height }: Hou
       style={{
         position: "absolute", left: 0, top: 0,
         zIndex: 0, pointerEvents: "none",
-        imageRendering: "pixelated",
+        imageRendering: "auto",
       }}
     />
   );
