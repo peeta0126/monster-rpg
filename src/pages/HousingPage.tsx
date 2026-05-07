@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
-import { IndoorRoomBg } from "../components/housing/IndoorRoomBg";
+import { IndoorRoomBg, getSlotCanvasPos, ROOM_WALL_H, ROOM_BASE_H, ROOM_MOL_H } from "../components/housing/IndoorRoomBg";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, isTileWalkable } from "../store/playerStore";
 import {
@@ -7,7 +7,7 @@ import {
   MATERIAL_LABEL, RARITY_LABEL, RARITY_COLOR, MATERIAL_SET_TIERS,
 } from "../data/furniture";
 import type { FurnitureMaterial } from "../data/furniture";
-import type { PlacedFurniture } from "../types/housing";
+import type { PlacedFurniture, WallSide } from "../types/housing";
 import { getMaterial } from "../data/items";
 import {
   TILE_W, TILE_H, roomPixelSize, getTileKey,
@@ -24,8 +24,7 @@ import { WALL_DECORATIONS, getWallDecoration } from "../data/wallDecorations";
 const roomSize = roomPixelSize(ROOM_COLS, ROOM_ROWS);
 // roomSize.width = 880, roomSize.height = 440, minX = -440, minY = 0
 
-// 실내 방 벽 높이 (스테이지 단위)
-const ROOM_WALL_H = 148;
+// ROOM_WALL_H, ROOM_BASE_H, ROOM_MOL_H → IndoorRoomBg에서 import
 
 // 방 타일 화면 좌표 (스테이지 내부 좌표: offsetX=0, offsetY=0 기준)
 function tileScreenPos(tx: number, ty: number, offsetX: number, offsetY: number) {
@@ -317,7 +316,7 @@ function IsoRoomGrid({
       {!editMode && (
         <PlayerSprite
           left={playerPos.left + TILE_W / 2}
-          top={playerPos.top}
+          top={playerPos.top + TILE_H / 2}
           zIndex={playerZIndex}
           sprite={playerSprite}
         />
@@ -332,14 +331,63 @@ function PlayerSprite({ left, top, zIndex, sprite }: { left: number; top: number
   return (
     <div style={{
       position: "absolute", left, top,
-      transform: "translate(-50%, -60%)",
+      transform: "translate(-50%, -100%)",
       zIndex, pointerEvents: "none",
     }}>
       <img src={`/assets/basecamp/${sprite}.png`} alt="player"
-        style={{ width: "32px", height: "48px", imageRendering: "pixelated", display: "block" }}
+        style={{ width: "56px", height: "56px", imageRendering: "pixelated", display: "block" }}
         draggable={false} />
     </div>
   );
+}
+
+// ─── 벽 슬롯 오버레이 ────────────────────────────────────────────────────────
+
+interface WallGeom {
+  leX: number; leY: number;
+  tpX: number; tpY: number;
+  riX: number; riY: number;
+  cs: number; slotW: number; slotH: number;
+}
+
+function WallSlotOverlay({
+  geom, wallDecorations, selectedDecoId, onSlotClick,
+}: {
+  geom: WallGeom;
+  wallDecorations: import("../types/housing").PlacedWallDecoration[];
+  selectedDecoId: string | null;
+  onSlotClick: (wall: "left" | "right", slotIndex: number) => void;
+}) {
+  const slots: ReactElement[] = [];
+  for (const wall of ["left", "right"] as const) {
+    for (let i = 0; i < 6; i++) {
+      const pos = getSlotCanvasPos(
+        wall, i,
+        geom.leX, geom.leY, geom.tpX, geom.tpY, geom.riX, geom.riY, geom.cs,
+      );
+      const occupied = wallDecorations.find((d) => d.wall === wall && d.slotIndex === i);
+      const isActive = !!selectedDecoId;
+      slots.push(
+        <div
+          key={`${wall}-${i}`}
+          onClick={() => onSlotClick(wall, i)}
+          style={{
+            position: "absolute",
+            left: pos.x, top: pos.y,
+            width: geom.slotW, height: geom.slotH,
+            transform: "translate(-50%, -50%)",
+            border: `2px dashed ${occupied ? "#f59e0b" : isActive ? "#4ade80" : "rgba(255,255,255,0.35)"}`,
+            borderRadius: 4,
+            background: occupied ? "rgba(251,191,36,0.08)" : isActive ? "rgba(74,222,128,0.08)" : "transparent",
+            cursor: "pointer",
+            zIndex: 10,
+            transition: "all 0.12s",
+          }}
+        />,
+      );
+    }
+  }
+  return <>{slots}</>;
 }
 
 // ─── 편집 패널 (Tiny Farm 스타일 하단 슬라이드) ──────────────────────────────
@@ -831,7 +879,7 @@ export default function HousingPage() {
 
   const {
     placedFurniture, placeFurniture, moveFurniture, rotateFurniture, removeFurniture, getHousingBonuses,
-    removeWallDecoration,
+    wallDecorations, placeWallDecoration, removeWallDecoration,
   } = usePlayerStore();
 
   // ── 레이아웃: housing_bg.png 다이아몬드 영역에 스테이지 정렬 ───────────────
@@ -1001,6 +1049,35 @@ export default function HousingPage() {
     removeWallDecoration(instanceId);
   };
 
+  // ── 벽 장식 슬롯 클릭 ─────────────────────────────────────────────────────
+  const handleSlotClick = (wall: WallSide, slotIndex: number) => {
+    if (!editMode) return;
+    const existing = wallDecorations.find((d) => d.wall === wall && d.slotIndex === slotIndex);
+    if (selectedDecoId) {
+      placeWallDecoration(wall, slotIndex, selectedDecoId);
+      setSelectedDecoId(null);
+    } else if (existing) {
+      removeWallDecoration(existing.instanceId);
+    }
+  };
+
+  // ── 벽 슬롯 캔버스 좌표 계산 ──────────────────────────────────────────────
+  const _WH   = ROOM_WALL_H * contentScale;
+  const _BH   = ROOM_BASE_H * contentScale;
+  const _MH   = ROOM_MOL_H  * contentScale;
+  const _inH  = _WH - _BH - _MH;
+  const wallGeom = {
+    leX: stageLeft,
+    leY: stageTop + 220 * contentScale,
+    tpX: stageLeft + 440 * contentScale,
+    tpY: stageTop,
+    riX: stageLeft + 880 * contentScale,
+    riY: stageTop + 220 * contentScale,
+    cs:  contentScale,
+    slotW: Math.abs((stageLeft + 440 * contentScale) - stageLeft) * 0.16,
+    slotH: _inH * 0.22,
+  };
+
   // ── 문 근접 여부 ───────────────────────────────────────────────────────────
   const nearFarm = playerTile.x <= 1.5;
   const nearExit = playerTile.x >= ROOM_COLS - 1.5;
@@ -1020,7 +1097,18 @@ export default function HousingPage() {
         stageLeft={stageLeft}
         stageTop={stageTop}
         cs={contentScale}
+        wallDecorations={wallDecorations}
       />
+
+      {/* ── 벽 슬롯 오버레이 (편집 모드) ────────────────────────────────── */}
+      {editMode && editTab === "walldeco" && (
+        <WallSlotOverlay
+          geom={wallGeom}
+          wallDecorations={wallDecorations}
+          selectedDecoId={selectedDecoId}
+          onSlotClick={handleSlotClick}
+        />
+      )}
 
       {/* ── 아이소메트릭 스테이지 (배경 다이아몬드에 정렬) ─────────────────── */}
       <div style={{
