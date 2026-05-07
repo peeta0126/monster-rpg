@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+﻿import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { IndoorRoomBg } from "../components/housing/IndoorRoomBg";
 import { useNavigate } from "react-router-dom";
-import HousingBgCanvas from "./HousingBgCanvas";
 import { usePlayerStore, isTileWalkable } from "../store/playerStore";
 import {
   FURNITURE, getFurniture, countMaterials,
   MATERIAL_LABEL, RARITY_LABEL, RARITY_COLOR, MATERIAL_SET_TIERS,
 } from "../data/furniture";
 import type { FurnitureMaterial } from "../data/furniture";
-import type { PlacedFurniture, PlacedWallDecoration, WallSide } from "../types/housing";
+import type { PlacedFurniture } from "../types/housing";
 import { getMaterial } from "../data/items";
 import {
   TILE_W, TILE_H, roomPixelSize, getTileKey,
@@ -15,55 +15,23 @@ import {
   canPlaceFurnitureAt, getFurnitureAtTile, getFurnitureRenderPosition,
 } from "../utils/isometric";
 import { ROOM_COLS, ROOM_ROWS, FARM_DOOR_TILE, EXIT_DOOR_TILE, PLAYER_INIT_TILE } from "../constants/housing";
-import { WALLPAPERS, getWallpaper } from "../data/wallpapers";
-import { FLOOR_TILES, getFloorTile } from "../data/floorTiles";
+import { WALLPAPERS } from "../data/wallpapers";
+import { FLOOR_TILES } from "../data/floorTiles";
 import { WALL_DECORATIONS, getWallDecoration } from "../data/wallDecorations";
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
-const WALL_H    = 160;
-const MOLDING_H = 14;   // 상단 몰딩 두께 (SVG px)
-const BASE_H    = 9;    // 하단 걸레받이 두께 (SVG px)
-
 const roomSize = roomPixelSize(ROOM_COLS, ROOM_ROWS);
-// roomSize.width = 880, roomSize.height = 440, roomSize.minX = -440, roomSize.minY = 0
+// roomSize.width = 880, roomSize.height = 440, minX = -440, minY = 0
 
-/** rgba(r,g,b,a) 에서 alpha 를 1 로 바꿔 불투명 색 반환 */
-function toOpaque(rgba: string): string {
-  return rgba.replace(/[\d.]+\)$/, "1)");
-}
+// 실내 방 벽 높이 (스테이지 단위)
+const ROOM_WALL_H = 148;
 
-// 벽 면 꼭짓점 헬퍼 (SVG 좌표계: SVG 원점 = 화면상 (offsetX, offsetY - WALL_H))
-// 방 백코너 = SVG 내 (440, WALL_H), 방 왼쪽코너 = (0, WALL_H+220), 오른쪽코너 = (880, WALL_H+220)
-const BACK_X = 440;
-const LEFT_X = 0;
-const RIGHT_X = 880;
-const MID_Y = 220; // ROOM_ROWS * TILE_H / 2 = 10 * 22
-
-// 방 타일 화면 좌표
+// 방 타일 화면 좌표 (스테이지 내부 좌표: offsetX=0, offsetY=0 기준)
 function tileScreenPos(tx: number, ty: number, offsetX: number, offsetY: number) {
   const left = (tx - ty) * (TILE_W / 2);
   const top  = (tx + ty) * (TILE_H / 2);
   return { left: left - roomSize.minX + offsetX, top: top - roomSize.minY + offsetY };
-}
-
-// 벽면 파라메트릭 위치 → SVG 좌표
-// left wall: P(u,v) = (440-440u, 220u + WALL_H*v)  [u=0:뒤, u=1:왼쪽]
-// right wall: P(u,v) = (440+440u, 220u + WALL_H*v) [u=0:뒤, u=1:오른쪽]
-function wallSlotSVGPos(wall: WallSide, u: number, v: number) {
-  if (wall === "left") {
-    return { x: BACK_X - BACK_X * u, y: MID_Y * u + WALL_H * v };
-  }
-  return { x: BACK_X + BACK_X * u, y: MID_Y * u + WALL_H * v };
-}
-
-// 6 슬롯 위치: 3열×2행
-const SLOT_U = [0.18, 0.5, 0.82];
-const SLOT_V = [0.22, 0.65];
-function slotUV(slotIndex: number): { u: number; v: number } {
-  const col = slotIndex % 3;
-  const row = Math.floor(slotIndex / 3);
-  return { u: SLOT_U[col], v: SLOT_V[row] };
 }
 
 // ─── 타일 컴포넌트 ────────────────────────────────────────────────────────────
@@ -90,7 +58,7 @@ function IsoTile({
   const hh = TILE_H / 2;
   const clip = `polygon(${hw}px 0px, ${TILE_W}px ${hh}px, ${hw}px ${TILE_H}px, 0px ${hh}px)`;
 
-  // normal 상태는 투명 — FloorSVG 가 바닥 시각을 담당
+  // normal 상태는 투명 — 배경 이미지가 바닥 시각을 담당
   const styles: Record<TileState, { bg: string }> = {
     normal:            { bg: "transparent" },
     hover:             { bg: floorStyle.hoverBg },
@@ -114,303 +82,30 @@ function IsoTile({
   );
 }
 
-// ─── 벽면 SVG ────────────────────────────────────────────────────────────────
+// ─── 편집 모드 그리드 오버레이 ───────────────────────────────────────────────
 
-function WallSVG({
-  offsetX, offsetY, wallpaperId,
-  wallDecorations, editMode, selectedDecoId,
-  onSlotClick,
-}: {
-  offsetX: number; offsetY: number; wallpaperId: string;
-  wallDecorations: PlacedWallDecoration[];
-  editMode: boolean; selectedDecoId: string | null;
-  onSlotClick: (wall: WallSide, slotIndex: number) => void;
-}) {
-  const wp = getWallpaper(wallpaperId);
-  const svgLeft = offsetX + TILE_W / 2;
-  const svgTop  = offsetY - WALL_H;
-  const svgW    = roomSize.width;          // 880
-  const svgH    = WALL_H + MID_Y + 20;    // 여유 20px (shadow)
-
-  // ── 벽 꼭짓점 ───────────────────────────────────────────────────────────────
-  const leftWall   = `${BACK_X},0 ${LEFT_X},${MID_Y} ${LEFT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H}`;
-  const rightWall  = `${BACK_X},0 ${RIGHT_X},${MID_Y} ${RIGHT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H}`;
-
-  // ── 몰딩: 벽 최상단 MOLDING_H 두께 ─────────────────────────────────────────
-  const leftMold   = `${BACK_X},0 ${LEFT_X},${MID_Y} ${LEFT_X},${MID_Y+MOLDING_H} ${BACK_X},${MOLDING_H}`;
-  const rightMold  = `${BACK_X},0 ${RIGHT_X},${MID_Y} ${RIGHT_X},${MID_Y+MOLDING_H} ${BACK_X},${MOLDING_H}`;
-
-  // ── 걸레받이: 벽 최하단 BASE_H 두께 ─────────────────────────────────────────
-  const bs         = WALL_H - BASE_H;
-  const leftBase   = `${BACK_X},${bs} ${LEFT_X},${MID_Y+bs} ${LEFT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H}`;
-  const rightBase  = `${BACK_X},${bs} ${RIGHT_X},${MID_Y+bs} ${RIGHT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H}`;
-
-  // ── 방 실루엣 (shadow용) ─────────────────────────────────────────────────────
-  const silhouette = `${BACK_X},0 ${LEFT_X},${MID_Y} ${LEFT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H} ${RIGHT_X},${WALL_H+MID_Y} ${RIGHT_X},${MID_Y}`;
-
-  // 슬롯 위치 맵
-  const decoMap = new Map<string, PlacedWallDecoration>();
-  for (const d of wallDecorations) {
-    decoMap.set(`${d.wall}-${d.slotIndex}`, d);
-  }
-
-  return (
-    <svg
-      style={{
-        position: "absolute",
-        left: svgLeft, top: svgTop,
-        width: svgW, height: svgH,
-        pointerEvents: editMode ? "auto" : "none",
-        zIndex: 2, overflow: "visible",
-      }}
-      viewBox={`0 0 ${svgW} ${svgH}`}
-    >
-      <defs>
-        {/* 벽 기본 그라디언트 ─ 좌(어둠) / 우(밝음) */}
-        <linearGradient id="gradLeft" x1={BACK_X} y1={0} x2={LEFT_X} y2={0} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={wp.leftColor1}/>
-          <stop offset="100%" stopColor={wp.leftColor2}/>
-        </linearGradient>
-        <linearGradient id="gradRight" x1={BACK_X} y1={0} x2={RIGHT_X} y2={0} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={wp.rightColor1}/>
-          <stop offset="100%" stopColor={wp.rightColor2}/>
-        </linearGradient>
-
-        {/* 좌벽: 코너에 가까울수록 약간 어둠 (입체감) */}
-        <linearGradient id="depthLeft" x1={LEFT_X} y1={0} x2={BACK_X} y2={0} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="rgba(0,0,0,0)"/>
-          <stop offset="100%" stopColor="rgba(0,0,0,0.18)"/>
-        </linearGradient>
-        {/* 우벽: 코너에 가까울수록 약간 어둠 */}
-        <linearGradient id="depthRight" x1={RIGHT_X} y1={0} x2={BACK_X} y2={0} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="rgba(0,0,0,0)"/>
-          <stop offset="100%" stopColor="rgba(0,0,0,0.12)"/>
-        </linearGradient>
-
-        {/* 상단 빛 하이라이트 (천장 근처가 살짝 밝음) */}
-        <linearGradient id="topLit" x1={BACK_X} y1={0} x2={BACK_X} y2={WALL_H} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.14)"/>
-          <stop offset="40%" stopColor="rgba(255,255,255,0)"/>
-        </linearGradient>
-
-        {/* 수평선 패턴 (벽지 결) */}
-        <pattern id="wallGrain" x="0" y="0" width="1" height="13" patternUnits="userSpaceOnUse">
-          <line x1="0" y1="12" x2="1000" y2="12" stroke="rgba(0,0,0,0.055)" strokeWidth="0.7"/>
-        </pattern>
-
-        {/* 몰딩 그라디언트 */}
-        <linearGradient id="gradMold" x1={LEFT_X} y1={0} x2={RIGHT_X} y2={0} gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor={wp.trimColor} stopOpacity="0.7"/>
-          <stop offset="50%"  stopColor={wp.trimColor} stopOpacity="1"/>
-          <stop offset="100%" stopColor={wp.trimColor} stopOpacity="0.7"/>
-        </linearGradient>
-
-        {/* 클립패스 (텍스처가 벽 밖으로 나가지 않게) */}
-        <clipPath id="clipL"><polygon points={leftWall}/></clipPath>
-        <clipPath id="clipR"><polygon points={rightWall}/></clipPath>
-
-        {/* 실루엣 블러 (방 그림자) */}
-        <filter id="silhouetteBlur" x="-10%" y="-10%" width="120%" height="130%">
-          <feGaussianBlur stdDeviation="13"/>
-        </filter>
-      </defs>
-
-      {/* ── 방 외곽 그림자 ─────────────────────────────────────────────── */}
-      <polygon
-        points={silhouette}
-        fill="rgba(0,0,0,0.32)"
-        transform="translate(6,16)"
-        filter="url(#silhouetteBlur)"
-      />
-
-      {/* ── 좌측 벽 ───────────────────────────────────────────────────── */}
-      <polygon points={leftWall} fill="url(#gradLeft)"/>
-      <polygon points={leftWall} fill="url(#wallGrain)" clipPath="url(#clipL)"/>
-      <polygon points={leftWall} fill="url(#depthLeft)"/>
-      <polygon points={leftWall} fill="url(#topLit)"    clipPath="url(#clipL)"/>
-      {/* 외곽선 */}
-      <polygon points={leftWall} fill="none" stroke="#17090a" strokeWidth="2.2"/>
-
-      {/* ── 우측 벽 ───────────────────────────────────────────────────── */}
-      <polygon points={rightWall} fill="url(#gradRight)"/>
-      <polygon points={rightWall} fill="url(#wallGrain)" clipPath="url(#clipR)"/>
-      <polygon points={rightWall} fill="url(#depthRight)"/>
-      <polygon points={rightWall} fill="url(#topLit)"    clipPath="url(#clipR)"/>
-      {/* 우벽에 약한 밝기 추가 (빛이 오른쪽에서 반사) */}
-      <polygon points={rightWall} fill="rgba(255,255,255,0.04)"/>
-      {/* 외곽선 */}
-      <polygon points={rightWall} fill="none" stroke="#17090a" strokeWidth="2.2"/>
-
-      {/* ── 상단 능선 (몰딩 바로 위 날카로운 선) ───────────────────────── */}
-      <polyline
-        points={`${LEFT_X},${MID_Y} ${BACK_X},0 ${RIGHT_X},${MID_Y}`}
-        fill="none" stroke="#17090a" strokeWidth="2.8"
-      />
-
-      {/* ── 상단 몰딩 ─────────────────────────────────────────────────── */}
-      <polygon points={leftMold}  fill="url(#gradMold)" opacity="0.9"/>
-      <polygon points={leftMold}  fill="rgba(255,255,255,0.1)"/>
-      <polygon points={leftMold}  fill="none" stroke="#17090a" strokeWidth="1.3"/>
-      <polygon points={rightMold} fill="url(#gradMold)" opacity="0.95"/>
-      <polygon points={rightMold} fill="rgba(255,255,255,0.16)"/>
-      <polygon points={rightMold} fill="none" stroke="#17090a" strokeWidth="1.3"/>
-
-      {/* ── 하단 걸레받이 ─────────────────────────────────────────────── */}
-      <polygon points={leftBase}  fill={wp.leftColor2}  opacity="0.92"/>
-      <polygon points={leftBase}  fill="rgba(0,0,0,0.22)"/>
-      <polygon points={leftBase}  fill="none" stroke="#17090a" strokeWidth="1.1"/>
-      <polygon points={rightBase} fill={wp.rightColor2} opacity="0.92"/>
-      <polygon points={rightBase} fill="rgba(0,0,0,0.18)"/>
-      <polygon points={rightBase} fill="none" stroke="#17090a" strokeWidth="1.1"/>
-
-      {/* ── 중앙 코너 기둥 ────────────────────────────────────────────── */}
-      {/* 그림자 사이드 */}
-      <line x1={BACK_X-1} y1={0} x2={BACK_X-1} y2={WALL_H} stroke="rgba(0,0,0,0.3)" strokeWidth="3"/>
-      {/* 하이라이트 사이드 */}
-      <line x1={BACK_X+1} y1={0} x2={BACK_X+1} y2={WALL_H} stroke="rgba(255,255,255,0.18)" strokeWidth="2"/>
-      {/* 중심선 */}
-      <line x1={BACK_X}   y1={0} x2={BACK_X}   y2={WALL_H} stroke={wp.trimColor} strokeWidth="1.4" opacity="0.85"/>
-
-      {/* ── 벽-바닥 접합선 ────────────────────────────────────────────── */}
-      <polyline
-        points={`${LEFT_X},${WALL_H+MID_Y} ${BACK_X},${WALL_H} ${RIGHT_X},${WALL_H+MID_Y}`}
-        fill="none" stroke="#17090a" strokeWidth="2"
-      />
-
-      {/* 벽 장식 슬롯 (편집 모드에서만 표시) */}
-      {editMode && (["left", "right"] as WallSide[]).map((wall) =>
-        Array.from({ length: 6 }, (_, i) => {
-          const { u, v } = slotUV(i);
-          const pos = wallSlotSVGPos(wall, u, v);
-          const key = `${wall}-${i}`;
-          const placed = decoMap.get(key);
-          const hasSelected = selectedDecoId !== null;
-          return (
-            <g key={key}
-              style={{ cursor: "pointer" }}
-              onClick={() => onSlotClick(wall, i)}
-            >
-              <ellipse
-                cx={pos.x} cy={pos.y}
-                rx={22} ry={12}
-                fill={placed ? "rgba(251,191,36,0.25)" : hasSelected ? "rgba(100,200,100,0.25)" : "rgba(255,255,255,0.08)"}
-                stroke={placed ? "#fbbf24" : hasSelected ? "#4ade80" : "rgba(255,255,255,0.25)"}
-                strokeWidth="1"
-                strokeDasharray={placed ? "0" : "3,2"}
-              />
-            </g>
-          );
-        })
-      )}
-
-      {/* 배치된 벽 장식 (항상 표시) */}
-      {wallDecorations.map((d) => {
-        const { u, v } = slotUV(d.slotIndex);
-        const pos = wallSlotSVGPos(d.wall, u, v);
-        const wd = getWallDecoration(d.decorId);
-        if (!wd) return null;
-        return (
-          <text
-            key={d.instanceId}
-            x={pos.x} y={pos.y + 5}
-            textAnchor="middle"
-            fontSize="20"
-            style={{ pointerEvents: editMode ? "auto" : "none", cursor: editMode ? "pointer" : "default", userSelect: "none" }}
-            onClick={(e) => { e.stopPropagation(); if (editMode) onSlotClick(d.wall, d.slotIndex); }}
-          >
-            {wd.emoji}
-          </text>
-        );
-      })}
-    </svg>
-  );
-}
-
-// ─── 바닥 SVG ────────────────────────────────────────────────────────────────
-// 불투명 아이소메트릭 바닥 + 타일 그리드 + 엣지 쉐이딩 + drop-shadow
-
-function FloorSVG({
-  offsetX, offsetY, floorStyle,
-}: {
-  offsetX: number; offsetY: number; floorStyle: FloorStyle;
-}) {
-  // WallSVG 와 같은 수평 기준점 사용
-  const svgLeft = offsetX + TILE_W / 2;
-  const svgTop  = offsetY;
-  const svgW    = 880;
-  const svgH    = 500; // 440 + 60 shadow room
-
-  // 바닥 다이아몬드 (back, left, front, right)
-  const FLOOR = "440,0 0,220 440,440 880,220";
-
-  // 타일 그리드선 (k=1..9): tx 열선 + ty 행선
+function GridOverlay() {
   const lines: ReactElement[] = [];
-  const gc = toOpaque(floorStyle.normalOutline);
-  for (let k = 1; k < ROOM_COLS; k++) {
-    // tx=k 열선: (440+44k, 22k) → (44k, 220+22k)
+  for (let k = 0; k <= ROOM_COLS; k++) {
     lines.push(
-      <line key={`tx${k}`}
-        x1={440+44*k} y1={22*k}   x2={44*k}     y2={220+22*k}
-        stroke={gc} strokeWidth="0.85" strokeOpacity="0.38"
-        clipPath="url(#floorClip)"/>,
-    );
-    // ty=k 행선: (440-44k, 22k) → (880-44k, 220+22k)
-    lines.push(
-      <line key={`ty${k}`}
-        x1={440-44*k} y1={22*k}   x2={880-44*k} y2={220+22*k}
-        stroke={gc} strokeWidth="0.85" strokeOpacity="0.38"
-        clipPath="url(#floorClip)"/>,
+      <line key={`tx${k}`} x1={440+44*k} y1={22*k} x2={44*k} y2={220+22*k}
+            stroke="rgba(255,255,255,0.18)" strokeWidth="0.7" />,
+      <line key={`ty${k}`} x1={440-44*k} y1={22*k} x2={880-44*k} y2={220+22*k}
+            stroke="rgba(255,255,255,0.18)" strokeWidth="0.7" />,
     );
   }
-
   return (
-    <svg
-      style={{
-        position: "absolute",
-        left: svgLeft, top: svgTop,
-        width: svgW, height: svgH,
-        pointerEvents: "none", zIndex: 0,
-        // 바닥 전체에 CSS drop-shadow (모양 따라 적용)
-        filter: "drop-shadow(3px 18px 22px rgba(0,0,0,0.52))",
-        overflow: "visible",
-      }}
-      viewBox={`0 0 ${svgW} ${svgH}`}
-    >
-      <defs>
-        <clipPath id="floorClip">
-          <polygon points={FLOOR}/>
-        </clipPath>
-
-        {/* 바닥 엣지 어둠 (가장자리가 살짝 어두워 입체감) */}
-        <radialGradient id="floorEdge" cx="440" cy="220" r="310" gradientUnits="userSpaceOnUse">
-          <stop offset="52%" stopColor="rgba(0,0,0,0)"/>
-          <stop offset="100%" stopColor="rgba(0,0,0,0.28)"/>
-        </radialGradient>
-
-        {/* 바닥 뒤쪽 하이라이트 (조명 방향: 좌상단) */}
-        <radialGradient id="floorLight" cx="440" cy="20" r="260" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.13)"/>
-          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-        </radialGradient>
-      </defs>
-
-      {/* 1. 불투명 바닥 */}
-      <polygon points={FLOOR} fill={toOpaque(floorStyle.normalBg)}/>
-
-      {/* 2. 타일 그리드 */}
+    <svg style={{ position: "absolute", left: 0, top: 0, width: 880, height: 440, pointerEvents: "none", zIndex: 1 }}
+         viewBox="0 0 880 440">
       {lines}
-
-      {/* 3. 엣지 어둠 오버레이 */}
-      <polygon points={FLOOR} fill="url(#floorEdge)"/>
-
-      {/* 4. 뒤쪽 빛 하이라이트 */}
-      <polygon points={FLOOR} fill="url(#floorLight)" clipPath="url(#floorClip)"/>
-
-      {/* 5. 바닥 외곽선 (픽셀아트 스타일 진한 테두리) */}
-      <polygon points={FLOOR} fill="none" stroke="#1a0e06" strokeWidth="2.8"/>
+      <polygon points="440,0 880,220 440,440 0,220"
+               fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
     </svg>
   );
 }
+
+// (WallSVG removed — housing area is outdoor, no walls)
+// (FloorSVG removed — background image provides floor visuals)
 
 // ─── 배치된 가구 스프라이트 ───────────────────────────────────────────────────
 
@@ -503,7 +198,7 @@ function IsoRoomGrid({
   offsetX, offsetY, editMode,
   hoveredTile, onTileHover, onTileLeave, onTileClick,
   placedFurniture, selectedInstanceId, selectedFurnitureId,
-  onFurnitureClick, playerTile, floorStyle,
+  onFurnitureClick, playerTile, playerSprite, floorStyle,
 }: {
   offsetX: number; offsetY: number; editMode: boolean;
   hoveredTile: { x: number; y: number } | null;
@@ -515,6 +210,7 @@ function IsoRoomGrid({
   selectedFurnitureId: string | null;
   onFurnitureClick: (instanceId: string) => void;
   playerTile: { x: number; y: number };
+  playerSprite: string;
   floorStyle: FloorStyle;
 }) {
   const selectedFD    = selectedFurnitureId ? getFurniture(selectedFurnitureId) : null;
@@ -623,6 +319,7 @@ function IsoRoomGrid({
           left={playerPos.left + TILE_W / 2}
           top={playerPos.top}
           zIndex={playerZIndex}
+          sprite={playerSprite}
         />
       )}
     </>
@@ -631,14 +328,14 @@ function IsoRoomGrid({
 
 // ─── 플레이어 스프라이트 ──────────────────────────────────────────────────────
 
-function PlayerSprite({ left, top, zIndex }: { left: number; top: number; zIndex: number }) {
+function PlayerSprite({ left, top, zIndex, sprite }: { left: number; top: number; zIndex: number; sprite: string }) {
   return (
     <div style={{
       position: "absolute", left, top,
       transform: "translate(-50%, -60%)",
-      zIndex, imageRendering: "pixelated", pointerEvents: "none",
+      zIndex, pointerEvents: "none",
     }}>
-      <img src="/assets/basecamp/player-down.png" alt="player"
+      <img src={`/assets/basecamp/${sprite}.png`} alt="player"
         style={{ width: "32px", height: "48px", imageRendering: "pixelated", display: "block" }}
         draggable={false} />
     </div>
@@ -674,13 +371,12 @@ function EditPanel({
   onTabChange: (t: EditTab) => void;
 }) {
   const {
-    materials, furnitureInventory, craftFurniture, placedFurniture, getHousingBonuses,
+    materials, furnitureInventory, craftFurniture, placedFurniture,
     wallDecoInventory, craftWallDecoration, wallDecorations,
     wallpaperId, setWallpaper, unlockedWallpapers, craftWallpaper,
     floorTileId, setFloorTile, unlockedFloorTiles, craftFloorTile,
   } = usePlayerStore();
   const [lastCrafted, setLastCrafted] = useState<string | null>(null);
-  const bonuses = getHousingBonuses();
   const counts  = countMaterials(placedFurniture.map((p) => p.furnitureId));
   const inventory = FURNITURE.filter((f) => (furnitureInventory[f.id] ?? 0) > 0);
 
@@ -699,12 +395,6 @@ function EditPanel({
 
   const matHues: Record<FurnitureMaterial, string> = {
     wood: "#fbbf24", iron: "#9ca3af", crystal: "#c084fc", leather: "#fb923c",
-  };
-  const matBg: Record<FurnitureMaterial, string> = {
-    wood: "#92400e", iron: "#374151", crystal: "#4c1d95", leather: "#7c2d12",
-  };
-  const rarityColor: Record<string, string> = {
-    common: "#9ca3af", rare: "#60a5fa", epic: "#c084fc", legendary: "#fbbf24",
   };
 
   const selectedFD = selectedFurnitureId ? getFurniture(selectedFurnitureId) : null;
@@ -1141,18 +831,20 @@ export default function HousingPage() {
 
   const {
     placedFurniture, placeFurniture, moveFurniture, rotateFurniture, removeFurniture, getHousingBonuses,
-    wallpaperId, floorTileId, wallDecorations, placeWallDecoration, removeWallDecoration,
+    removeWallDecoration,
   } = usePlayerStore();
 
-  // ── 레이아웃 ───────────────────────────────────────────────────────────────
+  // ── 레이아웃: housing_bg.png 다이아몬드 영역에 스테이지 정렬 ───────────────
   const [editMode, setEditMode] = useState(false);
-  const availW = containerSize.w;
-  const availH = editMode ? containerSize.h - PANEL_H : containerSize.h;
 
-  // 벽(WALL_H) + 방 바닥(roomSize.height) 전체를 화면에 맞게 중앙 정렬
-  const totalH = WALL_H + roomSize.height; // 160 + 440 = 600
-  const offsetX = (availW - roomSize.width) / 2;
-  const offsetY = (availH - totalH) / 2 + WALL_H + 20;
+  // 실내 방 전체 (벽+바닥) 크기: 가로 880, 세로 (440 + ROOM_WALL_H)
+  const totalStageH = roomSize.height + ROOM_WALL_H;
+  const contentScale = Math.min(
+    containerSize.w / (roomSize.width  + 40),
+    containerSize.h / (totalStageH + 40),
+  );
+  const stageLeft = (containerSize.w - roomSize.width  * contentScale) / 2;
+  const stageTop  = (containerSize.h - totalStageH * contentScale) / 2 + ROOM_WALL_H * contentScale;
 
   useEffect(() => {
     const update = () => setContainerSize({ w: window.innerWidth, h: window.innerHeight });
@@ -1172,12 +864,16 @@ export default function HousingPage() {
     : null;
   const selectedInstRotation: 0 | 90 | 180 | 270 = selectedInst?.rotation ?? 0;
 
-  // ── 플레이어 부드러운 이동 ─────────────────────────────────────────────────
+  // ── 플레이어 이동 + 애니메이션 ────────────────────────────────────────────
   const initPos = { x: PLAYER_INIT_TILE.x + 0.5, y: PLAYER_INIT_TILE.y + 0.5 };
   const [playerTile, setPlayerTile] = useState(initPos);
-  const playerPosRef     = useRef(initPos);
-  const keysRef          = useRef<Set<string>>(new Set());
-  const editModeRef      = useRef(editMode);
+  const [playerSprite, setPlayerSprite] = useState("player-down");
+  const playerPosRef    = useRef(initPos);
+  const keysRef         = useRef<Set<string>>(new Set());
+  const facingRef       = useRef<"up" | "down" | "left" | "right">("down");
+  const walkFrameRef    = useRef<1 | 2>(1);
+  const walkTimerRef    = useRef(0);
+  const editModeRef     = useRef(editMode);
   useEffect(() => { editModeRef.current = editMode; }, [editMode]);
 
   const placedFurnitureRef = useRef(placedFurniture);
@@ -1227,7 +923,27 @@ export default function HousingPage() {
       else if (keys.has("arrowright") || keys.has("d")) vx = 1;
       if (keys.has("arrowup")    || keys.has("w")) vy = -1;
       else if (keys.has("arrowdown")  || keys.has("s")) vy = 1;
-      if (vx !== 0 || vy !== 0) {
+      const isMoving = vx !== 0 || vy !== 0;
+
+      // ── 방향 + 애니메이션 프레임 ──────────────────────────────────────────
+      if (vx < 0) facingRef.current = "left";
+      else if (vx > 0) facingRef.current = "right";
+      if (vy < 0) facingRef.current = "up";
+      else if (vy > 0) facingRef.current = "down";
+
+      if (isMoving) {
+        walkTimerRef.current += dt * 1000;
+        if (walkTimerRef.current >= 160) {
+          walkTimerRef.current = 0;
+          walkFrameRef.current = walkFrameRef.current === 1 ? 2 : 1;
+        }
+        setPlayerSprite(`player-${facingRef.current}-${walkFrameRef.current}`);
+      } else {
+        walkTimerRef.current = 0;
+        setPlayerSprite(`player-${facingRef.current}`);
+      }
+
+      if (isMoving) {
         const len = vx !== 0 && vy !== 0 ? Math.SQRT2 : 1;
         const move = SPEED * dt / len;
         const cur = playerPosRef.current;
@@ -1281,18 +997,6 @@ export default function HousingPage() {
 
   const handleRotate = () => { if (selectedInstanceId) rotateFurniture(selectedInstanceId); };
 
-  // ── 벽 장식 슬롯 클릭 ─────────────────────────────────────────────────────
-  const handleSlotClick = (wall: WallSide, slotIndex: number) => {
-    if (!editMode) return;
-    const existing = wallDecorations.find((d) => d.wall === wall && d.slotIndex === slotIndex);
-    if (selectedDecoId) {
-      placeWallDecoration(wall, slotIndex, selectedDecoId);
-      setSelectedDecoId(null);
-    } else if (existing) {
-      removeWallDecoration(existing.instanceId);
-    }
-  };
-
   const handleRemoveSelectedDeco = (instanceId: string) => {
     removeWallDecoration(instanceId);
   };
@@ -1302,66 +1006,56 @@ export default function HousingPage() {
   const nearExit = playerTile.x >= ROOM_COLS - 1.5;
 
   const bonuses = getHousingBonuses();
-  const floorStyle = getFloorTile(floorTileId);
+  const floorStyle = { normalBg: "transparent", normalOutline: "transparent", hoverBg: "rgba(255,255,255,0.18)", hoverOutline: "transparent" };
 
   return (
     <div
       ref={containerRef}
-      style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}
+      style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative", backgroundColor: "#0a0705" }}
     >
-      {/* ── 아이소메트릭 배경 캔버스 (z:0) ──────────────────────────────── */}
-      <HousingBgCanvas
-        offsetX={offsetX}
-        offsetY={offsetY}
+      {/* ── 실내 방 캔버스 배경 ──────────────────────────────────────────── */}
+      <IndoorRoomBg
         width={containerSize.w}
         height={containerSize.h}
+        stageLeft={stageLeft}
+        stageTop={stageTop}
+        cs={contentScale}
       />
 
-      {/* ── 방 스테이지 (배경 위 z:2) ────────────────────────────────────── */}
+      {/* ── 아이소메트릭 스테이지 (배경 다이아몬드에 정렬) ─────────────────── */}
       <div style={{
-        position: "absolute", left: 0, top: 0,
-        width: containerSize.w,
-        height: containerSize.h,
-        overflow: "hidden",
+        position: "absolute",
+        left: stageLeft,
+        top: stageTop,
+        width: roomSize.width,
+        height: roomSize.height,
+        transform: `scale(${contentScale})`,
+        transformOrigin: "0 0",
         zIndex: 2,
       }}>
-        {/* 바닥 SVG (벽보다 아래 레이어: DOM 순서 앞) */}
-        <FloorSVG
-          offsetX={offsetX} offsetY={offsetY}
+        {/* 편집 모드 그리드 오버레이 */}
+        {editMode && <GridOverlay />}
+
+        {/* 타일 + 가구 + 플레이어 */}
+        <IsoRoomGrid
+          offsetX={0} offsetY={0}
+          editMode={editMode && editTab === "furniture"}
+          hoveredTile={hoveredTile}
+          onTileHover={(x, y) => setHoveredTile({ x, y })}
+          onTileLeave={() => setHoveredTile(null)}
+          onTileClick={handleTileClick}
+          placedFurniture={placedFurniture}
+          selectedInstanceId={selectedInstanceId}
+          selectedFurnitureId={selectedFurnitureId}
+          onFurnitureClick={handleFurnitureClick}
+          playerTile={playerTile}
+          playerSprite={playerSprite}
           floorStyle={floorStyle}
         />
 
-        {/* 벽 SVG */}
-        <WallSVG
-          offsetX={offsetX} offsetY={offsetY}
-          wallpaperId={wallpaperId}
-          wallDecorations={wallDecorations}
-          editMode={editMode && editTab === "walldeco"}
-          selectedDecoId={selectedDecoId}
-          onSlotClick={handleSlotClick}
-        />
-
-        {/* 그리드 + 가구 + 플레이어 */}
-        <div style={{ position: "absolute", inset: 0 }}>
-          <IsoRoomGrid
-            offsetX={offsetX} offsetY={offsetY}
-            editMode={editMode && editTab === "furniture"}
-            hoveredTile={hoveredTile}
-            onTileHover={(x, y) => setHoveredTile({ x, y })}
-            onTileLeave={() => setHoveredTile(null)}
-            onTileClick={handleTileClick}
-            placedFurniture={placedFurniture}
-            selectedInstanceId={selectedInstanceId}
-            selectedFurnitureId={selectedFurnitureId}
-            onFurnitureClick={handleFurnitureClick}
-            playerTile={playerTile}
-            floorStyle={floorStyle}
-          />
-        </div>
-
         {/* 문 오버레이 */}
-        <DoorOverlay tile={FARM_DOOR_TILE} offsetX={offsetX} offsetY={offsetY} label="🌾 농장" color="#4caf50" nearPlayer={nearFarm} />
-        <DoorOverlay tile={EXIT_DOOR_TILE} offsetX={offsetX} offsetY={offsetY} label="🌲 바깥" color="#4fc3f7" nearPlayer={nearExit} />
+        <DoorOverlay tile={FARM_DOOR_TILE} offsetX={0} offsetY={0} label="🌾 농장" color="#4caf50" nearPlayer={nearFarm} />
+        <DoorOverlay tile={EXIT_DOOR_TILE} offsetX={0} offsetY={0} label="🌲 바깥" color="#4fc3f7" nearPlayer={nearExit} />
       </div>
 
       {/* ── 상단 HUD ─────────────────────────────────────────────────────── */}

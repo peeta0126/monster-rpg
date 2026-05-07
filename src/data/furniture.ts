@@ -50,12 +50,13 @@ export interface Furniture {
 // ─── 가구 데이터 ──────────────────────────────────────────────────────────────
 
 export const FURNITURE: Furniture[] = [
-  // ── 나무(Wood) 4종 ──────────────────────────────────────────────────────────
+
+  // ── 나무(Wood) 4종 — 아늑한 나무 가구 세트 ────────────────────────────────────
   {
     id: "wooden_bed",
     name: "나무 침대",
     emoji: "🛏️",
-    description: "튼튼한 나무 침대. 나무 세트의 시작.",
+    description: "따뜻한 나무 프레임의 침대. 푹신한 매트리스로 피로가 빠르게 회복된다.",
     material: "wood",
     rarity: "common",
     color: 0x8b5e3c,
@@ -75,7 +76,7 @@ export const FURNITURE: Furniture[] = [
     id: "wooden_desk",
     name: "나무 책상",
     emoji: "📖",
-    description: "전략을 세우는 나무 책상. 나무 세트 2종.",
+    description: "넓은 나무 책상. 지도와 전략서를 펼쳐두기 좋다.",
     material: "wood",
     rarity: "common",
     color: 0x6b4226,
@@ -92,14 +93,14 @@ export const FURNITURE: Furniture[] = [
   },
   {
     id: "wooden_dummy",
-    name: "나무 훈련 인형",
-    emoji: "🪆",
-    description: "나무로 만든 훈련 인형. 나무 세트 3종 달성.",
+    name: "나무 의자",
+    emoji: "🪑",
+    description: "손으로 깎아 만든 나무 의자. 책상 옆에 두면 잘 어울린다.",
     material: "wood",
     rarity: "rare",
     color: 0xbc8a4e,
-    recipe: { wood_plank: 4, root: 1 },
-    maxInRoom: 1,
+    recipe: { wood_plank: 2, leather: 1 },
+    maxInRoom: 3,
     size: { width: 1, height: 1 },
     visual: {
       asset: "/assets/housing/wooden_chair.png",
@@ -112,13 +113,13 @@ export const FURNITURE: Furniture[] = [
   },
   {
     id: "ancient_altar",
-    name: "고대 나무 제단",
-    emoji: "🌿",
-    description: "자연의 기운이 깃든 제단. 나무 풀세트 달성.",
+    name: "나무 식탁",
+    emoji: "🍽️",
+    description: "넉넉한 원목 식탁. 나무 세트를 완성해 집의 분위기를 높인다.",
     material: "wood",
     rarity: "epic",
-    color: 0x2e7d32,
-    recipe: { wood_plank: 6, crystal: 1 },
+    color: 0x7a4e28,
+    recipe: { wood_plank: 5, leather: 1 },
     maxInRoom: 1,
     size: { width: 2, height: 2 },
     visual: {
@@ -131,17 +132,17 @@ export const FURNITURE: Furniture[] = [
     },
   },
 
-  // ── 철(Iron) 3종 ────────────────────────────────────────────────────────────
+  // ── 철(Iron) 3종 — 철제 인테리어 세트 ────────────────────────────────────────
   {
     id: "iron_stand",
-    name: "철제 거치대",
-    emoji: "⚔️",
-    description: "무기를 걸어두는 철제 거치대. 철 세트의 시작.",
+    name: "철제 스탠드 조명",
+    emoji: "💡",
+    description: "우아한 철제 플로어 램프. 방 안을 포근하게 밝혀 준다.",
     material: "iron",
     rarity: "common",
     color: 0x546e7a,
     recipe: { iron_fragment: 2 },
-    maxInRoom: 1,
+    maxInRoom: 3,
     size: { width: 1, height: 1 },
     visual: {
       asset: "/assets/housing/floor_lamp.png",
@@ -154,19 +155,19 @@ export const FURNITURE: Furniture[] = [
   },
   {
     id: "iron_trainer",
-    name: "철제 훈련 장비",
-    emoji: "🏋️",
-    description: "몸을 단련하는 철제 기구. 철 세트 2종.",
+    name: "철제 책장",
+    emoji: "📚",
+    description: "튼튼한 철제 프레임의 책장. 전략서와 모험 일지가 빼곡히 꽂혀 있다.",
     material: "iron",
     rarity: "rare",
     color: 0x37474f,
-    recipe: { iron_fragment: 3, leather: 1 },
-    maxInRoom: 1,
-    size: { width: 2, height: 2 },
+    recipe: { iron_fragment: 3, wood_plank: 1 },
+    maxInRoom: 2,
+    size: { width: 1, height: 2 },
     visual: {
       asset: "/assets/housing/floor_lamp.png",
-      width: 150,
-      height: 130,
+      width: 120,
+      height: 160,
       offsetX: 0,
       offsetY: 0,
       rotatedAsset: "/assets/housing/floor_lamp1.png",
@@ -174,36 +175,36 @@ export const FURNITURE: Furniture[] = [
   },
   {
     id: "magic_forge",
-    name: "마법 용광로",
+    name: "마법 벽난로",
     emoji: "🔥",
-    description: "마법이 깃든 용광로. 철 풀세트 달성.",
+    description: "마법 불꽃이 타오르는 벽난로. 철 풀세트의 중심. 방 전체를 따뜻하게 한다.",
     material: "iron",
     rarity: "legendary",
     color: 0xbf360c,
     recipe: { iron_fragment: 5, crystal: 2 },
     maxInRoom: 1,
-    size: { width: 2, height: 2 },
+    size: { width: 2, height: 1 },
     visual: {
       asset: "/assets/housing/wooden_table.png",
-      width: 150,
-      height: 150,
+      width: 160,
+      height: 140,
       offsetX: 0,
       offsetY: 0,
       rotatedAsset: "/assets/housing/wooden_table1.png",
     },
   },
 
-  // ── 수정(Crystal) 2종 ───────────────────────────────────────────────────────
+  // ── 수정(Crystal) 2종 — 마법 인테리어 세트 ────────────────────────────────────
   {
     id: "crystal_display",
-    name: "수정 진열대",
+    name: "수정 장식장",
     emoji: "💎",
-    description: "빛나는 수정을 전시한다. 수정 세트 발동.",
+    description: "수정으로 장식된 유리 장식장. 희귀 아이템을 전시하기 좋다.",
     material: "crystal",
     rarity: "epic",
     color: 0x6a1b9a,
-    recipe: { crystal: 3, iron_fragment: 1 },
-    maxInRoom: 1,
+    recipe: { crystal: 3, wood_plank: 2 },
+    maxInRoom: 2,
     size: { width: 2, height: 1 },
     visual: {
       asset: "/assets/housing/wooden_cabinet.png",
@@ -216,14 +217,14 @@ export const FURNITURE: Furniture[] = [
   },
   {
     id: "ancient_orb",
-    name: "고대 수정 구슬",
-    emoji: "🔮",
-    description: "고대의 힘이 담긴 수정 구슬. 수정 풀세트.",
+    name: "마법 화분",
+    emoji: "🪴",
+    description: "수정 조각이 박힌 신비로운 화분. 수정 풀세트 완성. 이상한 식물이 자라고 있다.",
     material: "crystal",
     rarity: "legendary",
     color: 0x4a148c,
-    recipe: { crystal: 5, wood_plank: 2 },
-    maxInRoom: 1,
+    recipe: { crystal: 4, herb: 3 },
+    maxInRoom: 2,
     size: { width: 1, height: 1 },
     visual: {
       asset: "/assets/housing/potted_plant.png",
@@ -235,17 +236,17 @@ export const FURNITURE: Furniture[] = [
     },
   },
 
-  // ── 가죽(Leather) 1종 ───────────────────────────────────────────────────────
+  // ── 가죽(Leather) 1종 — 편안한 가죽 세트 ──────────────────────────────────────
   {
     id: "leather_mat",
-    name: "가죽 수련 매트",
+    name: "가죽 러그",
     emoji: "🟫",
-    description: "부드러운 가죽 매트. 물약과 경험치 효율 상승.",
+    description: "부드러운 짐승 가죽으로 만든 장식 러그. 맨발로 밟으면 아늑하다.",
     material: "leather",
     rarity: "rare",
     color: 0x6d4c1f,
-    recipe: { leather: 4, herb: 2 },
-    maxInRoom: 1,
+    recipe: { leather: 4, herb: 1 },
+    maxInRoom: 2,
     size: { width: 3, height: 2 },
     visual: {
       asset: "/assets/housing/decorative_rug.png",
@@ -268,20 +269,20 @@ export interface MaterialSetTier {
 
 export const MATERIAL_SET_TIERS: Record<FurnitureMaterial, MaterialSetTier[]> = {
   wood: [
-    { count: 2, name: "나무 2종 세트",   description: "풀타입 기술 위력 +10%" },
-    { count: 3, name: "나무 3종 세트",   description: "풀타입 기술 위력 +20%" },
-    { count: 4, name: "나무 풀세트 ✨", description: "풀타입 기술 위력 +20% + 최대 HP +10%" },
+    { count: 2, name: "나무 2종 세트",   description: "경험치 획득 +10%" },
+    { count: 3, name: "나무 3종 세트",   description: "경험치 획득 +15% + 최대 HP +5%" },
+    { count: 4, name: "나무 풀세트 ✨", description: "경험치 획득 +20% + 최대 HP +10% + 물약 회복 +10%" },
   ],
   iron: [
     { count: 2, name: "철 2종 세트",   description: "공격력 +10%" },
     { count: 3, name: "철 풀세트 ✨", description: "공격력 +10% + 방어력 +10%" },
   ],
   crystal: [
-    { count: 1, name: "수정 1종 세트",   description: "탑 드랍 +15%" },
-    { count: 2, name: "수정 풀세트 ✨", description: "탑 드랍 +30% + 포획률 +15%" },
+    { count: 1, name: "수정 1종 세트",   description: "탑 드랍 +15% + 포획률 +10%" },
+    { count: 2, name: "수정 풀세트 ✨", description: "탑 드랍 +30% + 포획률 +20%" },
   ],
   leather: [
-    { count: 1, name: "가죽 세트",   description: "물약 회복 +15% + 경험치 획득 +10%" },
+    { count: 1, name: "가죽 세트",   description: "물약 회복 +20% + 경험치 획득 +10%" },
   ],
 };
 
