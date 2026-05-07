@@ -645,16 +645,22 @@ function PlayerSprite({ left, top, zIndex }: { left: number; top: number; zIndex
   );
 }
 
-// ─── 편집 패널 ────────────────────────────────────────────────────────────────
+// ─── 편집 패널 (Tiny Farm 스타일 하단 슬라이드) ──────────────────────────────
+
+export const PANEL_H = 272; // 외부에서 레이아웃 계산용
 
 type EditTab = "furniture" | "walldeco" | "wallpaper" | "floortile";
 
 function EditPanel({
+  open,
+  onClose,
   selectedFurnitureId, onSelectFurniture,
   selectedInstanceId, selectedInstanceRotation, onRemoveFurniture, onRotate,
   selectedDecoId, onSelectDeco, onRemoveSelectedDeco,
   tab, onTabChange,
 }: {
+  open: boolean;
+  onClose: () => void;
   selectedFurnitureId: string | null;
   onSelectFurniture: (id: string | null) => void;
   selectedInstanceId: string | null;
@@ -716,63 +722,71 @@ function EditPanel({
 
   return (
     <div style={{
-      position: "fixed", right: 0, top: 0, bottom: 0, width: 300,
-      background: "linear-gradient(180deg, #100a04 0%, #150d07 100%)",
-      borderLeft: "1px solid #3a2510",
-      display: "flex", flexDirection: "column", zIndex: 50,
-      boxShadow: "-4px 0 20px rgba(0,0,0,0.6)",
+      position: "fixed", bottom: 0, left: 0, right: 0, height: PANEL_H,
+      background: "linear-gradient(180deg, #0e0804 0%, #150d07 100%)",
+      borderTop: "2px solid #3a2510",
+      display: "flex", flexDirection: "column", zIndex: 500,
+      boxShadow: "0 -6px 32px rgba(0,0,0,0.7)",
+      transform: open ? "translateY(0)" : "translateY(100%)",
+      transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
     }}>
-      {/* 헤더 + 탭 */}
-      <div style={{ padding: "12px 14px 0", borderBottom: "1px solid #2a1a0a", flexShrink: 0 }}>
-        <div style={{ color: "#fbbf24", fontSize: 13, fontWeight: "bold", marginBottom: 10 }}>
-          ✏️ 방 꾸미기
-        </div>
-        <div style={{ display: "flex", gap: 1 }}>
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => onTabChange(t.id)} style={{
-              flex: 1, padding: "7px 2px", fontSize: 9.5, fontWeight: "bold",
-              color: tab === t.id ? "#fbbf24" : "#555",
-              background: tab === t.id ? "rgba(251,191,36,0.1)" : "none",
-              border: "none", borderBottom: `2px solid ${tab === t.id ? "#fbbf24" : "transparent"}`,
-              cursor: "pointer", borderRadius: "4px 4px 0 0", transition: "all 0.15s",
-            }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+
+      {/* ── 탭 헤더 행 ── */}
+      <div style={{
+        display: "flex", alignItems: "stretch", height: 40,
+        borderBottom: "1px solid #2a1a0a", flexShrink: 0,
+      }}>
+        {tabs.map((t) => (
+          <button key={t.id} onClick={() => onTabChange(t.id)} style={{
+            flex: 1, padding: "0 4px", fontSize: 10, fontWeight: "bold",
+            color: tab === t.id ? "#fbbf24" : "#555",
+            background: tab === t.id ? "rgba(251,191,36,0.08)" : "none",
+            border: "none", borderBottom: `2px solid ${tab === t.id ? "#fbbf24" : "transparent"}`,
+            cursor: "pointer", transition: "all 0.15s",
+          }}>
+            {t.label}
+          </button>
+        ))}
+        <button
+          onClick={onClose}
+          style={{
+            padding: "0 16px", fontSize: 11, fontWeight: "bold",
+            color: "#fbbf24", background: "rgba(251,191,36,0.1)",
+            border: "none", borderLeft: "1px solid #3a2510", cursor: "pointer",
+          }}
+        >
+          ✓ 완료
+        </button>
       </div>
 
-      {/* 선택 상태 표시 */}
+      {/* ── 선택 상태 액션 바 (가구/벽장식 선택 시) ── */}
       {tab === "furniture" && (selectedFD || selectedInstanceId) && (
         <div style={{
-          padding: "8px 12px", borderBottom: "1px solid #2a1a0a",
-          background: "rgba(251,191,36,0.06)", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 8, height: 36, flexShrink: 0,
+          padding: "0 12px", borderBottom: "1px solid #2a1a0a",
+          background: "rgba(251,191,36,0.06)",
         }}>
           {selectedFD && !selectedInstanceId && (
-            <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>
-              <span style={{ fontSize: 16, marginRight: 6 }}>{selectedFD.emoji}</span>
-              <strong>{selectedFD.name}</strong> 선택됨
-            </div>
+            <>
+              <span style={{ fontSize: 16 }}>{selectedFD.emoji}</span>
+              <span style={{ color: "#fbbf24", fontSize: 11, fontWeight: "bold", flex: 1 }}>
+                {selectedFD.name} 배치 중 — 타일 클릭
+              </span>
+              <button onClick={() => onSelectFurniture(null)} style={actionBtn("#9ca3af")}>✕ 취소</button>
+            </>
           )}
           {selectedInstanceId && instFD && (
-            <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>
-              <span style={{ fontSize: 16, marginRight: 6 }}>{instFD.emoji}</span>
-              <strong>{instFD.name}</strong>
-              <span style={{ fontSize: 10, color: "#888", marginLeft: 6 }}>회전: {selectedInstanceRotation}°</span>
-              {instRotSize && <span style={{ fontSize: 10, color: "#888", marginLeft: 6 }}>{instRotSize.width}×{instRotSize.height}</span>}
-            </div>
+            <>
+              <span style={{ fontSize: 16 }}>{instFD.emoji}</span>
+              <span style={{ color: "#fbbf24", fontSize: 11, fontWeight: "bold", flex: 1 }}>
+                {instFD.name}
+                <span style={{ color: "#888", fontSize: 10, marginLeft: 6 }}>{selectedInstanceRotation}°</span>
+                {instRotSize && <span style={{ color: "#888", fontSize: 10, marginLeft: 4 }}>{instRotSize.width}×{instRotSize.height}</span>}
+              </span>
+              <button onClick={onRotate}          style={actionBtn("#60a5fa")}>↻ 회전</button>
+              <button onClick={onRemoveFurniture} style={actionBtn("#f87171")}>↩ 회수</button>
+            </>
           )}
-          <div style={{ display: "flex", gap: 6 }}>
-            {selectedFD && !selectedInstanceId && (
-              <button onClick={() => onSelectFurniture(null)} style={actionBtn("#9ca3af")}>취소 (ESC)</button>
-            )}
-            {selectedInstanceId && (
-              <>
-                <button onClick={onRotate}         style={actionBtn("#60a5fa")}>↻ 회전</button>
-                <button onClick={onRemoveFurniture} style={actionBtn("#f87171")}>↩ 회수</button>
-              </>
-            )}
-          </div>
         </div>
       )}
 
@@ -797,376 +811,277 @@ function EditPanel({
         </div>
       )}
 
-      {/* 탭 컨텐츠 */}
-      <div style={{ flex: 1, overflowY: "auto", padding: 12 }}>
+      {/* 탭 컨텐츠 — 가로 스크롤 카드 */}
+      <div style={{ flex: 1, display: "flex", overflowX: "auto", overflowY: "hidden", padding: "6px 10px", gap: 6, alignItems: "stretch" }}>
 
-        {/* 가구 탭 */}
-        {tab === "furniture" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {/* 보유 가구 */}
-            <div style={{ color: "#666", fontSize: 9, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>보유 가구</div>
-            {inventory.length === 0 ? (
-              <div style={{ textAlign: "center", color: "#444", fontSize: 12, padding: "20px 0" }}>
-                <div style={{ fontSize: 28, marginBottom: 6 }}>🪑</div>
-                <p>보유 가구 없음</p>
-              </div>
-            ) : inventory.map((f) => {
-              const rSz = getRotatedSize(f.size, 0);
-              const isSelected = selectedFurnitureId === f.id;
-              return (
-                <button key={f.id} onClick={() => onSelectFurniture(isSelected ? null : f.id)} style={{
-                  display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 8,
-                  border: `1px solid ${isSelected ? "#fbbf24" : "#2a1a0a"}`,
-                  background: isSelected ? "rgba(251,191,36,0.1)" : "rgba(255,255,255,0.02)",
-                  cursor: "pointer", textAlign: "left", transition: "all 0.15s",
-                }}>
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>{f.emoji}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                      <span style={{ color: "#e5e5e5", fontSize: 11, fontWeight: "bold" }}>{f.name}</span>
-                      <span style={{ fontSize: 8, padding: "1px 4px", borderRadius: 3, background: "rgba(0,0,0,0.4)", color: RARITY_COLOR[f.rarity] }}>{RARITY_LABEL[f.rarity]}</span>
-                    </div>
-                    <div style={{ color: "#666", fontSize: 9, marginTop: 2 }}>{MATERIAL_LABEL[f.material]} · {rSz.width}×{rSz.height}칸</div>
-                  </div>
-                  <span style={{ fontSize: 11, color: "#fbbf24", fontWeight: "bold", fontFamily: "monospace" }}>×{furnitureInventory[f.id] ?? 0}</span>
-                </button>
-              );
-            })}
+        {/* ══ 가구 탭 ══════════════════════════════════════════════════════════ */}
+        {tab === "furniture" && (<>
+          {/* 보유 가구 */}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>보유</div>
+          {inventory.length === 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 64, flexShrink: 0, color: "#444" }}>
+              <div style={{ fontSize: 24 }}>🪑</div><div style={{ fontSize: 8, marginTop: 4 }}>없음</div>
+            </div>
+          ) : inventory.map((f) => {
+            const isSelected = selectedFurnitureId === f.id;
+            return (
+              <button key={f.id} onClick={() => onSelectFurniture(isSelected ? null : f.id)} style={{
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                width: 72, flexShrink: 0, padding: "8px 4px", gap: 4, borderRadius: 8, cursor: "pointer",
+                border: `2px solid ${isSelected ? "#fbbf24" : "#2a1a0a"}`,
+                background: isSelected ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.02)",
+                transition: "all 0.15s",
+              }}>
+                <span style={{ fontSize: 26 }}>{f.emoji}</span>
+                <span style={{ fontSize: 9, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{f.name}</span>
+                <span style={{ fontSize: 11, color: "#fbbf24", fontWeight: "bold" }}>×{furnitureInventory[f.id] ?? 0}</span>
+              </button>
+            );
+          })}
 
-            {/* 가구 제작 */}
-            <div style={{ color: "#666", fontSize: 9, textTransform: "uppercase", letterSpacing: 1, marginTop: 12, marginBottom: 4 }}>가구 제작</div>
-            {(["wood", "iron", "crystal", "leather"] as FurnitureMaterial[]).map((mat) => (
-              <div key={mat} style={{ marginBottom: 8 }}>
-                <div style={{ marginBottom: 4 }}>
-                  <span style={{ fontSize: 9, fontWeight: "bold", padding: "2px 7px", borderRadius: 4, background: matBg[mat], color: "#fff" }}>{MATERIAL_LABEL[mat]}</span>
+          <div style={{ width: 1, background: "#2a1a0a", flexShrink: 0, margin: "0 4px" }} />
+
+          {/* 가구 제작 */}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>제작</div>
+          {FURNITURE.map((f) => {
+            const canCraft = Object.entries(f.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
+            const crafted = lastCrafted === f.id;
+            return (
+              <div key={f.id} style={{
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
+                width: 82, flexShrink: 0, padding: "8px 5px", gap: 3, borderRadius: 8,
+                border: `1px solid ${crafted ? "#34d399" : canCraft ? "#d97706" : "#2a1a0a"}`,
+                background: crafted ? "rgba(52,211,153,0.07)" : canCraft ? "rgba(217,119,6,0.05)" : "rgba(255,255,255,0.01)",
+              }}>
+                <span style={{ fontSize: 22 }}>{f.emoji}</span>
+                <span style={{ fontSize: 8, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{f.name}</span>
+                {(furnitureInventory[f.id] ?? 0) > 0 && (
+                  <span style={{ fontSize: 7, color: "#fbbf24" }}>보유×{furnitureInventory[f.id]}</span>
+                )}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center" }}>
+                  {Object.entries(f.recipe).slice(0, 2).map(([mid, need]) => {
+                    const have = materials[mid] ?? 0; const ok = have >= need;
+                    const m = getMaterial(mid);
+                    return (
+                      <span key={mid} style={{ fontSize: 7, padding: "1px 3px", borderRadius: 6, border: `1px solid ${ok ? "#333" : "#7f1d1d"}`, color: ok ? "#999" : "#f87171", fontFamily: "monospace" }}>
+                        {m?.emoji}{have}/{need}
+                      </span>
+                    );
+                  })}
                 </div>
-                {FURNITURE.filter((f) => f.material === mat).map((f) => {
-                  const canCraft = Object.entries(f.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
-                  const crafted = lastCrafted === f.id;
-                  return (
-                    <div key={f.id} style={{
-                      padding: 8, borderRadius: 8, marginBottom: 4,
-                      border: `1px solid ${crafted ? "#34d399" : "#2a1a0a"}`,
-                      background: crafted ? "rgba(52,211,153,0.07)" : "rgba(255,255,255,0.02)",
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                        <span style={{ fontSize: 16 }}>{f.emoji}</span>
-                        <span style={{ color: "#e5e5e5", fontSize: 11, fontWeight: "bold", flex: 1 }}>{f.name}</span>
-                        {(furnitureInventory[f.id] ?? 0) > 0 && (
-                          <span style={{ fontSize: 9, color: "#fbbf24" }}>보유×{furnitureInventory[f.id]}</span>
-                        )}
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 5 }}>
-                        {Object.entries(f.recipe).map(([mid, need]) => {
-                          const have = materials[mid] ?? 0; const ok = have >= need;
-                          const m = getMaterial(mid);
-                          return (
-                            <span key={mid} style={{
-                              fontSize: 9, padding: "2px 6px", borderRadius: 10,
-                              border: `1px solid ${ok ? "#444" : "#7f1d1d"}`,
-                              color: ok ? "#ccc" : "#f87171", fontFamily: "monospace",
-                            }}>{m?.emoji} {m?.name ?? mid} {have}/{need}</span>
-                          );
-                        })}
-                      </div>
-                      <button onClick={() => handleCraft(f.id)} disabled={!canCraft} style={{
-                        padding: "4px 12px", borderRadius: 6, fontSize: 10, fontWeight: "bold", border: "1px solid",
-                        borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
-                        background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
-                        color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
-                        cursor: canCraft ? "pointer" : "not-allowed",
-                      }}>{crafted ? "완성! ✓" : "제작"}</button>
-                    </div>
-                  );
-                })}
+                <button onClick={() => handleCraft(f.id)} disabled={!canCraft} style={{
+                  padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid",
+                  borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
+                  background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
+                  color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
+                  cursor: canCraft ? "pointer" : "not-allowed",
+                }}>{crafted ? "완성! ✓" : "제작"}</button>
               </div>
-            ))}
+            );
+          })}
 
-            {/* 세트 효과 */}
-            <div style={{ color: "#666", fontSize: 9, textTransform: "uppercase", letterSpacing: 1, marginTop: 12, marginBottom: 4 }}>세트 효과</div>
-            {bonuses.activeSets.length > 0 && (
-              <div style={{ padding: 10, borderRadius: 8, border: "1px solid rgba(52,211,153,0.3)", background: "rgba(52,211,153,0.06)", marginBottom: 8 }}>
-                {bonuses.grassTypePower > 0    && <p style={{ color: "#86efac", fontSize: 11 }}>🌿 풀타입 +{bonuses.grassTypePower}%</p>}
-                {bonuses.hpPercent > 0          && <p style={{ color: "#6ee7b7", fontSize: 11 }}>❤️ HP +{bonuses.hpPercent}%</p>}
-                {bonuses.attackPercent > 0      && <p style={{ color: "#fca5a5", fontSize: 11 }}>⚔️ 공격 +{bonuses.attackPercent}%</p>}
-                {bonuses.defensePercent > 0     && <p style={{ color: "#93c5fd", fontSize: 11 }}>🛡️ 방어 +{bonuses.defensePercent}%</p>}
-                {bonuses.towerDropBonus > 0     && <p style={{ color: "#67e8f9", fontSize: 11 }}>🗼 드랍 +{bonuses.towerDropBonus}%</p>}
-                {bonuses.catchRateBonus > 0     && <p style={{ color: "#fde047", fontSize: 11 }}>🎯 포획 +{bonuses.catchRateBonus}%</p>}
-                {bonuses.potionBonusPercent > 0 && <p style={{ color: "#f9a8d4", fontSize: 11 }}>🧪 물약 +{bonuses.potionBonusPercent}%</p>}
-                {bonuses.expBonusPercent > 0    && <p style={{ color: "#c4b5fd", fontSize: 11 }}>✨ 경험치 +{bonuses.expBonusPercent}%</p>}
-              </div>
-            )}
-            {(["wood", "iron", "crystal", "leather"] as FurnitureMaterial[]).map((mat) => {
-              const tiers = MATERIAL_SET_TIERS[mat]; const cur = counts[mat]; const max = tiers[tiers.length - 1].count;
-              return (
-                <div key={mat} style={{
-                  padding: 8, borderRadius: 8, marginBottom: 4,
-                  border: `1px solid ${cur > 0 ? matHues[mat] + "44" : "#2a1a0a"}`,
-                  background: cur > 0 ? `${matHues[mat]}08` : "rgba(255,255,255,0.01)",
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, fontWeight: "bold", color: matHues[mat] }}>{MATERIAL_LABEL[mat]}</span>
-                    <span style={{ fontSize: 9, color: "#777", fontFamily: "monospace" }}>{cur}/{max}종</span>
-                  </div>
-                  <div style={{ height: 3, borderRadius: 2, background: "#1a0e06", marginBottom: 5 }}>
-                    <div style={{ height: 3, borderRadius: 2, background: matHues[mat], width: `${Math.min(100, (cur / max) * 100)}%`, transition: "width 0.3s" }} />
-                  </div>
-                  {tiers.map((tier) => (
-                    <div key={tier.count} style={{
-                      display: "flex", alignItems: "center", gap: 4, padding: "2px 4px",
-                      borderRadius: 4, marginBottom: 1,
-                      background: cur >= tier.count ? `${matHues[mat]}18` : "transparent",
-                      opacity: cur >= tier.count ? 1 : 0.35,
-                    }}>
-                      <span style={{ fontSize: 9 }}>{cur >= tier.count ? "✅" : `${tier.count}종`}</span>
-                      <span style={{ fontSize: 9, color: cur >= tier.count ? matHues[mat] : "#777", fontWeight: "bold" }}>{tier.name}</span>
-                      <span style={{ fontSize: 8, color: "#666", marginLeft: "auto" }}>{tier.description}</span>
-                    </div>
-                  ))}
+          <div style={{ width: 1, background: "#2a1a0a", flexShrink: 0, margin: "0 4px" }} />
+
+          {/* 세트 효과 */}
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>세트</div>
+          {(["wood", "iron", "crystal", "leather"] as FurnitureMaterial[]).map((mat) => {
+            const tiers = MATERIAL_SET_TIERS[mat]; const cur = counts[mat]; const max = tiers[tiers.length - 1].count;
+            return (
+              <div key={mat} style={{
+                display: "flex", flexDirection: "column", alignItems: "center",
+                width: 84, flexShrink: 0, padding: "8px 6px", gap: 4, borderRadius: 8,
+                border: `1px solid ${cur > 0 ? matHues[mat] + "44" : "#2a1a0a"}`,
+                background: cur > 0 ? `${matHues[mat]}08` : "rgba(255,255,255,0.01)",
+              }}>
+                <span style={{ fontSize: 10, fontWeight: "bold", color: matHues[mat] }}>{MATERIAL_LABEL[mat]}</span>
+                <div style={{ width: "100%", height: 3, borderRadius: 2, background: "#1a0e06" }}>
+                  <div style={{ height: 3, borderRadius: 2, background: matHues[mat], width: `${Math.min(100, (cur / max) * 100)}%`, transition: "width 0.3s" }} />
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 벽 장식 탭 */}
-        {tab === "walldeco" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <div style={{ color: "#666", fontSize: 9, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>보유 벽 장식</div>
-            {WALL_DECORATIONS.filter((d) => (wallDecoInventory[d.id] ?? 0) > 0).length === 0 ? (
-              <div style={{ textAlign: "center", color: "#444", fontSize: 12, padding: "20px 0" }}>
-                <div style={{ fontSize: 28, marginBottom: 6 }}>🖼️</div>
-                <p>보유 장식 없음</p>
-              </div>
-            ) : (
-              WALL_DECORATIONS.filter((d) => (wallDecoInventory[d.id] ?? 0) > 0).map((d) => {
-                const isSelected = selectedDecoId === d.id;
-                return (
-                  <button key={d.id} onClick={() => onSelectDeco(isSelected ? null : d.id)} style={{
-                    display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 8,
-                    border: `1px solid ${isSelected ? "#fbbf24" : "#2a1a0a"}`,
-                    background: isSelected ? "rgba(251,191,36,0.1)" : "rgba(255,255,255,0.02)",
-                    cursor: "pointer", textAlign: "left", transition: "all 0.15s",
-                  }}>
-                    <span style={{ fontSize: 20 }}>{d.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                        <span style={{ color: "#e5e5e5", fontSize: 11, fontWeight: "bold" }}>{d.name}</span>
-                        <span style={{ fontSize: 8, color: rarityColor[d.rarity] }}>{d.rarity}</span>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 11, color: "#fbbf24", fontWeight: "bold", fontFamily: "monospace" }}>×{wallDecoInventory[d.id] ?? 0}</span>
-                  </button>
-                );
-              })
-            )}
-
-            {/* 배치된 벽 장식 목록 */}
-            {wallDecorations.length > 0 && (
-              <>
-                <div style={{ color: "#666", fontSize: 9, textTransform: "uppercase", letterSpacing: 1, marginTop: 12, marginBottom: 4 }}>배치됨</div>
-                {wallDecorations.map((d) => {
-                  const wd = getWallDecoration(d.decorId);
-                  return wd ? (
-                    <div key={d.instanceId} style={{
-                      display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 8,
-                      border: "1px solid #2a1a0a", background: "rgba(255,255,255,0.02)",
-                    }}>
-                      <span style={{ fontSize: 18 }}>{wd.emoji}</span>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ color: "#ccc", fontSize: 11 }}>{wd.name}</span>
-                        <div style={{ color: "#666", fontSize: 9, marginTop: 1 }}>{d.wall === "left" ? "왼쪽 벽" : "오른쪽 벽"} · {d.slotIndex + 1}번 슬롯</div>
-                      </div>
-                      <button onClick={() => onRemoveSelectedDeco(d.instanceId)} style={{ padding: "3px 8px", borderRadius: 5, fontSize: 9, border: "1px solid #f8717155", background: "rgba(248,113,113,0.1)", color: "#f87171", cursor: "pointer" }}>↩</button>
-                    </div>
-                  ) : null;
-                })}
-              </>
-            )}
-
-            <div style={{ color: "#666", fontSize: 9, textTransform: "uppercase", letterSpacing: 1, marginTop: 12, marginBottom: 4 }}>벽 장식 제작</div>
-            {WALL_DECORATIONS.map((d) => {
-              const canCraft = Object.entries(d.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
-              const crafted = lastCrafted === d.id;
-              return (
-                <div key={d.id} style={{
-                  padding: 8, borderRadius: 8, marginBottom: 4,
-                  border: `1px solid ${crafted ? "#34d399" : "#2a1a0a"}`,
-                  background: crafted ? "rgba(52,211,153,0.07)" : "rgba(255,255,255,0.02)",
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                    <span style={{ fontSize: 18 }}>{d.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <span style={{ color: "#e5e5e5", fontSize: 11, fontWeight: "bold" }}>{d.name}</span>
-                      <span style={{ fontSize: 8, color: rarityColor[d.rarity], marginLeft: 5 }}>{d.rarity}</span>
-                    </div>
-                    {(wallDecoInventory[d.id] ?? 0) > 0 && (
-                      <span style={{ fontSize: 9, color: "#fbbf24" }}>×{wallDecoInventory[d.id]}</span>
-                    )}
+                <span style={{ fontSize: 8, color: "#777", fontFamily: "monospace" }}>{cur}/{max}종</span>
+                {tiers.map((tier) => (
+                  <div key={tier.count} style={{ fontSize: 7, color: cur >= tier.count ? matHues[mat] : "#555", opacity: cur >= tier.count ? 1 : 0.5, textAlign: "center", lineHeight: 1.3 }}>
+                    {cur >= tier.count ? "✅" : `${tier.count}종`} {tier.name}
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 5 }}>
-                    {Object.entries(d.recipe).map(([mid, need]) => {
+                ))}
+              </div>
+            );
+          })}
+        </>)}
+
+        {/* ══ 벽 장식 탭 ════════════════════════════════════════════════════════ */}
+        {tab === "walldeco" && (<>
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>보유</div>
+          {WALL_DECORATIONS.filter((d) => (wallDecoInventory[d.id] ?? 0) > 0).length === 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 64, flexShrink: 0, color: "#444" }}>
+              <div style={{ fontSize: 24 }}>🖼️</div><div style={{ fontSize: 8, marginTop: 4 }}>없음</div>
+            </div>
+          ) : WALL_DECORATIONS.filter((d) => (wallDecoInventory[d.id] ?? 0) > 0).map((d) => {
+            const isSelected = selectedDecoId === d.id;
+            return (
+              <button key={d.id} onClick={() => onSelectDeco(isSelected ? null : d.id)} style={{
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                width: 72, flexShrink: 0, padding: "8px 4px", gap: 4, borderRadius: 8, cursor: "pointer",
+                border: `2px solid ${isSelected ? "#fbbf24" : "#2a1a0a"}`,
+                background: isSelected ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.02)",
+                transition: "all 0.15s",
+              }}>
+                <span style={{ fontSize: 26 }}>{d.emoji}</span>
+                <span style={{ fontSize: 9, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{d.name}</span>
+                <span style={{ fontSize: 11, color: "#fbbf24", fontWeight: "bold" }}>×{wallDecoInventory[d.id] ?? 0}</span>
+              </button>
+            );
+          })}
+
+          {wallDecorations.length > 0 && (<>
+            <div style={{ width: 1, background: "#2a1a0a", flexShrink: 0, margin: "0 4px" }} />
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>배치</div>
+            {wallDecorations.map((d) => {
+              const wd = getWallDecoration(d.decorId);
+              return wd ? (
+                <div key={d.instanceId} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  width: 72, flexShrink: 0, padding: "8px 4px", gap: 4, borderRadius: 8,
+                  border: "1px solid #2a1a0a", background: "rgba(255,255,255,0.02)",
+                }}>
+                  <span style={{ fontSize: 24 }}>{wd.emoji}</span>
+                  <span style={{ fontSize: 8, color: "#ccc", textAlign: "center" }}>{wd.name}</span>
+                  <span style={{ fontSize: 7, color: "#666" }}>{d.wall === "left" ? "왼쪽" : "오른쪽"} {d.slotIndex + 1}번</span>
+                  <button onClick={() => onRemoveSelectedDeco(d.instanceId)} style={{ padding: "2px 6px", borderRadius: 4, fontSize: 8, border: "1px solid #f8717155", background: "rgba(248,113,113,0.1)", color: "#f87171", cursor: "pointer" }}>↩ 회수</button>
+                </div>
+              ) : null;
+            })}
+          </>)}
+
+          <div style={{ width: 1, background: "#2a1a0a", flexShrink: 0, margin: "0 4px" }} />
+
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>제작</div>
+          {WALL_DECORATIONS.map((d) => {
+            const canCraft = Object.entries(d.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
+            const crafted = lastCrafted === d.id;
+            return (
+              <div key={d.id} style={{
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
+                width: 82, flexShrink: 0, padding: "8px 5px", gap: 3, borderRadius: 8,
+                border: `1px solid ${crafted ? "#34d399" : canCraft ? "#d97706" : "#2a1a0a"}`,
+                background: crafted ? "rgba(52,211,153,0.07)" : canCraft ? "rgba(217,119,6,0.05)" : "rgba(255,255,255,0.01)",
+              }}>
+                <span style={{ fontSize: 22 }}>{d.emoji}</span>
+                <span style={{ fontSize: 8, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{d.name}</span>
+                {(wallDecoInventory[d.id] ?? 0) > 0 && (
+                  <span style={{ fontSize: 7, color: "#fbbf24" }}>보유×{wallDecoInventory[d.id]}</span>
+                )}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center" }}>
+                  {Object.entries(d.recipe).slice(0, 2).map(([mid, need]) => {
+                    const have = materials[mid] ?? 0; const ok = have >= need;
+                    const m = getMaterial(mid);
+                    return (
+                      <span key={mid} style={{ fontSize: 7, padding: "1px 3px", borderRadius: 6, border: `1px solid ${ok ? "#333" : "#7f1d1d"}`, color: ok ? "#999" : "#f87171", fontFamily: "monospace" }}>
+                        {m?.emoji}{have}/{need}
+                      </span>
+                    );
+                  })}
+                </div>
+                <button onClick={() => handleCraftDeco(d.id)} disabled={!canCraft} style={{
+                  padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid",
+                  borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
+                  background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
+                  color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
+                  cursor: canCraft ? "pointer" : "not-allowed",
+                }}>{crafted ? "완성! ✓" : "제작"}</button>
+              </div>
+            );
+          })}
+        </>)}
+
+        {/* ══ 벽지 탭 ══════════════════════════════════════════════════════════ */}
+        {tab === "wallpaper" && WALLPAPERS.map((wp) => {
+          const isUnlocked = unlockedWallpapers.includes(wp.id);
+          const isActive   = wallpaperId === wp.id;
+          const canCraft   = Object.keys(wp.recipe).length === 0 ? false : Object.entries(wp.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
+          const crafted = lastCrafted === wp.id;
+          return (
+            <div key={wp.id} style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              width: 88, flexShrink: 0, padding: "6px 5px", gap: 4, borderRadius: 8,
+              border: `1px solid ${isActive ? "#fbbf24" : isUnlocked ? "#2a1a0a" : "#1a0e06"}`,
+              background: isActive ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.02)",
+            }}>
+              <div style={{ width: "100%", height: 28, borderRadius: 5, flexShrink: 0, opacity: isUnlocked ? 1 : 0.4, background: `linear-gradient(135deg, ${wp.leftColor1}, ${wp.leftColor2} 45%, ${wp.rightColor1} 55%, ${wp.rightColor2})`, border: `1px solid ${wp.trimColor}66` }} />
+              <span style={{ fontSize: 14 }}>{wp.emoji}</span>
+              <span style={{ fontSize: 8, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{wp.name}</span>
+              {isActive && <span style={{ fontSize: 7, color: "#fbbf24", background: "rgba(251,191,36,0.15)", padding: "1px 5px", borderRadius: 3 }}>현재</span>}
+              {isUnlocked ? (
+                <button onClick={() => setWallpaper(wp.id)} disabled={isActive} style={{
+                  padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid", marginTop: "auto",
+                  borderColor: isActive ? "#fbbf2444" : "#d97706", background: isActive ? "transparent" : "rgba(217,119,6,0.2)",
+                  color: isActive ? "#555" : "#fbbf24", cursor: isActive ? "default" : "pointer",
+                }}>{isActive ? "사용 중" : "적용"}</button>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: "auto", width: "100%" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center" }}>
+                    {Object.entries(wp.recipe).slice(0, 2).map(([mid, need]) => {
                       const have = materials[mid] ?? 0; const ok = have >= need;
                       const m = getMaterial(mid);
-                      return (
-                        <span key={mid} style={{
-                          fontSize: 9, padding: "2px 6px", borderRadius: 10,
-                          border: `1px solid ${ok ? "#444" : "#7f1d1d"}`,
-                          color: ok ? "#ccc" : "#f87171", fontFamily: "monospace",
-                        }}>{m?.emoji} {m?.name ?? mid} {have}/{need}</span>
-                      );
+                      return <span key={mid} style={{ fontSize: 7, padding: "1px 3px", borderRadius: 6, border: `1px solid ${ok ? "#333" : "#7f1d1d"}`, color: ok ? "#999" : "#f87171", fontFamily: "monospace" }}>{m?.emoji}{have}/{need}</span>;
                     })}
                   </div>
-                  <button onClick={() => handleCraftDeco(d.id)} disabled={!canCraft} style={{
-                    padding: "4px 12px", borderRadius: 6, fontSize: 10, fontWeight: "bold", border: "1px solid",
+                  <button onClick={() => handleCraftWallpaper(wp.id)} disabled={!canCraft} style={{
+                    padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid",
                     borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
                     background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
                     color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
                     cursor: canCraft ? "pointer" : "not-allowed",
-                  }}>{crafted ? "완성! ✓" : "제작"}</button>
+                  }}>{crafted ? "해금! ✓" : "🔒 해금"}</button>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
+            </div>
+          );
+        })}
 
-        {/* 벽지 탭 */}
-        {tab === "wallpaper" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {WALLPAPERS.map((wp) => {
-              const isUnlocked = unlockedWallpapers.includes(wp.id);
-              const isActive   = wallpaperId === wp.id;
-              const canCraft   = Object.keys(wp.recipe).length === 0
-                ? false
-                : Object.entries(wp.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
-              const crafted = lastCrafted === wp.id;
-              return (
-                <div key={wp.id} style={{
-                  padding: 10, borderRadius: 10,
-                  border: `1px solid ${isActive ? "#fbbf24" : isUnlocked ? "#2a1a0a" : "#1a0e06"}`,
-                  background: isActive ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.02)",
-                }}>
-                  {/* 미리보기 */}
-                  <div style={{
-                    height: 36, borderRadius: 6, marginBottom: 8, overflow: "hidden",
-                    background: `linear-gradient(135deg, ${wp.leftColor1}, ${wp.leftColor2} 45%, ${wp.rightColor1} 55%, ${wp.rightColor2})`,
-                    border: `1px solid ${wp.trimColor}66`,
-                    opacity: isUnlocked ? 1 : 0.4,
-                  }} />
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                    <span style={{ fontSize: 16 }}>{wp.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <span style={{ color: "#e5e5e5", fontSize: 11, fontWeight: "bold" }}>{wp.name}</span>
-                      <span style={{ fontSize: 8, color: rarityColor[wp.rarity], marginLeft: 5 }}>{wp.rarity}</span>
-                    </div>
-                    {isActive && <span style={{ fontSize: 9, color: "#fbbf24", background: "rgba(251,191,36,0.15)", padding: "2px 6px", borderRadius: 4 }}>현재</span>}
+        {/* ══ 바닥 탭 ══════════════════════════════════════════════════════════ */}
+        {tab === "floortile" && FLOOR_TILES.map((ft) => {
+          const isUnlocked = unlockedFloorTiles.includes(ft.id);
+          const isActive   = floorTileId === ft.id;
+          const canCraft   = Object.keys(ft.recipe).length === 0 ? false : Object.entries(ft.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
+          const crafted = lastCrafted === ft.id;
+          return (
+            <div key={ft.id} style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              width: 88, flexShrink: 0, padding: "6px 5px", gap: 4, borderRadius: 8,
+              border: `1px solid ${isActive ? "#fbbf24" : isUnlocked ? "#2a1a0a" : "#1a0e06"}`,
+              background: isActive ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.02)",
+            }}>
+              <div style={{ width: "100%", height: 28, borderRadius: 5, flexShrink: 0, opacity: isUnlocked ? 1 : 0.4, background: ft.normalBg, border: `1px solid ${ft.normalOutline}` }} />
+              <span style={{ fontSize: 14 }}>{ft.emoji}</span>
+              <span style={{ fontSize: 8, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{ft.name}</span>
+              {isActive && <span style={{ fontSize: 7, color: "#fbbf24", background: "rgba(251,191,36,0.15)", padding: "1px 5px", borderRadius: 3 }}>현재</span>}
+              {isUnlocked ? (
+                <button onClick={() => setFloorTile(ft.id)} disabled={isActive} style={{
+                  padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid", marginTop: "auto",
+                  borderColor: isActive ? "#fbbf2444" : "#d97706", background: isActive ? "transparent" : "rgba(217,119,6,0.2)",
+                  color: isActive ? "#555" : "#fbbf24", cursor: isActive ? "default" : "pointer",
+                }}>{isActive ? "사용 중" : "적용"}</button>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: "auto", width: "100%" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center" }}>
+                    {Object.entries(ft.recipe).slice(0, 2).map(([mid, need]) => {
+                      const have = materials[mid] ?? 0; const ok = have >= need;
+                      const m = getMaterial(mid);
+                      return <span key={mid} style={{ fontSize: 7, padding: "1px 3px", borderRadius: 6, border: `1px solid ${ok ? "#333" : "#7f1d1d"}`, color: ok ? "#999" : "#f87171", fontFamily: "monospace" }}>{m?.emoji}{have}/{need}</span>;
+                    })}
                   </div>
-                  {isUnlocked ? (
-                    <button onClick={() => setWallpaper(wp.id)} disabled={isActive} style={{
-                      padding: "4px 14px", borderRadius: 6, fontSize: 10, fontWeight: "bold", border: "1px solid",
-                      borderColor: isActive ? "#fbbf2444" : "#d97706",
-                      background: isActive ? "transparent" : "rgba(217,119,6,0.2)",
-                      color: isActive ? "#555" : "#fbbf24",
-                      cursor: isActive ? "default" : "pointer",
-                    }}>{isActive ? "사용 중" : "적용"}</button>
-                  ) : (
-                    <div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 5 }}>
-                        {Object.entries(wp.recipe).map(([mid, need]) => {
-                          const have = materials[mid] ?? 0; const ok = have >= need;
-                          const m = getMaterial(mid);
-                          return (
-                            <span key={mid} style={{
-                              fontSize: 9, padding: "2px 6px", borderRadius: 10,
-                              border: `1px solid ${ok ? "#444" : "#7f1d1d"}`,
-                              color: ok ? "#ccc" : "#f87171", fontFamily: "monospace",
-                            }}>{m?.emoji} {m?.name ?? mid} {have}/{need}</span>
-                          );
-                        })}
-                      </div>
-                      <button onClick={() => handleCraftWallpaper(wp.id)} disabled={!canCraft} style={{
-                        padding: "4px 12px", borderRadius: 6, fontSize: 10, fontWeight: "bold", border: "1px solid",
-                        borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
-                        background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
-                        color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
-                        cursor: canCraft ? "pointer" : "not-allowed",
-                      }}>{crafted ? "해금! ✓" : "🔒 해금"}</button>
-                    </div>
-                  )}
+                  <button onClick={() => handleCraftFloorTile(ft.id)} disabled={!canCraft} style={{
+                    padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid",
+                    borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
+                    background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
+                    color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
+                    cursor: canCraft ? "pointer" : "not-allowed",
+                  }}>{crafted ? "해금! ✓" : "🔒 해금"}</button>
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 바닥 탭 */}
-        {tab === "floortile" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {FLOOR_TILES.map((ft) => {
-              const isUnlocked = unlockedFloorTiles.includes(ft.id);
-              const isActive   = floorTileId === ft.id;
-              const canCraft   = Object.keys(ft.recipe).length === 0
-                ? false
-                : Object.entries(ft.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
-              const crafted = lastCrafted === ft.id;
-              return (
-                <div key={ft.id} style={{
-                  padding: 10, borderRadius: 10,
-                  border: `1px solid ${isActive ? "#fbbf24" : isUnlocked ? "#2a1a0a" : "#1a0e06"}`,
-                  background: isActive ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.02)",
-                }}>
-                  {/* 미리보기 */}
-                  <div style={{
-                    height: 28, borderRadius: 6, marginBottom: 8,
-                    background: ft.normalBg,
-                    border: `1px solid ${ft.normalOutline}`,
-                    opacity: isUnlocked ? 1 : 0.4,
-                  }} />
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                    <span style={{ fontSize: 16 }}>{ft.emoji}</span>
-                    <div style={{ flex: 1 }}>
-                      <span style={{ color: "#e5e5e5", fontSize: 11, fontWeight: "bold" }}>{ft.name}</span>
-                      <span style={{ fontSize: 8, color: rarityColor[ft.rarity], marginLeft: 5 }}>{ft.rarity}</span>
-                    </div>
-                    {isActive && <span style={{ fontSize: 9, color: "#fbbf24", background: "rgba(251,191,36,0.15)", padding: "2px 6px", borderRadius: 4 }}>현재</span>}
-                  </div>
-                  {isUnlocked ? (
-                    <button onClick={() => setFloorTile(ft.id)} disabled={isActive} style={{
-                      padding: "4px 14px", borderRadius: 6, fontSize: 10, fontWeight: "bold", border: "1px solid",
-                      borderColor: isActive ? "#fbbf2444" : "#d97706",
-                      background: isActive ? "transparent" : "rgba(217,119,6,0.2)",
-                      color: isActive ? "#555" : "#fbbf24",
-                      cursor: isActive ? "default" : "pointer",
-                    }}>{isActive ? "사용 중" : "적용"}</button>
-                  ) : (
-                    <div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 5 }}>
-                        {Object.entries(ft.recipe).map(([mid, need]) => {
-                          const have = materials[mid] ?? 0; const ok = have >= need;
-                          const m = getMaterial(mid);
-                          return (
-                            <span key={mid} style={{
-                              fontSize: 9, padding: "2px 6px", borderRadius: 10,
-                              border: `1px solid ${ok ? "#444" : "#7f1d1d"}`,
-                              color: ok ? "#ccc" : "#f87171", fontFamily: "monospace",
-                            }}>{m?.emoji} {m?.name ?? mid} {have}/{need}</span>
-                          );
-                        })}
-                      </div>
-                      <button onClick={() => handleCraftFloorTile(ft.id)} disabled={!canCraft} style={{
-                        padding: "4px 12px", borderRadius: 6, fontSize: 10, fontWeight: "bold", border: "1px solid",
-                        borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
-                        background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
-                        color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
-                        cursor: canCraft ? "pointer" : "not-allowed",
-                      }}>{crafted ? "해금! ✓" : "🔒 해금"}</button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1230,10 +1145,9 @@ export default function HousingPage() {
   } = usePlayerStore();
 
   // ── 레이아웃 ───────────────────────────────────────────────────────────────
-  const panelWidth = 300;
   const [editMode, setEditMode] = useState(false);
-  const availW = editMode ? containerSize.w - panelWidth : containerSize.w;
-  const availH = containerSize.h;
+  const availW = containerSize.w;
+  const availH = editMode ? containerSize.h - PANEL_H : containerSize.h;
 
   // 벽(WALL_H) + 방 바닥(roomSize.height) 전체를 화면에 맞게 중앙 정렬
   const totalH = WALL_H + roomSize.height; // 160 + 440 = 600
@@ -1406,7 +1320,7 @@ export default function HousingPage() {
       {/* ── 방 스테이지 (배경 위 z:2) ────────────────────────────────────── */}
       <div style={{
         position: "absolute", left: 0, top: 0,
-        width: editMode ? containerSize.w - panelWidth : containerSize.w,
+        width: containerSize.w,
         height: containerSize.h,
         overflow: "hidden",
         zIndex: 2,
@@ -1453,7 +1367,7 @@ export default function HousingPage() {
       {/* ── 상단 HUD ─────────────────────────────────────────────────────── */}
       <div style={{
         position: "fixed", top: 0, left: 0,
-        right: editMode ? panelWidth : 0,
+        right: 0,
         zIndex: 500, display: "flex", alignItems: "center",
         padding: "10px 14px",
         background: "linear-gradient(180deg, rgba(8,4,1,0.95) 0%, rgba(8,4,1,0) 100%)",
@@ -1482,8 +1396,8 @@ export default function HousingPage() {
 
       {/* ── 우하단: 꾸미기 버튼 ──────────────────────────────────────────── */}
       <div style={{
-        position: "fixed", bottom: 16,
-        right: editMode ? panelWidth + 14 : 14,
+        position: "fixed", bottom: editMode ? PANEL_H + 12 : 16,
+        right: 14,
         zIndex: 500, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8,
       }}>
         {!editMode && (
@@ -1500,21 +1414,21 @@ export default function HousingPage() {
       </div>
 
       {/* ── 편집 패널 ────────────────────────────────────────────────────── */}
-      {editMode && (
-        <EditPanel
-          selectedFurnitureId={selectedFurnitureId}
-          onSelectFurniture={(id) => { setSelectedFurnitureId(id); setSelectedInstanceId(null); }}
-          selectedInstanceId={selectedInstanceId}
-          selectedInstanceRotation={selectedInstRotation}
-          onRemoveFurniture={handleRemoveFurniture}
-          onRotate={handleRotate}
-          selectedDecoId={selectedDecoId}
-          onSelectDeco={(id) => { setSelectedDecoId(id); if (id) setEditTab("walldeco"); }}
-          onRemoveSelectedDeco={handleRemoveSelectedDeco}
-          tab={editTab}
-          onTabChange={setEditTab}
-        />
-      )}
+      <EditPanel
+        open={editMode}
+        onClose={() => { setEditMode(false); setSelectedFurnitureId(null); setSelectedInstanceId(null); setSelectedDecoId(null); }}
+        selectedFurnitureId={selectedFurnitureId}
+        onSelectFurniture={(id) => { setSelectedFurnitureId(id); setSelectedInstanceId(null); }}
+        selectedInstanceId={selectedInstanceId}
+        selectedInstanceRotation={selectedInstRotation}
+        onRemoveFurniture={handleRemoveFurniture}
+        onRotate={handleRotate}
+        selectedDecoId={selectedDecoId}
+        onSelectDeco={(id) => { setSelectedDecoId(id); if (id) setEditTab("walldeco"); }}
+        onRemoveSelectedDeco={handleRemoveSelectedDeco}
+        tab={editTab}
+        onTabChange={setEditTab}
+      />
     </div>
   );
 }
