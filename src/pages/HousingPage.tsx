@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
-import { IndoorRoomBg, getSlotCanvasPos, ROOM_WALL_H, ROOM_BASE_H, ROOM_MOL_H } from "../components/housing/IndoorRoomBg";
+import { IndoorRoomBg, ROOM_WALL_H, ROOM_BASE_H, ROOM_MOL_H } from "../components/housing/IndoorRoomBg";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, isTileWalkable } from "../store/playerStore";
 import {
@@ -7,14 +7,14 @@ import {
   MATERIAL_LABEL, RARITY_LABEL, RARITY_COLOR, MATERIAL_SET_TIERS,
 } from "../data/furniture";
 import type { FurnitureMaterial } from "../data/furniture";
-import type { PlacedFurniture, WallSide } from "../types/housing";
+import type { PlacedFurniture, PlacedWallDecoration, WallSide } from "../types/housing";
 import { getMaterial } from "../data/items";
 import {
   TILE_W, TILE_H, roomPixelSize, getTileKey,
   getFurnitureOccupiedTiles, getRotatedSize, buildOccupiedSet,
   canPlaceFurnitureAt, getFurnitureAtTile, getFurnitureRenderPosition,
 } from "../utils/isometric";
-import { ROOM_COLS, ROOM_ROWS, FARM_DOOR_TILE, EXIT_DOOR_TILE, PLAYER_INIT_TILE } from "../constants/housing";
+import { ROOM_COLS, ROOM_ROWS, PLAYER_INIT_TILE, WALL_COLS, WALL_ROWS } from "../constants/housing";
 import { WALLPAPERS } from "../data/wallpapers";
 import { FLOOR_TILES } from "../data/floorTiles";
 import { WALL_DECORATIONS, getWallDecoration } from "../data/wallDecorations";
@@ -341,53 +341,88 @@ function PlayerSprite({ left, top, zIndex, sprite }: { left: number; top: number
   );
 }
 
-// ─── 벽 슬롯 오버레이 ────────────────────────────────────────────────────────
+// ─── 벽 격자 오버레이 (SVG) ──────────────────────────────────────────────────
 
-interface WallGeom {
+function WallGridOverlay({
+  leX, leY, tpX, tpY, riX, riY, BH, inH,
+  screenW, screenH,
+  wallDecorations, selectedDecoId,
+  onCellClick,
+}: {
   leX: number; leY: number;
   tpX: number; tpY: number;
   riX: number; riY: number;
-  cs: number; slotW: number; slotH: number;
-}
-
-function WallSlotOverlay({
-  geom, wallDecorations, selectedDecoId, onSlotClick,
-}: {
-  geom: WallGeom;
-  wallDecorations: import("../types/housing").PlacedWallDecoration[];
+  BH: number; inH: number;
+  screenW: number; screenH: number;
+  wallDecorations: PlacedWallDecoration[];
   selectedDecoId: string | null;
-  onSlotClick: (wall: "left" | "right", slotIndex: number) => void;
+  onCellClick: (wall: WallSide, col: number, row: number) => void;
 }) {
-  const slots: ReactElement[] = [];
+  const [hovered, setHovered] = useState<{ wall: WallSide; col: number; row: number } | null>(null);
+
+  const cells: ReactElement[] = [];
   for (const wall of ["left", "right"] as const) {
-    for (let i = 0; i < 6; i++) {
-      const pos = getSlotCanvasPos(
-        wall, i,
-        geom.leX, geom.leY, geom.tpX, geom.tpY, geom.riX, geom.riY, geom.cs,
-      );
-      const occupied = wallDecorations.find((d) => d.wall === wall && d.slotIndex === i);
-      const isActive = !!selectedDecoId;
-      slots.push(
-        <div
-          key={`${wall}-${i}`}
-          onClick={() => onSlotClick(wall, i)}
-          style={{
-            position: "absolute",
-            left: pos.x, top: pos.y,
-            width: geom.slotW, height: geom.slotH,
-            transform: "translate(-50%, -50%)",
-            border: `2px dashed ${occupied ? "#f59e0b" : isActive ? "#4ade80" : "rgba(255,255,255,0.35)"}`,
-            borderRadius: 4,
-            background: occupied ? "rgba(251,191,36,0.08)" : isActive ? "rgba(74,222,128,0.08)" : "transparent",
-            cursor: "pointer",
-            zIndex: 10,
-            transition: "all 0.12s",
-          }}
-        />,
-      );
+    const ax = wall === "left" ? leX : tpX;
+    const ay = wall === "left" ? leY : tpY;
+    const bx = wall === "left" ? tpX : riX;
+    const by = wall === "left" ? tpY : riY;
+
+    for (let row = 0; row < WALL_ROWS; row++) {
+      for (let col = 0; col < WALL_COLS; col++) {
+        const u0 = col / WALL_COLS, u1 = (col + 1) / WALL_COLS;
+        const h0 = BH + row * inH / WALL_ROWS;
+        const h1 = BH + (row + 1) * inH / WALL_ROWS;
+
+        const x0 = ax + u0 * (bx - ax), y0 = ay + u0 * (by - ay);
+        const x1 = ax + u1 * (bx - ax), y1 = ay + u1 * (by - ay);
+
+        const pts = [
+          `${x0},${y0 - h0}`, `${x1},${y1 - h0}`,
+          `${x1},${y1 - h1}`, `${x0},${y0 - h1}`,
+        ].join(" ");
+
+        const isHov = hovered?.wall === wall && hovered.col === col && hovered.row === row;
+        const occupied = wallDecorations.find((d) => d.wall === wall && d.col === col && d.row === row);
+
+        cells.push(
+          <polygon
+            key={`${wall}-${col}-${row}`}
+            points={pts}
+            fill={
+              occupied
+                ? "rgba(251,191,36,0.14)"
+                : isHov && selectedDecoId
+                  ? "rgba(74,222,128,0.2)"
+                  : isHov
+                    ? "rgba(255,255,255,0.08)"
+                    : "transparent"
+            }
+            stroke={
+              occupied
+                ? "#f59e0b"
+                : isHov
+                  ? (selectedDecoId ? "#4ade80" : "rgba(255,255,255,0.55)")
+                  : "rgba(255,255,255,0.12)"
+            }
+            strokeWidth={isHov || occupied ? 1.2 : 0.6}
+            style={{ cursor: "pointer", pointerEvents: "all" }}
+            onMouseEnter={() => setHovered({ wall, col, row })}
+            onMouseLeave={() => setHovered(null)}
+            onClick={() => onCellClick(wall, col, row)}
+          />,
+        );
+      }
     }
   }
-  return <>{slots}</>;
+
+  return (
+    <svg
+      style={{ position: "absolute", inset: 0, zIndex: 15, pointerEvents: "none" }}
+      width={screenW} height={screenH}
+    >
+      {cells}
+    </svg>
+  );
 }
 
 // ─── 편집 패널 (Tiny Farm 스타일 하단 슬라이드) ──────────────────────────────
@@ -539,7 +574,7 @@ function EditPanel({
               <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>
                 <span style={{ fontSize: 18, marginRight: 6 }}>{wd.emoji}</span>
                 <strong>{wd.name}</strong> 선택됨
-                <div style={{ fontSize: 10, color: "#aaa", marginTop: 2 }}>벽의 슬롯을 클릭해 배치</div>
+                <div style={{ fontSize: 10, color: "#aaa", marginTop: 2 }}>벽 칸을 클릭해 배치</div>
               </div>
             ) : null;
           })()}
@@ -683,7 +718,7 @@ function EditPanel({
                 }}>
                   <span style={{ fontSize: 24 }}>{wd.emoji}</span>
                   <span style={{ fontSize: 8, color: "#ccc", textAlign: "center" }}>{wd.name}</span>
-                  <span style={{ fontSize: 7, color: "#666" }}>{d.wall === "left" ? "왼쪽" : "오른쪽"} {d.slotIndex + 1}번</span>
+                  <span style={{ fontSize: 7, color: "#666" }}>{d.wall === "left" ? "왼쪽" : "오른쪽"} ({d.col},{d.row})</span>
                   <button onClick={() => onRemoveSelectedDeco(d.instanceId)} style={{ padding: "2px 6px", borderRadius: 4, fontSize: 8, border: "1px solid #f8717155", background: "rgba(248,113,113,0.1)", color: "#f87171", cursor: "pointer" }}>↩ 회수</button>
                 </div>
               ) : null;
@@ -832,41 +867,59 @@ function actionBtn(color: string): React.CSSProperties {
   };
 }
 
-// ─── 문/포탈 오버레이 ─────────────────────────────────────────────────────────
+// ─── 문 타일 레이어 (흰색 아이소메트릭 타일 + 라벨) ────────────────────────
 
-function DoorOverlay({ tile, offsetX, offsetY, label, color, nearPlayer }: {
-  tile: { x: number; y: number }; offsetX: number; offsetY: number;
-  label: string; color: string; nearPlayer: boolean;
-}) {
-  const { left, top } = tileScreenPos(tile.x, tile.y, offsetX, offsetY);
+function DoorTilesLayer({ nearFarm, nearExit }: { nearFarm: boolean; nearExit: boolean }) {
+  const farmTiles = [{ x: 4, y: 9 }, { x: 5, y: 9 }];
+  const exitTiles = [{ x: 9, y: 4 }, { x: 9, y: 5 }];
+  const hw = TILE_W / 2;
+  const clip = `polygon(${hw}px 0px, ${TILE_W}px ${TILE_H / 2}px, ${hw}px ${TILE_H}px, 0px ${TILE_H / 2}px)`;
+
+  const renderGroup = (tiles: { x: number; y: number }[], near: boolean, label: string) => {
+    const positions = tiles.map((t) => tileScreenPos(t.x, t.y, 0, 0));
+    // Canvas draws the tile top-vertex at pos.left; HTML bounding box needs to start hw left of that.
+    const centerX = positions.reduce((s, p) => s + p.left, 0) / positions.length;
+    const bottomY = Math.max(...positions.map((p) => p.top + TILE_H));
+    return (
+      <>
+        {positions.map((pos, i) => (
+          <div key={i} style={{
+            position: "absolute", left: pos.left - hw, top: pos.top,
+            width: TILE_W, height: TILE_H,
+            clipPath: clip,
+            background: near ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.38)",
+            zIndex: 5, pointerEvents: "none",
+            boxShadow: near ? "0 0 14px rgba(255,255,255,0.9)" : "none",
+            transition: "background 0.3s, box-shadow 0.3s",
+          }} />
+        ))}
+        <div style={{
+          position: "absolute", left: centerX, top: bottomY + 5,
+          transform: "translateX(-50%)", textAlign: "center",
+          pointerEvents: "none", zIndex: 6, whiteSpace: "nowrap",
+          color: near ? "#ffffff" : "#cccccc",
+          fontSize: 11, fontWeight: "bold",
+          textShadow: "0 1px 5px rgba(0,0,0,0.95)",
+          transition: "color 0.3s",
+        }}>{label}</div>
+        {near && (
+          <div style={{
+            position: "absolute", left: centerX, top: bottomY + 19,
+            transform: "translateX(-50%)", textAlign: "center",
+            pointerEvents: "none", zIndex: 6, whiteSpace: "nowrap",
+            color: "#fbbf24", fontSize: 10, fontWeight: "bold",
+            textShadow: "0 1px 4px rgba(0,0,0,0.9)",
+          }}>[E] 이동</div>
+        )}
+      </>
+    );
+  };
+
   return (
-    <div style={{
-      position: "absolute", left: left + TILE_W / 2, top: top - 52,
-      transform: "translate(-50%, 0)", zIndex: 300, pointerEvents: "none",
-      transition: "filter 0.3s",
-      filter: nearPlayer ? `drop-shadow(0 0 10px ${color})` : "none",
-    }}>
-      <div style={{
-        width: 32, height: 48,
-        background: `linear-gradient(180deg, ${color}cc, ${color}88)`,
-        border: `2px solid ${color}`, borderRadius: "4px 4px 0 0",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        boxShadow: nearPlayer ? `0 0 12px ${color}88` : "none", margin: "0 auto",
-      }}>
-        <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#f0c040" }} />
-      </div>
-      <div style={{
-        textAlign: "center", fontSize: 9, color: nearPlayer ? "#fff" : "#999",
-        fontWeight: "bold", marginTop: 2, whiteSpace: "nowrap",
-        background: nearPlayer ? "rgba(0,0,0,0.8)" : "transparent",
-        padding: nearPlayer ? "1px 5px" : 0, borderRadius: 3,
-      }}>{label}</div>
-      {nearPlayer && (
-        <div style={{ textAlign: "center", fontSize: 9, color: "#fbbf24", fontWeight: "bold", marginTop: 1, whiteSpace: "nowrap" }}>
-          [E] 이동
-        </div>
-      )}
-    </div>
+    <>
+      {renderGroup(farmTiles, nearFarm, "🌾 농장")}
+      {renderGroup(exitTiles, nearExit, "🌲 바깥")}
+    </>
   );
 }
 
@@ -880,6 +933,7 @@ export default function HousingPage() {
   const {
     placedFurniture, placeFurniture, moveFurniture, rotateFurniture, removeFurniture, getHousingBonuses,
     wallDecorations, placeWallDecoration, removeWallDecoration,
+    grantAllHousingItems,
   } = usePlayerStore();
 
   // ── 레이아웃: housing_bg.png 다이아몬드 영역에 스테이지 정렬 ───────────────
@@ -899,6 +953,8 @@ export default function HousingPage() {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
+  useEffect(() => { grantAllHousingItems(); }, []);
 
   // ── 선택 상태 ─────────────────────────────────────────────────────────────
   const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
@@ -940,8 +996,10 @@ export default function HousingPage() {
       const key = e.key.toLowerCase();
       if (key === "e") {
         const pt = playerPosRef.current;
-        if (pt.x <= 1.5) navigate("/farm", { state: { from: "housing" } });
-        else if (pt.x >= ROOM_COLS - 1.5) navigate("/");
+        const isFarm = pt.y >= ROOM_ROWS - 1.5 && pt.x >= 3.5 && pt.x <= 6.5;
+        const isExit = pt.x >= ROOM_COLS - 1.5 && pt.y >= 3.5 && pt.y <= 6.5;
+        if (isFarm) navigate("/farm", { state: { from: "housing" } });
+        else if (isExit) navigate("/");
       }
       if (key === "h" && !editModeRef.current) { setEditMode(true); setEditTab("furniture"); }
       if (e.key === "Escape") {
@@ -1049,38 +1107,33 @@ export default function HousingPage() {
     removeWallDecoration(instanceId);
   };
 
-  // ── 벽 장식 슬롯 클릭 ─────────────────────────────────────────────────────
-  const handleSlotClick = (wall: WallSide, slotIndex: number) => {
+  // ── 벽 격자 셀 클릭 ───────────────────────────────────────────────────────
+  const handleWallCellClick = (wall: WallSide, col: number, row: number) => {
     if (!editMode) return;
-    const existing = wallDecorations.find((d) => d.wall === wall && d.slotIndex === slotIndex);
+    const existing = wallDecorations.find((d) => d.wall === wall && d.col === col && d.row === row);
     if (selectedDecoId) {
-      placeWallDecoration(wall, slotIndex, selectedDecoId);
+      placeWallDecoration(wall, col, row, selectedDecoId);
       setSelectedDecoId(null);
     } else if (existing) {
       removeWallDecoration(existing.instanceId);
     }
   };
 
-  // ── 벽 슬롯 캔버스 좌표 계산 ──────────────────────────────────────────────
-  const _WH   = ROOM_WALL_H * contentScale;
-  const _BH   = ROOM_BASE_H * contentScale;
-  const _MH   = ROOM_MOL_H  * contentScale;
-  const _inH  = _WH - _BH - _MH;
-  const wallGeom = {
-    leX: stageLeft,
-    leY: stageTop + 220 * contentScale,
-    tpX: stageLeft + 440 * contentScale,
-    tpY: stageTop,
-    riX: stageLeft + 880 * contentScale,
-    riY: stageTop + 220 * contentScale,
-    cs:  contentScale,
-    slotW: Math.abs((stageLeft + 440 * contentScale) - stageLeft) * 0.16,
-    slotH: _inH * 0.22,
-  };
+  // ── 벽 격자 기하 값 ────────────────────────────────────────────────────────
+  const _WH  = ROOM_WALL_H * contentScale;
+  const _BH  = ROOM_BASE_H * contentScale;
+  const _MH  = ROOM_MOL_H  * contentScale;
+  const _inH = _WH - _BH - _MH;
+  const wallLeX = stageLeft;
+  const wallLeY = stageTop + 220 * contentScale;
+  const wallTpX = stageLeft + 440 * contentScale;
+  const wallTpY = stageTop;
+  const wallRiX = stageLeft + 880 * contentScale;
+  const wallRiY = stageTop + 220 * contentScale;
 
   // ── 문 근접 여부 ───────────────────────────────────────────────────────────
-  const nearFarm = playerTile.x <= 1.5;
-  const nearExit = playerTile.x >= ROOM_COLS - 1.5;
+  const nearFarm = playerTile.y >= ROOM_ROWS - 1.5 && playerTile.x >= 3.5 && playerTile.x <= 6.5;
+  const nearExit = playerTile.x >= ROOM_COLS - 1.5 && playerTile.y >= 3.5 && playerTile.y <= 6.5;
 
   const bonuses = getHousingBonuses();
   const floorStyle = { normalBg: "transparent", normalOutline: "transparent", hoverBg: "rgba(255,255,255,0.18)", hoverOutline: "transparent" };
@@ -1100,13 +1153,17 @@ export default function HousingPage() {
         wallDecorations={wallDecorations}
       />
 
-      {/* ── 벽 슬롯 오버레이 (편집 모드) ────────────────────────────────── */}
+      {/* ── 벽 격자 오버레이 (편집 모드) ────────────────────────────────── */}
       {editMode && editTab === "walldeco" && (
-        <WallSlotOverlay
-          geom={wallGeom}
+        <WallGridOverlay
+          leX={wallLeX} leY={wallLeY}
+          tpX={wallTpX} tpY={wallTpY}
+          riX={wallRiX} riY={wallRiY}
+          BH={_BH} inH={_inH}
+          screenW={containerSize.w} screenH={containerSize.h}
           wallDecorations={wallDecorations}
           selectedDecoId={selectedDecoId}
-          onSlotClick={handleSlotClick}
+          onCellClick={handleWallCellClick}
         />
       )}
 
@@ -1141,9 +1198,8 @@ export default function HousingPage() {
           floorStyle={floorStyle}
         />
 
-        {/* 문 오버레이 */}
-        <DoorOverlay tile={FARM_DOOR_TILE} offsetX={0} offsetY={0} label="🌾 농장" color="#4caf50" nearPlayer={nearFarm} />
-        <DoorOverlay tile={EXIT_DOOR_TILE} offsetX={0} offsetY={0} label="🌲 바깥" color="#4fc3f7" nearPlayer={nearExit} />
+        {/* 문 타일 */}
+        <DoorTilesLayer nearFarm={nearFarm} nearExit={nearExit} />
       </div>
 
       {/* ── 상단 HUD ─────────────────────────────────────────────────────── */}
@@ -1159,9 +1215,7 @@ export default function HousingPage() {
           <button onClick={() => navigate("/")} style={topBtn("#3f3f46", "#a1a1aa")}>← 바깥</button>
           <button onClick={() => navigate("/farm", { state: { from: "housing" } })} style={topBtn("#14532d", "#4ade80")}>🌾 농장</button>
         </div>
-        <div style={{ flex: 1, textAlign: "center", color: "#ffe4b5", fontSize: 15, fontWeight: "bold", textShadow: "0 2px 8px rgba(0,0,0,0.8)", pointerEvents: "none" }}>
-          🏠 나의 집
-        </div>
+        <div style={{ flex: 1 }} />
         <div style={{ minWidth: 120, textAlign: "right", pointerEvents: "auto" }}>
           {!editMode && bonuses.activeSets.length > 0 && (
             <span style={{ fontSize: 10, color: "#34d399", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", padding: "3px 8px", borderRadius: 6 }}>

@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { TILE_W, TILE_H, ROOM_COLS, ROOM_ROWS } from "../../constants/housing";
+import { TILE_W, TILE_H, ROOM_COLS, ROOM_ROWS, WALL_COLS, WALL_ROWS } from "../../constants/housing";
 import { getWallDecoration } from "../../data/wallDecorations";
 import type { PlacedWallDecoration } from "../../types/housing";
 
@@ -33,28 +33,21 @@ export const ROOM_WALL_H   = 148;   // 벽 높이 (스테이지 단위)
 export const ROOM_BASE_H   = 10;    // 걸레받이 (스테이지 단위)
 export const ROOM_MOL_H    = 8;     // 크라운 몰딩 (스테이지 단위)
 
-// slot 위치 (u = 벽 길이 방향, v = 바닥으로부터 높이, 스테이지 단위)
-const U_COLS  = [0.22, 0.50, 0.78];
-const V_ROWS  = [ROOM_BASE_H + (ROOM_WALL_H - ROOM_BASE_H - ROOM_MOL_H) * 0.28,
-                 ROOM_BASE_H + (ROOM_WALL_H - ROOM_BASE_H - ROOM_MOL_H) * 0.68];
-
-/** 캔버스에서 벽 슬롯의 위치 반환 */
-export function getSlotCanvasPos(
+/** 캔버스에서 벽 격자 셀 중심 위치 반환 (BH, inH 는 cs 적용된 픽셀 값) */
+function getWallCellCenter(
   wall: "left" | "right",
-  slotIndex: number,
+  col: number, row: number,
   leX: number, leY: number,
   tpX: number, tpY: number,
   riX: number, riY: number,
-  cs: number,
+  BH: number, inH: number,
 ) {
-  const col = slotIndex % 3;
-  const row = Math.floor(slotIndex / 3);
-  const u = U_COLS[col];
-  const v = V_ROWS[row] * cs;
+  const u = (col + 0.5) / WALL_COLS;
+  const h = BH + (row + 0.5) * inH / WALL_ROWS;
   if (wall === "left") {
-    return { x: leX + u * (tpX - leX), y: leY + u * (tpY - leY) - v };
+    return { x: leX + u * (tpX - leX), y: leY + u * (tpY - leY) - h };
   }
-  return { x: tpX + u * (riX - tpX), y: tpY + u * (riY - tpY) - v };
+  return { x: tpX + u * (riX - tpX), y: tpY + u * (riY - tpY) - h };
 }
 
 // ─── 유틸 ─────────────────────────────────────────────────────────────────────
@@ -198,7 +191,7 @@ export function IndoorRoomBg({
 
     // ── 4. 벽 장식 렌더링 ────────────────────────────────────────────────
     for (const wd of wallDecorations) {
-      const pos = getSlotCanvasPos(wd.wall, wd.slotIndex, leX, leY, tpX, tpY, riX, riY, cs);
+      const pos = getWallCellCenter(wd.wall, wd.col, wd.row, leX, leY, tpX, tpY, riX, riY, BH, inH);
       const wallDX = wd.wall === "left" ? tpX - leX : riX - tpX;
       const wallDY = wd.wall === "left" ? tpY - leY : riY - tpY;
       drawWallDecoration(ctx, wd.decorId, pos.x, pos.y, wallDX, wallDY, inH, cs);
@@ -274,9 +267,9 @@ function drawWallDecoration(
   wallDX: number, wallDY: number,
   inH: number, cs: number,
 ) {
-  const halfW  = Math.abs(wallDX) * 0.12;   // 가로 반폭 (벽 방향)
-  const halfHw = Math.abs(wallDY) * 0.12;   // 가로 반폭 Y 성분
-  const halfH  = inH * 0.18;                // 세로 반높이
+  const halfW  = Math.abs(wallDX) / WALL_COLS * 0.45;
+  const halfHw = Math.abs(wallDY) / WALL_COLS * 0.45;
+  const halfH  = inH / WALL_ROWS * 0.45;
 
   const sign = wallDX > 0 ? 1 : -1;
 

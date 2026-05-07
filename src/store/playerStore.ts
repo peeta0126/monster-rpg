@@ -81,11 +81,12 @@ interface PlayerState {
   // ── 방 커스터마이징 메서드 ──────────────────────────────────────────────────────
   setWallpaper: (id: string) => void;
   setFloorTile: (id: string) => void;
-  placeWallDecoration: (wall: WallSide, slotIndex: number, decorId: string) => boolean;
+  placeWallDecoration: (wall: WallSide, col: number, row: number, decorId: string) => boolean;
   removeWallDecoration: (instanceId: string) => void;
   craftWallDecoration: (id: string) => boolean;
   craftWallpaper: (id: string) => boolean;
   craftFloorTile: (id: string) => boolean;
+  grantAllHousingItems: () => void;
 }
 
 export const usePlayerStore = create<PlayerState>()(
@@ -319,15 +320,15 @@ export const usePlayerStore = create<PlayerState>()(
 
       setFloorTile: (id) => set({ floorTileId: id }),
 
-      placeWallDecoration: (wall, slotIndex, decorId) => {
+      placeWallDecoration: (wall, col, row, decorId) => {
         const s = get();
         if ((s.wallDecoInventory[decorId] ?? 0) <= 0) return false;
-        // 같은 벽의 같은 슬롯에 이미 배치된 경우 제거 후 교체
-        const existing = s.wallDecorations.find((d) => d.wall === wall && d.slotIndex === slotIndex);
-        const filtered = s.wallDecorations.filter((d) => !(d.wall === wall && d.slotIndex === slotIndex));
+        // 같은 벽의 같은 셀에 이미 배치된 경우 제거 후 교체
+        const existing = s.wallDecorations.find((d) => d.wall === wall && d.col === col && d.row === row);
+        const filtered = s.wallDecorations.filter((d) => !(d.wall === wall && d.col === col && d.row === row));
         const newDeco: import("../types/housing").PlacedWallDecoration = {
           instanceId: makeInstanceId(),
-          decorId, wall, slotIndex,
+          decorId, wall, col, row,
           placedAt: Date.now(),
         };
         const newInv = { ...s.wallDecoInventory, [decorId]: (s.wallDecoInventory[decorId] ?? 0) - 1 };
@@ -380,6 +381,21 @@ export const usePlayerStore = create<PlayerState>()(
         return true;
       },
 
+      grantAllHousingItems: () => {
+        set((s) => {
+          const newFurnitureInv = { ...s.furnitureInventory };
+          for (const f of FURNITURE) newFurnitureInv[f.id] = Math.max(newFurnitureInv[f.id] ?? 0, 10);
+          const newDecoInv = { ...s.wallDecoInventory };
+          for (const d of WALL_DECORATIONS) newDecoInv[d.id] = Math.max(newDecoInv[d.id] ?? 0, 10);
+          return {
+            furnitureInventory: newFurnitureInv,
+            wallDecoInventory: newDecoInv,
+            unlockedWallpapers: WALLPAPERS.map((w) => w.id),
+            unlockedFloorTiles: FLOOR_TILES.map((f) => f.id),
+          };
+        });
+      },
+
       craftWallDecoration: (id) => {
         const decor = WALL_DECORATIONS.find((d) => d.id === id);
         if (!decor) return false;
@@ -406,6 +422,8 @@ export const usePlayerStore = create<PlayerState>()(
         if (!state.wallpaperId) state.wallpaperId = "wood";
         if (!state.floorTileId) state.floorTileId = "wood";
         if (!Array.isArray(state.wallDecorations)) state.wallDecorations = [];
+        // 구형 slotIndex 기반 데이터 마이그레이션: col/row 시스템으로 변경되어 초기화
+        else if (state.wallDecorations.some((d: any) => 'slotIndex' in d)) state.wallDecorations = [];
         if (!state.wallDecoInventory) state.wallDecoInventory = {};
         if (!Array.isArray(state.unlockedWallpapers)) state.unlockedWallpapers = ["wood"];
         if (!Array.isArray(state.unlockedFloorTiles)) state.unlockedFloorTiles = ["wood"];
@@ -464,7 +482,7 @@ export function isTileWalkable(
 }
 
 export function isDoorTile(x: number, y: number): "farm" | "exit" | null {
-  if (x === 0 && y === Math.floor(ROOM_ROWS / 2) - 1) return "farm";
-  if (x === ROOM_COLS - 1 && y === Math.floor(ROOM_ROWS / 2) - 1) return "exit";
+  if ((x === 4 || x === 5) && y === ROOM_ROWS - 1) return "farm";
+  if (x === ROOM_COLS - 1 && (y === 4 || y === 5)) return "exit";
   return null;
 }

@@ -55,10 +55,9 @@ export interface PlacedWallDecoration {
   decorId: string;
   /** 배치된 벽면 */
   wall: WallSide;
-  /**
-   * 슬롯 인덱스 (0~5, 3열 × 2행)
-   * col = slotIndex % 3,  row = Math.floor(slotIndex / 3)
-   */
-  slotIndex: number;
+  /** 벽 격자 열 (0 .. WALL_COLS-1) */
+  col: number;
+  /** 벽 격자 행 (0 .. WALL_ROWS-1, 0=하단) */
+  row: number;
   placedAt?: number;
 }
