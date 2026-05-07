@@ -14,7 +14,7 @@ export const EXIT_DOOR_TILE  = EXIT_DOOR_TILES[0];
 
 // ─── 벽면 격자 크기 ──────────────────────────────────────────────────────────
 export const WALL_COLS = 10;   // 벽면 가로 분할 수 (바닥 타일과 동일)
-export const WALL_ROWS = 4;    // 벽면 세로 분할 수 (걸레받이·몰딩 제외 구역)
+export const WALL_ROWS = 6;    // 벽면 세로 분할 수 (타일 높이 기준 ~22px/행)
 
 // ─── 캐릭터 초기 위치 (타일 좌표) ────────────────────────────────────────────
 export const PLAYER_INIT_TILE = { x: Math.floor(ROOM_COLS / 2), y: Math.floor(ROOM_ROWS / 2) };

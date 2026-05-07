@@ -267,16 +267,15 @@ function drawWallDecoration(
   wallDX: number, wallDY: number,
   inH: number, cs: number,
 ) {
-  const halfW  = Math.abs(wallDX) / WALL_COLS * 0.45;
-  const halfHw = Math.abs(wallDY) / WALL_COLS * 0.45;
-  const halfH  = inH / WALL_ROWS * 0.45;
+  // 벽 방향 벡터의 부호를 유지해야 코너가 벽면 기울기와 일치함
+  const dhx  = wallDX / WALL_COLS * 0.45;   // 수평 방향 X 성분 (부호 포함)
+  const dhy  = wallDY / WALL_COLS * 0.45;   // 수평 방향 Y 성분 (부호 포함: 왼벽 < 0)
+  const halfH = inH / WALL_ROWS * 0.45;
 
-  const sign = wallDX > 0 ? 1 : -1;
-
-  const tl = { x: cx - sign * halfW, y: cy - halfHw - halfH };
-  const tr = { x: cx + sign * halfW, y: cy + halfHw - halfH };
-  const br = { x: cx + sign * halfW, y: cy + halfHw + halfH };
-  const bl = { x: cx - sign * halfW, y: cy - halfHw + halfH };
+  const tl = { x: cx - dhx, y: cy - dhy - halfH };
+  const tr = { x: cx + dhx, y: cy + dhy - halfH };
+  const br = { x: cx + dhx, y: cy + dhy + halfH };
+  const bl = { x: cx - dhx, y: cy - dhy + halfH };
 
   if (decorId === "window") {
     drawWindowDecoration(ctx, tl, tr, br, bl, cs);

@@ -390,21 +390,21 @@ function WallGridOverlay({
             points={pts}
             fill={
               occupied
-                ? "rgba(251,191,36,0.14)"
+                ? "rgba(251,191,36,0.18)"
                 : isHov && selectedDecoId
-                  ? "rgba(74,222,128,0.2)"
+                  ? "rgba(74,222,128,0.28)"
                   : isHov
-                    ? "rgba(255,255,255,0.08)"
+                    ? "rgba(255,255,255,0.12)"
                     : "transparent"
             }
             stroke={
               occupied
                 ? "#f59e0b"
                 : isHov
-                  ? (selectedDecoId ? "#4ade80" : "rgba(255,255,255,0.55)")
-                  : "rgba(255,255,255,0.12)"
+                  ? (selectedDecoId ? "#4ade80" : "rgba(255,255,255,0.70)")
+                  : "rgba(255,255,255,0.22)"
             }
-            strokeWidth={isHov || occupied ? 1.2 : 0.6}
+            strokeWidth={isHov || occupied ? 1.5 : 0.9}
             style={{ cursor: "pointer", pointerEvents: "all" }}
             onMouseEnter={() => setHovered({ wall, col, row })}
             onMouseLeave={() => setHovered(null)}
