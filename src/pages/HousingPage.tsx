@@ -15,8 +15,8 @@ import {
   canPlaceFurnitureAt, getFurnitureAtTile, getFurnitureRenderPosition,
 } from "../utils/isometric";
 import { ROOM_COLS, ROOM_ROWS, PLAYER_INIT_TILE, WALL_COLS, WALL_ROWS } from "../constants/housing";
-import { WALLPAPERS } from "../data/wallpapers";
-import { FLOOR_TILES } from "../data/floorTiles";
+import { WALLPAPERS, getWallpaper } from "../data/wallpapers";
+import { FLOOR_TILES, getFloorTile } from "../data/floorTiles";
 import { WALL_DECORATIONS, getWallDecoration } from "../data/wallDecorations";
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
@@ -427,7 +427,7 @@ function WallGridOverlay({
 
 // ─── 편집 패널 (Tiny Farm 스타일 하단 슬라이드) ──────────────────────────────
 
-export const PANEL_H = 272; // 외부에서 레이아웃 계산용
+export const PANEL_W = 280; // 우측 패널 너비 (외부에서 레이아웃 계산용)
 
 type EditTab = "furniture" | "walldeco" | "wallpaper" | "floortile";
 
@@ -495,23 +495,23 @@ function EditPanel({
 
   return (
     <div style={{
-      position: "fixed", bottom: 0, left: 0, right: 0, height: PANEL_H,
+      position: "fixed", right: 0, top: 0, bottom: 0, width: PANEL_W,
       background: "linear-gradient(180deg, #0e0804 0%, #150d07 100%)",
-      borderTop: "2px solid #3a2510",
+      borderLeft: "2px solid #3a2510",
       display: "flex", flexDirection: "column", zIndex: 500,
-      boxShadow: "0 -6px 32px rgba(0,0,0,0.7)",
-      transform: open ? "translateY(0)" : "translateY(100%)",
+      boxShadow: "-6px 0 32px rgba(0,0,0,0.8)",
+      transform: open ? "translateX(0)" : "translateX(100%)",
       transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
     }}>
 
-      {/* ── 탭 헤더 행 ── */}
+      {/* ── 탭 헤더 (2×2 그리드) + 닫기 ── */}
       <div style={{
-        display: "flex", alignItems: "stretch", height: 40,
+        display: "grid", gridTemplateColumns: "1fr 1fr",
         borderBottom: "1px solid #2a1a0a", flexShrink: 0,
       }}>
         {tabs.map((t) => (
           <button key={t.id} onClick={() => onTabChange(t.id)} style={{
-            flex: 1, padding: "0 4px", fontSize: 10, fontWeight: "bold",
+            padding: "8px 4px", fontSize: 10, fontWeight: "bold",
             color: tab === t.id ? "#fbbf24" : "#555",
             background: tab === t.id ? "rgba(251,191,36,0.08)" : "none",
             border: "none", borderBottom: `2px solid ${tab === t.id ? "#fbbf24" : "transparent"}`,
@@ -523,9 +523,9 @@ function EditPanel({
         <button
           onClick={onClose}
           style={{
-            padding: "0 16px", fontSize: 11, fontWeight: "bold",
+            gridColumn: "1 / -1", padding: "6px 0", fontSize: 11, fontWeight: "bold",
             color: "#fbbf24", background: "rgba(251,191,36,0.1)",
-            border: "none", borderLeft: "1px solid #3a2510", cursor: "pointer",
+            border: "none", borderTop: "1px solid #3a2510", cursor: "pointer",
           }}
         >
           ✓ 완료
@@ -584,15 +584,16 @@ function EditPanel({
         </div>
       )}
 
-      {/* 탭 컨텐츠 — 가로 스크롤 카드 */}
-      <div style={{ flex: 1, display: "flex", overflowX: "auto", overflowY: "hidden", padding: "6px 10px", gap: 6, alignItems: "stretch" }}>
+      {/* 탭 컨텐츠 — 세로 스크롤 */}
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 10px" }}>
 
         {/* ══ 가구 탭 ══════════════════════════════════════════════════════════ */}
         {tab === "furniture" && (<>
           {/* 보유 가구 */}
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>보유</div>
+          <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>보유</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {inventory.length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 64, flexShrink: 0, color: "#444" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 64, color: "#444" }}>
               <div style={{ fontSize: 24 }}>🪑</div><div style={{ fontSize: 8, marginTop: 4 }}>없음</div>
             </div>
           ) : inventory.map((f) => {
@@ -600,7 +601,7 @@ function EditPanel({
             return (
               <button key={f.id} onClick={() => onSelectFurniture(isSelected ? null : f.id)} style={{
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                width: 72, flexShrink: 0, padding: "8px 4px", gap: 4, borderRadius: 8, cursor: "pointer",
+                width: 72, padding: "8px 4px", gap: 4, borderRadius: 8, cursor: "pointer",
                 border: `2px solid ${isSelected ? "#fbbf24" : "#2a1a0a"}`,
                 background: isSelected ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.02)",
                 transition: "all 0.15s",
@@ -611,11 +612,13 @@ function EditPanel({
               </button>
             );
           })}
+          </div>
 
-          <div style={{ width: 1, background: "#2a1a0a", flexShrink: 0, margin: "0 4px" }} />
+          <div style={{ height: 1, background: "#2a1a0a", margin: "2px 0 8px" }} />
 
           {/* 가구 제작 */}
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>제작</div>
+          <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>제작</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {FURNITURE.map((f) => {
             const canCraft = Object.entries(f.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
             const crafted = lastCrafted === f.id;
@@ -652,17 +655,19 @@ function EditPanel({
               </div>
             );
           })}
+          </div>
 
-          <div style={{ width: 1, background: "#2a1a0a", flexShrink: 0, margin: "0 4px" }} />
+          <div style={{ height: 1, background: "#2a1a0a", margin: "2px 0 8px" }} />
 
           {/* 세트 효과 */}
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>세트</div>
+          <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>세트</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {(["wood", "iron", "crystal", "leather"] as FurnitureMaterial[]).map((mat) => {
             const tiers = MATERIAL_SET_TIERS[mat]; const cur = counts[mat]; const max = tiers[tiers.length - 1].count;
             return (
               <div key={mat} style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
-                width: 84, flexShrink: 0, padding: "8px 6px", gap: 4, borderRadius: 8,
+                width: 120, padding: "8px 6px", gap: 4, borderRadius: 8,
                 border: `1px solid ${cur > 0 ? matHues[mat] + "44" : "#2a1a0a"}`,
                 background: cur > 0 ? `${matHues[mat]}08` : "rgba(255,255,255,0.01)",
               }}>
@@ -679,13 +684,15 @@ function EditPanel({
               </div>
             );
           })}
+          </div>
         </>)}
 
         {/* ══ 벽 장식 탭 ════════════════════════════════════════════════════════ */}
         {tab === "walldeco" && (<>
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>보유</div>
+          <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>보유</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {WALL_DECORATIONS.filter((d) => (wallDecoInventory[d.id] ?? 0) > 0).length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 64, flexShrink: 0, color: "#444" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 64, color: "#444" }}>
               <div style={{ fontSize: 24 }}>🖼️</div><div style={{ fontSize: 8, marginTop: 4 }}>없음</div>
             </div>
           ) : WALL_DECORATIONS.filter((d) => (wallDecoInventory[d.id] ?? 0) > 0).map((d) => {
@@ -693,7 +700,7 @@ function EditPanel({
             return (
               <button key={d.id} onClick={() => onSelectDeco(isSelected ? null : d.id)} style={{
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                width: 72, flexShrink: 0, padding: "8px 4px", gap: 4, borderRadius: 8, cursor: "pointer",
+                width: 72, padding: "8px 4px", gap: 4, borderRadius: 8, cursor: "pointer",
                 border: `2px solid ${isSelected ? "#fbbf24" : "#2a1a0a"}`,
                 background: isSelected ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.02)",
                 transition: "all 0.15s",
@@ -704,16 +711,18 @@ function EditPanel({
               </button>
             );
           })}
+          </div>
 
           {wallDecorations.length > 0 && (<>
-            <div style={{ width: 1, background: "#2a1a0a", flexShrink: 0, margin: "0 4px" }} />
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>배치</div>
+            <div style={{ height: 1, background: "#2a1a0a", margin: "2px 0 8px" }} />
+            <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>배치</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
             {wallDecorations.map((d) => {
               const wd = getWallDecoration(d.decorId);
               return wd ? (
                 <div key={d.instanceId} style={{
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  width: 72, flexShrink: 0, padding: "8px 4px", gap: 4, borderRadius: 8,
+                  width: 72, padding: "8px 4px", gap: 4, borderRadius: 8,
                   border: "1px solid #2a1a0a", background: "rgba(255,255,255,0.02)",
                 }}>
                   <span style={{ fontSize: 24 }}>{wd.emoji}</span>
@@ -723,11 +732,12 @@ function EditPanel({
                 </div>
               ) : null;
             })}
+            </div>
           </>)}
 
-          <div style={{ width: 1, background: "#2a1a0a", flexShrink: 0, margin: "0 4px" }} />
-
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", width: 22, flexShrink: 0, color: "#444", fontSize: 8, writingMode: "vertical-rl", textTransform: "uppercase", letterSpacing: 1, userSelect: "none" }}>제작</div>
+          <div style={{ height: 1, background: "#2a1a0a", margin: "2px 0 8px" }} />
+          <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>제작</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {WALL_DECORATIONS.map((d) => {
             const canCraft = Object.entries(d.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
             const crafted = lastCrafted === d.id;
@@ -764,10 +774,13 @@ function EditPanel({
               </div>
             );
           })}
+          </div>
         </>)}
 
         {/* ══ 벽지 탭 ══════════════════════════════════════════════════════════ */}
-        {tab === "wallpaper" && WALLPAPERS.map((wp) => {
+        {tab === "wallpaper" && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {WALLPAPERS.map((wp) => {
           const isUnlocked = unlockedWallpapers.includes(wp.id);
           const isActive   = wallpaperId === wp.id;
           const canCraft   = Object.keys(wp.recipe).length === 0 ? false : Object.entries(wp.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
@@ -775,7 +788,7 @@ function EditPanel({
           return (
             <div key={wp.id} style={{
               display: "flex", flexDirection: "column", alignItems: "center",
-              width: 88, flexShrink: 0, padding: "6px 5px", gap: 4, borderRadius: 8,
+              width: 120, padding: "6px 5px", gap: 4, borderRadius: 8,
               border: `1px solid ${isActive ? "#fbbf24" : isUnlocked ? "#2a1a0a" : "#1a0e06"}`,
               background: isActive ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.02)",
             }}>
@@ -810,9 +823,13 @@ function EditPanel({
             </div>
           );
         })}
+          </div>
+        )}
 
         {/* ══ 바닥 탭 ══════════════════════════════════════════════════════════ */}
-        {tab === "floortile" && FLOOR_TILES.map((ft) => {
+        {tab === "floortile" && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {FLOOR_TILES.map((ft) => {
           const isUnlocked = unlockedFloorTiles.includes(ft.id);
           const isActive   = floorTileId === ft.id;
           const canCraft   = Object.keys(ft.recipe).length === 0 ? false : Object.entries(ft.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
@@ -820,11 +837,11 @@ function EditPanel({
           return (
             <div key={ft.id} style={{
               display: "flex", flexDirection: "column", alignItems: "center",
-              width: 88, flexShrink: 0, padding: "6px 5px", gap: 4, borderRadius: 8,
+              width: 120, padding: "6px 5px", gap: 4, borderRadius: 8,
               border: `1px solid ${isActive ? "#fbbf24" : isUnlocked ? "#2a1a0a" : "#1a0e06"}`,
               background: isActive ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.02)",
             }}>
-              <div style={{ width: "100%", height: 28, borderRadius: 5, flexShrink: 0, opacity: isUnlocked ? 1 : 0.4, background: ft.normalBg, border: `1px solid ${ft.normalOutline}` }} />
+              <div style={{ width: "100%", height: 28, borderRadius: 5, opacity: isUnlocked ? 1 : 0.4, background: ft.normalBg, border: `1px solid ${ft.normalOutline}` }} />
               <span style={{ fontSize: 14 }}>{ft.emoji}</span>
               <span style={{ fontSize: 8, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{ft.name}</span>
               {isActive && <span style={{ fontSize: 7, color: "#fbbf24", background: "rgba(251,191,36,0.15)", padding: "1px 5px", borderRadius: 3 }}>현재</span>}
@@ -855,6 +872,8 @@ function EditPanel({
             </div>
           );
         })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -934,6 +953,7 @@ export default function HousingPage() {
     placedFurniture, placeFurniture, moveFurniture, rotateFurniture, removeFurniture, getHousingBonuses,
     wallDecorations, placeWallDecoration, removeWallDecoration,
     grantAllHousingItems,
+    wallpaperId, floorTileId,
   } = usePlayerStore();
 
   // ── 레이아웃: housing_bg.png 다이아몬드 영역에 스테이지 정렬 ───────────────
@@ -941,11 +961,12 @@ export default function HousingPage() {
 
   // 실내 방 전체 (벽+바닥) 크기: 가로 880, 세로 (440 + ROOM_WALL_H)
   const totalStageH = roomSize.height + ROOM_WALL_H;
+  const availW = containerSize.w - (editMode ? PANEL_W : 0);
   const contentScale = Math.min(
-    containerSize.w / (roomSize.width  + 40),
-    containerSize.h / (totalStageH + 40),
+    (availW - 40) / roomSize.width,
+    (containerSize.h - 40) / totalStageH,
   );
-  const stageLeft = (containerSize.w - roomSize.width  * contentScale) / 2;
+  const stageLeft = (availW - roomSize.width  * contentScale) / 2;
   const stageTop  = (containerSize.h - totalStageH * contentScale) / 2 + ROOM_WALL_H * contentScale;
 
   useEffect(() => {
@@ -1136,7 +1157,8 @@ export default function HousingPage() {
   const nearExit = playerTile.x >= ROOM_COLS - 1.5 && playerTile.y >= 3.5 && playerTile.y <= 6.5;
 
   const bonuses = getHousingBonuses();
-  const floorStyle = { normalBg: "transparent", normalOutline: "transparent", hoverBg: "rgba(255,255,255,0.18)", hoverOutline: "transparent" };
+  const _ft = getFloorTile(floorTileId);
+  const floorStyle = { normalBg: "transparent", normalOutline: "transparent", hoverBg: _ft.hoverBg, hoverOutline: _ft.normalOutline };
 
   return (
     <div
@@ -1151,6 +1173,8 @@ export default function HousingPage() {
         stageTop={stageTop}
         cs={contentScale}
         wallDecorations={wallDecorations}
+        wallpaperId={wallpaperId}
+        floorTileId={floorTileId}
       />
 
       {/* ── 벽 격자 오버레이 (편집 모드) ────────────────────────────────── */}
@@ -1232,8 +1256,8 @@ export default function HousingPage() {
 
       {/* ── 우하단: 꾸미기 버튼 ──────────────────────────────────────────── */}
       <div style={{
-        position: "fixed", bottom: editMode ? PANEL_H + 12 : 16,
-        right: 14,
+        position: "fixed", bottom: 16,
+        right: editMode ? PANEL_W + 14 : 14,
         zIndex: 500, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8,
       }}>
         {!editMode && (
