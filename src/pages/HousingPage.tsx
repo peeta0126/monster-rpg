@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { IndoorRoomBg, ROOM_WALL_H } from "../components/housing/IndoorRoomBg";
+import { FurnitureCanvas } from "../components/housing/FurnitureCanvas";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, isTileWalkable } from "../store/playerStore";
 import {
@@ -104,13 +105,12 @@ function PlacedFurnitureSprite({
   if (!f) return null;
 
   const rSize = getRotatedSize(f.size, item.rotation);
-  const isRotated = item.rotation !== 0;
   const v = f.visual;
-  const imgSrc = isRotated && v.rotatedAsset ? v.rotatedAsset : v.asset;
-  const imgW   = (isRotated ? v.rotatedWidth  : undefined) ?? v.width  ?? 80;
-  const imgH   = (isRotated ? v.rotatedHeight : undefined) ?? v.height ?? 80;
-  const oX     = (isRotated ? v.rotatedOffsetX : undefined) ?? v.offsetX ?? 0;
-  const oY     = (isRotated ? v.rotatedOffsetY : undefined) ?? v.offsetY ?? 0;
+  const swapped = item.rotation === 90 || item.rotation === 270;
+  const canvasW = swapped ? (v.height ?? 80) : (v.width ?? 80);
+  const canvasH = swapped ? (v.width ?? 80) : (v.height ?? 80);
+  const oX = v.offsetX ?? 0;
+  const oY = v.offsetY ?? 0;
 
   // 앵커: 점유 영역의 하단 중앙
   const anchorLeft = (item.x + rSize.width  / 2) * TILE_SIZE + oX;
@@ -138,17 +138,7 @@ function PlacedFurnitureSprite({
         userSelect: "none", pointerEvents: "auto",
       }}
     >
-      {imgSrc ? (
-        <img src={imgSrc} alt={f.name}
-          style={{ width: imgW, height: imgH, imageRendering: "pixelated", display: "block" }}
-          draggable={false}
-        />
-      ) : (
-        <div style={{ fontSize: 32, lineHeight: 1, textAlign: "center",
-          filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.8))" }}>
-          {f.emoji}
-        </div>
-      )}
+      <FurnitureCanvas furnitureId={f.id} rotation={item.rotation} W={canvasW} H={canvasH} />
       {(isSelected || (hovered && editMode)) && (
         <div style={{
           position: "absolute", bottom: "100%", left: "50%",
@@ -264,12 +254,11 @@ function TopDownRoomGrid({
   const ghostFurniture = (() => {
     if (!editMode || !hoveredTile || !selectedFD) return null;
     const v = selectedFD.visual;
-    const isRotated = placementRotation !== 0;
-    const imgSrc = isRotated && v.rotatedAsset ? v.rotatedAsset : v.asset;
-    const imgW   = (isRotated ? v.rotatedWidth  : undefined) ?? v.width  ?? 80;
-    const imgH   = (isRotated ? v.rotatedHeight : undefined) ?? v.height ?? 80;
-    const oX     = (isRotated ? v.rotatedOffsetX : undefined) ?? v.offsetX ?? 0;
-    const oY     = (isRotated ? v.rotatedOffsetY : undefined) ?? v.offsetY ?? 0;
+    const swappedG = placementRotation === 90 || placementRotation === 270;
+    const gW = swappedG ? (v.height ?? 80) : (v.width ?? 80);
+    const gH = swappedG ? (v.width ?? 80) : (v.height ?? 80);
+    const oX = v.offsetX ?? 0;
+    const oY = v.offsetY ?? 0;
     const rSize  = getRotatedSize(selectedFD.size, placementRotation);
     const ghostLeft = (hoveredTile.x + rSize.width  / 2) * TILE_SIZE + oX;
     const ghostTop  = (hoveredTile.y + rSize.height) * TILE_SIZE + oY;
@@ -280,11 +269,7 @@ function TopDownRoomGrid({
         transform: "translate(-50%, -100%)", zIndex: 200, opacity: 0.6, pointerEvents: "none",
         filter: canPlace ? "drop-shadow(0 0 6px #4ade80)" : "drop-shadow(0 0 6px #f87171)",
       }}>
-        {imgSrc ? (
-          <img src={imgSrc} alt={selectedFD.name}
-            style={{ width: imgW, height: imgH, imageRendering: "pixelated", display: "block" }}
-            draggable={false} />
-        ) : <div style={{ fontSize: 32, lineHeight: 1 }}>{selectedFD.emoji}</div>}
+        <FurnitureCanvas furnitureId={selectedFD.id} rotation={placementRotation} W={gW} H={gH} />
       </div>
     );
   })();

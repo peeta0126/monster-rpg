@@ -287,25 +287,35 @@ function drawFloor(
   const ph = PLANK_H * cs;
 
   if (id === "wood") {
-    // ── 나무 마루 (가로 결) ──────────────────────────────────────────────
+    // ── 풍성한 원목 마루판 ────────────────────────────────────────────────
+    const plankPalette = ["#8C4E20", "#7A4018", "#9A5A28", "#6E3A14", "#A06030"];
     let row = 0;
     for (let y = ry; y < ry + roomH; y += ph) {
       const h = Math.min(ph, ry + roomH - y);
-      ctx.fillStyle = row % 2 === 0 ? "rgba(155,96,42,0.96)" : "rgba(126,74,24,0.96)";
+      ctx.fillStyle = plankPalette[row % plankPalette.length];
       ctx.fillRect(rx, y, roomW, h);
-      ctx.fillStyle = "rgba(215,152,68,0.07)";
-      ctx.fillRect(rx, y, roomW, h * 0.42);
-      ctx.fillStyle = "rgba(42,18,4,0.92)";
-      ctx.fillRect(rx, y, roomW, Math.max(1.5, cs * 1.8));
+      // 마루 상단 하이라이트
+      ctx.fillStyle = "rgba(255,200,100,0.09)";
+      ctx.fillRect(rx, y, roomW, h * 0.32);
+      // 마루 하단 음영
+      ctx.fillStyle = "rgba(0,0,0,0.20)";
+      ctx.fillRect(rx, y + h * 0.72, roomW, h * 0.28);
+      // 판 이음 선
+      ctx.fillStyle = "rgba(30,10,2,0.90)";
+      ctx.fillRect(rx, y, roomW, Math.max(1.5, cs * 2));
+      // 결 선 (가로)
+      ctx.strokeStyle = "rgba(50,20,5,0.18)"; ctx.lineWidth = Math.max(0.5, cs * 0.6);
+      for (let g = 1; g < 3; g++) {
+        ctx.beginPath(); ctx.moveTo(rx, y + h * g / 3 + cs * 0.5); ctx.lineTo(rx + roomW, y + h * g / 3 + cs * 0.5); ctx.stroke();
+      }
       row++;
     }
-    // 세로 이음새
-    ctx.strokeStyle = "rgba(42,18,4,0.30)";
-    ctx.lineWidth = Math.max(0.6, cs * 0.8);
-    const segW = cs * 88;
+    // 세로 이음새 (엇갈림)
+    const segW = ts * 1.8;
+    ctx.strokeStyle = "rgba(30,10,2,0.42)"; ctx.lineWidth = Math.max(1, cs * 1.2);
     let ri = 0;
     for (let y = ry; y < ry + roomH; y += ph * 2) {
-      const off = ri % 2 === 0 ? 0 : segW * 0.5;
+      const off = ri % 2 === 0 ? 0 : segW * 0.55;
       for (let x = rx + off; x < rx + roomW; x += segW) {
         ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, Math.min(y + ph * 2, ry + roomH)); ctx.stroke();
       }
@@ -313,64 +323,145 @@ function drawFloor(
     }
 
   } else if (id === "stone") {
+    // ── 깃발돌 바닥 ──────────────────────────────────────────────────────
+    const stonePalette = ["rgba(108,95,78,0.97)", "rgba(90,79,62,0.97)", "rgba(120,104,84,0.97)", "rgba(80,68,53,0.97)", "rgba(100,88,70,0.97)"];
     for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
       const x = rx + tx * ts, y = ry + ty * ts;
-      ctx.fillStyle = (tx+ty)%2===0 ? "rgba(102,90,74,0.96)" : "rgba(80,68,52,0.96)";
-      ctx.fillRect(x, y, ts, ts);
-      ctx.fillStyle = "rgba(255,255,255,0.055)";
-      ctx.fillRect(x, y, ts, ts*0.18); ctx.fillRect(x, y, ts*0.08, ts);
-      ctx.strokeStyle = "rgba(34,24,12,0.96)"; ctx.lineWidth = Math.max(1.2, cs*1.5);
-      ctx.strokeRect(x+cs*0.8, y+cs*0.8, ts-cs*1.6, ts-cs*1.6);
+      const ci = (tx * 3 + ty * 7) % stonePalette.length;
+      ctx.fillStyle = stonePalette[ci]; ctx.fillRect(x, y, ts, ts);
+      // 내부 석판 (약간 다른 색)
+      const inset = Math.max(cs * 3, 3.5);
+      ctx.fillStyle = stonePalette[(ci + 2) % stonePalette.length];
+      ctx.fillRect(x + inset, y + inset, ts - inset * 2, ts - inset * 2);
+      // 좌상 하이라이트
+      ctx.fillStyle = "rgba(215,195,165,0.14)";
+      ctx.fillRect(x + inset, y + inset, ts - inset * 2, ts * 0.22);
+      ctx.fillRect(x + inset, y + inset, ts * 0.16, ts - inset * 2);
+      // 우하 음영
+      ctx.fillStyle = "rgba(15,10,5,0.30)";
+      ctx.fillRect(x + inset, y + ts * 0.76, ts - inset * 2, ts * 0.24 - inset);
+      ctx.fillRect(x + ts * 0.76, y + inset, ts * 0.24 - inset, ts - inset * 2);
+      // 줄눈 (grout)
+      ctx.strokeStyle = "rgba(28,18,10,0.98)"; ctx.lineWidth = Math.max(2, cs * 3);
+      ctx.strokeRect(x + cs * 0.6, y + cs * 0.6, ts - cs * 1.2, ts - cs * 1.2);
     }
 
   } else if (id === "cafe") {
+    // ── 고급 흑백 체커 타일 ───────────────────────────────────────────────
     for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
       const x = rx + tx * ts, y = ry + ty * ts;
-      ctx.fillStyle = (tx+ty)%2===0 ? "rgba(232,204,156,0.96)" : "rgba(112,76,38,0.96)";
+      const isLight = (tx + ty) % 2 === 0;
+      ctx.fillStyle = isLight ? "#EAD9B6" : "#1E1208";
       ctx.fillRect(x, y, ts, ts);
-      ctx.fillStyle = "rgba(255,255,255,0.07)";
-      ctx.fillRect(x, y, ts, ts*0.18);
-      ctx.strokeStyle = "rgba(96,68,32,0.93)"; ctx.lineWidth = Math.max(1.2, cs*1.5);
-      ctx.strokeRect(x+cs*0.8, y+cs*0.8, ts-cs*1.6, ts-cs*1.6);
+      if (isLight) {
+        // 밝은 타일 광택
+        const sg = ctx.createRadialGradient(x + ts * 0.32, y + ts * 0.28, 0, x + ts * 0.5, y + ts * 0.5, ts * 0.68);
+        sg.addColorStop(0, "rgba(255,255,255,0.24)"); sg.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = sg; ctx.fillRect(x, y, ts, ts);
+        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        ctx.fillRect(x, y, ts, ts * 0.15); ctx.fillRect(x, y, ts * 0.10, ts);
+      } else {
+        // 어두운 타일 따뜻함
+        ctx.fillStyle = "rgba(90,50,15,0.22)";
+        ctx.fillRect(x + ts * 0.5, y, ts * 0.5, ts); ctx.fillRect(x, y, ts, ts * 0.20);
+      }
+      // 줄눈
+      ctx.strokeStyle = isLight ? "rgba(120,95,55,0.80)" : "rgba(60,38,12,0.90)";
+      ctx.lineWidth = Math.max(1.8, cs * 2.2);
+      ctx.strokeRect(x + cs, y + cs, ts - cs * 2, ts - cs * 2);
     }
 
   } else if (id === "rug") {
-    ctx.fillStyle = "rgba(152,42,34,0.96)"; ctx.fillRect(rx, ry, roomW, roomH);
-    const b1 = Math.max(cs*14, 13);
-    ctx.strokeStyle = "rgba(208,80,60,0.94)"; ctx.lineWidth = Math.max(cs*3.5, 4.5);
-    ctx.strokeRect(rx+b1, ry+b1, roomW-b1*2, roomH-b1*2);
-    const b2 = b1 + Math.max(cs*5, 6);
-    ctx.strokeStyle = "rgba(238,152,110,0.52)"; ctx.lineWidth = Math.max(cs*1.5, 2);
-    ctx.strokeRect(rx+b2, ry+b2, roomW-b2*2, roomH-b2*2);
+    // ── 페르시아 카펫 ────────────────────────────────────────────────────
+    ctx.fillStyle = "rgba(148,26,26,0.98)"; ctx.fillRect(rx, ry, roomW, roomH);
+    // 짜임 텍스처
+    ctx.strokeStyle = "rgba(100,14,14,0.42)"; ctx.lineWidth = 1.5;
+    for (let y = ry + 4; y < ry + roomH; y += 5) { ctx.beginPath(); ctx.moveTo(rx, y); ctx.lineTo(rx + roomW, y); ctx.stroke(); }
+    ctx.strokeStyle = "rgba(120,20,20,0.28)"; ctx.lineWidth = 1;
+    for (let x = rx + 4; x < rx + roomW; x += 8) { ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x, ry + roomH); ctx.stroke(); }
+    // 외곽 테두리
+    const b1 = Math.max(cs * 16, 16);
+    ctx.strokeStyle = "#CC3E2A"; ctx.lineWidth = Math.max(cs * 5.5, 6.5); ctx.strokeRect(rx + b1, ry + b1, roomW - b1 * 2, roomH - b1 * 2);
+    ctx.strokeStyle = "#EE9850"; ctx.lineWidth = Math.max(cs * 2.5, 3); ctx.strokeRect(rx + b1 + 5, ry + b1 + 5, roomW - b1 * 2 - 10, roomH - b1 * 2 - 10);
+    const b2 = b1 + Math.max(cs * 9, 10);
+    ctx.strokeStyle = "rgba(240,155,85,0.55)"; ctx.lineWidth = Math.max(cs * 1.5, 1.8); ctx.strokeRect(rx + b2, ry + b2, roomW - b2 * 2, roomH - b2 * 2);
+    // 다이아몬드 패턴
+    const dStep = ts * 0.82;
+    ctx.strokeStyle = "rgba(200,55,35,0.55)"; ctx.lineWidth = Math.max(cs * 1.2, 1.5);
+    for (let dy = ry + b2 + dStep * 0.5; dy < ry + roomH - b2; dy += dStep) {
+      for (let dx = rx + b2 + dStep * 0.5; dx < rx + roomW - b2; dx += dStep) {
+        const dh = dStep * 0.40;
+        ctx.beginPath(); ctx.moveTo(dx, dy - dh); ctx.lineTo(dx + dh, dy); ctx.lineTo(dx, dy + dh); ctx.lineTo(dx - dh, dy); ctx.closePath(); ctx.stroke();
+      }
+    }
 
   } else if (id === "crystal") {
+    // ── 빛나는 수정 바닥 ─────────────────────────────────────────────────
     for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
       const x = rx + tx * ts, y = ry + ty * ts;
-      ctx.fillStyle = (tx+ty)%2===0 ? "rgba(72,138,222,0.92)" : "rgba(50,106,194,0.92)";
+      ctx.fillStyle = (tx + ty) % 2 === 0 ? "rgba(64,122,218,0.96)" : "rgba(46,92,188,0.96)";
       ctx.fillRect(x, y, ts, ts);
-      ctx.fillStyle = "rgba(192,232,255,0.14)";
-      ctx.fillRect(x, y, ts*0.13, ts); ctx.fillRect(x, y, ts, ts*0.16);
-      ctx.strokeStyle = "rgba(28,60,170,0.94)"; ctx.lineWidth = Math.max(1.2, cs*1.5);
-      ctx.strokeRect(x+cs*0.8, y+cs*0.8, ts-cs*1.6, ts-cs*1.6);
+      // 내부 발광
+      const ig = ctx.createRadialGradient(x + ts * 0.5, y + ts * 0.45, 0, x + ts * 0.5, y + ts * 0.5, ts * 0.58);
+      ig.addColorStop(0, "rgba(195,240,255,0.30)"); ig.addColorStop(0.6, "rgba(100,180,255,0.08)"); ig.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = ig; ctx.fillRect(x, y, ts, ts);
+      // 하이라이트 선
+      ctx.fillStyle = "rgba(195,238,255,0.20)";
+      ctx.fillRect(x, y, ts * 0.10, ts); ctx.fillRect(x, y, ts, ts * 0.12);
+      // 별빛 스파클 (일부 타일)
+      if ((tx + ty) % 2 === 0 && tx % 3 === 0) {
+        const sx = x + ts * 0.5, sy = y + ts * 0.5;
+        ctx.strokeStyle = "rgba(200,245,255,0.80)"; ctx.lineWidth = Math.max(0.8, cs);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - ts * 0.26); ctx.lineTo(sx, sy + ts * 0.26);
+        ctx.moveTo(sx - ts * 0.26, sy); ctx.lineTo(sx + ts * 0.26, sy);
+        ctx.moveTo(sx - ts * 0.18, sy - ts * 0.18); ctx.lineTo(sx + ts * 0.18, sy + ts * 0.18);
+        ctx.moveTo(sx + ts * 0.18, sy - ts * 0.18); ctx.lineTo(sx - ts * 0.18, sy + ts * 0.18);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(255,255,255,0.90)"; ctx.beginPath(); ctx.arc(sx, sy, Math.max(1.5, cs * 1.8), 0, Math.PI * 2); ctx.fill();
+      }
+      // 타일 테두리
+      ctx.strokeStyle = "rgba(24,50,158,0.98)"; ctx.lineWidth = Math.max(1.8, cs * 2.2);
+      ctx.strokeRect(x + cs * 0.8, y + cs * 0.8, ts - cs * 1.6, ts - cs * 1.6);
     }
 
   } else if (id === "dark") {
+    // ── 검은 대리석 + 보라빛 결 ──────────────────────────────────────────
     for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
       const x = rx + tx * ts, y = ry + ty * ts;
-      ctx.fillStyle = (tx+ty)%2===0 ? "rgba(30,18,46,0.97)" : "rgba(18,10,30,0.97)";
+      ctx.fillStyle = (tx + ty) % 2 === 0 ? "rgba(20,12,34,0.97)" : "rgba(12,7,22,0.97)";
       ctx.fillRect(x, y, ts, ts);
-      ctx.fillStyle = "rgba(102,60,148,0.14)";
-      ctx.fillRect(x+ts*0.5, y, ts*0.5, ts); ctx.fillRect(x, y, ts, ts*0.13);
-      ctx.strokeStyle = "rgba(72,42,104,0.94)"; ctx.lineWidth = Math.max(1.2, cs*1.5);
-      ctx.strokeRect(x+cs*0.8, y+cs*0.8, ts-cs*1.6, ts-cs*1.6);
+      // 대리석 결 (비정형 곡선)
+      ctx.strokeStyle = "rgba(80,42,124,0.58)"; ctx.lineWidth = Math.max(0.8, cs);
+      ctx.beginPath();
+      ctx.moveTo(x + ts * 0.05, y + ts * 0.60);
+      ctx.bezierCurveTo(x + ts * 0.28, y + ts * 0.40, x + ts * 0.68, y + ts * 0.70, x + ts * 0.96, y + ts * 0.48);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(60,28,96,0.42)"; ctx.lineWidth = Math.max(0.5, cs * 0.7);
+      ctx.beginPath();
+      ctx.moveTo(x + ts * 0.20, y + ts * 0.18);
+      ctx.bezierCurveTo(x + ts * 0.45, y + ts * 0.32, x + ts * 0.55, y + ts * 0.10, x + ts * 0.85, y + ts * 0.28);
+      ctx.stroke();
+      // 보라빛 shimmer
+      ctx.fillStyle = "rgba(88,46,138,0.16)";
+      ctx.fillRect(x + ts * 0.55, y, ts * 0.45, ts); ctx.fillRect(x, y, ts, ts * 0.14);
+      // 교차점 미묘한 글로우 (4칸마다)
+      if ((tx + ty) % 4 === 0) {
+        const cg = ctx.createRadialGradient(x + ts * 0.5, y + ts * 0.5, 0, x + ts * 0.5, y + ts * 0.5, ts * 0.44);
+        cg.addColorStop(0, "rgba(110,55,190,0.20)"); cg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = cg; ctx.fillRect(x, y, ts, ts);
+      }
+      // 타일 테두리
+      ctx.strokeStyle = "rgba(60,34,96,0.96)"; ctx.lineWidth = Math.max(1.8, cs * 2.2);
+      ctx.strokeRect(x + cs * 0.8, y + cs * 0.8, ts - cs * 1.6, ts - cs * 1.6);
     }
 
   } else {
     for (let ty = 0; ty < ROOM_ROWS; ty++) for (let tx = 0; tx < ROOM_COLS; tx++) {
       const x = rx + tx * ts, y = ry + ty * ts;
-      ctx.fillStyle = (tx+ty)%2===0 ? ft.normalBg : ft.hoverBg;
+      ctx.fillStyle = (tx + ty) % 2 === 0 ? ft.normalBg : ft.hoverBg;
       ctx.fillRect(x, y, ts, ts);
-      ctx.strokeStyle = ft.normalOutline; ctx.lineWidth = Math.max(1, cs*1.4);
+      ctx.strokeStyle = ft.normalOutline; ctx.lineWidth = Math.max(1, cs * 1.4);
       ctx.strokeRect(x, y, ts, ts);
     }
   }

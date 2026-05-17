@@ -64,12 +64,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 1,
     size: { width: 2, height: 3 },
     visual: {
-      asset: "/assets/housing/wooden_bed.png",
-      width: 200,
-      height: 230,
+      width: 168,
+      height: 252,
       offsetX: 0,
       offsetY: -18,
-      rotatedAsset: "/assets/housing/wooden_bed1.png",
     },
   },
   {
@@ -84,9 +82,8 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 1,
     size: { width: 2, height: 1 },
     visual: {
-      asset: "/assets/housing/wooden_desk.png",
-      width: 172,
-      height: 140,
+      width: 168,
+      height: 112,
       offsetX: 0,
       offsetY: -10,
     },
@@ -103,12 +100,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 3,
     size: { width: 1, height: 1 },
     visual: {
-      asset: "/assets/housing/wooden_chair.png",
-      width: 96,
-      height: 108,
+      width: 88,
+      height: 100,
       offsetX: 0,
       offsetY: -8,
-      rotatedAsset: "/assets/housing/wooden_chair1.png",
     },
   },
   {
@@ -123,12 +118,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 1,
     size: { width: 2, height: 2 },
     visual: {
-      asset: "/assets/housing/wooden_table.png",
-      width: 174,
-      height: 166,
+      width: 168,
+      height: 158,
       offsetX: 0,
-      offsetY: -14,
-      rotatedAsset: "/assets/housing/wooden_table1.png",
+      offsetY: -12,
     },
   },
 
@@ -145,12 +138,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 3,
     size: { width: 1, height: 1 },
     visual: {
-      asset: "/assets/housing/floor_lamp.png",
       width: 72,
-      height: 130,
+      height: 128,
       offsetX: 0,
       offsetY: -6,
-      rotatedAsset: "/assets/housing/floor_lamp1.png",
     },
   },
   {
@@ -165,12 +156,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 2,
     size: { width: 1, height: 2 },
     visual: {
-      asset: "/assets/housing/floor_lamp.png",
-      width: 96,
-      height: 178,
+      width: 88,
+      height: 172,
       offsetX: 0,
       offsetY: -10,
-      rotatedAsset: "/assets/housing/floor_lamp1.png",
     },
   },
   {
@@ -185,12 +174,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 1,
     size: { width: 2, height: 1 },
     visual: {
-      asset: "/assets/housing/wooden_table.png",
-      width: 172,
-      height: 148,
+      width: 168,
+      height: 120,
       offsetX: 0,
       offsetY: -12,
-      rotatedAsset: "/assets/housing/wooden_table1.png",
     },
   },
 
@@ -207,12 +194,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 2,
     size: { width: 2, height: 1 },
     visual: {
-      asset: "/assets/housing/wooden_cabinet.png",
-      width: 172,
-      height: 148,
+      width: 168,
+      height: 112,
       offsetX: 0,
-      offsetY: -12,
-      rotatedAsset: "/assets/housing/wooden_cabinet1.png",
+      offsetY: -10,
     },
   },
   {
@@ -227,12 +212,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 2,
     size: { width: 1, height: 1 },
     visual: {
-      asset: "/assets/housing/potted_plant.png",
       width: 88,
-      height: 96,
+      height: 92,
       offsetX: 0,
       offsetY: -6,
-      rotatedAsset: "/assets/housing/potted_plant1.png",
     },
   },
 
@@ -249,12 +232,10 @@ export const FURNITURE: Furniture[] = [
     maxInRoom: 2,
     size: { width: 3, height: 2 },
     visual: {
-      asset: "/assets/housing/decorative_rug.png",
-      width: 250,
-      height: 168,
+      width: 248,
+      height: 164,
       offsetX: 0,
-      offsetY: -16,
-      rotatedAsset: "/assets/housing/decorative_rug1.png",
+      offsetY: -14,
     },
   },
 ];
