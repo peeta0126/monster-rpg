@@ -61,9 +61,9 @@ function IsoTile({
   const styles: Record<TileState, { bg: string }> = {
     normal:            { bg: "transparent" },
     hover:             { bg: floorStyle.hoverBg },
-    preview_ok:        { bg: "rgba(80,200,120,0.55)" },
-    preview_block:     { bg: "rgba(220,60,60,0.55)" },
-    selected_furniture:{ bg: "rgba(250,200,50,0.55)" },
+    preview_ok:        { bg: "rgba(72,210,96,0.52)" },
+    preview_block:     { bg: "rgba(210,44,44,0.60)" },
+    selected_furniture:{ bg: "rgba(244,169,54,0.55)" },  // 금빛 선택
   };
   const s = styles[state];
 
@@ -88,9 +88,9 @@ function GridOverlay() {
   for (let k = 0; k <= ROOM_COLS; k++) {
     lines.push(
       <line key={`tx${k}`} x1={440+44*k} y1={22*k} x2={44*k} y2={220+22*k}
-            stroke="rgba(255,255,255,0.18)" strokeWidth="0.7" />,
+            stroke="rgba(244,169,54,0.32)" strokeWidth="1.1" />,
       <line key={`ty${k}`} x1={440-44*k} y1={22*k} x2={880-44*k} y2={220+22*k}
-            stroke="rgba(255,255,255,0.18)" strokeWidth="0.7" />,
+            stroke="rgba(244,169,54,0.32)" strokeWidth="1.1" />,
     );
   }
   return (
@@ -98,7 +98,7 @@ function GridOverlay() {
          viewBox="0 0 880 440">
       {lines}
       <polygon points="440,0 880,220 440,440 0,220"
-               fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
+               fill="none" stroke="rgba(244,169,54,0.58)" strokeWidth="2.0" />
     </svg>
   );
 }
@@ -507,10 +507,10 @@ function EditPanel({
   return (
     <div style={{
       position: "fixed", right: 0, top: 0, bottom: 0, width: PANEL_W,
-      background: "linear-gradient(180deg, #0e0804 0%, #150d07 100%)",
-      borderLeft: "2px solid #3a2510",
+      background: "linear-gradient(180deg, #100804 0%, #1C0E06 100%)",
+      borderLeft: "2px solid #6A3810",
       display: "flex", flexDirection: "column", zIndex: 500,
-      boxShadow: "-6px 0 32px rgba(0,0,0,0.8)",
+      boxShadow: "-8px 0 36px rgba(0,0,0,0.90)",
       transform: open ? "translateX(0)" : "translateX(100%)",
       transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
     }}>
@@ -518,14 +518,14 @@ function EditPanel({
       {/* ── 탭 헤더 (2×2 그리드) + 닫기 ── */}
       <div style={{
         display: "grid", gridTemplateColumns: "1fr 1fr",
-        borderBottom: "1px solid #2a1a0a", flexShrink: 0,
+        borderBottom: "1px solid #5C3010", flexShrink: 0,
       }}>
         {tabs.map((t) => (
           <button key={t.id} onClick={() => onTabChange(t.id)} style={{
             padding: "8px 4px", fontSize: 10, fontWeight: "bold",
-            color: tab === t.id ? "#fbbf24" : "#555",
-            background: tab === t.id ? "rgba(251,191,36,0.08)" : "none",
-            border: "none", borderBottom: `2px solid ${tab === t.id ? "#fbbf24" : "transparent"}`,
+            color: tab === t.id ? "#F4A936" : "#5C3A14",
+            background: tab === t.id ? "rgba(244,169,54,0.10)" : "none",
+            border: "none", borderBottom: `2px solid ${tab === t.id ? "#F4A936" : "transparent"}`,
             cursor: "pointer", transition: "all 0.15s",
           }}>
             {t.label}
@@ -535,8 +535,8 @@ function EditPanel({
           onClick={onClose}
           style={{
             gridColumn: "1 / -1", padding: "6px 0", fontSize: 11, fontWeight: "bold",
-            color: "#fbbf24", background: "rgba(251,191,36,0.1)",
-            border: "none", borderTop: "1px solid #3a2510", cursor: "pointer",
+            color: "#F4A936", background: "rgba(244,169,54,0.08)",
+            border: "none", borderTop: "1px solid #6A3810", cursor: "pointer",
           }}
         >
           ✓ 완료
@@ -548,7 +548,7 @@ function EditPanel({
         <div style={{
           display: "flex", alignItems: "center", gap: 8, height: 36, flexShrink: 0,
           padding: "0 12px", borderBottom: "1px solid #2a1a0a",
-          background: "rgba(251,191,36,0.06)",
+          background: "rgba(244,169,54,0.06)",
         }}>
           {selectedFD && !selectedInstanceId && (
             <>
@@ -580,7 +580,7 @@ function EditPanel({
       {tab === "walldeco" && selectedDecoId && (
         <div style={{
           padding: "8px 12px", borderBottom: "1px solid #2a1a0a",
-          background: "rgba(251,191,36,0.06)", flexShrink: 0,
+          background: "rgba(244,169,54,0.06)", flexShrink: 0,
         }}>
           {(() => {
             const wd = getWallDecoration(selectedDecoId);
@@ -628,7 +628,7 @@ function EditPanel({
           })}
           </div>
 
-          <div style={{ height: 1, background: "#2a1a0a", margin: "2px 0 8px" }} />
+          <div style={{ height: 1, background: "#5C3010", margin: "2px 0 8px" }} />
 
           {/* 가구 제작 */}
           <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>제작</div>
@@ -671,7 +671,7 @@ function EditPanel({
           })}
           </div>
 
-          <div style={{ height: 1, background: "#2a1a0a", margin: "2px 0 8px" }} />
+          <div style={{ height: 1, background: "#5C3010", margin: "2px 0 8px" }} />
 
           {/* 세트 효과 */}
           <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>세트</div>
@@ -728,7 +728,7 @@ function EditPanel({
           </div>
 
           {wallDecorations.length > 0 && (<>
-            <div style={{ height: 1, background: "#2a1a0a", margin: "2px 0 8px" }} />
+            <div style={{ height: 1, background: "#5C3010", margin: "2px 0 8px" }} />
             <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>배치</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
             {wallDecorations.map((d) => {
@@ -749,7 +749,7 @@ function EditPanel({
             </div>
           </>)}
 
-          <div style={{ height: 1, background: "#2a1a0a", margin: "2px 0 8px" }} />
+          <div style={{ height: 1, background: "#5C3010", margin: "2px 0 8px" }} />
           <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>제작</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {WALL_DECORATIONS.map((d) => {

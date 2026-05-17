@@ -10,37 +10,23 @@ function hexLighten(hex: string, f: number): string {
   return `rgb(${Math.min(255,Math.round(((n>>16)&0xff)*(1+f)))},${Math.min(255,Math.round(((n>>8)&0xff)*(1+f)))},${Math.min(255,Math.round((n&0xff)*(1+f)))})`;
 }
 
-// ─── 색상 팔레트 ───────────────────────────────────────────────────────────────
+// ─── 색상 팔레트 (중세 석조/목재) ─────────────────────────────────────────────
 
 const C = {
-  void:       "#080604",
-  ceilDark:   "#120c07",
-  wallL:      "#c8b585",   // 왼벽 — 따뜻한 베이지
-  wallLhi:    "#d4c490",   // 왼벽 하이라이트 (아래쪽)
-  wallR:      "#ddd0a0",   // 오른벽 — 더 밝음
-  wallRhi:    "#e8dab0",   // 오른벽 하이라이트
-  wallLine:   "#b0a070",   // 벽 패널선
-  base:       "#3a2008",   // 걸레받이
-  baseLt:     "#5a3412",   // 걸레받이 밝은면
-  molding:    "#6e4c20",   // 크라운 몰딩
-  moldLt:     "#8a6030",   // 몰딩 밝은면
-  floorA:     "#c88040",   // 바닥 타일 A
-  floorB:     "#b06c28",   // 바닥 타일 B
-  floorGrain: "#8c5010",   // 목재 결
-  floorEdge:  "#6a3c0c",   // 타일 테두리
-  edge:       "#2a1808",   // 외곽선
-  winGlass:   "#90c8e8",   // 창문 유리
-  winSky:     "#b8dff4",   // 창문 상단
-  winFrame:   "#3a2008",   // 창틀
+  void:     "#080502",   // 배경 (거의 검정)
+  ceilDark: "#0C0704",   // 천장 영역 상단
+  edge:     "#180804",   // 강한 외곽선
+  winGlass: "#6AAED4",   // 창문 유리
+  winSky:   "#9ACCE8",   // 창문 상단
+  winFrame: "#2A1206",   // 창틀
 };
 
-// ─── 기하학 상수 (IndoorRoomBg 외부에서도 동일하게 사용) ──────────────────────
+// ─── 기하학 상수 ──────────────────────────────────────────────────────────────
 
-export const ROOM_WALL_H   = 148;   // 벽 높이 (스테이지 단위)
-export const ROOM_BASE_H   = 10;    // 걸레받이 (스테이지 단위)
-export const ROOM_MOL_H    = 8;     // 크라운 몰딩 (스테이지 단위)
+export const ROOM_WALL_H = 148;
+export const ROOM_BASE_H = 10;
+export const ROOM_MOL_H  = 8;
 
-/** 캔버스에서 벽 격자 셀 중심 위치 반환 (BH, inH 는 cs 적용된 픽셀 값) */
 function getWallCellCenter(
   wall: "left" | "right",
   col: number, row: number,
@@ -51,13 +37,9 @@ function getWallCellCenter(
 ) {
   const u = (col + 0.5) / WALL_COLS;
   const h = BH + (row + 0.5) * inH / WALL_ROWS;
-  if (wall === "left") {
-    return { x: leX + u * (tpX - leX), y: leY + u * (tpY - leY) - h };
-  }
+  if (wall === "left") return { x: leX + u * (tpX - leX), y: leY + u * (tpY - leY) - h };
   return { x: tpX + u * (riX - tpX), y: tpY + u * (riY - tpY) - h };
 }
-
-// ─── 유틸 ─────────────────────────────────────────────────────────────────────
 
 function quad(
   ctx: CanvasRenderingContext2D,
@@ -91,15 +73,14 @@ export function IndoorRoomBg({
     const ctx = canvas.getContext("2d")!;
     ctx.imageSmoothingEnabled = false;
 
-    const hw   = (TILE_W / 2) * cs;
-    const hh   = (TILE_H / 2) * cs;
-    const WH   = ROOM_WALL_H * cs;
-    const BH   = ROOM_BASE_H * cs;
-    const MH   = ROOM_MOL_H  * cs;
-    const inH  = WH - BH - MH;       // 패널 영역 높이
-    const OL   = Math.max(1.5, cs * 2);
+    const hw  = (TILE_W / 2) * cs;
+    const hh  = (TILE_H / 2) * cs;
+    const WH  = ROOM_WALL_H * cs;
+    const BH  = ROOM_BASE_H * cs;
+    const MH  = ROOM_MOL_H  * cs;
+    const inH = WH - BH - MH;
+    const OL  = Math.max(1.5, cs * 2);
 
-    // ── 꼭짓점 ──────────────────────────────────────────────────────────
     const tpX = stageLeft + 440 * cs,  tpY = stageTop;
     const riX = stageLeft + 880 * cs,  riY = stageTop + 220 * cs;
     const btX = stageLeft + 440 * cs,  btY = stageTop + 440 * cs;
@@ -108,16 +89,15 @@ export function IndoorRoomBg({
     const riWY = riY - WH;
     const leWY = leY - WH;
 
-    const wp = getWallpaper(wallpaperId);
-    const ft = getFloorTile(floorTileId);
-    const trimLt = hexLighten(wp.trimColor, 0.38);
-    const trimMd = hexLighten(wp.trimColor, 0.18);
+    const wp     = getWallpaper(wallpaperId);
+    const ft     = getFloorTile(floorTileId);
+    const trimLt = hexLighten(wp.trimColor, 0.50);
+    const trimMd = hexLighten(wp.trimColor, 0.24);
 
     // ── 1. 배경 ──────────────────────────────────────────────────────────
     ctx.fillStyle = C.void;
     ctx.fillRect(0, 0, width, height);
 
-    // 천장 영역 (그라데이션: 위 = 어두움, 아래 = 살짝 밝음)
     const ceilGrad = ctx.createLinearGradient(0, 0, 0, tpWY);
     ceilGrad.addColorStop(0, C.void);
     ceilGrad.addColorStop(1, C.ceilDark);
@@ -128,8 +108,39 @@ export function IndoorRoomBg({
     ctx.closePath();
     ctx.fill();
 
-    // ── 2. 왼쪽 벽 ───────────────────────────────────────────────────────
+    // ── 벽 공통: 벽돌 줄눈 그리기 ──────────────────────────────────────
+    function drawWallJoints(ax: number, ay: number, bx: number, by: number) {
+      // 수평 줄눈 (행 구분)
+      ctx.lineWidth = Math.max(1.0, cs * 1.3);
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = wp.trimColor;
+      for (let i = 1; i < WALL_ROWS; i++) {
+        const v = BH + inH * (i / WALL_ROWS);
+        ctx.beginPath();
+        ctx.moveTo(ax, ay - v);
+        ctx.lineTo(bx, by - v);
+        ctx.stroke();
+      }
+      // 세로 줄눈 (오프셋 벽돌 패턴)
+      ctx.lineWidth = Math.max(0.5, cs * 0.7);
+      ctx.globalAlpha = 0.28;
+      for (let i = 0; i < WALL_ROWS; i++) {
+        const h1 = BH + inH * i / WALL_ROWS;
+        const h2 = BH + inH * (i + 1) / WALL_ROWS;
+        const uArr = i % 2 === 0 ? [0.33, 0.67] : [0.17, 0.50, 0.83];
+        for (const u of uArr) {
+          const jx  = ax + u * (bx - ax);
+          const jyB = ay + u * (by - ay);
+          ctx.beginPath();
+          ctx.moveTo(jx, jyB - h1);
+          ctx.lineTo(jx, jyB - h2);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1.0;
+    }
 
+    // ── 2. 왼쪽 벽 ───────────────────────────────────────────────────────
     const wallLGrad = ctx.createLinearGradient(leX, leWY, leX, leY);
     wallLGrad.addColorStop(0, wp.leftColor1);
     wallLGrad.addColorStop(1, wp.leftColor2);
@@ -137,16 +148,9 @@ export function IndoorRoomBg({
     quad(ctx, leX, leY, tpX, tpY, tpX, tpWY, leX, leWY);
     ctx.fill();
 
-    for (let i = 1; i < WALL_ROWS; i++) {
-      const v = BH + inH * (i / WALL_ROWS);
-      ctx.strokeStyle = wp.leftColor2;
-      ctx.lineWidth = Math.max(0.8, cs * 1.0);
-      ctx.beginPath();
-      ctx.moveTo(leX, leY - v);
-      ctx.lineTo(tpX, tpY - v);
-      ctx.stroke();
-    }
+    drawWallJoints(leX, leY, tpX, tpY);
 
+    // 걸레받이
     ctx.fillStyle = wp.trimColor;
     quad(ctx, leX, leY, tpX, tpY, tpX, tpY - BH, leX, leY - BH);
     ctx.fill();
@@ -154,6 +158,7 @@ export function IndoorRoomBg({
     ctx.lineWidth = Math.max(0.8, cs * 1.0);
     ctx.beginPath(); ctx.moveTo(leX, leY - BH); ctx.lineTo(tpX, tpY - BH); ctx.stroke();
 
+    // 몰딩
     ctx.fillStyle = trimMd;
     quad(ctx, leX, leWY + MH, tpX, tpWY + MH, tpX, tpWY, leX, leWY);
     ctx.fill();
@@ -162,7 +167,6 @@ export function IndoorRoomBg({
     ctx.beginPath(); ctx.moveTo(leX, leWY + MH); ctx.lineTo(tpX, tpWY + MH); ctx.stroke();
 
     // ── 3. 오른쪽 벽 ──────────────────────────────────────────────────────
-
     const wallRGrad = ctx.createLinearGradient(tpX, tpWY, tpX, tpY);
     wallRGrad.addColorStop(0, wp.rightColor1);
     wallRGrad.addColorStop(1, wp.rightColor2);
@@ -170,16 +174,9 @@ export function IndoorRoomBg({
     quad(ctx, tpX, tpY, riX, riY, riX, riWY, tpX, tpWY);
     ctx.fill();
 
-    for (let i = 1; i < WALL_ROWS; i++) {
-      const v = BH + inH * (i / WALL_ROWS);
-      ctx.strokeStyle = wp.rightColor2;
-      ctx.lineWidth = Math.max(0.8, cs * 1.0);
-      ctx.beginPath();
-      ctx.moveTo(tpX, tpY - v);
-      ctx.lineTo(riX, riY - v);
-      ctx.stroke();
-    }
+    drawWallJoints(tpX, tpY, riX, riY);
 
+    // 걸레받이
     ctx.fillStyle = wp.trimColor;
     quad(ctx, tpX, tpY, riX, riY, riX, riY - BH, tpX, tpY - BH);
     ctx.fill();
@@ -187,6 +184,7 @@ export function IndoorRoomBg({
     ctx.lineWidth = Math.max(0.8, cs * 1.0);
     ctx.beginPath(); ctx.moveTo(tpX, tpY - BH); ctx.lineTo(riX, riY - BH); ctx.stroke();
 
+    // 몰딩
     ctx.fillStyle = trimMd;
     quad(ctx, tpX, tpWY + MH, riX, riWY + MH, riX, riWY, tpX, tpWY);
     ctx.fill();
@@ -202,53 +200,46 @@ export function IndoorRoomBg({
       drawWallDecoration(ctx, wd.decorId, pos.x, pos.y, wallDX, wallDY, inH, cs);
     }
 
-    // ── 5. 바닥 타일 ─────────────────────────────────────────────────────
+    // ── 5. 바닥 타일 (대각선 순서 렌더링) ────────────────────────────────
     for (let sum = 0; sum <= (ROOM_COLS - 1) + (ROOM_ROWS - 1); sum++) {
-      for (let ty = 0; ty <= sum; ty++) {
-        const tx = sum - ty;
-        if (tx >= 0 && tx < ROOM_COLS && ty >= 0 && ty < ROOM_ROWS) {
-          drawFloorTile(ctx, tx, ty, stageLeft, stageTop, cs, hw, hh, ft.hoverBg, ft.normalBg, ft.normalOutline);
+      for (let ty2 = 0; ty2 <= sum; ty2++) {
+        const tx2 = sum - ty2;
+        if (tx2 >= 0 && tx2 < ROOM_COLS && ty2 >= 0 && ty2 < ROOM_ROWS) {
+          drawFloorTile(ctx, tx2, ty2, stageLeft, stageTop, cs, hw, hh, ft.hoverBg, ft.normalBg, ft.normalOutline);
         }
       }
     }
 
     // ── 6. 외곽선 ────────────────────────────────────────────────────────
-
-    // 벽 코너 세로선 (가장 눈에 띄는 선)
     ctx.strokeStyle = C.edge;
-    ctx.lineWidth = OL * 1.3;
+    ctx.lineWidth = OL * 1.4;
     ctx.beginPath(); ctx.moveTo(tpX, tpWY); ctx.lineTo(tpX, tpY); ctx.stroke();
     ctx.lineWidth = OL;
     ctx.beginPath(); ctx.moveTo(leX, leWY); ctx.lineTo(leX, leY); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(riX, riWY); ctx.lineTo(riX, riY); ctx.stroke();
 
-    // 벽-바닥 경계선
     ctx.strokeStyle = C.edge;
     ctx.lineWidth = OL;
     ctx.beginPath(); ctx.moveTo(leX, leY); ctx.lineTo(tpX, tpY); ctx.lineTo(riX, riY); ctx.stroke();
 
-    // 천장 선
-    ctx.strokeStyle = "#302010";
+    ctx.strokeStyle = "#241408";
     ctx.lineWidth = OL * 0.7;
     ctx.beginPath(); ctx.moveTo(leX, leWY); ctx.lineTo(tpX, tpWY); ctx.lineTo(riX, riWY); ctx.stroke();
 
-    // 바닥 앞면 (열린 면)
     ctx.strokeStyle = ft.normalOutline;
-    ctx.lineWidth = OL * 0.7;
+    ctx.lineWidth = OL * 0.8;
     ctx.beginPath(); ctx.moveTo(leX, leY); ctx.lineTo(btX, btY); ctx.lineTo(riX, riY); ctx.stroke();
 
     // ── 7. 코너 그림자 (깊이감) ──────────────────────────────────────────
     const shadowSize = 30 * cs;
-    // 왼쪽 코너
     const sL = ctx.createRadialGradient(leX, leY, 0, leX, leY, shadowSize * 2);
-    sL.addColorStop(0, "rgba(0,0,0,0.25)");
+    sL.addColorStop(0, "rgba(0,0,0,0.32)");
     sL.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = sL;
     ctx.fillRect(leX - shadowSize, leY - shadowSize * 2, shadowSize * 2, shadowSize * 3);
 
-    // 오른쪽 코너
     const sR = ctx.createRadialGradient(riX, riY, 0, riX, riY, shadowSize * 2);
-    sR.addColorStop(0, "rgba(0,0,0,0.25)");
+    sR.addColorStop(0, "rgba(0,0,0,0.32)");
     sR.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = sR;
     ctx.fillRect(riX - shadowSize, riY - shadowSize * 2, shadowSize * 2, shadowSize * 3);
@@ -272,9 +263,8 @@ function drawWallDecoration(
   wallDX: number, wallDY: number,
   inH: number, cs: number,
 ) {
-  // 벽 방향 벡터의 부호를 유지해야 코너가 벽면 기울기와 일치함
-  const dhx  = wallDX / WALL_COLS * 0.45;   // 수평 방향 X 성분 (부호 포함)
-  const dhy  = wallDY / WALL_COLS * 0.45;   // 수평 방향 Y 성분 (부호 포함: 왼벽 < 0)
+  const dhx   = wallDX / WALL_COLS * 0.45;
+  const dhy   = wallDY / WALL_COLS * 0.45;
   const halfH = inH / WALL_ROWS * 0.45;
 
   const tl = { x: cx - dhx, y: cy - dhy - halfH };
@@ -287,22 +277,41 @@ function drawWallDecoration(
     return;
   }
 
-  // ── 일반 장식: 어두운 패널 + 이모지 ──────────────────────────────────
-  ctx.fillStyle = "rgba(10,6,2,0.55)";
+  const fw = Math.max(2, cs * 2.6);
+  const pad = fw * 1.3;
+
+  // 외부 짙은 테두리 (두께감)
+  ctx.fillStyle = "rgba(20, 10, 4, 0.72)";
+  quad(ctx, tl.x-pad, tl.y-pad*0.5, tr.x+pad, tr.y-pad*0.5, br.x+pad, br.y+pad*0.5, bl.x-pad, bl.y+pad*0.5);
+  ctx.fill();
+
+  // 패널 배경 (어두운 목재)
+  ctx.fillStyle = "rgba(14, 7, 2, 0.68)";
   quad(ctx, tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y);
   ctx.fill();
 
-  ctx.strokeStyle = "#6a4820";
-  ctx.lineWidth = Math.max(1.5, cs * 1.8);
+  // 금빛 외곽 프레임
+  ctx.strokeStyle = "#8A5818";
+  ctx.lineWidth = fw;
   quad(ctx, tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y);
   ctx.stroke();
 
+  // 내부 장식선 (이중 프레임)
+  const pad2 = fw * 0.55;
+  ctx.strokeStyle = "rgba(244,169,54,0.38)";
+  ctx.lineWidth = Math.max(0.8, cs * 0.9);
+  quad(ctx, tl.x+pad2, tl.y+pad2*0.4, tr.x-pad2, tr.y+pad2*0.4,
+       br.x-pad2, br.y-pad2*0.4, bl.x+pad2, bl.y-pad2*0.4);
+  ctx.stroke();
+
+  // 이모지
   const deco = getWallDecoration(decorId);
   if (deco) {
     const fontSize = Math.max(12, halfH * 1.2);
     ctx.font = `${fontSize}px serif`;
-    ctx.textAlign  = "center";
+    ctx.textAlign    = "center";
     ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff";
     ctx.fillText(deco.emoji, cx, cy);
   }
 }
@@ -314,10 +323,10 @@ function drawWindowDecoration(
   cs: number,
 ) {
   const fw = Math.max(2, cs * 2.4);
+  const p  = fw * 1.4;
 
-  // 리세스 (약간 어두운 배경)
-  const p = fw * 1.4;
-  ctx.fillStyle = "#1a0e06";
+  // 리세스 (돌출부 그림자)
+  ctx.fillStyle = "#0E0602";
   quad(ctx, tl.x-p, tl.y-p, tr.x+p, tr.y-p, br.x+p, br.y+p, bl.x-p, bl.y+p);
   ctx.fill();
 
@@ -330,33 +339,34 @@ function drawWindowDecoration(
   ctx.fill();
 
   // 반사 하이라이트
-  ctx.fillStyle = "rgba(255,255,255,0.14)";
+  ctx.fillStyle = "rgba(255,255,255,0.16)";
   quad(ctx, tl.x, tl.y,
     tl.x + (tr.x-tl.x)*0.4, tl.y + (tr.y-tl.y)*0.4,
     bl.x + (br.x-bl.x)*0.4, bl.y + (br.y-bl.y)*0.4 + (bl.y-tl.y)*0.45,
     tl.x, tl.y + (bl.y-tl.y)*0.45);
   ctx.fill();
 
-  // 외곽 프레임
+  // 창틀
   ctx.strokeStyle = C.winFrame;
   ctx.lineWidth = fw;
   quad(ctx, tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y);
   ctx.stroke();
 
   // 가로 창살
-  const mx1 = (tl.x+bl.x)/2, my1 = (tl.y+bl.y)/2;
-  const mx2 = (tr.x+br.x)/2, my2 = (tr.y+br.y)/2;
   ctx.lineWidth = Math.max(1.2, cs * 1.5);
-  ctx.strokeStyle = C.winFrame;
-  ctx.beginPath(); ctx.moveTo(mx1, my1); ctx.lineTo(mx2, my2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo((tl.x+bl.x)/2, (tl.y+bl.y)/2);
+  ctx.lineTo((tr.x+br.x)/2, (tr.y+br.y)/2);
+  ctx.stroke();
 
   // 세로 창살
-  const mx3 = (tl.x+tr.x)/2, my3 = (tl.y+tr.y)/2;
-  const mx4 = (bl.x+br.x)/2, my4 = (bl.y+br.y)/2;
-  ctx.beginPath(); ctx.moveTo(mx3, my3); ctx.lineTo(mx4, my4); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo((tl.x+tr.x)/2, (tl.y+tr.y)/2);
+  ctx.lineTo((bl.x+br.x)/2, (bl.y+br.y)/2);
+  ctx.stroke();
 }
 
-// ─── 바닥 타일 ────────────────────────────────────────────────────────────────
+// ─── 바닥 타일 (중세 도트 느낌) ──────────────────────────────────────────────
 
 function drawFloorTile(
   ctx: CanvasRenderingContext2D,
@@ -368,8 +378,9 @@ function drawFloorTile(
   const cx = stageLeft + ((tx - ty) * 44 + 440) * cs;
   const cy = stageTop  + ((tx + ty) * 22) * cs;
 
-  const base = ty % 2 === 0 ? tileA : tileB;
-  ctx.fillStyle = base;
+  // 체커보드 패턴 — 강한 명암 대비로 스냅감 극대화
+  const isAlt = (tx + ty) % 2 === 0;
+  ctx.fillStyle = isAlt ? tileA : tileB;
   ctx.beginPath();
   ctx.moveTo(cx,      cy);
   ctx.lineTo(cx + hw, cy + hh);
@@ -378,21 +389,30 @@ function drawFloorTile(
   ctx.closePath();
   ctx.fill();
 
-  // 목재 결 (1~2줄)
-  ctx.strokeStyle = tileEdge;
-  ctx.lineWidth = Math.max(0.4, cs * 0.45);
+  // 상단 하이라이트 (빛이 위에서 내려오는 느낌)
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.beginPath();
-  ctx.moveTo(cx - hw * 0.28, cy + hh * 0.72);
-  ctx.lineTo(cx + hw * 0.28, cy + hh * 1.28);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(cx + hw * 0.05, cy + hh * 0.25);
-  ctx.lineTo(cx + hw * 0.60, cy + hh * 1.0);
-  ctx.stroke();
+  ctx.moveTo(cx,      cy);
+  ctx.lineTo(cx + hw, cy + hh);
+  ctx.lineTo(cx,      cy + hh * 1.14);
+  ctx.lineTo(cx - hw, cy + hh);
+  ctx.closePath();
+  ctx.fill();
 
-  // 타일 테두리
+  // 하단 그림자 (깊이감)
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.beginPath();
+  ctx.moveTo(cx + hw * 0.45, cy + hh * 1.45);
+  ctx.lineTo(cx + hw,        cy + hh);
+  ctx.lineTo(cx,             cy + hh * 2);
+  ctx.lineTo(cx - hw,        cy + hh);
+  ctx.lineTo(cx - hw * 0.45, cy + hh * 1.45);
+  ctx.closePath();
+  ctx.fill();
+
+  // 두껍고 선명한 타일 테두리 — 스냅감의 핵심
   ctx.strokeStyle = tileEdge;
-  ctx.lineWidth = Math.max(0.5, cs * 0.6);
+  ctx.lineWidth = Math.max(1.6, cs * 2.4);
   ctx.beginPath();
   ctx.moveTo(cx,      cy);
   ctx.lineTo(cx + hw, cy + hh);
