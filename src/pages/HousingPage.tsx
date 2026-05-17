@@ -313,7 +313,7 @@ function TopDownRoomGrid({
           zIndex: playerZIndex, pointerEvents: "none",
         }}>
           <img src={`/assets/basecamp/${playerSprite}.png`} alt="player"
-            style={{ width: "56px", height: "56px", imageRendering: "pixelated", display: "block" }}
+            style={{ width: "64px", height: "64px", imageRendering: "pixelated", display: "block" }}
             draggable={false} />
         </div>
       )}
@@ -337,10 +337,13 @@ function DoorTilesLayer({ nearFarm, nearExit }: { nearFarm: boolean; nearExit: b
             position: "absolute",
             left: t.x * TILE_SIZE, top: t.y * TILE_SIZE,
             width: TILE_SIZE, height: TILE_SIZE,
-            background: near ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.38)",
+            background: near
+              ? "linear-gradient(180deg, rgba(255,240,200,0.92) 0%, rgba(255,255,255,0.70) 100%)"
+              : "linear-gradient(180deg, rgba(200,180,140,0.55) 0%, rgba(255,255,255,0.28) 100%)",
             zIndex: 5, pointerEvents: "none",
-            boxShadow: near ? "0 0 14px rgba(255,255,255,0.9)" : "none",
-            transition: "background 0.3s, box-shadow 0.3s",
+            boxShadow: near ? "0 0 20px rgba(255,220,100,0.85), inset 0 0 8px rgba(255,255,255,0.4)" : "none",
+            border: near ? "1px solid rgba(255,200,80,0.6)" : "1px solid rgba(200,180,120,0.25)",
+            transition: "all 0.3s",
           }} />
         ))}
         <div style={{
@@ -859,7 +862,7 @@ export default function HousingPage() {
   return (
     <div
       ref={containerRef}
-      style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative", backgroundColor: "#080502" }}
+      style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative", backgroundColor: "#0E0804" }}
     >
       {/* ── 배경 캔버스 ──────────────────────────────────────────────────────── */}
       <IndoorRoomBg
