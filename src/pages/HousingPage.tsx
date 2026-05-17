@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
-import { IndoorRoomBg } from "../components/housing/IndoorRoomBg";
+import { IndoorRoomBg, ROOM_WALL_H } from "../components/housing/IndoorRoomBg";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, isTileWalkable } from "../store/playerStore";
 import {
@@ -682,13 +682,14 @@ export default function HousingPage() {
   const [editMode, setEditMode] = useState(false);
 
   // ── 레이아웃 ─────────────────────────────────────────────────────────────
-  const availW = containerSize.w - (editMode ? PANEL_W : 0);
+  const availW  = containerSize.w - (editMode ? PANEL_W : 0);
+  const TOTAL_H = ROOM_H + ROOM_WALL_H;
   const contentScale = Math.min(
     (availW - 40) / ROOM_W,
-    (containerSize.h - 40) / ROOM_H,
+    (containerSize.h - 40) / TOTAL_H,
   );
-  const stageLeft = (availW  - ROOM_W * contentScale) / 2;
-  const stageTop  = (containerSize.h - ROOM_H * contentScale) / 2;
+  const stageLeft = (availW - ROOM_W * contentScale) / 2;
+  const stageTop  = (containerSize.h - TOTAL_H * contentScale) / 2 + ROOM_WALL_H * contentScale;
 
   useEffect(() => {
     const update = () => setContainerSize({ w: window.innerWidth, h: window.innerHeight });
