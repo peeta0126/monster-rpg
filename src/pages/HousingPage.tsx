@@ -198,6 +198,7 @@ function IsoRoomGrid({
   hoveredTile, onTileHover, onTileLeave, onTileClick,
   placedFurniture, selectedInstanceId, selectedFurnitureId,
   onFurnitureClick, playerTile, playerSprite, floorStyle,
+  placementRotation,
 }: {
   offsetX: number; offsetY: number; editMode: boolean;
   hoveredTile: { x: number; y: number } | null;
@@ -211,6 +212,8 @@ function IsoRoomGrid({
   playerTile: { x: number; y: number };
   playerSprite: string;
   floorStyle: FloorStyle;
+  /** 배치 모드에서 R키로 설정한 회전각 */
+  placementRotation: 0 | 90;
 }) {
   const selectedFD    = selectedFurnitureId ? getFurniture(selectedFurnitureId) : null;
   const selectedInst  = selectedInstanceId ? placedFurniture.find((p) => p.instanceId === selectedInstanceId) : null;
@@ -221,7 +224,7 @@ function IsoRoomGrid({
     let furnitureId: string | null = null;
     let rotation: 0 | 90 | 180 | 270 = 0;
     let ignoreId: string | undefined;
-    if (selectedFD) { furnitureId = selectedFD.id; }
+    if (selectedFD) { furnitureId = selectedFD.id; rotation = placementRotation; }
     else if (selectedInstFD && selectedInst) {
       furnitureId = selectedInstFD.id; rotation = selectedInst.rotation; ignoreId = selectedInst.instanceId;
     }
@@ -277,20 +280,25 @@ function IsoRoomGrid({
   const ghostFurniture = (() => {
     if (!editMode || !hoveredTile || !selectedFD) return null;
     const v = selectedFD.visual;
-    const imgW = v.width ?? 80; const imgH = v.height ?? 80;
-    const oX = v.offsetX ?? 0; const oY = v.offsetY ?? 0;
-    const rawPos = getFurnitureRenderPosition(hoveredTile.x, hoveredTile.y, selectedFD.size, 0);
+    // placementRotation을 반영한 이미지/크기/오프셋 선택
+    const isRotated = placementRotation !== 0;
+    const imgSrc = isRotated && v.rotatedAsset ? v.rotatedAsset : v.asset;
+    const imgW   = (isRotated ? v.rotatedWidth  : undefined) ?? v.width  ?? 80;
+    const imgH   = (isRotated ? v.rotatedHeight : undefined) ?? v.height ?? 80;
+    const oX     = (isRotated ? v.rotatedOffsetX : undefined) ?? v.offsetX ?? 0;
+    const oY     = (isRotated ? v.rotatedOffsetY : undefined) ?? v.offsetY ?? 0;
+    const rawPos = getFurnitureRenderPosition(hoveredTile.x, hoveredTile.y, selectedFD.size, placementRotation);
     const ghostLeft = rawPos.left - roomSize.minX + offsetX + oX;
     const ghostTop  = rawPos.top  - roomSize.minY + offsetY + oY;
-    const canPlace = canPlaceFurnitureAt(selectedFD.id, hoveredTile.x, hoveredTile.y, 0, placedFurniture, FURNITURE);
+    const canPlace = canPlaceFurnitureAt(selectedFD.id, hoveredTile.x, hoveredTile.y, placementRotation, placedFurniture, FURNITURE);
     return (
       <div style={{
         position: "absolute", left: ghostLeft, top: ghostTop,
         transform: "translate(-50%, -100%)", zIndex: 200, opacity: 0.6, pointerEvents: "none",
         filter: canPlace ? "drop-shadow(0 0 6px #4ade80)" : "drop-shadow(0 0 6px #f87171)",
       }}>
-        {v.asset ? (
-          <img src={v.asset} alt={selectedFD.name}
+        {imgSrc ? (
+          <img src={imgSrc} alt={selectedFD.name}
             style={{ width: imgW, height: imgH, imageRendering: "pixelated", display: "block" }}
             draggable={false} />
         ) : <div style={{ fontSize: 32, lineHeight: 1 }}>{selectedFD.emoji}</div>}
@@ -438,6 +446,7 @@ function EditPanel({
   selectedInstanceId, selectedInstanceRotation, onRemoveFurniture, onRotate,
   selectedDecoId, onSelectDeco, onRemoveSelectedDeco,
   tab, onTabChange,
+  placementRotation, onRotatePlacement,
 }: {
   open: boolean;
   onClose: () => void;
@@ -452,6 +461,8 @@ function EditPanel({
   onRemoveSelectedDeco: (instanceId: string) => void;
   tab: EditTab;
   onTabChange: (t: EditTab) => void;
+  placementRotation: 0 | 90;
+  onRotatePlacement: () => void;
 }) {
   const {
     materials, furnitureInventory, craftFurniture, placedFurniture,
@@ -543,8 +554,11 @@ function EditPanel({
             <>
               <span style={{ fontSize: 16 }}>{selectedFD.emoji}</span>
               <span style={{ color: "#fbbf24", fontSize: 11, fontWeight: "bold", flex: 1 }}>
-                {selectedFD.name} 배치 중 — 타일 클릭
+                {selectedFD.name}
+                <span style={{ color: "#888", fontSize: 10, marginLeft: 5 }}>{placementRotation}°</span>
+                <span style={{ color: "#555", fontSize: 9, marginLeft: 4 }}>R: 회전</span>
               </span>
+              <button onClick={onRotatePlacement} style={actionBtn("#60a5fa")}>↻ 회전</button>
               <button onClick={() => onSelectFurniture(null)} style={actionBtn("#9ca3af")}>✕ 취소</button>
             </>
           )}
@@ -981,6 +995,8 @@ export default function HousingPage() {
   const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
   const [selectedInstanceId, setSelectedInstanceId]   = useState<string | null>(null);
   const [selectedDecoId, setSelectedDecoId]           = useState<string | null>(null);
+  // 배치 모드(selectedFurnitureId)에서 R키로 토글되는 회전 각도
+  const [placementRotation, setPlacementRotation]     = useState<0 | 90>(0);
   const [editTab, setEditTab] = useState<EditTab>("furniture");
   const [hoveredTile, setHoveredTile] = useState<{ x: number; y: number } | null>(null);
 
@@ -988,6 +1004,11 @@ export default function HousingPage() {
     ? placedFurniture.find((p) => p.instanceId === selectedInstanceId)
     : null;
   const selectedInstRotation: 0 | 90 | 180 | 270 = selectedInst?.rotation ?? 0;
+
+  // 가구 선택 해제(배치 완료/취소) 시 회전각 초기화
+  useEffect(() => {
+    if (!selectedFurnitureId) setPlacementRotation(0);
+  }, [selectedFurnitureId]);
 
   // ── 플레이어 이동 + 애니메이션 ────────────────────────────────────────────
   const initPos = { x: PLAYER_INIT_TILE.x + 0.5, y: PLAYER_INIT_TILE.y + 0.5 };
@@ -1023,6 +1044,11 @@ export default function HousingPage() {
         else if (isExit) navigate("/");
       }
       if (key === "h" && !editModeRef.current) { setEditMode(true); setEditTab("furniture"); }
+      // R키: 배치 중이면 배치 회전 토글, 선택된 배치 가구가 있으면 그 가구 회전
+      if (key === "r" && editModeRef.current) {
+        if (selectedFurnitureId) { setPlacementRotation((r) => (r === 0 ? 90 : 0)); return; }
+        if (selectedInstanceId)  { rotateFurniture(selectedInstanceId); return; }
+      }
       if (e.key === "Escape") {
         if (selectedDecoId) { setSelectedDecoId(null); return; }
         if (selectedFurnitureId || selectedInstanceId) {
@@ -1106,7 +1132,7 @@ export default function HousingPage() {
     }
     if (selectedFurnitureId) {
       if (occupied) return;
-      placeFurniture(tx, ty, selectedFurnitureId); setSelectedFurnitureId(null); return;
+      placeFurniture(tx, ty, selectedFurnitureId, placementRotation); setSelectedFurnitureId(null); return;
     }
     if (occupied) { setSelectedInstanceId(occupied.instanceId); setSelectedFurnitureId(null); }
   };
@@ -1220,6 +1246,7 @@ export default function HousingPage() {
           playerTile={playerTile}
           playerSprite={playerSprite}
           floorStyle={floorStyle}
+          placementRotation={placementRotation}
         />
 
         {/* 문 타일 */}
@@ -1288,6 +1315,8 @@ export default function HousingPage() {
         onRemoveSelectedDeco={handleRemoveSelectedDeco}
         tab={editTab}
         onTabChange={setEditTab}
+        placementRotation={placementRotation}
+        onRotatePlacement={() => setPlacementRotation((r) => (r === 0 ? 90 : 0))}
       />
     </div>
   );

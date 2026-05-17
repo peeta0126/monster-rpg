@@ -72,7 +72,7 @@ interface PlayerState {
   craftPotion:  (potionId: string) => boolean;
   usePotion:    (potionId: string) => boolean;
   craftFurniture:  (furnitureId: string) => boolean;
-  placeFurniture:  (x: number, y: number, furnitureId: string) => boolean;
+  placeFurniture:  (x: number, y: number, furnitureId: string, rotation?: 0 | 90) => boolean;
   moveFurniture:   (instanceId: string, x: number, y: number) => boolean;
   rotateFurniture: (instanceId: string) => void;
   removeFurniture: (instanceId: string) => void;
@@ -237,7 +237,7 @@ export const usePlayerStore = create<PlayerState>()(
         return true;
       },
 
-      placeFurniture: (x, y, furnitureId) => {
+      placeFurniture: (x, y, furnitureId, rotation = 0) => {
         const s = get();
         if ((s.furnitureInventory[furnitureId] ?? 0) <= 0) return false;
 
@@ -247,13 +247,13 @@ export const usePlayerStore = create<PlayerState>()(
         const alreadyPlaced = s.placedFurniture.filter((p) => p.furnitureId === furnitureId).length;
         if (alreadyPlaced >= fd.maxInRoom) return false;
 
-        // 다중 타일 배치 가능 여부 확인
-        if (!canPlaceFurnitureAt(furnitureId, x, y, 0, s.placedFurniture, FURNITURE)) return false;
+        // 다중 타일 배치 가능 여부 확인 (회전 반영)
+        if (!canPlaceFurnitureAt(furnitureId, x, y, rotation, s.placedFurniture, FURNITURE)) return false;
 
         const newItem: PlacedFurniture = {
           instanceId: makeInstanceId(),
           furnitureId, x, y,
-          rotation: 0,
+          rotation,
           placedAt: Date.now(),
         };
         set((prev) => ({
