@@ -1,5 +1,5 @@
-﻿import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
-import { IndoorRoomBg, ROOM_WALL_H, ROOM_BASE_H, ROOM_MOL_H } from "../components/housing/IndoorRoomBg";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { IndoorRoomBg } from "../components/housing/IndoorRoomBg";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, isTileWalkable } from "../store/playerStore";
 import {
@@ -7,72 +7,56 @@ import {
   MATERIAL_LABEL, RARITY_LABEL, RARITY_COLOR, MATERIAL_SET_TIERS,
 } from "../data/furniture";
 import type { FurnitureMaterial } from "../data/furniture";
-import type { PlacedFurniture, PlacedWallDecoration, WallSide } from "../types/housing";
+import type { PlacedFurniture } from "../types/housing";
 import { getMaterial } from "../data/items";
 import {
-  TILE_W, TILE_H, roomPixelSize, getTileKey,
-  getFurnitureOccupiedTiles, getRotatedSize, buildOccupiedSet,
-  canPlaceFurnitureAt, getFurnitureAtTile, getFurnitureRenderPosition,
+  getTileKey, getFurnitureOccupiedTiles, getRotatedSize,
+  buildOccupiedSet, canPlaceFurnitureAt, getFurnitureAtTile,
 } from "../utils/isometric";
-import { ROOM_COLS, ROOM_ROWS, PLAYER_INIT_TILE, WALL_COLS, WALL_ROWS } from "../constants/housing";
-import { WALLPAPERS, getWallpaper } from "../data/wallpapers";
+import { ROOM_COLS, ROOM_ROWS, PLAYER_INIT_TILE, TILE_SIZE } from "../constants/housing";
 import { FLOOR_TILES, getFloorTile } from "../data/floorTiles";
-import { WALL_DECORATIONS, getWallDecoration } from "../data/wallDecorations";
 
-// ─── 상수 ──────────────────────────────────────────────────────────────────────
-
-const roomSize = roomPixelSize(ROOM_COLS, ROOM_ROWS);
-// roomSize.width = 880, roomSize.height = 440, minX = -440, minY = 0
-
-// ROOM_WALL_H, ROOM_BASE_H, ROOM_MOL_H → IndoorRoomBg에서 import
-
-// 방 타일 화면 좌표 (스테이지 내부 좌표: offsetX=0, offsetY=0 기준)
-function tileScreenPos(tx: number, ty: number, offsetX: number, offsetY: number) {
-  const left = (tx - ty) * (TILE_W / 2);
-  const top  = (tx + ty) * (TILE_H / 2);
-  return { left: left - roomSize.minX + offsetX, top: top - roomSize.minY + offsetY };
-}
+// ─── 방 픽셀 크기 ──────────────────────────────────────────────────────────────
+const ROOM_W = ROOM_COLS * TILE_SIZE; // 640
+const ROOM_H = ROOM_ROWS * TILE_SIZE; // 640
 
 // ─── 타일 컴포넌트 ────────────────────────────────────────────────────────────
 
 type TileState = "normal" | "hover" | "preview_ok" | "preview_block" | "selected_furniture";
 
 interface FloorStyle {
-  normalBg: string;
-  normalOutline: string;
   hoverBg: string;
-  hoverOutline: string;
 }
 
-function IsoTile({
-  tx, ty, offsetX, offsetY, state, floorStyle,
+function TopDownTile({
+  tx, ty, state, floorStyle,
   onClick, onMouseEnter, onMouseLeave,
 }: {
-  tx: number; ty: number; offsetX: number; offsetY: number;
+  tx: number; ty: number;
   state: TileState; floorStyle: FloorStyle;
   onClick: () => void; onMouseEnter: () => void; onMouseLeave: () => void;
 }) {
-  const { left, top } = tileScreenPos(tx, ty, offsetX, offsetY);
-  const hw = TILE_W / 2;
-  const hh = TILE_H / 2;
-  const clip = `polygon(${hw}px 0px, ${TILE_W}px ${hh}px, ${hw}px ${TILE_H}px, 0px ${hh}px)`;
-
-  // normal 상태는 투명 — 배경 이미지가 바닥 시각을 담당
-  const styles: Record<TileState, { bg: string }> = {
-    normal:            { bg: "transparent" },
-    hover:             { bg: floorStyle.hoverBg },
-    preview_ok:        { bg: "rgba(72,210,96,0.52)" },
-    preview_block:     { bg: "rgba(210,44,44,0.60)" },
-    selected_furniture:{ bg: "rgba(244,169,54,0.55)" },  // 금빛 선택
+  const styles: Record<TileState, string> = {
+    normal:             "transparent",
+    hover:              floorStyle.hoverBg,
+    preview_ok:         "rgba(72,210,96,0.52)",
+    preview_block:      "rgba(210,44,44,0.60)",
+    selected_furniture: "rgba(244,169,54,0.55)",
   };
-  const s = styles[state];
 
   return (
     <div
       style={{
-        position: "absolute", left, top, width: TILE_W, height: TILE_H,
-        clipPath: clip, background: s.bg,
-        cursor: "pointer", zIndex: 1, transition: "background 0.08s",
+        position: "absolute",
+        left: tx * TILE_SIZE,
+        top:  ty * TILE_SIZE,
+        width:  TILE_SIZE,
+        height: TILE_SIZE,
+        background: styles[state],
+        cursor: "pointer",
+        zIndex: 1,
+        transition: "background 0.08s",
+        boxSizing: "border-box",
       }}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
@@ -87,31 +71,32 @@ function GridOverlay() {
   const lines: ReactElement[] = [];
   for (let k = 0; k <= ROOM_COLS; k++) {
     lines.push(
-      <line key={`tx${k}`} x1={440+44*k} y1={22*k} x2={44*k} y2={220+22*k}
+      <line key={`v${k}`} x1={k * TILE_SIZE} y1={0} x2={k * TILE_SIZE} y2={ROOM_H}
             stroke="rgba(244,169,54,0.32)" strokeWidth="1.1" />,
-      <line key={`ty${k}`} x1={440-44*k} y1={22*k} x2={880-44*k} y2={220+22*k}
+    );
+  }
+  for (let k = 0; k <= ROOM_ROWS; k++) {
+    lines.push(
+      <line key={`h${k}`} x1={0} y1={k * TILE_SIZE} x2={ROOM_W} y2={k * TILE_SIZE}
             stroke="rgba(244,169,54,0.32)" strokeWidth="1.1" />,
     );
   }
   return (
-    <svg style={{ position: "absolute", left: 0, top: 0, width: 880, height: 440, pointerEvents: "none", zIndex: 1 }}
-         viewBox="0 0 880 440">
+    <svg style={{ position: "absolute", left: 0, top: 0, width: ROOM_W, height: ROOM_H, pointerEvents: "none", zIndex: 1 }}
+         viewBox={`0 0 ${ROOM_W} ${ROOM_H}`}>
       {lines}
-      <polygon points="440,0 880,220 440,440 0,220"
-               fill="none" stroke="rgba(244,169,54,0.58)" strokeWidth="2.0" />
+      <rect x={0} y={0} width={ROOM_W} height={ROOM_H}
+            fill="none" stroke="rgba(244,169,54,0.58)" strokeWidth="2.0" />
     </svg>
   );
 }
 
-// (WallSVG removed — housing area is outdoor, no walls)
-// (FloorSVG removed — background image provides floor visuals)
-
 // ─── 배치된 가구 스프라이트 ───────────────────────────────────────────────────
 
 function PlacedFurnitureSprite({
-  item, offsetX, offsetY, isSelected, editMode, onClick,
+  item, isSelected, editMode, onClick,
 }: {
-  item: PlacedFurniture; offsetX: number; offsetY: number;
+  item: PlacedFurniture;
   isSelected: boolean; editMode: boolean; onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -119,18 +104,18 @@ function PlacedFurnitureSprite({
   if (!f) return null;
 
   const rSize = getRotatedSize(f.size, item.rotation);
-  const rawPos = getFurnitureRenderPosition(item.x, item.y, f.size, item.rotation);
-  const anchorLeft = rawPos.left - roomSize.minX + offsetX;
-  const anchorTop  = rawPos.top  - roomSize.minY + offsetY;
-  const zIndex = 10 + (item.y + rSize.height - 1) * ROOM_COLS + (item.x + rSize.width - 1);
-
-  const v = f.visual;
   const isRotated = item.rotation !== 0;
+  const v = f.visual;
   const imgSrc = isRotated && v.rotatedAsset ? v.rotatedAsset : v.asset;
   const imgW   = (isRotated ? v.rotatedWidth  : undefined) ?? v.width  ?? 80;
   const imgH   = (isRotated ? v.rotatedHeight : undefined) ?? v.height ?? 80;
   const oX     = (isRotated ? v.rotatedOffsetX : undefined) ?? v.offsetX ?? 0;
   const oY     = (isRotated ? v.rotatedOffsetY : undefined) ?? v.offsetY ?? 0;
+
+  // 앵커: 점유 영역의 하단 중앙
+  const anchorLeft = (item.x + rSize.width  / 2) * TILE_SIZE + oX;
+  const anchorTop  = (item.y + rSize.height) * TILE_SIZE + oY;
+  const zIndex = 10 + (item.y + rSize.height - 1) * ROOM_COLS + (item.x + rSize.width - 1);
 
   return (
     <div
@@ -139,8 +124,8 @@ function PlacedFurnitureSprite({
       onMouseLeave={() => setHovered(false)}
       style={{
         position: "absolute",
-        left: anchorLeft + oX,
-        top:  anchorTop  + oY,
+        left: anchorLeft,
+        top:  anchorTop,
         transform: "translate(-50%, -100%)",
         zIndex,
         cursor: editMode ? "pointer" : "default",
@@ -191,16 +176,16 @@ function PlacedFurnitureSprite({
   );
 }
 
-// ─── 아이소메트릭 방 그리드 ───────────────────────────────────────────────────
+// ─── 탑다운 방 그리드 ─────────────────────────────────────────────────────────
 
-function IsoRoomGrid({
-  offsetX, offsetY, editMode,
+function TopDownRoomGrid({
+  editMode,
   hoveredTile, onTileHover, onTileLeave, onTileClick,
   placedFurniture, selectedInstanceId, selectedFurnitureId,
   onFurnitureClick, playerTile, playerSprite, floorStyle,
   placementRotation,
 }: {
-  offsetX: number; offsetY: number; editMode: boolean;
+  editMode: boolean;
   hoveredTile: { x: number; y: number } | null;
   onTileHover: (x: number, y: number) => void;
   onTileLeave: () => void;
@@ -212,11 +197,10 @@ function IsoRoomGrid({
   playerTile: { x: number; y: number };
   playerSprite: string;
   floorStyle: FloorStyle;
-  /** 배치 모드에서 R키로 설정한 회전각 */
   placementRotation: 0 | 90;
 }) {
-  const selectedFD    = selectedFurnitureId ? getFurniture(selectedFurnitureId) : null;
-  const selectedInst  = selectedInstanceId ? placedFurniture.find((p) => p.instanceId === selectedInstanceId) : null;
+  const selectedFD   = selectedFurnitureId ? getFurniture(selectedFurnitureId) : null;
+  const selectedInst = selectedInstanceId ? placedFurniture.find((p) => p.instanceId === selectedInstanceId) : null;
   const selectedInstFD = selectedInst ? getFurniture(selectedInst.furnitureId) : null;
 
   const previewTiles: Map<string, "ok" | "block"> = new Map();
@@ -259,8 +243,8 @@ function IsoRoomGrid({
         }
       }
       tiles.push(
-        <IsoTile
-          key={key} tx={tx} ty={ty} offsetX={offsetX} offsetY={offsetY}
+        <TopDownTile
+          key={key} tx={tx} ty={ty}
           state={tileState} floorStyle={floorStyle}
           onClick={() => onTileClick(tx, ty)}
           onMouseEnter={editMode ? () => onTileHover(tx, ty) : () => {}}
@@ -274,23 +258,22 @@ function IsoRoomGrid({
     const fa = getFurniture(a.furnitureId); const fb = getFurniture(b.furnitureId);
     const ra = getRotatedSize(fa?.size ?? { width: 1, height: 1 }, a.rotation);
     const rb = getRotatedSize(fb?.size ?? { width: 1, height: 1 }, b.rotation);
-    return ((a.y + ra.height - 1) + (a.x + ra.width - 1)) - ((b.y + rb.height - 1) + (b.x + rb.width - 1));
+    return (a.y + ra.height - 1) - (b.y + rb.height - 1);
   });
 
   const ghostFurniture = (() => {
     if (!editMode || !hoveredTile || !selectedFD) return null;
     const v = selectedFD.visual;
-    // placementRotation을 반영한 이미지/크기/오프셋 선택
     const isRotated = placementRotation !== 0;
     const imgSrc = isRotated && v.rotatedAsset ? v.rotatedAsset : v.asset;
     const imgW   = (isRotated ? v.rotatedWidth  : undefined) ?? v.width  ?? 80;
     const imgH   = (isRotated ? v.rotatedHeight : undefined) ?? v.height ?? 80;
     const oX     = (isRotated ? v.rotatedOffsetX : undefined) ?? v.offsetX ?? 0;
     const oY     = (isRotated ? v.rotatedOffsetY : undefined) ?? v.offsetY ?? 0;
-    const rawPos = getFurnitureRenderPosition(hoveredTile.x, hoveredTile.y, selectedFD.size, placementRotation);
-    const ghostLeft = rawPos.left - roomSize.minX + offsetX + oX;
-    const ghostTop  = rawPos.top  - roomSize.minY + offsetY + oY;
-    const canPlace = canPlaceFurnitureAt(selectedFD.id, hoveredTile.x, hoveredTile.y, placementRotation, placedFurniture, FURNITURE);
+    const rSize  = getRotatedSize(selectedFD.size, placementRotation);
+    const ghostLeft = (hoveredTile.x + rSize.width  / 2) * TILE_SIZE + oX;
+    const ghostTop  = (hoveredTile.y + rSize.height) * TILE_SIZE + oY;
+    const canPlace  = canPlaceFurnitureAt(selectedFD.id, hoveredTile.x, hoveredTile.y, placementRotation, placedFurniture, FURNITURE);
     return (
       <div style={{
         position: "absolute", left: ghostLeft, top: ghostTop,
@@ -306,7 +289,9 @@ function IsoRoomGrid({
     );
   })();
 
-  const playerPos = tileScreenPos(playerTile.x, playerTile.y, offsetX, offsetY);
+  // 플레이어: 타일 하단 중앙에 앵커
+  const playerLeft = (playerTile.x + 0.5) * TILE_SIZE;
+  const playerTop  = (playerTile.y + 1)   * TILE_SIZE;
   const playerZIndex = 10 + Math.floor(playerTile.y) * ROOM_COLS + Math.floor(playerTile.x) + 5;
 
   return (
@@ -315,136 +300,90 @@ function IsoRoomGrid({
       {ghostFurniture}
       {sortedFurniture.map((item) => (
         <PlacedFurnitureSprite
-          key={item.instanceId} item={item} offsetX={offsetX} offsetY={offsetY}
+          key={item.instanceId} item={item}
           isSelected={item.instanceId === selectedInstanceId}
           editMode={editMode}
           onClick={() => onFurnitureClick(item.instanceId)}
         />
       ))}
       {!editMode && (
-        <PlayerSprite
-          left={playerPos.left + TILE_W / 2}
-          top={playerPos.top + TILE_H / 2}
-          zIndex={playerZIndex}
-          sprite={playerSprite}
-        />
+        <div style={{
+          position: "absolute", left: playerLeft, top: playerTop,
+          transform: "translate(-50%, -100%)",
+          zIndex: playerZIndex, pointerEvents: "none",
+        }}>
+          <img src={`/assets/basecamp/${playerSprite}.png`} alt="player"
+            style={{ width: "56px", height: "56px", imageRendering: "pixelated", display: "block" }}
+            draggable={false} />
+        </div>
       )}
     </>
   );
 }
 
-// ─── 플레이어 스프라이트 ──────────────────────────────────────────────────────
+// ─── 문 타일 레이어 (탑다운 정사각) ──────────────────────────────────────────
 
-function PlayerSprite({ left, top, zIndex, sprite }: { left: number; top: number; zIndex: number; sprite: string }) {
+function DoorTilesLayer({ nearFarm, nearExit }: { nearFarm: boolean; nearExit: boolean }) {
+  const farmTiles = [{ x: 4, y: 9 }, { x: 5, y: 9 }];
+  const exitTiles = [{ x: 9, y: 4 }, { x: 9, y: 5 }];
+
+  const renderGroup = (tiles: { x: number; y: number }[], near: boolean, label: string) => {
+    const centerX = (tiles.reduce((s, t) => s + t.x, 0) / tiles.length + 0.5) * TILE_SIZE;
+    const bottomY = (Math.max(...tiles.map((t) => t.y)) + 1) * TILE_SIZE;
+    return (
+      <>
+        {tiles.map((t, i) => (
+          <div key={i} style={{
+            position: "absolute",
+            left: t.x * TILE_SIZE, top: t.y * TILE_SIZE,
+            width: TILE_SIZE, height: TILE_SIZE,
+            background: near ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.38)",
+            zIndex: 5, pointerEvents: "none",
+            boxShadow: near ? "0 0 14px rgba(255,255,255,0.9)" : "none",
+            transition: "background 0.3s, box-shadow 0.3s",
+          }} />
+        ))}
+        <div style={{
+          position: "absolute", left: centerX, top: bottomY + 5,
+          transform: "translateX(-50%)", textAlign: "center",
+          pointerEvents: "none", zIndex: 6, whiteSpace: "nowrap",
+          color: near ? "#ffffff" : "#cccccc",
+          fontSize: 11, fontWeight: "bold",
+          textShadow: "0 1px 5px rgba(0,0,0,0.95)",
+          transition: "color 0.3s",
+        }}>{label}</div>
+        {near && (
+          <div style={{
+            position: "absolute", left: centerX, top: bottomY + 19,
+            transform: "translateX(-50%)", textAlign: "center",
+            pointerEvents: "none", zIndex: 6, whiteSpace: "nowrap",
+            color: "#fbbf24", fontSize: 10, fontWeight: "bold",
+            textShadow: "0 1px 4px rgba(0,0,0,0.9)",
+          }}>[E] 이동</div>
+        )}
+      </>
+    );
+  };
+
   return (
-    <div style={{
-      position: "absolute", left, top,
-      transform: "translate(-50%, -100%)",
-      zIndex, pointerEvents: "none",
-    }}>
-      <img src={`/assets/basecamp/${sprite}.png`} alt="player"
-        style={{ width: "56px", height: "56px", imageRendering: "pixelated", display: "block" }}
-        draggable={false} />
-    </div>
+    <>
+      {renderGroup(farmTiles, nearFarm, "🌾 농장")}
+      {renderGroup(exitTiles, nearExit, "🌲 바깥")}
+    </>
   );
 }
 
-// ─── 벽 격자 오버레이 (SVG) ──────────────────────────────────────────────────
+// ─── 편집 패널 ────────────────────────────────────────────────────────────────
 
-function WallGridOverlay({
-  leX, leY, tpX, tpY, riX, riY, BH, inH,
-  screenW, screenH,
-  wallDecorations, selectedDecoId,
-  onCellClick,
-}: {
-  leX: number; leY: number;
-  tpX: number; tpY: number;
-  riX: number; riY: number;
-  BH: number; inH: number;
-  screenW: number; screenH: number;
-  wallDecorations: PlacedWallDecoration[];
-  selectedDecoId: string | null;
-  onCellClick: (wall: WallSide, col: number, row: number) => void;
-}) {
-  const [hovered, setHovered] = useState<{ wall: WallSide; col: number; row: number } | null>(null);
+export const PANEL_W = 280;
 
-  const cells: ReactElement[] = [];
-  for (const wall of ["left", "right"] as const) {
-    const ax = wall === "left" ? leX : tpX;
-    const ay = wall === "left" ? leY : tpY;
-    const bx = wall === "left" ? tpX : riX;
-    const by = wall === "left" ? tpY : riY;
-
-    for (let row = 0; row < WALL_ROWS; row++) {
-      for (let col = 0; col < WALL_COLS; col++) {
-        const u0 = col / WALL_COLS, u1 = (col + 1) / WALL_COLS;
-        const h0 = BH + row * inH / WALL_ROWS;
-        const h1 = BH + (row + 1) * inH / WALL_ROWS;
-
-        const x0 = ax + u0 * (bx - ax), y0 = ay + u0 * (by - ay);
-        const x1 = ax + u1 * (bx - ax), y1 = ay + u1 * (by - ay);
-
-        const pts = [
-          `${x0},${y0 - h0}`, `${x1},${y1 - h0}`,
-          `${x1},${y1 - h1}`, `${x0},${y0 - h1}`,
-        ].join(" ");
-
-        const isHov = hovered?.wall === wall && hovered.col === col && hovered.row === row;
-        const occupied = wallDecorations.find((d) => d.wall === wall && d.col === col && d.row === row);
-
-        cells.push(
-          <polygon
-            key={`${wall}-${col}-${row}`}
-            points={pts}
-            fill={
-              occupied
-                ? "rgba(251,191,36,0.18)"
-                : isHov && selectedDecoId
-                  ? "rgba(74,222,128,0.28)"
-                  : isHov
-                    ? "rgba(255,255,255,0.12)"
-                    : "transparent"
-            }
-            stroke={
-              occupied
-                ? "#f59e0b"
-                : isHov
-                  ? (selectedDecoId ? "#4ade80" : "rgba(255,255,255,0.70)")
-                  : "rgba(255,255,255,0.22)"
-            }
-            strokeWidth={isHov || occupied ? 1.5 : 0.9}
-            style={{ cursor: "pointer", pointerEvents: "all" }}
-            onMouseEnter={() => setHovered({ wall, col, row })}
-            onMouseLeave={() => setHovered(null)}
-            onClick={() => onCellClick(wall, col, row)}
-          />,
-        );
-      }
-    }
-  }
-
-  return (
-    <svg
-      style={{ position: "absolute", inset: 0, zIndex: 15, pointerEvents: "none" }}
-      width={screenW} height={screenH}
-    >
-      {cells}
-    </svg>
-  );
-}
-
-// ─── 편집 패널 (Tiny Farm 스타일 하단 슬라이드) ──────────────────────────────
-
-export const PANEL_W = 280; // 우측 패널 너비 (외부에서 레이아웃 계산용)
-
-type EditTab = "furniture" | "walldeco" | "wallpaper" | "floortile";
+type EditTab = "furniture" | "floortile";
 
 function EditPanel({
   open,
   onClose,
   selectedFurnitureId, onSelectFurniture,
   selectedInstanceId, selectedInstanceRotation, onRemoveFurniture, onRotate,
-  selectedDecoId, onSelectDeco, onRemoveSelectedDeco,
   tab, onTabChange,
   placementRotation, onRotatePlacement,
 }: {
@@ -456,9 +395,6 @@ function EditPanel({
   selectedInstanceRotation: 0 | 90 | 180 | 270;
   onRemoveFurniture: () => void;
   onRotate: () => void;
-  selectedDecoId: string | null;
-  onSelectDeco: (id: string | null) => void;
-  onRemoveSelectedDeco: (instanceId: string) => void;
   tab: EditTab;
   onTabChange: (t: EditTab) => void;
   placementRotation: 0 | 90;
@@ -466,8 +402,6 @@ function EditPanel({
 }) {
   const {
     materials, furnitureInventory, craftFurniture, placedFurniture,
-    wallDecoInventory, craftWallDecoration, wallDecorations,
-    wallpaperId, setWallpaper, unlockedWallpapers, craftWallpaper,
     floorTileId, setFloorTile, unlockedFloorTiles, craftFloorTile,
   } = usePlayerStore();
   const [lastCrafted, setLastCrafted] = useState<string | null>(null);
@@ -476,12 +410,6 @@ function EditPanel({
 
   const handleCraft = (id: string) => {
     if (craftFurniture(id)) { setLastCrafted(id); setTimeout(() => setLastCrafted(null), 1400); }
-  };
-  const handleCraftDeco = (id: string) => {
-    if (craftWallDecoration(id)) { setLastCrafted(id); setTimeout(() => setLastCrafted(null), 1400); }
-  };
-  const handleCraftWallpaper = (id: string) => {
-    if (craftWallpaper(id)) { setLastCrafted(id); setTimeout(() => setLastCrafted(null), 1400); }
   };
   const handleCraftFloorTile = (id: string) => {
     if (craftFloorTile(id)) { setLastCrafted(id); setTimeout(() => setLastCrafted(null), 1400); }
@@ -499,8 +427,6 @@ function EditPanel({
 
   const tabs: { id: EditTab; label: string }[] = [
     { id: "furniture", label: "🪑 가구" },
-    { id: "walldeco",  label: "🖼️ 벽장식" },
-    { id: "wallpaper", label: "🎨 벽지" },
     { id: "floortile", label: "🟫 바닥" },
   ];
 
@@ -515,7 +441,7 @@ function EditPanel({
       transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
     }}>
 
-      {/* ── 탭 헤더 (2×2 그리드) + 닫기 ── */}
+      {/* ── 탭 헤더 + 닫기 ── */}
       <div style={{
         display: "grid", gridTemplateColumns: "1fr 1fr",
         borderBottom: "1px solid #5C3010", flexShrink: 0,
@@ -543,7 +469,7 @@ function EditPanel({
         </button>
       </div>
 
-      {/* ── 선택 상태 액션 바 (가구/벽장식 선택 시) ── */}
+      {/* ── 선택 상태 액션 바 ── */}
       {tab === "furniture" && (selectedFD || selectedInstanceId) && (
         <div style={{
           display: "flex", alignItems: "center", gap: 8, height: 36, flexShrink: 0,
@@ -577,33 +503,11 @@ function EditPanel({
         </div>
       )}
 
-      {tab === "walldeco" && selectedDecoId && (
-        <div style={{
-          padding: "8px 12px", borderBottom: "1px solid #2a1a0a",
-          background: "rgba(244,169,54,0.06)", flexShrink: 0,
-        }}>
-          {(() => {
-            const wd = getWallDecoration(selectedDecoId);
-            return wd ? (
-              <div style={{ fontSize: 11, color: "#fbbf24", marginBottom: 6 }}>
-                <span style={{ fontSize: 18, marginRight: 6 }}>{wd.emoji}</span>
-                <strong>{wd.name}</strong> 선택됨
-                <div style={{ fontSize: 10, color: "#aaa", marginTop: 2 }}>벽 칸을 클릭해 배치</div>
-              </div>
-            ) : null;
-          })()}
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => onSelectDeco(null)} style={actionBtn("#9ca3af")}>취소 (ESC)</button>
-          </div>
-        </div>
-      )}
-
-      {/* 탭 컨텐츠 — 세로 스크롤 */}
+      {/* 탭 컨텐츠 */}
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 10px" }}>
 
         {/* ══ 가구 탭 ══════════════════════════════════════════════════════════ */}
         {tab === "furniture" && (<>
-          {/* 보유 가구 */}
           <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>보유</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {inventory.length === 0 ? (
@@ -630,7 +534,6 @@ function EditPanel({
 
           <div style={{ height: 1, background: "#5C3010", margin: "2px 0 8px" }} />
 
-          {/* 가구 제작 */}
           <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>제작</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {FURNITURE.map((f) => {
@@ -673,7 +576,6 @@ function EditPanel({
 
           <div style={{ height: 1, background: "#5C3010", margin: "2px 0 8px" }} />
 
-          {/* 세트 효과 */}
           <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>세트</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {(["wood", "iron", "crystal", "leather"] as FurnitureMaterial[]).map((mat) => {
@@ -700,145 +602,6 @@ function EditPanel({
           })}
           </div>
         </>)}
-
-        {/* ══ 벽 장식 탭 ════════════════════════════════════════════════════════ */}
-        {tab === "walldeco" && (<>
-          <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>보유</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-          {WALL_DECORATIONS.filter((d) => (wallDecoInventory[d.id] ?? 0) > 0).length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 64, color: "#444" }}>
-              <div style={{ fontSize: 24 }}>🖼️</div><div style={{ fontSize: 8, marginTop: 4 }}>없음</div>
-            </div>
-          ) : WALL_DECORATIONS.filter((d) => (wallDecoInventory[d.id] ?? 0) > 0).map((d) => {
-            const isSelected = selectedDecoId === d.id;
-            return (
-              <button key={d.id} onClick={() => onSelectDeco(isSelected ? null : d.id)} style={{
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                width: 72, padding: "8px 4px", gap: 4, borderRadius: 8, cursor: "pointer",
-                border: `2px solid ${isSelected ? "#fbbf24" : "#2a1a0a"}`,
-                background: isSelected ? "rgba(251,191,36,0.12)" : "rgba(255,255,255,0.02)",
-                transition: "all 0.15s",
-              }}>
-                <span style={{ fontSize: 26 }}>{d.emoji}</span>
-                <span style={{ fontSize: 9, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{d.name}</span>
-                <span style={{ fontSize: 11, color: "#fbbf24", fontWeight: "bold" }}>×{wallDecoInventory[d.id] ?? 0}</span>
-              </button>
-            );
-          })}
-          </div>
-
-          {wallDecorations.length > 0 && (<>
-            <div style={{ height: 1, background: "#5C3010", margin: "2px 0 8px" }} />
-            <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>배치</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-            {wallDecorations.map((d) => {
-              const wd = getWallDecoration(d.decorId);
-              return wd ? (
-                <div key={d.instanceId} style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  width: 72, padding: "8px 4px", gap: 4, borderRadius: 8,
-                  border: "1px solid #2a1a0a", background: "rgba(255,255,255,0.02)",
-                }}>
-                  <span style={{ fontSize: 24 }}>{wd.emoji}</span>
-                  <span style={{ fontSize: 8, color: "#ccc", textAlign: "center" }}>{wd.name}</span>
-                  <span style={{ fontSize: 7, color: "#666" }}>{d.wall === "left" ? "왼쪽" : "오른쪽"} ({d.col},{d.row})</span>
-                  <button onClick={() => onRemoveSelectedDeco(d.instanceId)} style={{ padding: "2px 6px", borderRadius: 4, fontSize: 8, border: "1px solid #f8717155", background: "rgba(248,113,113,0.1)", color: "#f87171", cursor: "pointer" }}>↩ 회수</button>
-                </div>
-              ) : null;
-            })}
-            </div>
-          </>)}
-
-          <div style={{ height: 1, background: "#5C3010", margin: "2px 0 8px" }} />
-          <div style={{ color: "#444", fontSize: 8, textTransform: "uppercase", letterSpacing: 1, userSelect: "none", marginBottom: 4 }}>제작</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {WALL_DECORATIONS.map((d) => {
-            const canCraft = Object.entries(d.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
-            const crafted = lastCrafted === d.id;
-            return (
-              <div key={d.id} style={{
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between",
-                width: 82, flexShrink: 0, padding: "8px 5px", gap: 3, borderRadius: 8,
-                border: `1px solid ${crafted ? "#34d399" : canCraft ? "#d97706" : "#2a1a0a"}`,
-                background: crafted ? "rgba(52,211,153,0.07)" : canCraft ? "rgba(217,119,6,0.05)" : "rgba(255,255,255,0.01)",
-              }}>
-                <span style={{ fontSize: 22 }}>{d.emoji}</span>
-                <span style={{ fontSize: 8, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{d.name}</span>
-                {(wallDecoInventory[d.id] ?? 0) > 0 && (
-                  <span style={{ fontSize: 7, color: "#fbbf24" }}>보유×{wallDecoInventory[d.id]}</span>
-                )}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center" }}>
-                  {Object.entries(d.recipe).slice(0, 2).map(([mid, need]) => {
-                    const have = materials[mid] ?? 0; const ok = have >= need;
-                    const m = getMaterial(mid);
-                    return (
-                      <span key={mid} style={{ fontSize: 7, padding: "1px 3px", borderRadius: 6, border: `1px solid ${ok ? "#333" : "#7f1d1d"}`, color: ok ? "#999" : "#f87171", fontFamily: "monospace" }}>
-                        {m?.emoji}{have}/{need}
-                      </span>
-                    );
-                  })}
-                </div>
-                <button onClick={() => handleCraftDeco(d.id)} disabled={!canCraft} style={{
-                  padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid",
-                  borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
-                  background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
-                  color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
-                  cursor: canCraft ? "pointer" : "not-allowed",
-                }}>{crafted ? "완성! ✓" : "제작"}</button>
-              </div>
-            );
-          })}
-          </div>
-        </>)}
-
-        {/* ══ 벽지 탭 ══════════════════════════════════════════════════════════ */}
-        {tab === "wallpaper" && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {WALLPAPERS.map((wp) => {
-          const isUnlocked = unlockedWallpapers.includes(wp.id);
-          const isActive   = wallpaperId === wp.id;
-          const canCraft   = Object.keys(wp.recipe).length === 0 ? false : Object.entries(wp.recipe).every(([id, n]) => (materials[id] ?? 0) >= n);
-          const crafted = lastCrafted === wp.id;
-          return (
-            <div key={wp.id} style={{
-              display: "flex", flexDirection: "column", alignItems: "center",
-              width: 120, padding: "6px 5px", gap: 4, borderRadius: 8,
-              border: `1px solid ${isActive ? "#fbbf24" : isUnlocked ? "#2a1a0a" : "#1a0e06"}`,
-              background: isActive ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.02)",
-            }}>
-              <div style={{ width: "100%", height: 28, borderRadius: 5, flexShrink: 0, opacity: isUnlocked ? 1 : 0.4, background: `linear-gradient(135deg, ${wp.leftColor1}, ${wp.leftColor2} 45%, ${wp.rightColor1} 55%, ${wp.rightColor2})`, border: `1px solid ${wp.trimColor}66` }} />
-              <span style={{ fontSize: 14 }}>{wp.emoji}</span>
-              <span style={{ fontSize: 8, color: "#ccc", textAlign: "center", lineHeight: 1.2 }}>{wp.name}</span>
-              {isActive && <span style={{ fontSize: 7, color: "#fbbf24", background: "rgba(251,191,36,0.15)", padding: "1px 5px", borderRadius: 3 }}>현재</span>}
-              {isUnlocked ? (
-                <button onClick={() => setWallpaper(wp.id)} disabled={isActive} style={{
-                  padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid", marginTop: "auto",
-                  borderColor: isActive ? "#fbbf2444" : "#d97706", background: isActive ? "transparent" : "rgba(217,119,6,0.2)",
-                  color: isActive ? "#555" : "#fbbf24", cursor: isActive ? "default" : "pointer",
-                }}>{isActive ? "사용 중" : "적용"}</button>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: "auto", width: "100%" }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center" }}>
-                    {Object.entries(wp.recipe).slice(0, 2).map(([mid, need]) => {
-                      const have = materials[mid] ?? 0; const ok = have >= need;
-                      const m = getMaterial(mid);
-                      return <span key={mid} style={{ fontSize: 7, padding: "1px 3px", borderRadius: 6, border: `1px solid ${ok ? "#333" : "#7f1d1d"}`, color: ok ? "#999" : "#f87171", fontFamily: "monospace" }}>{m?.emoji}{have}/{need}</span>;
-                    })}
-                  </div>
-                  <button onClick={() => handleCraftWallpaper(wp.id)} disabled={!canCraft} style={{
-                    padding: "3px 0", width: "100%", borderRadius: 5, fontSize: 9, fontWeight: "bold", border: "1px solid",
-                    borderColor: crafted ? "#34d399" : canCraft ? "#d97706" : "#333",
-                    background: crafted ? "rgba(52,211,153,0.2)" : canCraft ? "rgba(217,119,6,0.2)" : "transparent",
-                    color: crafted ? "#34d399" : canCraft ? "#fbbf24" : "#555",
-                    cursor: canCraft ? "pointer" : "not-allowed",
-                  }}>{crafted ? "해금! ✓" : "🔒 해금"}</button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-          </div>
-        )}
 
         {/* ══ 바닥 탭 ══════════════════════════════════════════════════════════ */}
         {tab === "floortile" && (
@@ -900,62 +663,6 @@ function actionBtn(color: string): React.CSSProperties {
   };
 }
 
-// ─── 문 타일 레이어 (흰색 아이소메트릭 타일 + 라벨) ────────────────────────
-
-function DoorTilesLayer({ nearFarm, nearExit }: { nearFarm: boolean; nearExit: boolean }) {
-  const farmTiles = [{ x: 4, y: 9 }, { x: 5, y: 9 }];
-  const exitTiles = [{ x: 9, y: 4 }, { x: 9, y: 5 }];
-  const hw = TILE_W / 2;
-  const clip = `polygon(${hw}px 0px, ${TILE_W}px ${TILE_H / 2}px, ${hw}px ${TILE_H}px, 0px ${TILE_H / 2}px)`;
-
-  const renderGroup = (tiles: { x: number; y: number }[], near: boolean, label: string) => {
-    const positions = tiles.map((t) => tileScreenPos(t.x, t.y, 0, 0));
-    // Canvas draws the tile top-vertex at pos.left; HTML bounding box needs to start hw left of that.
-    const centerX = positions.reduce((s, p) => s + p.left, 0) / positions.length;
-    const bottomY = Math.max(...positions.map((p) => p.top + TILE_H));
-    return (
-      <>
-        {positions.map((pos, i) => (
-          <div key={i} style={{
-            position: "absolute", left: pos.left - hw, top: pos.top,
-            width: TILE_W, height: TILE_H,
-            clipPath: clip,
-            background: near ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.38)",
-            zIndex: 5, pointerEvents: "none",
-            boxShadow: near ? "0 0 14px rgba(255,255,255,0.9)" : "none",
-            transition: "background 0.3s, box-shadow 0.3s",
-          }} />
-        ))}
-        <div style={{
-          position: "absolute", left: centerX, top: bottomY + 5,
-          transform: "translateX(-50%)", textAlign: "center",
-          pointerEvents: "none", zIndex: 6, whiteSpace: "nowrap",
-          color: near ? "#ffffff" : "#cccccc",
-          fontSize: 11, fontWeight: "bold",
-          textShadow: "0 1px 5px rgba(0,0,0,0.95)",
-          transition: "color 0.3s",
-        }}>{label}</div>
-        {near && (
-          <div style={{
-            position: "absolute", left: centerX, top: bottomY + 19,
-            transform: "translateX(-50%)", textAlign: "center",
-            pointerEvents: "none", zIndex: 6, whiteSpace: "nowrap",
-            color: "#fbbf24", fontSize: 10, fontWeight: "bold",
-            textShadow: "0 1px 4px rgba(0,0,0,0.9)",
-          }}>[E] 이동</div>
-        )}
-      </>
-    );
-  };
-
-  return (
-    <>
-      {renderGroup(farmTiles, nearFarm, "🌾 농장")}
-      {renderGroup(exitTiles, nearExit, "🌲 바깥")}
-    </>
-  );
-}
-
 // ─── HousingPage ─────────────────────────────────────────────────────────────
 
 export default function HousingPage() {
@@ -965,23 +672,20 @@ export default function HousingPage() {
 
   const {
     placedFurniture, placeFurniture, moveFurniture, rotateFurniture, removeFurniture, getHousingBonuses,
-    wallDecorations, placeWallDecoration, removeWallDecoration,
     grantAllHousingItems,
-    wallpaperId, floorTileId,
+    floorTileId,
   } = usePlayerStore();
 
-  // ── 레이아웃: housing_bg.png 다이아몬드 영역에 스테이지 정렬 ───────────────
   const [editMode, setEditMode] = useState(false);
 
-  // 실내 방 전체 (벽+바닥) 크기: 가로 880, 세로 (440 + ROOM_WALL_H)
-  const totalStageH = roomSize.height + ROOM_WALL_H;
+  // ── 레이아웃 ─────────────────────────────────────────────────────────────
   const availW = containerSize.w - (editMode ? PANEL_W : 0);
   const contentScale = Math.min(
-    (availW - 40) / roomSize.width,
-    (containerSize.h - 40) / totalStageH,
+    (availW - 40) / ROOM_W,
+    (containerSize.h - 40) / ROOM_H,
   );
-  const stageLeft = (availW - roomSize.width  * contentScale) / 2;
-  const stageTop  = (containerSize.h - totalStageH * contentScale) / 2 + ROOM_WALL_H * contentScale;
+  const stageLeft = (availW  - ROOM_W * contentScale) / 2;
+  const stageTop  = (containerSize.h - ROOM_H * contentScale) / 2;
 
   useEffect(() => {
     const update = () => setContainerSize({ w: window.innerWidth, h: window.innerHeight });
@@ -994,8 +698,6 @@ export default function HousingPage() {
   // ── 선택 상태 ─────────────────────────────────────────────────────────────
   const [selectedFurnitureId, setSelectedFurnitureId] = useState<string | null>(null);
   const [selectedInstanceId, setSelectedInstanceId]   = useState<string | null>(null);
-  const [selectedDecoId, setSelectedDecoId]           = useState<string | null>(null);
-  // 배치 모드(selectedFurnitureId)에서 R키로 토글되는 회전 각도
   const [placementRotation, setPlacementRotation]     = useState<0 | 90>(0);
   const [editTab, setEditTab] = useState<EditTab>("furniture");
   const [hoveredTile, setHoveredTile] = useState<{ x: number; y: number } | null>(null);
@@ -1005,7 +707,6 @@ export default function HousingPage() {
     : null;
   const selectedInstRotation: 0 | 90 | 180 | 270 = selectedInst?.rotation ?? 0;
 
-  // 가구 선택 해제(배치 완료/취소) 시 회전각 초기화
   useEffect(() => {
     if (!selectedFurnitureId) setPlacementRotation(0);
   }, [selectedFurnitureId]);
@@ -1044,13 +745,11 @@ export default function HousingPage() {
         else if (isExit) navigate("/");
       }
       if (key === "h" && !editModeRef.current) { setEditMode(true); setEditTab("furniture"); }
-      // R키: 배치 중이면 배치 회전 토글, 선택된 배치 가구가 있으면 그 가구 회전
       if (key === "r" && editModeRef.current) {
         if (selectedFurnitureId) { setPlacementRotation((r) => (r === 0 ? 90 : 0)); return; }
         if (selectedInstanceId)  { rotateFurniture(selectedInstanceId); return; }
       }
       if (e.key === "Escape") {
-        if (selectedDecoId) { setSelectedDecoId(null); return; }
         if (selectedFurnitureId || selectedInstanceId) {
           setSelectedFurnitureId(null); setSelectedInstanceId(null);
         } else {
@@ -1060,7 +759,7 @@ export default function HousingPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate, selectedFurnitureId, selectedInstanceId, selectedDecoId]);
+  }, [navigate, selectedFurnitureId, selectedInstanceId]);
 
   const lastRef = useRef(0);
   const animRef = useRef(0);
@@ -1078,7 +777,6 @@ export default function HousingPage() {
       else if (keys.has("arrowdown")  || keys.has("s")) vy = 1;
       const isMoving = vx !== 0 || vy !== 0;
 
-      // ── 방향 + 애니메이션 프레임 ──────────────────────────────────────────
       if (vx < 0) facingRef.current = "left";
       else if (vx > 0) facingRef.current = "right";
       if (vy < 0) facingRef.current = "up";
@@ -1150,90 +848,43 @@ export default function HousingPage() {
 
   const handleRotate = () => { if (selectedInstanceId) rotateFurniture(selectedInstanceId); };
 
-  const handleRemoveSelectedDeco = (instanceId: string) => {
-    removeWallDecoration(instanceId);
-  };
-
-  // ── 벽 격자 셀 클릭 ───────────────────────────────────────────────────────
-  const handleWallCellClick = (wall: WallSide, col: number, row: number) => {
-    if (!editMode) return;
-    const existing = wallDecorations.find((d) => d.wall === wall && d.col === col && d.row === row);
-    if (selectedDecoId) {
-      placeWallDecoration(wall, col, row, selectedDecoId);
-      setSelectedDecoId(null);
-    } else if (existing) {
-      removeWallDecoration(existing.instanceId);
-    }
-  };
-
-  // ── 벽 격자 기하 값 ────────────────────────────────────────────────────────
-  const _WH  = ROOM_WALL_H * contentScale;
-  const _BH  = ROOM_BASE_H * contentScale;
-  const _MH  = ROOM_MOL_H  * contentScale;
-  const _inH = _WH - _BH - _MH;
-  const wallLeX = stageLeft;
-  const wallLeY = stageTop + 220 * contentScale;
-  const wallTpX = stageLeft + 440 * contentScale;
-  const wallTpY = stageTop;
-  const wallRiX = stageLeft + 880 * contentScale;
-  const wallRiY = stageTop + 220 * contentScale;
-
   // ── 문 근접 여부 ───────────────────────────────────────────────────────────
   const nearFarm = playerTile.y >= ROOM_ROWS - 1.5 && playerTile.x >= 3.5 && playerTile.x <= 6.5;
   const nearExit = playerTile.x >= ROOM_COLS - 1.5 && playerTile.y >= 3.5 && playerTile.y <= 6.5;
 
   const bonuses = getHousingBonuses();
   const _ft = getFloorTile(floorTileId);
-  const floorStyle = { normalBg: "transparent", normalOutline: "transparent", hoverBg: _ft.hoverBg, hoverOutline: _ft.normalOutline };
+  const floorStyle: FloorStyle = { hoverBg: _ft.hoverBg };
 
   return (
     <div
       ref={containerRef}
-      style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative", backgroundColor: "#0a0705" }}
+      style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative", backgroundColor: "#080502" }}
     >
-      {/* ── 실내 방 캔버스 배경 ──────────────────────────────────────────── */}
+      {/* ── 배경 캔버스 ──────────────────────────────────────────────────────── */}
       <IndoorRoomBg
         width={containerSize.w}
         height={containerSize.h}
         stageLeft={stageLeft}
         stageTop={stageTop}
         cs={contentScale}
-        wallDecorations={wallDecorations}
-        wallpaperId={wallpaperId}
         floorTileId={floorTileId}
       />
 
-      {/* ── 벽 격자 오버레이 (편집 모드) ────────────────────────────────── */}
-      {editMode && editTab === "walldeco" && (
-        <WallGridOverlay
-          leX={wallLeX} leY={wallLeY}
-          tpX={wallTpX} tpY={wallTpY}
-          riX={wallRiX} riY={wallRiY}
-          BH={_BH} inH={_inH}
-          screenW={containerSize.w} screenH={containerSize.h}
-          wallDecorations={wallDecorations}
-          selectedDecoId={selectedDecoId}
-          onCellClick={handleWallCellClick}
-        />
-      )}
-
-      {/* ── 아이소메트릭 스테이지 (배경 다이아몬드에 정렬) ─────────────────── */}
+      {/* ── 탑다운 스테이지 ──────────────────────────────────────────────────── */}
       <div style={{
         position: "absolute",
         left: stageLeft,
         top: stageTop,
-        width: roomSize.width,
-        height: roomSize.height,
+        width: ROOM_W,
+        height: ROOM_H,
         transform: `scale(${contentScale})`,
         transformOrigin: "0 0",
         zIndex: 2,
       }}>
-        {/* 편집 모드 그리드 오버레이 */}
         {editMode && <GridOverlay />}
 
-        {/* 타일 + 가구 + 플레이어 */}
-        <IsoRoomGrid
-          offsetX={0} offsetY={0}
+        <TopDownRoomGrid
           editMode={editMode && editTab === "furniture"}
           hoveredTile={hoveredTile}
           onTileHover={(x, y) => setHoveredTile({ x, y })}
@@ -1249,14 +900,12 @@ export default function HousingPage() {
           placementRotation={placementRotation}
         />
 
-        {/* 문 타일 */}
         <DoorTilesLayer nearFarm={nearFarm} nearExit={nearExit} />
       </div>
 
-      {/* ── 상단 HUD ─────────────────────────────────────────────────────── */}
+      {/* ── 상단 HUD ─────────────────────────────────────────────────────────── */}
       <div style={{
-        position: "fixed", top: 0, left: 0,
-        right: 0,
+        position: "fixed", top: 0, left: 0, right: 0,
         zIndex: 500, display: "flex", alignItems: "center",
         padding: "10px 14px",
         background: "linear-gradient(180deg, rgba(8,4,1,0.95) 0%, rgba(8,4,1,0) 100%)",
@@ -1281,7 +930,7 @@ export default function HousingPage() {
         </div>
       </div>
 
-      {/* ── 우하단: 꾸미기 버튼 ──────────────────────────────────────────── */}
+      {/* ── 우하단: 꾸미기 버튼 ──────────────────────────────────────────────── */}
       <div style={{
         position: "fixed", bottom: 16,
         right: editMode ? PANEL_W + 14 : 14,
@@ -1293,26 +942,23 @@ export default function HousingPage() {
           </div>
         )}
         <button
-          onClick={() => { setEditMode((v) => !v); setSelectedFurnitureId(null); setSelectedInstanceId(null); setSelectedDecoId(null); }}
+          onClick={() => { setEditMode((v) => !v); setSelectedFurnitureId(null); setSelectedInstanceId(null); }}
           style={editMode ? bigBtn("#78350f", "#fbbf24", true) : bigBtn("#451a03", "#fb923c", false)}
         >
           {editMode ? "✓ 편집 완료" : "✏️ 방 꾸미기"}
         </button>
       </div>
 
-      {/* ── 편집 패널 ────────────────────────────────────────────────────── */}
+      {/* ── 편집 패널 ────────────────────────────────────────────────────────── */}
       <EditPanel
         open={editMode}
-        onClose={() => { setEditMode(false); setSelectedFurnitureId(null); setSelectedInstanceId(null); setSelectedDecoId(null); }}
+        onClose={() => { setEditMode(false); setSelectedFurnitureId(null); setSelectedInstanceId(null); }}
         selectedFurnitureId={selectedFurnitureId}
         onSelectFurniture={(id) => { setSelectedFurnitureId(id); setSelectedInstanceId(null); }}
         selectedInstanceId={selectedInstanceId}
         selectedInstanceRotation={selectedInstRotation}
         onRemoveFurniture={handleRemoveFurniture}
         onRotate={handleRotate}
-        selectedDecoId={selectedDecoId}
-        onSelectDeco={(id) => { setSelectedDecoId(id); if (id) setEditTab("walldeco"); }}
-        onRemoveSelectedDeco={handleRemoveSelectedDeco}
         tab={editTab}
         onTabChange={setEditTab}
         placementRotation={placementRotation}

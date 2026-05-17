@@ -5,6 +5,7 @@ export const ROOM_ROWS = 10;
 // ─── 타일 크기 ───────────────────────────────────────────────────────────────
 export const TILE_W = 88;
 export const TILE_H = 44;
+export const TILE_SIZE = 64; // 탑다운 정사각 타일 크기 (픽셀, scale 1 기준)
 
 // ─── 문 위치 (바닥면 중앙 2칸: 4칸-2칸-4칸) ──────────────────────────────────
 export const FARM_DOOR_TILES = [{ x: 4, y: ROOM_ROWS - 1 }, { x: 5, y: ROOM_ROWS - 1 }];
