@@ -520,11 +520,28 @@ export default function BaseCampPage() {
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#111" }}>
       <div ref={gameRef} style={{ width: "100%", height: "100%" }} />
 
+      {/* 도감 버튼 */}
       <button
         onClick={() => setDexOpen(true)}
         className="fixed bottom-4 right-4 z-40 rounded-xl border border-zinc-600 bg-zinc-900/90 px-4 py-2 text-sm font-semibold text-zinc-300 shadow-lg hover:bg-zinc-800 hover:text-zinc-100 backdrop-blur"
       >
         도감 (P)
+      </button>
+
+      {/* 내 몬스터 버튼 */}
+      <button
+        onClick={() => navigate("/monsters")}
+        className="fixed bottom-4 right-[14.5rem] z-40 rounded-xl border border-indigo-800/60 bg-zinc-900/90 px-4 py-2 text-sm font-semibold text-indigo-300 shadow-lg hover:bg-zinc-800 hover:text-indigo-200 backdrop-blur"
+      >
+        👾 내 몬스터
+      </button>
+
+      {/* 가방 버튼 */}
+      <button
+        onClick={() => navigate("/farm", { state: { from: "basecamp" } })}
+        className="fixed bottom-4 right-[7.5rem] z-40 rounded-xl border border-amber-800/60 bg-zinc-900/90 px-4 py-2 text-sm font-semibold text-amber-300 shadow-lg hover:bg-zinc-800 hover:text-amber-200 backdrop-blur"
+      >
+        🎒 가방
       </button>
 
       {dexOpen && <DexModal onClose={() => setDexOpen(false)} />}

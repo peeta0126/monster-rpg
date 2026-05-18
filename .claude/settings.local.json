@@ -16,7 +16,11 @@
       "Bash(npx.cmd tsc:*)",
       "Bash(node_modules/.bin/tsc --noEmit)",
       "Bash(where node:*)",
-      "Bash(\"C:\\\\Program Files\\\\nodejs\\\\npx.cmd\" tsc --noEmit)"
+      "Bash(\"C:\\\\Program Files\\\\nodejs\\\\npx.cmd\" tsc --noEmit)",
+      "mcp__ide__getDiagnostics",
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\('public/assets/housing/housing_bg.png'\\); print\\(img.size, img.mode\\)\")",
+      "Bash(python -c \"from PIL import Image; img = Image.open\\('public/assets/housing/housing_bg.png'\\); print\\(img.size, img.mode\\)\")",
+      "Bash(identify public/assets/housing/housing_bg.png)"
     ]
   }
 }

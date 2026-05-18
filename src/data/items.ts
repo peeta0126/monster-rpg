@@ -12,10 +12,13 @@ export const MATERIALS: Material[] = [
   { id: "berry",         name: "열매",      emoji: "🍓", description: "새콤달콤한 열매. 해독에 효과적." },
   { id: "root",          name: "나무뿌리",  emoji: "🪵", description: "단단한 나무뿌리. 여러 물약에 쓰인다." },
   { id: "crystal",       name: "빛의 수정", emoji: "💎", description: "숲 깊숙이서 발견되는 수정." },
-  // ── 가구 제작 재료 ─────────────────────────────────────────────────────────────
-  { id: "wood_plank",    name: "나무판자",  emoji: "🪓", description: "튼튼한 목재 조각. 가구 제작에 쓰인다." },
-  { id: "iron_fragment", name: "철 조각",   emoji: "⚙️", description: "단단한 철 파편. 금속 가구의 재료." },
-  { id: "leather",       name: "가죽",      emoji: "🟫", description: "부드러운 가죽. 여러 용도로 활용된다." },
+  // ── 제작 공방 재료 ─────────────────────────────────────────────────────────────
+  { id: "wood_plank",       name: "나무판자",      emoji: "🪓", description: "튼튼한 목재 조각. 아티팩트 제작에 쓰인다." },
+  { id: "iron_fragment",    name: "철 조각",       emoji: "⚙️", description: "단단한 철 파편. 금속 아티팩트의 재료." },
+  { id: "leather",          name: "가죽",          emoji: "🟫", description: "부드러운 가죽. 여러 용도로 활용된다." },
+  { id: "monster_essence",  name: "몬스터 정수",   emoji: "💠", description: "몬스터를 쓰러뜨리면 얻을 수 있는 신비로운 정수." },
+  { id: "slime_extract",    name: "슬라임 추출물", emoji: "🟢", description: "슬라임류 몬스터에서 얻는 점성 물질. 물약 제조에 쓰인다." },
+  { id: "magic_dust",       name: "마법 가루",     emoji: "✨", description: "마력이 응축된 희귀한 가루. 고급 제조에 사용된다." },
 ];
 
 // ─── 물약 효과 타입 ────────────────────────────────────────────────────────────────

@@ -3,7 +3,8 @@ import BaseCampPage from "./pages/BaseCampPage";
 import BattlePage from "./pages/BattlePage";
 import FarmPage from "./pages/FarmPage";
 import ForestPage from "./pages/ForestPage";
-import HousingPage from "./pages/HousingPage";
+import MonstersPage from "./pages/MonstersPage";
+import WorkshopPage from "./pages/WorkshopPage";
 
 function BattlePageWrapper() {
   const location = useLocation();
@@ -20,7 +21,9 @@ export default function App() {
         <Route path="/battle" element={<BattlePageWrapper />} />
         <Route path="/farm" element={<FarmPage />} />
         <Route path="/forest" element={<ForestPage />} />
-        <Route path="/housing" element={<HousingPage />} />
+        <Route path="/monsters" element={<MonstersPage />} />
+        <Route path="/housing" element={<WorkshopPage />} />
+        <Route path="/workshop" element={<WorkshopPage />} />
       </Routes>
     </BrowserRouter>
   );
