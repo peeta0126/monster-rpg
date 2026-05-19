@@ -291,67 +291,79 @@ function weightedPick<T>(weights: [T, number][]): T {
   return weights[weights.length - 1][0];
 }
 
-function generateDungeon(area: ForestArea): ForestNode[] {
-  // depth 0=start, 1-3=내부, 4=boss
-  const MAX_DEPTH = 4;
+// ── 탐험 맵 디버그 (true 시 노드 id/좌표 표시) ─────────────────────────────────
+const SHOW_EXPLORE_MAP_DEBUG = false;
 
-  // 각 깊이별 컬럼 수 결정
-  const depthCols: number[] = [1, 3, 3, 2, 1];
+function generateDungeon(_area: ForestArea): ForestNode[] {
+  // 탐험마다 랜덤 총 컬럼 수 (6~8)
+  const TOTAL_COLS = 6 + Math.floor(Math.random() * 3); // 6, 7, 8
+  const MAX_DEPTH  = TOTAL_COLS - 1;
 
-  const typeWeights: Record<number, [ForestNodeType, number][]> = {
-    1: [["battle",4],["material",3],["event",2],["rest",1]],
-    2: [["battle",3],["material",3],["event",2],["rest",2]],
-    3: [["battle",2],["material",2],["event",2],["rest",1],["elite",3]],
-    4: [["boss",1]],
-  };
+  // 각 column(depth) 별 row 수: 시작·보스=1, 중간=2~4
+  const depthCols = Array.from({ length: TOTAL_COLS }, (_, d) => {
+    if (d === 0 || d === MAX_DEPTH) return 1;
+    return 2 + Math.floor(Math.random() * 3); // 2~4
+  });
+
+  // 진행도 기반 노드 타입 가중치
+  function colWeights(depth: number): [ForestNodeType, number][] {
+    if (depth === 0)         return [["start",  1]];
+    if (depth === MAX_DEPTH) return [["boss",   1]];
+    const p = depth / MAX_DEPTH;
+    if (p < 0.35) return [["battle",4],["material",3],["event",2],["rest",1]];
+    if (p < 0.65) return [["battle",3],["material",3],["event",2],["rest",2]];
+    // 후반: elite 비율 증가, rest 증가
+    return [["battle",3],["material",2],["event",2],["rest",2],["elite",3]];
+  }
 
   const nodes: ForestNode[] = [];
   let idCounter = 0;
-
-  // 노드 생성
   const depthNodes: ForestNode[][] = [];
+
   for (let depth = 0; depth <= MAX_DEPTH; depth++) {
     const cols = depthCols[depth];
     const layer: ForestNode[] = [];
     for (let col = 0; col < cols; col++) {
-      const type: ForestNodeType = depth === 0
-        ? "start"
-        : typeWeights[depth]
-          ? weightedPick(typeWeights[depth])
-          : "battle";
       layer.push({
-        id: `n${idCounter++}`,
-        type,
+        id:        `n${idCounter++}`,
+        type:      weightedPick(colWeights(depth)),
         depth,
         col,
         totalCols: cols,
-        nextIds: [],
-        cleared: depth === 0,
-        revealed: depth === 0,
+        nextIds:   [],
+        cleared:   depth === 0,
+        revealed:  depth === 0,
       });
     }
     depthNodes.push(layer);
     nodes.push(...layer);
   }
 
-  // 연결 생성: 각 노드는 다음 depth 노드 중 1~2개와 연결
+  // 연결: 가까운 row 우선 + 일부 랜덤 + 미연결 노드 보정
   for (let d = 0; d < MAX_DEPTH; d++) {
     const curr = depthNodes[d];
     const next = depthNodes[d + 1];
-    // 모든 next 노드가 최소 1개 연결되도록
     const assigned = new Set<string>();
+
     for (const cn of curr) {
-      // 가장 가까운 next 노드 + 랜덤 1개
-      const closest = next[Math.round((cn.col / Math.max(cn.totalCols - 1, 1)) * (next.length - 1))];
+      const closestIdx = Math.round(
+        (cn.col / Math.max(cn.totalCols - 1, 1)) * (next.length - 1)
+      );
+      const closest = next[closestIdx];
       cn.nextIds.push(closest.id);
       assigned.add(closest.id);
+
       if (next.length > 1 && Math.random() < 0.45) {
         const others = next.filter(n => n.id !== closest.id);
-        const extra = others[Math.floor(Math.random() * others.length)];
-        if (!cn.nextIds.includes(extra.id)) { cn.nextIds.push(extra.id); assigned.add(extra.id); }
+        const extra  = others[Math.floor(Math.random() * others.length)];
+        if (!cn.nextIds.includes(extra.id)) {
+          cn.nextIds.push(extra.id);
+          assigned.add(extra.id);
+        }
       }
     }
-    // 연결 안 된 next 노드는 아무 curr에 연결
+
+    // 연결 없는 next 노드 보정 (항상 경로 존재 보장)
     for (const nn of next) {
       if (!assigned.has(nn.id)) {
         const src = curr[Math.floor(Math.random() * curr.length)];
@@ -613,8 +625,8 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-zinc-600 uppercase tracking-wider">노드 수</p>
-            <p className="text-sm font-bold text-zinc-300">5단계</p>
+            <p className="text-[10px] text-zinc-600 uppercase tracking-wider">맵 구조</p>
+            <p className="text-sm font-bold text-zinc-300">랜덤 생성</p>
           </div>
           <div className="mt-1 px-3 py-1.5 text-xs font-bold"
             style={{
@@ -651,7 +663,13 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
 // 던전 맵 화면
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const DIR_LABELS = ["왼쪽 길", "앞쪽 길", "오른쪽 길"];
+// y 좌표 기준 정렬된 다음 노드 방향 라벨
+function getNextDirLabel(index: number, total: number): string {
+  if (total === 1) return "앞으로";
+  if (total === 2) return index === 0 ? "위쪽 길" : "아래쪽 길";
+  const labels = ["위쪽 길", "중앙 길", "아래쪽 길"];
+  return labels[index] ?? `${index + 1}번 길`;
+}
 
 function DungeonMapScreen({
   nodes, currentNodeId, area, onSelectNode, onExit,
@@ -662,121 +680,132 @@ function DungeonMapScreen({
   onSelectNode: (nodeId: string) => void;
   onExit: () => void;
 }) {
-  const current = nodes.find(n => n.id === currentNodeId)!;
-  const nextNodes = current.nextIds.map(id => nodes.find(n => n.id === id)!).filter(Boolean);
-  const MAX_DEPTH = 4;
+  const current    = nodes.find(n => n.id === currentNodeId)!;
+  const nextNodes  = current.nextIds.map(id => nodes.find(n => n.id === id)!).filter(Boolean);
+  const MAX_DEPTH  = Math.max(...nodes.map(n => n.depth));
 
-  // 모든 cleared 노드 계산
-  const clearedIds = new Set(nodes.filter(n => n.cleared).map(n => n.id));
+  const clearedIds  = new Set(nodes.filter(n => n.cleared).map(n => n.id));
   const reachableIds = new Set(current.nextIds);
 
-  // 각 depth를 행으로 배치 (위=boss, 아래=start)
-  const depthGroups: ForestNode[][] = [];
-  for (let d = 0; d <= MAX_DEPTH; d++) {
-    depthGroups[d] = nodes.filter(n => n.depth === d);
-  }
+  // ── 가로형 SVG 좌표 (depth → x, col → y) ──────────────────────────────────
+  const VW = 900, VH = 280;
+  const PAD_X = 44, PAD_Y = 28;
+  const nodeCoords = (node: ForestNode) => ({
+    x: MAX_DEPTH === 0 ? VW / 2 : PAD_X + (node.depth / MAX_DEPTH) * (VW - PAD_X * 2),
+    y: node.totalCols === 1 ? VH / 2 : PAD_Y + (node.col / (node.totalCols - 1)) * (VH - PAD_Y * 2),
+  });
 
-  // SVG 좌표 계산 (depth 0=아래, depth 4=위)
-  const W = 320, H = 420;
-  const nodeCoords = (node: ForestNode) => {
-    const x = node.totalCols === 1
-      ? W / 2
-      : (W * 0.15) + (node.col / (node.totalCols - 1)) * (W * 0.7);
-    const y = H - 40 - (node.depth / MAX_DEPTH) * (H - 80);
-    return { x, y };
-  };
+  // 다음 노드를 y 순으로 정렬 → 위/중/아래 라벨 부여
+  const sortedNext = [...nextNodes].sort((a, b) => nodeCoords(a).y - nodeCoords(b).y);
 
   return (
-    <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-sm mx-4"
+    <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-3xl mx-4"
       style={{ animation:"slideInUp .4s ease both" }}>
 
       {/* 헤더 */}
       <div className="text-center">
-        <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-0.5">DUNGEON MAP</p>
+        <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-0.5">NODE MAP</p>
         <p className="text-lg font-black text-zinc-100">{area.name} 탐험</p>
-        <p className="text-xs text-zinc-500">깊이 {current.depth} / {MAX_DEPTH}</p>
+        <p className="text-xs text-zinc-500">진행 {current.depth} / {MAX_DEPTH}</p>
       </div>
 
-      {/* 맵 SVG */}
+      {/* 가로 노드맵 */}
       <div className="w-full rounded-2xl overflow-hidden"
         style={{
-          background:"rgba(6,8,6,0.88)",
-          border:`1px solid ${area.borderGlow}`,
-          backdropFilter:"blur(12px)",
+          background: "rgba(6,8,6,0.88)",
+          border: `1px solid ${area.borderGlow}`,
+          backdropFilter: "blur(12px)",
         }}>
-        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display:"block" }}>
-          {/* 연결선 */}
-          {nodes.map(node =>
-            node.nextIds.map(nextId => {
-              const next = nodes.find(n => n.id === nextId);
-              if (!next) return null;
-              const from = nodeCoords(node);
-              const to   = nodeCoords(next);
-              const isActive = clearedIds.has(node.id);
-              return (
-                <line key={`${node.id}-${nextId}`}
-                  x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                  stroke={isActive ? area.accentColor : "rgba(255,255,255,0.08)"}
-                  strokeWidth={isActive ? 1.5 : 1}
-                  strokeDasharray={isActive ? "none" : "4 4"}
-                  opacity={isActive ? 0.5 : 0.3}
-                />
-              );
-            })
-          )}
 
-          {/* 노드 */}
-          {nodes.map(node => {
-            const { x, y } = nodeCoords(node);
-            const isCurrent  = node.id === currentNodeId;
-            const isCleared  = clearedIds.has(node.id);
-            const isReachable = reachableIds.has(node.id);
-            const meta = NODE_META[node.revealed ? node.type : "start"];
+        {/* 수평 스크롤 컨테이너 */}
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: 580 }}>
+            <svg
+              width="100%"
+              viewBox={`0 0 ${VW} ${VH}`}
+              preserveAspectRatio="xMidYMid meet"
+              style={{ display:"block", minWidth: 580 }}
+            >
+              {/* 연결선 (왼쪽 → 오른쪽) */}
+              {nodes.map(node =>
+                node.nextIds.map(nextId => {
+                  const next = nodes.find(n => n.id === nextId);
+                  if (!next) return null;
+                  const from = nodeCoords(node);
+                  const to   = nodeCoords(next);
+                  const active = clearedIds.has(node.id);
+                  return (
+                    <line key={`${node.id}-${nextId}`}
+                      x1={from.x} y1={from.y} x2={to.x} y2={to.y}
+                      stroke={active ? area.accentColor : "rgba(255,255,255,0.08)"}
+                      strokeWidth={active ? 1.5 : 0.8}
+                      strokeDasharray={active ? "none" : "5 3"}
+                      opacity={active ? 0.5 : 0.22}
+                    />
+                  );
+                })
+              )}
 
-            // 도달 불가 + 미방문 + 현재 아님 → 흐리게
-            const dimmed = !isCurrent && !isCleared && !isReachable;
+              {/* 노드 */}
+              {nodes.map(node => {
+                const { x, y } = nodeCoords(node);
+                const isCurrent   = node.id === currentNodeId;
+                const isCleared   = clearedIds.has(node.id);
+                const isReachable = reachableIds.has(node.id);
+                const meta  = NODE_META[node.revealed ? node.type : "start"];
+                const dimmed = !isCurrent && !isCleared && !isReachable;
 
-            return (
-              <g key={node.id} style={{ cursor: isReachable ? "pointer" : "default" }}
-                onClick={() => isReachable && onSelectNode(node.id)}>
-                {/* 현재 위치 링 */}
-                {isCurrent && (
-                  <circle cx={x} cy={y} r={22}
-                    fill="none" stroke={area.accentColor}
-                    strokeWidth={2} opacity={0.6}
-                    style={{ animation:"pulseRing 2s ease-out infinite" }}/>
-                )}
-                {/* 도달 가능 강조 링 */}
-                {isReachable && (
-                  <circle cx={x} cy={y} r={20}
-                    fill={area.accentColor} opacity={0.12}/>
-                )}
-                {/* 노드 원 */}
-                <circle cx={x} cy={y} r={16}
-                  fill={isCleared ? meta.bg : isReachable ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)"}
-                  stroke={isCurrent ? area.accentColor : isReachable ? meta.color : "rgba(255,255,255,0.15)"}
-                  strokeWidth={isCurrent ? 2.5 : isReachable ? 1.5 : 1}
-                  opacity={dimmed ? 0.3 : 1}
-                />
-                {/* 아이콘 or ? */}
-                <text x={x} y={y+1} textAnchor="middle" dominantBaseline="middle"
-                  fontSize={node.revealed ? 13 : 14}
-                  opacity={dimmed ? 0.3 : 1}
-                  style={{ userSelect:"none", pointerEvents:"none" }}>
-                  {node.revealed ? meta.icon : (isReachable ? "?" : "·")}
-                </text>
-                {/* 깊이 라벨 (boss만) */}
-                {node.type === "boss" && node.revealed && (
-                  <text x={x} y={y+28} textAnchor="middle" dominantBaseline="middle"
-                    fontSize={8} fill="#ef4444" opacity={0.8}
-                    style={{ userSelect:"none", pointerEvents:"none" }}>
-                    BOSS
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+                return (
+                  <g key={node.id}
+                    style={{ cursor: isReachable ? "pointer" : "default" }}
+                    onClick={() => isReachable && onSelectNode(node.id)}
+                  >
+                    {/* 현재 위치 펄스 링 */}
+                    {isCurrent && (
+                      <circle cx={x} cy={y} r={21}
+                        fill="none" stroke={area.accentColor} strokeWidth={2} opacity={0.55}
+                        style={{ animation:"pulseRing 2s ease-out infinite" }}/>
+                    )}
+                    {/* 도달 가능 강조 */}
+                    {isReachable && !isCurrent && (
+                      <circle cx={x} cy={y} r={19}
+                        fill={area.accentColor} opacity={0.1}/>
+                    )}
+                    {/* 노드 원 */}
+                    <circle cx={x} cy={y} r={15}
+                      fill={isCleared ? meta.bg : isReachable ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)"}
+                      stroke={isCurrent ? area.accentColor : isReachable ? meta.color : "rgba(255,255,255,0.12)"}
+                      strokeWidth={isCurrent ? 2.5 : isReachable ? 1.5 : 0.8}
+                      opacity={dimmed ? 0.22 : 1}
+                    />
+                    {/* 아이콘 */}
+                    <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="middle"
+                      fontSize={node.revealed ? 11 : 12}
+                      opacity={dimmed ? 0.22 : 1}
+                      style={{ userSelect:"none", pointerEvents:"none" }}>
+                      {node.revealed ? meta.icon : (isReachable ? "?" : "·")}
+                    </text>
+                    {/* BOSS 라벨 */}
+                    {node.type === "boss" && node.revealed && (
+                      <text x={x} y={y + 25} textAnchor="middle" dominantBaseline="middle"
+                        fontSize={7} fill="#ef4444" opacity={0.8}
+                        style={{ userSelect:"none", pointerEvents:"none" }}>
+                        BOSS
+                      </text>
+                    )}
+                    {/* 디버그 */}
+                    {SHOW_EXPLORE_MAP_DEBUG && (
+                      <text x={x} y={y - 20} textAnchor="middle" fontSize={6} fill="#888888"
+                        style={{ userSelect:"none", pointerEvents:"none" }}>
+                        {node.id}({node.depth},{node.col})
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </div>
 
         {/* 범례 */}
         <div className="px-4 pb-3 flex flex-wrap gap-x-3 gap-y-1">
@@ -792,23 +821,26 @@ function DungeonMapScreen({
         </div>
       </div>
 
-      {/* 이동 선택 버튼 */}
-      {nextNodes.length > 0 && (
+      {/* 이동 선택 버튼 (y 좌표 순 정렬 → 위/중/아래 라벨) */}
+      {sortedNext.length > 0 && (
         <div className="w-full flex flex-col gap-2">
           <p className="text-xs text-zinc-500 text-center">어느 방향으로 탐사하시겠습니까?</p>
-          <div className={`grid gap-2 ${nextNodes.length === 1 ? "grid-cols-1" : nextNodes.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
-            {nextNodes.map((node, i) => (
+          <div className={`grid gap-2 ${
+            sortedNext.length === 1 ? "grid-cols-1" :
+            sortedNext.length === 2 ? "grid-cols-2" : "grid-cols-3"
+          }`}>
+            {sortedNext.map((node, i) => (
               <button key={node.id}
                 onClick={() => onSelectNode(node.id)}
                 className="flex flex-col items-center gap-1.5 rounded-xl py-3 px-2 transition-all active:scale-95"
                 style={{
-                  background:"rgba(255,255,255,0.04)",
-                  border:`1.5px solid ${area.accentColor}50`,
+                  background: "rgba(255,255,255,0.04)",
+                  border: `1.5px solid ${area.accentColor}50`,
                   color: area.accentColor,
                 }}>
                 <span className="text-2xl">🌫️</span>
                 <span className="text-xs font-bold">
-                  {nextNodes.length === 1 ? "앞쪽 길" : DIR_LABELS[i] ?? `길 ${i+1}`}
+                  {getNextDirLabel(i, sortedNext.length)}
                 </span>
                 <span className="text-[9px] text-zinc-600">미지의 공간</span>
               </button>
@@ -1551,6 +1583,9 @@ export default function ForestPage() {
 
   const totalPotions = Object.values(potions).reduce((a,b)=>a+b, 0);
   const currentNode  = dungeonNodes.find(n => n.id === currentNodeId);
+  const maxDepth     = dungeonNodes.length > 0
+    ? Math.max(...dungeonNodes.map(n => n.depth))
+    : 0;
 
   return (
     <div className="relative flex h-screen w-full flex-col items-center overflow-hidden text-white">
@@ -1568,7 +1603,7 @@ export default function ForestPage() {
           {area && (
             <div className="rounded-xl px-3 py-1.5 text-xs font-bold backdrop-blur"
               style={{ background:"rgba(0,0,0,.5)", border:`1px solid ${area.borderGlow}`, color: area.accentColor }}>
-              {area.name} {currentNode && phase!=="enter" ? `· ${currentNode.depth}/${4}` : ""}
+              {area.name} {currentNode && phase!=="enter" ? `· ${currentNode.depth}/${maxDepth}` : ""}
             </div>
           )}
           {totalPotions>0 && (
