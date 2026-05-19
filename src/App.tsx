@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import BaseCampPage from "./pages/BaseCampPage";
-import BattlePage from "./pages/BattlePage";
-import FarmPage from "./pages/FarmPage";
-import ForestPage from "./pages/ForestPage";
-import MonstersPage from "./pages/MonstersPage";
-import WorkshopPage from "./pages/WorkshopPage";
+import BaseCampPage from "./camp/BaseCampPage";
+import BattlePage from "./battle/BattlePage";
+import FarmPage from "./monster/FarmPage";
+import ForestPage from "./camp/ForestPage";
+import MonstersPage from "./monster/MonstersPage";
+import WorkshopPage from "./workshop/WorkshopPage";
 
 function BattlePageWrapper() {
   const location = useLocation();

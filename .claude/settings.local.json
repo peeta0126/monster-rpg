@@ -20,7 +20,27 @@
       "mcp__ide__getDiagnostics",
       "Bash(python3 -c \"from PIL import Image; img = Image.open\\('public/assets/housing/housing_bg.png'\\); print\\(img.size, img.mode\\)\")",
       "Bash(python -c \"from PIL import Image; img = Image.open\\('public/assets/housing/housing_bg.png'\\); print\\(img.size, img.mode\\)\")",
-      "Bash(identify public/assets/housing/housing_bg.png)"
+      "Bash(identify public/assets/housing/housing_bg.png)",
+      "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
+      "Bash(node ./node_modules/.bin/tsc --noEmit)",
+      "Bash(node ./node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(sed 's|from \"../types/game\"|from \"../shared/game\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/data/typeChart.ts')",
+      "Bash(sed -e 's|from \"../data/typeChart\"|from \"./typeChart\"|g' -e 's|from \"../types/game\"|from \"../shared/game\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/utils/battle.ts')",
+      "Bash(sed 's|from \"../types/game\"|from \"../shared/game\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/data/monsters.ts')",
+      "Bash(sed 's|from \"../types/game\"|from \"../shared/game\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/data/moves.ts')",
+      "Bash(sed 's|from \"../types/game\"|from \"../shared/game\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/data/learnset.ts')",
+      "Bash(sed -e 's|from \"../types/game\"|from \"./game\"|g' -e 's|from \"./monsters\"|from \"../monster/monsters\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/data/floorTable.ts')",
+      "Bash(sed 's|from \"../types/crafting\"|from \"../shared/crafting\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/data/craftingRecipes.ts')",
+      "Bash(sed -e 's|from \"../events\"|from \"../shared/phaser/events\"|g' -e 's|from \"../battleInitStore\"|from \"./battleInitStore\"|g' -e 's|from \"../../../types/game\"|from \"../shared/game\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/game/phaser/scenes/BattleScene.ts')",
+      "Bash(sed -e 's|from \"../events\"|from \"../shared/phaser/events\"|g' -e 's|from \"../campPositionStore\"|from \"./campPositionStore\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/game/phaser/scenes/BaseCampScene.ts')",
+      "Bash(sed -e 's|from \"../store/playerStore\"|from \"../shared/playerStore\"|g' -e 's|from \"../data/items\"|from \"../shared/items\"|g' -e 's|from \"../types/crafting\"|from \"../shared/crafting\"|g' -e 's|from \"../utils/crafting\"|from \"../shared/craftingUtils\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/pages/FarmPage.tsx')",
+      "Bash(sed -e 's|from \"../store/playerStore\"|from \"../shared/playerStore\"|g' -e 's|from \"../data/monsterImages\"|from \"./monsterImages\"|g' -e 's|from \"../types/crafting\"|from \"../shared/crafting\"|g' -e 's|from \"../utils/crafting\"|from \"../shared/craftingUtils\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/pages/MonstersPage.tsx')",
+      "Bash(sed -e 's|from \"../../data/craftingRecipes\"|from \"./craftingRecipes\"|g' -e 's|from \"../../store/playerStore\"|from \"../shared/playerStore\"|g' -e 's|from \"../../types/crafting\"|from \"../shared/crafting\"|g' -e 's|from \"../../utils/crafting\"|from \"../shared/craftingUtils\"|g' -e 's|from \"../../utils/crafting\"|from \"../shared/craftingUtils\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/components/workshop/CraftingModal.tsx')",
+      "Bash(sed -e 's|from \"../../store/playerStore\"|from \"../shared/playerStore\"|g' -e 's|from \"../../types/crafting\"|from \"../shared/crafting\"|g' -e 's|from \"../../utils/crafting\"|from \"../shared/craftingUtils\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/components/workshop/AnvilModal.tsx')",
+      "Bash(sed -e 's|from \"../rps/RpsIcon\"|from \"./RpsIcon\"|g' -e 's|from \"../../utils/crafting\"|from \"../shared/craftingUtils\"|g' 'C:/Users/leere/OneDrive/바탕 화면/건국대/4-1/소웨종 - 졸업작품/monster-rpg/src/components/workshop/RockPaperScissorsMiniGame.tsx')",
+      "Bash(python3:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
