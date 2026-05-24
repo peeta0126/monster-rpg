@@ -132,7 +132,7 @@ export default class BaseCampScene extends Phaser.Scene {
       this.physics.add.existing(r, true);
       wallBodies.push(r);
 
-      const debug = true;
+      const debug = false;
       if (debug) {
         const g = this.add.graphics().setDepth(9999);
         g.lineStyle(2, 0x00ff88, 1);
