@@ -186,7 +186,6 @@ export function checkStatusEffects(monster: BattleMonster): {
 export function checkCatchCondition(
   target: BattleMonster,
   isCatchZone: boolean,
-  catchRateBonus: number = 0,
 ): { canAttempt: boolean; success: boolean; message: string } {
   if (!isCatchZone) {
     return {
@@ -206,8 +205,7 @@ export function checkCatchCondition(
     };
   }
 
-  // 기본 포획 확률 40%, 상태이상 시 1.5배, 하우징 보너스
-  const baseCatchRate = 0.4 * (1 + catchRateBonus / 100);
+  const baseCatchRate = 0.4;
   const statusMultiplier = target.status !== null ? 1.5 : 1;
   const catchRate = Math.min(0.95, baseCatchRate * statusMultiplier);
 

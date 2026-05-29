@@ -917,7 +917,7 @@ function ExploringScreen({ area }: { area: ForestArea }) {
 // 노드 도착 공개 화면
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function NodeArrivedScreen({ node, area, onContinue }: {
+function NodeArrivedScreen({ node, onContinue }: {
   node: ForestNode; area: ForestArea; onContinue: () => void;
 }) {
   const meta = NODE_META[node.type];
@@ -963,7 +963,7 @@ function NodeArrivedScreen({ node, area, onContinue }: {
 // 휴식 화면
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function RestScreen({ area, onContinue }: { area: ForestArea; onContinue: () => void }) {
+function RestScreen({ onContinue }: { area: ForestArea; onContinue: () => void }) {
   return (
     <div className="relative z-10 flex flex-col items-center gap-5 max-w-sm w-full mx-4"
       style={{ animation:"slideInUp .4s ease both" }}>
@@ -1015,7 +1015,7 @@ const EVENTS = [
   { icon:"👻", title:"정체불명의 기운", desc:"차가운 바람이 불어왔다. 뭔가 있는 것 같다.", reward:"두렵지만 계속 나아갔다." },
 ];
 
-function EventScreen({ area, onContinue }: { area: ForestArea; onContinue: () => void }) {
+function EventScreen({ onContinue }: { area: ForestArea; onContinue: () => void }) {
   const ev = useMemo(() => EVENTS[Math.floor(Math.random() * EVENTS.length)], []);
   return (
     <div className="relative z-10 flex flex-col items-center gap-5 max-w-sm w-full mx-4"

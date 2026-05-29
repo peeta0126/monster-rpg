@@ -22,7 +22,6 @@ export default function App() {
         <Route path="/farm" element={<FarmPage />} />
         <Route path="/forest" element={<ForestPage />} />
         <Route path="/monsters" element={<MonstersPage />} />
-        <Route path="/housing" element={<WorkshopPage />} />
         <Route path="/workshop" element={<WorkshopPage />} />
       </Routes>
     </BrowserRouter>

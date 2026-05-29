@@ -376,8 +376,8 @@ export default function FarmPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from     = (location.state as { from?: string } | null)?.from;
-  const backPath  = from === "housing" ? "/housing" : "/";
-  const backLabel = from === "housing" ? "← 공방" : "← 베이스캠프";
+  const backPath  = from === "workshop" ? "/workshop" : "/";
+  const backLabel = from === "workshop" ? "← 공방" : "← 베이스캠프";
 
   const {
     materials, craftedArtifacts, craftedPotions,

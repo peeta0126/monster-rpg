@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Monster, HousingBonuses } from "./game";
+import type { Monster } from "./game";
 import type { CraftingRecipe, CraftedItem, ArtifactInstance, CraftedPotionStack, ItemQuality } from "./crafting";
 import { monsters } from "../monster/monsters";
 import { POTIONS } from "./items";
@@ -99,8 +99,7 @@ interface PlayerState {
   discardArtifact: (instanceId: string) => void;
   releaseMonster: (uid: string) => boolean;
 
-  // ── 하우징 보너스 (보전용 스텁) ───────────────────────────────────────────────
-  getHousingBonuses: () => HousingBonuses;
+
 }
 
 export const usePlayerStore = create<PlayerState>()(
@@ -453,14 +452,7 @@ export const usePlayerStore = create<PlayerState>()(
         });
       },
 
-      getHousingBonuses: () => ({
-        hpPercent: 0,
-        attackPercent: 0,
-        defensePercent: 0,
-        speedPercent: 0,
-        expBonusPercent: 0,
-        potionBonusPercent: 0,
-      }),
+
     }),
     {
       name: "monster-rpg-player",

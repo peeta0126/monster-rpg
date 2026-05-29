@@ -536,7 +536,7 @@ export default function WorkshopPage() {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/farm", { state: { from: "housing" } })}
+          onClick={() => navigate("/farm", { state: { from: "workshop" } })}
           style={{
             background: "rgba(22,12,4,0.88)",
             border: "1px solid rgba(180,120,30,0.6)",

@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { usePlayerStore } from "../shared/playerStore";
-import type { ArtifactInstance, ItemQuality } from "../shared/crafting";
+import type { ArtifactInstance } from "../shared/crafting";
 import {
   QUALITY_COLOR,
   QUALITY_LABEL,
   QUALITY_MULTIPLIER,
   ARTIFACT_STAT_LABEL,
-  EQUIPMENT_MAX_LEVEL,
   MAX_EQUIPMENT_ENHANCEMENT,
   getEquipmentMaxLevel,
   getEquipmentLevelUpCost,
@@ -563,7 +562,6 @@ function SynthesizePanel({
   onSelectSecondary: (id: string) => void;
   onSynthesize:      () => void;
 }) {
-  const color     = QUALITY_COLOR[primary.quality];
   const nextQual  = getNextQuality(primary.quality);
   const nextColor = nextQual ? QUALITY_COLOR[nextQual] : C.textFaint;
   const maxLv     = getEquipmentMaxLevel(primary.quality);
