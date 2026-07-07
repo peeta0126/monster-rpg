@@ -56,14 +56,13 @@ npm run lint
 ## 화면 경로
 
 | 경로 | 화면 | 설명 |
-| --- | --- | --- |
+|---|---|---|
 | `/` | BaseCamp | 시작 화면입니다. 캐릭터를 이동해 전투, 숲, 공방으로 진입합니다. |
 | `/battle` | Battle | 층 기반 몬스터 전투 화면입니다. 공격, 교체, 물약 사용, 포획을 처리합니다. |
 | `/forest` | Forest | 숲 탐험 화면입니다. 몬스터 조우와 재료 획득이 일어납니다. |
 | `/farm` | Farm | 파티, 보관함, 도감, 재료, 물약, 제작품을 관리합니다. |
 | `/monsters` | Monsters | 몬스터 목록과 관련 정보를 확인합니다. |
 | `/workshop` | Workshop | 물약과 아티팩트를 제작하는 공방 화면입니다. |
-| `/housing` | Workshop | 현재는 공방 화면과 같은 컴포넌트로 연결되어 있습니다. |
 
 기본 이동은 `WASD` 또는 방향키를 사용합니다. 베이스캠프에서는 특정 위치에 접근해 다른 화면으로 이동합니다.
 
@@ -80,13 +79,12 @@ npm run lint
 
 ## 프로젝트 구조
 
-```text
+```txt
 monster-rpg/
 ├─ public/
 │  ├─ vite.svg
 │  └─ assets/
 │     ├─ basecamp/        # 베이스캠프 배경 이미지
-│     ├─ housing/         # 공방/하우징 배경 이미지
 │     ├─ monsters/        # Phaser와 React에서 사용하는 몬스터 이미지
 │     └─ player/          # 플레이어 방향별 스프라이트
 ├─ src/
@@ -113,7 +111,7 @@ monster-rpg/
 ## 주요 파일
 
 | 파일 | 역할 |
-| --- | --- |
+|---|---|
 | `src/App.tsx` | React Router 경로를 정의합니다. |
 | `src/camp/BaseCampPage.tsx` | 베이스캠프 화면을 렌더링합니다. |
 | `src/camp/BaseCampScene.ts` | Phaser 베이스캠프 씬과 이동/전환 로직을 담당합니다. |

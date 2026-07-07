@@ -13,9 +13,45 @@ const TOWER_X = 278,
 
 const CAM_ZOOM = 0.5;
 const PLAYER_SCALE = 2.5;
+const NPC_DISPLAY_HEIGHT = 360;
+const NPC_INTERACT_DISTANCE = 120;
+
+type BaseCampNpc = {
+  id: string;
+  name: string;
+  texture: string;
+  imagePath: string;
+  x: number;
+  y: number;
+  dialogue: string;
+  flipX?: boolean;
+};
+type BaseCampNpcInstance = BaseCampNpc & { sprite: Phaser.GameObjects.Image };
+
+const BASECAMP_NPCS: BaseCampNpc[] = [
+  {
+    id: "baros",
+    name: "Baros",
+    texture: "npc-baros",
+    imagePath: "/assets/player/Baros.png",
+    x: 330,
+    y: 1260,
+    dialogue: "이 탑은 내가 지키고 있다.",
+  },
+  {
+    id: "orion",
+    name: "Orion",
+    texture: "npc-orion",
+    imagePath: "/assets/player/orion.png",
+    x: 1090,
+    y: 1950,
+    dialogue: "마을의 평화를 지키는 것이 내 역할이지.",
+  },
+];
 
 export default class BaseCampScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
+  private npcSprites: BaseCampNpcInstance[] = [];
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
@@ -46,6 +82,9 @@ export default class BaseCampScene extends Phaser.Scene {
     this.load.image("player-right", "/assets/player/player-right.png");
     this.load.image("player-right-1", "/assets/player/player-right-1.png");
     this.load.image("player-right-2", "/assets/player/player-right-2.png");
+    BASECAMP_NPCS.forEach((npc) => {
+      this.load.image(npc.texture, npc.imagePath);
+    });
   }
 
   create() {
@@ -62,6 +101,7 @@ export default class BaseCampScene extends Phaser.Scene {
     // ── 배경 / 드래곤 배너 ────────────────────────────────────────────────────────
     this.add.image(mapW / 2, mapH / 2, "basecamp-bg").setDepth(0);
     this.add.image(mapW / 2, mapH / 2, "basecamp-bg-1").setDepth(3000);
+    this.createNpcs();
 
     // ─────────────────────────────────────────────────────────────────────────────
     // 플레이어
@@ -94,6 +134,7 @@ export default class BaseCampScene extends Phaser.Scene {
     keyboard.on("keydown-E", () => {
       const px = this.player.x,
         py = this.player.y;
+      const nearestNpc = this.getNearestNpc(px, py);
       const dTower = Phaser.Math.Distance.Between(
         px,
         py,
@@ -108,7 +149,9 @@ export default class BaseCampScene extends Phaser.Scene {
         HOUSE_DOOR_Y,
       );
 
-      if (dTower < 90) {
+      if (nearestNpc) {
+        this.showNpcDialogue(nearestNpc);
+      } else if (dTower < 90) {
         setCampPosition(TOWER_X, TOWER_Y + 120);
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
           from: "basecamp",
@@ -194,6 +237,64 @@ export default class BaseCampScene extends Phaser.Scene {
     keyboard.on("keydown-P", () => gameEvents.emit("open-dex"));
   }
 
+  private createNpcs() {
+    this.npcSprites = BASECAMP_NPCS.map((npc) => {
+      const texture = this.textures.get(npc.texture).getSourceImage();
+      const width = NPC_DISPLAY_HEIGHT * (texture.width / texture.height);
+      const sprite = this.add
+        .image(npc.x, npc.y, npc.texture)
+        .setName(npc.id)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(width, NPC_DISPLAY_HEIGHT)
+        .setDepth(npc.y);
+
+      if (npc.flipX) sprite.setFlipX(true);
+      return { ...npc, sprite };
+    });
+  }
+
+  private getNearestNpc(x: number, y: number): BaseCampNpcInstance | null {
+    let nearest: BaseCampNpcInstance | null = null;
+    let nearestDistance = NPC_INTERACT_DISTANCE;
+
+    for (const npc of this.npcSprites) {
+      const distance = Phaser.Math.Distance.Between(x, y, npc.x, npc.y);
+      if (distance < nearestDistance) {
+        nearest = npc;
+        nearestDistance = distance;
+      }
+    }
+
+    return nearest;
+  }
+
+  private showNpcDialogue(npc: BaseCampNpc) {
+    this.children.getByName("npcDialogueBox")?.destroy();
+    this.children.getByName("npcDialogueName")?.destroy();
+    this.children.getByName("npcDialogueText")?.destroy();
+
+    const box = this.add
+      .rectangle(this.player.x, this.player.y + 110, 560, 96, 0x111827, 0.9)
+      .setName("npcDialogueBox")
+      .setStrokeStyle(3, 0xf8e6b0)
+      .setDepth(10000);
+    this.add
+      .text(box.x - 250, box.y - 38, npc.name, {
+        fontSize: "24px",
+        color: "#f8e6b0",
+        fontStyle: "bold",
+      })
+      .setName("npcDialogueName")
+      .setDepth(10001);
+    this.add
+      .text(box.x - 250, box.y - 6, npc.dialogue, {
+        fontSize: "22px",
+        color: "#ffffff",
+      })
+      .setName("npcDialogueText")
+      .setDepth(10001);
+  }
+
   update(_time: number, delta: number) {
     //좌표 확인용
     const pointer = this.input.activePointer;
@@ -259,12 +360,26 @@ export default class BaseCampScene extends Phaser.Scene {
     const dTower = Phaser.Math.Distance.Between(px, py, TOWER_X, TOWER_Y + 100);
     const dForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
     const dHouse = Phaser.Math.Distance.Between(px, py, HOUSE_X, HOUSE_DOOR_Y);
+    const nearestNpc = this.getNearestNpc(px, py);
 
     const ph = this.children.getByName("portalHint");
     const fh = this.children.getByName("forestHint");
     const hh = this.children.getByName("houseHint");
+    const nh = this.children.getByName("npcHint");
 
-    if (dTower < 90 && !ph) {
+    if (nearestNpc && !nh) {
+      this.add
+        .text(px - 46, py - 80, `E: ${nearestNpc.name}`, {
+          fontSize: "26px",
+          color: "#f8e6b0",
+          backgroundColor: "#000000aa",
+          padding: { x: 6, y: 3 },
+        })
+        .setName("npcHint")
+        .setDepth(9999);
+    } else if (!nearestNpc && nh) nh.destroy();
+
+    if (dTower < 90 && !ph && !nearestNpc) {
       this.add
         .text(px - 46, py - 80, "E: 탑 입장", {
           fontSize: "26px",
@@ -274,7 +389,7 @@ export default class BaseCampScene extends Phaser.Scene {
         })
         .setName("portalHint")
         .setDepth(9999);
-    } else if (dTower >= 120 && ph) ph.destroy();
+    } else if ((dTower >= 120 || nearestNpc) && ph) ph.destroy();
 
     if (dForest < 130 && !fh) {
       this.add
