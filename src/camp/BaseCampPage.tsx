@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createBaseCampGame } from "../shared/phaser/phaserConfig";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
+import type { NpcDialoguePayload } from "../shared/phaser/events";
 import { monsters } from "../monster/monsters";
 import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../monster/monsterImages";
 import { usePlayerStore } from "../shared/playerStore";
@@ -453,6 +454,7 @@ export default function BaseCampPage() {
   const navigate = useNavigate();
   const [dexOpen, setDexOpen]           = useState(false);
   const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string; isCatchZone: boolean } | null>(null);
+  const [npcDialogue, setNpcDialogue]   = useState<NpcDialoguePayload | null>(null);
   const bestFloor = usePlayerStore((s) => s.bestFloor);
 
   useEffect(() => {
@@ -476,17 +478,20 @@ export default function BaseCampPage() {
     const handleEnterForest  = () => navigate("/forest");
     const handleEnterWorkshop = () => navigate("/workshop");
     const handleOpenDex = () => setDexOpen(true);
+    const handleShowNpcDialogue = (payload: NpcDialoguePayload) => setNpcDialogue(payload);
 
     gameEvents.on(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
     gameEvents.on(GAME_EVENT.ENTER_FOREST, handleEnterForest);
     gameEvents.on(GAME_EVENT.ENTER_HOUSING, handleEnterWorkshop);
     gameEvents.on("open-dex", handleOpenDex);
+    gameEvents.on(GAME_EVENT.SHOW_NPC_DIALOGUE, handleShowNpcDialogue);
 
     return () => {
       gameEvents.off(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
       gameEvents.off(GAME_EVENT.ENTER_FOREST, handleEnterForest);
       gameEvents.off(GAME_EVENT.ENTER_HOUSING, handleEnterWorkshop);
       gameEvents.off("open-dex", handleOpenDex);
+      gameEvents.off(GAME_EVENT.SHOW_NPC_DIALOGUE, handleShowNpcDialogue);
       game.destroy(true);
     };
   }, [navigate]);
@@ -495,13 +500,14 @@ export default function BaseCampPage() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === "p" || e.key === "P") && !dexOpen) setDexOpen(true);
       if (e.key === "Escape") {
+        if (npcDialogue) { setNpcDialogue(null); return; }
         if (dexOpen) setDexOpen(false);
         if (towerPayload) setTowerPayload(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dexOpen, towerPayload]);
+  }, [dexOpen, towerPayload, npcDialogue]);
 
   const handleTowerSelect = (floor: number) => {
     if (!towerPayload) return;
@@ -552,6 +558,36 @@ export default function BaseCampPage() {
           onSelect={handleTowerSelect}
           onClose={() => setTowerPayload(null)}
         />
+      )}
+
+      {npcDialogue && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 pb-6"
+          onClick={() => setNpcDialogue(null)}
+        >
+          <div
+            className="flex items-stretch w-full max-w-2xl rounded-2xl overflow-hidden border-2 border-amber-700/60 bg-zinc-950/96 shadow-2xl"
+            style={{ boxShadow: "0 0 40px rgba(180,140,60,0.25)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 초상화 */}
+            <div className="shrink-0 w-28 bg-zinc-900/80 flex items-end justify-center p-3">
+              <img
+                src={npcDialogue.portraitPath}
+                alt={npcDialogue.name}
+                className="w-24 h-36 object-cover rounded-xl border border-zinc-700"
+              />
+            </div>
+            {/* 대사 영역 */}
+            <div className="flex-1 flex flex-col justify-between p-4">
+              <div>
+                <p className="text-amber-300 font-bold text-base mb-2">{npcDialogue.name}</p>
+                <p className="text-zinc-100 text-sm leading-relaxed">{npcDialogue.dialogue}</p>
+              </div>
+              <p className="text-zinc-600 text-xs self-end">ESC 또는 클릭으로 닫기</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -13,17 +13,18 @@ const TOWER_X = 278,
 
 const CAM_ZOOM = 0.5;
 const PLAYER_SCALE = 2.5;
-const NPC_DISPLAY_HEIGHT = 360;
-const NPC_INTERACT_DISTANCE = 120;
+const NPC_DISPLAY_HEIGHT = 192;   // 플레이어(160) × 1.2배
+const NPC_INTERACT_DISTANCE = 160; // 디스플레이 절반(160)에 맞춰 조정
 
 type BaseCampNpc = {
   id: string;
   name: string;
-  texture: string;
-  imagePath: string;
+  spriteTexture: string;  // 월드에 표시되는 픽셀아트 스프라이트 텍스처 키
+  portraitPath: string;   // 대화창에 표시되는 초상화 이미지 경로
   x: number;
   y: number;
   dialogue: string;
+  tint?: number;
   flipX?: boolean;
 };
 type BaseCampNpcInstance = BaseCampNpc & { sprite: Phaser.GameObjects.Image };
@@ -32,17 +33,17 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
   {
     id: "baros",
     name: "Baros",
-    texture: "npc-baros",
-    imagePath: "/assets/player/Baros.png",
-    x: 330,
-    y: 1260,
+    spriteTexture: "Baros",
+    portraitPath: "/assets/player/Baros_portrait.png",
+    x: 278,
+    y: 1040,
     dialogue: "이 탑은 내가 지키고 있다.",
   },
   {
     id: "orion",
     name: "Orion",
-    texture: "npc-orion",
-    imagePath: "/assets/player/orion.png",
+    spriteTexture: "npc-orion-sprite",
+    portraitPath: "/assets/player/orion.png",
     x: 1090,
     y: 1950,
     dialogue: "마을의 평화를 지키는 것이 내 역할이지.",
@@ -83,7 +84,7 @@ export default class BaseCampScene extends Phaser.Scene {
     this.load.image("player-right-1", "/assets/player/player-right-1.png");
     this.load.image("player-right-2", "/assets/player/player-right-2.png");
     BASECAMP_NPCS.forEach((npc) => {
-      this.load.image(npc.texture, npc.imagePath);
+      this.load.image(npc.spriteTexture, `/assets/player/${npc.spriteTexture}.png`);
     });
   }
 
@@ -239,15 +240,16 @@ export default class BaseCampScene extends Phaser.Scene {
 
   private createNpcs() {
     this.npcSprites = BASECAMP_NPCS.map((npc) => {
-      const texture = this.textures.get(npc.texture).getSourceImage();
-      const width = NPC_DISPLAY_HEIGHT * (texture.width / texture.height);
+      const src = this.textures.get(npc.spriteTexture).getSourceImage();
+      const displayW = Math.round(NPC_DISPLAY_HEIGHT * (src.width / src.height));
       const sprite = this.add
-        .image(npc.x, npc.y, npc.texture)
+        .image(npc.x, npc.y, npc.spriteTexture)
         .setName(npc.id)
         .setOrigin(0.5, 1)
-        .setDisplaySize(width, NPC_DISPLAY_HEIGHT)
+        .setDisplaySize(displayW, NPC_DISPLAY_HEIGHT)
         .setDepth(npc.y);
 
+      if (npc.tint !== undefined) sprite.setTint(npc.tint);
       if (npc.flipX) sprite.setFlipX(true);
       return { ...npc, sprite };
     });
@@ -269,30 +271,11 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   private showNpcDialogue(npc: BaseCampNpc) {
-    this.children.getByName("npcDialogueBox")?.destroy();
-    this.children.getByName("npcDialogueName")?.destroy();
-    this.children.getByName("npcDialogueText")?.destroy();
-
-    const box = this.add
-      .rectangle(this.player.x, this.player.y + 110, 560, 96, 0x111827, 0.9)
-      .setName("npcDialogueBox")
-      .setStrokeStyle(3, 0xf8e6b0)
-      .setDepth(10000);
-    this.add
-      .text(box.x - 250, box.y - 38, npc.name, {
-        fontSize: "24px",
-        color: "#f8e6b0",
-        fontStyle: "bold",
-      })
-      .setName("npcDialogueName")
-      .setDepth(10001);
-    this.add
-      .text(box.x - 250, box.y - 6, npc.dialogue, {
-        fontSize: "22px",
-        color: "#ffffff",
-      })
-      .setName("npcDialogueText")
-      .setDepth(10001);
+    gameEvents.emit(GAME_EVENT.SHOW_NPC_DIALOGUE, {
+      name: npc.name,
+      dialogue: npc.dialogue,
+      portraitPath: npc.portraitPath,
+    });
   }
 
   update(_time: number, delta: number) {

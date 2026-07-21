@@ -8,6 +8,8 @@ export const GAME_EVENT = {
   ENTER_HOUSING: "portal:enter-housing",
   /** BaseCampScene → BaseCampPage: 숲 탐험 페이지로 이동 */
   ENTER_FOREST: "portal:enter-forest",
+  /** BaseCampScene → BaseCampPage: NPC 대화창 표시 */
+  SHOW_NPC_DIALOGUE: "npc:show-dialogue",
   BATTLE_INIT: "battle:init",
   /** BattlePage → BattleScene: HP·상태이상 갱신 */
   BATTLE_STATE_UPDATE: "battle:state-update",
@@ -22,6 +24,12 @@ export const GAME_EVENT = {
   /** BattlePage → BattleScene: 플레이어 몬스터 교체 (스프라이트 변경) */
   BATTLE_PLAYER_SWITCH: "battle:player-switch",
 } as const;
+
+export interface NpcDialoguePayload {
+  name: string;
+  dialogue: string;
+  portraitPath: string;
+}
 
 export interface BattlePlayerSwitchPayload {
   /** 파티 인덱스 (preload된 party-mon-{i} 텍스처 키 결정) */
