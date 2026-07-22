@@ -256,10 +256,19 @@ export default function WorkshopPage() {
           let rx = prev.x;
           let ry = prev.y;
 
-          // X축 단독 검사
-          if (!isColliding({ x: nx, y: prev.y })) rx = nx;
-          // Y축 단독 검사 (해결된 X 기준)
-          if (!isColliding({ x: rx, y: ny })) ry = ny;
+          // X축 단독 검사 / Y축 단독 검사 — 항상 원래 prev 기준으로 검사해야
+          // 대각선 이동 시 박스 모서리를 파고들어 갇히는 현상을 막을 수 있음
+          const collideX = isColliding({ x: nx, y: prev.y });
+          const collideY = isColliding({ x: prev.x, y: ny });
+          if (!collideX) rx = nx;
+          if (!collideY) ry = ny;
+
+          // 대각선 이동: 각 축은 개별적으로 안전해 보여도 합쳐진 목적지가
+          // 박스 내부라면(모서리 통과) 이동 자체를 취소 — 박스 안에 끼는 버그 방지
+          if (!collideX && !collideY && isColliding({ x: nx, y: ny })) {
+            rx = prev.x;
+            ry = prev.y;
+          }
 
           posRef.current = { x: rx, y: ry };
           return { x: rx, y: ry };

@@ -42,8 +42,8 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
   {
     id: "orion",
     name: "Orion",
-    spriteTexture: "npc-orion-sprite",
-    portraitPath: "/assets/player/orion.png",
+    spriteTexture: "Orion",
+    portraitPath: "/assets/player/Orion_portrait.png",
     x: 1090,
     y: 1950,
     dialogue: "마을의 평화를 지키는 것이 내 역할이지.",
