@@ -89,7 +89,7 @@ export default function BattlePage() {
 
   const { updateBestFloor, updatePartyMember, addCapturedMonster,
           addToDexSeen, addToDexCaught, usePotion: consumePotion,
-          addMaterial } = usePlayerStore();
+          addMaterial, setStoryFlag } = usePlayerStore();
 
   const [initialParty] = useState(() => usePlayerStore.getState().party);
   const [activePartyIndex, setActivePartyIndex] = useState(0);
@@ -446,6 +446,7 @@ export default function BattlePage() {
     if (res.success) {
       const captureResult = addCapturedMonster(enemyState);
       addToDexCaught(enemyState.id);
+      if (captureResult === "storage") setStoryFlag("first_capture");
       await sendLogAndWait(captureResult === "storage" ? "보관함에 저장되었다!" : "보관함이 가득 차서 놓아줬다...");
       finishBattle("win"); setIsProcessing(false); return;
     }
@@ -471,7 +472,7 @@ export default function BattlePage() {
     isProcessing, battleOutcome, player, enemyState, isCatchZone, floor,
     activePartyIndex, initialParty, partyHp,
     resolveAttack, sendLogAndWait, finishBattle,
-    addCapturedMonster, addToDexCaught, hasAlivePartyMember,
+    addCapturedMonster, addToDexCaught, hasAlivePartyMember, setStoryFlag,
   ]);
 
   // ─── 렌더 헬퍼 ──────────────────────────────────────────────────────────────────

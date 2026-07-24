@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import type { PersistedStoryFlag } from "../playerStore";
 
 export const gameEvents = new Phaser.Events.EventEmitter();
 
@@ -27,8 +28,9 @@ export const GAME_EVENT = {
 
 export interface NpcDialoguePayload {
   name: string;
-  dialogue: string;
+  lines: string[];
   portraitPath: string;
+  setsFlag?: PersistedStoryFlag;
 }
 
 export interface BattlePlayerSwitchPayload {

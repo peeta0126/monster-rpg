@@ -7,6 +7,51 @@ import { POTIONS } from "./items";
 import { rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats } from "./craftingUtils";
 import type { RpsResult } from "./craftingUtils";
 
+// ─── 스토리 플래그 ──────────────────────────────────────────────────────────────
+
+/** always: 항상 충족되는 sentinel. floor_*: bestFloor에서 파생(저장 안 함). 나머지는 저장 대상. */
+export type StoryFlag =
+  | "always"
+  | "met_orion"
+  | "met_baros"
+  | "first_capture"
+  | "quest_baros_done"
+  | "quest_orion_done"
+  | "floor_5"
+  | "floor_10"
+  | "floor_20"
+  | "floor_40";
+
+export type PersistedStoryFlag =
+  | "met_orion"
+  | "met_baros"
+  | "first_capture"
+  | "quest_baros_done"
+  | "quest_orion_done";
+
+const DEFAULT_STORY_FLAGS: Record<PersistedStoryFlag, boolean> = {
+  met_orion: false,
+  met_baros: false,
+  first_capture: false,
+  quest_baros_done: false,
+  quest_orion_done: false,
+};
+
+export function isStoryFlagSet(
+  flag: StoryFlag,
+  storyFlags: Record<PersistedStoryFlag, boolean>,
+  bestFloor: number,
+): boolean {
+  switch (flag) {
+    case "always":   return true;
+    case "floor_5":  return bestFloor >= 5;
+    case "floor_10": return bestFloor >= 10;
+    case "floor_20": return bestFloor >= 20;
+    case "floor_40": return bestFloor >= 40;
+    default:         return storyFlags[flag];
+  }
+}
+
 // ─── OwnedMonster ────────────────────────────────────────────────────────────────
 
 export interface OwnedMonster extends Monster {
@@ -51,6 +96,7 @@ interface PlayerState {
   materials: Record<string, number>;
   potions: Record<string, number>;
   bestFloor: number;
+  storyFlags: Record<PersistedStoryFlag, boolean>;
 
   // ── 제작 공방 ─────────────────────────────────────────────────────────────────
   craftedItems: CraftedItem[];
@@ -63,6 +109,7 @@ interface PlayerState {
   addToDexSeen:   (id: string) => void;
   addToDexCaught: (id: string) => void;
   updateBestFloor: (floor: number) => void;
+  setStoryFlag: (flag: PersistedStoryFlag) => void;
   addCapturedMonster: (monster: Monster) => "storage" | "full";
   swapWithStorage:  (partyIndex: number, storageUid: string) => void;
   moveToStorage:    (partyIndex: number) => void;
@@ -112,6 +159,7 @@ export const usePlayerStore = create<PlayerState>()(
       materials:   {},
       potions:     {},
       bestFloor:   0,
+      storyFlags:  { ...DEFAULT_STORY_FLAGS },
       craftedItems: [],
       craftedArtifacts: [],
       craftedPotions: [],
@@ -130,6 +178,9 @@ export const usePlayerStore = create<PlayerState>()(
 
       updateBestFloor: (floor) =>
         set((s) => ({ bestFloor: Math.max(s.bestFloor, floor) })),
+
+      setStoryFlag: (flag) =>
+        set((s) => ({ storyFlags: { ...s.storyFlags, [flag]: true } })),
 
       addCapturedMonster: (monster) => {
         let result: "storage" | "full" = "full";
@@ -463,6 +514,10 @@ export const usePlayerStore = create<PlayerState>()(
         if (!Array.isArray(state.craftedPotions))   state.craftedPotions = [];
         if (typeof state.equippedArtifacts !== "object" || state.equippedArtifacts === null)
           state.equippedArtifacts = {};
+        if (typeof state.storyFlags !== "object" || state.storyFlags === null)
+          state.storyFlags = { ...DEFAULT_STORY_FLAGS };
+        else
+          state.storyFlags = { ...DEFAULT_STORY_FLAGS, ...state.storyFlags };
       },
     }
   )

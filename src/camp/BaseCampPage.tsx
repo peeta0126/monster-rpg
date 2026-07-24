@@ -455,7 +455,9 @@ export default function BaseCampPage() {
   const [dexOpen, setDexOpen]           = useState(false);
   const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string; isCatchZone: boolean } | null>(null);
   const [npcDialogue, setNpcDialogue]   = useState<NpcDialoguePayload | null>(null);
+  const [dialogueLineIndex, setDialogueLineIndex] = useState(0);
   const bestFloor = usePlayerStore((s) => s.bestFloor);
+  const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
 
   useEffect(() => {
     if (!gameRef.current) return;
@@ -478,7 +480,10 @@ export default function BaseCampPage() {
     const handleEnterForest  = () => navigate("/forest");
     const handleEnterWorkshop = () => navigate("/workshop");
     const handleOpenDex = () => setDexOpen(true);
-    const handleShowNpcDialogue = (payload: NpcDialoguePayload) => setNpcDialogue(payload);
+    const handleShowNpcDialogue = (payload: NpcDialoguePayload) => {
+      setNpcDialogue(payload);
+      setDialogueLineIndex(0);
+    };
 
     gameEvents.on(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
     gameEvents.on(GAME_EVENT.ENTER_FOREST, handleEnterForest);
@@ -496,18 +501,30 @@ export default function BaseCampPage() {
     };
   }, [navigate]);
 
+  const advanceNpcDialogue = () => {
+    if (!npcDialogue) return;
+    if (dialogueLineIndex < npcDialogue.lines.length - 1) {
+      setDialogueLineIndex((i) => i + 1);
+      return;
+    }
+    if (npcDialogue.setsFlag) setStoryFlag(npcDialogue.setsFlag);
+    setNpcDialogue(null);
+    setDialogueLineIndex(0);
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === "p" || e.key === "P") && !dexOpen) setDexOpen(true);
+      if ((e.key === "p" || e.key === "P") && !dexOpen && !npcDialogue) setDexOpen(true);
+      if (e.key === " " && npcDialogue) { e.preventDefault(); advanceNpcDialogue(); return; }
       if (e.key === "Escape") {
-        if (npcDialogue) { setNpcDialogue(null); return; }
+        if (npcDialogue) { setNpcDialogue(null); setDialogueLineIndex(0); return; }
         if (dexOpen) setDexOpen(false);
         if (towerPayload) setTowerPayload(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dexOpen, towerPayload, npcDialogue]);
+  }, [dexOpen, towerPayload, npcDialogue, dialogueLineIndex]);
 
   const handleTowerSelect = (floor: number) => {
     if (!towerPayload) return;
@@ -563,12 +580,12 @@ export default function BaseCampPage() {
       {npcDialogue && (
         <div
           className="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 pb-6"
-          onClick={() => setNpcDialogue(null)}
+          onClick={advanceNpcDialogue}
         >
           <div
-            className="flex items-stretch w-full max-w-2xl rounded-2xl overflow-hidden border-2 border-amber-700/60 bg-zinc-950/96 shadow-2xl"
+            className="flex items-stretch w-full max-w-2xl rounded-2xl overflow-hidden border-2 border-amber-700/60 bg-zinc-950/96 shadow-2xl cursor-pointer"
             style={{ boxShadow: "0 0 40px rgba(180,140,60,0.25)" }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); advanceNpcDialogue(); }}
           >
             {/* 초상화 */}
             <div className="shrink-0 w-28 bg-zinc-900/80 flex items-end justify-center p-3">
@@ -582,9 +599,15 @@ export default function BaseCampPage() {
             <div className="flex-1 flex flex-col justify-between p-4">
               <div>
                 <p className="text-amber-300 font-bold text-base mb-2">{npcDialogue.name}</p>
-                <p className="text-zinc-100 text-sm leading-relaxed">{npcDialogue.dialogue}</p>
+                <p className="text-zinc-100 text-sm leading-relaxed">
+                  {npcDialogue.lines[dialogueLineIndex]}
+                </p>
               </div>
-              <p className="text-zinc-600 text-xs self-end">ESC 또는 클릭으로 닫기</p>
+              <p className="text-zinc-600 text-xs self-end">
+                {dialogueLineIndex < npcDialogue.lines.length - 1
+                  ? "클릭 / Space: 다음  ·  ESC: 닫기"
+                  : "클릭 / Space: 닫기  ·  ESC: 닫기"}
+              </p>
             </div>
           </div>
         </div>

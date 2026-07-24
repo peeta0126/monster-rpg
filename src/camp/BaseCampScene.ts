@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
+import { usePlayerStore } from "../shared/playerStore";
+import { ORION_DIALOGUES, BAROS_DIALOGUES, selectDialogueEntry } from "./campDialogues";
+import type { DialogueEntry } from "./campDialogues";
 
 // ─── 맵 좌표 (basecamp-bg.png 1536×2730 기준) ─────────────────────────────────
 const FOREST_X = 1500,
@@ -23,7 +26,7 @@ type BaseCampNpc = {
   portraitPath: string;   // 대화창에 표시되는 초상화 이미지 경로
   x: number;
   y: number;
-  dialogue: string;
+  dialogues: DialogueEntry[];
   tint?: number;
   flipX?: boolean;
 };
@@ -37,7 +40,7 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
     portraitPath: "/assets/player/Baros_portrait.png",
     x: 278,
     y: 1040,
-    dialogue: "이 탑은 내가 지키고 있다.",
+    dialogues: BAROS_DIALOGUES,
   },
   {
     id: "orion",
@@ -46,7 +49,7 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
     portraitPath: "/assets/player/Orion_portrait.png",
     x: 1090,
     y: 1950,
-    dialogue: "마을의 평화를 지키는 것이 내 역할이지.",
+    dialogues: ORION_DIALOGUES,
   },
 ];
 
@@ -271,10 +274,14 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   private showNpcDialogue(npc: BaseCampNpc) {
+    const { storyFlags, bestFloor } = usePlayerStore.getState();
+    const entry = selectDialogueEntry(npc.dialogues, storyFlags, bestFloor);
+    if (!entry) return;
     gameEvents.emit(GAME_EVENT.SHOW_NPC_DIALOGUE, {
       name: npc.name,
-      dialogue: npc.dialogue,
+      lines: entry.lines,
       portraitPath: npc.portraitPath,
+      setsFlag: entry.setsFlag,
     });
   }
 
