@@ -31,6 +31,13 @@ export interface NpcDialoguePayload {
   lines: string[];
   portraitPath: string;
   setsFlag?: PersistedStoryFlag;
+  acceptQuestId?: string;
+  completeQuest?: {
+    questId: string;
+    objective: { itemId: string; amount: number };
+    rewards: { itemId: string; amount: number }[];
+    setsFlag: PersistedStoryFlag;
+  };
 }
 
 export interface BattlePlayerSwitchPayload {

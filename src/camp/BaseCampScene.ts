@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
 import { usePlayerStore } from "../shared/playerStore";
-import { ORION_DIALOGUES, BAROS_DIALOGUES, selectDialogueEntry } from "./campDialogues";
+import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
 import type { DialogueEntry } from "./campDialogues";
 
 // ─── 맵 좌표 (basecamp-bg.png 1536×2730 기준) ─────────────────────────────────
@@ -274,14 +274,16 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   private showNpcDialogue(npc: BaseCampNpc) {
-    const { storyFlags, bestFloor } = usePlayerStore.getState();
-    const entry = selectDialogueEntry(npc.dialogues, storyFlags, bestFloor);
-    if (!entry) return;
+    const { storyFlags, bestFloor, materials, questStatus } = usePlayerStore.getState();
+    const result = resolveNpcInteraction(npc.dialogues, storyFlags, bestFloor, materials, questStatus);
+    if (!result) return;
     gameEvents.emit(GAME_EVENT.SHOW_NPC_DIALOGUE, {
       name: npc.name,
-      lines: entry.lines,
+      lines: result.lines,
       portraitPath: npc.portraitPath,
-      setsFlag: entry.setsFlag,
+      setsFlag: result.setsFlag,
+      acceptQuestId: result.acceptQuestId,
+      completeQuest: result.completeQuest,
     });
   }
 

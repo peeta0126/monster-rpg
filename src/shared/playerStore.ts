@@ -52,6 +52,17 @@ export function isStoryFlagSet(
   }
 }
 
+// ─── 퀘스트 상태 ────────────────────────────────────────────────────────────────
+
+export type QuestStatus = "not_accepted" | "in_progress" | "completed";
+
+export function getQuestStatus(
+  questId: string,
+  questStatus: Record<string, QuestStatus>,
+): QuestStatus {
+  return questStatus[questId] ?? "not_accepted";
+}
+
 // ─── OwnedMonster ────────────────────────────────────────────────────────────────
 
 export interface OwnedMonster extends Monster {
@@ -97,6 +108,7 @@ interface PlayerState {
   potions: Record<string, number>;
   bestFloor: number;
   storyFlags: Record<PersistedStoryFlag, boolean>;
+  questStatus: Record<string, QuestStatus>;
 
   // ── 제작 공방 ─────────────────────────────────────────────────────────────────
   craftedItems: CraftedItem[];
@@ -110,6 +122,14 @@ interface PlayerState {
   addToDexCaught: (id: string) => void;
   updateBestFloor: (floor: number) => void;
   setStoryFlag: (flag: PersistedStoryFlag) => void;
+  acceptQuest: (questId: string) => void;
+  /** 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 한 번의 set()으로 원자적으로 수행 */
+  completeQuest: (
+    questId: string,
+    objective: { itemId: string; amount: number },
+    rewards: { itemId: string; amount: number }[],
+    setsFlag: PersistedStoryFlag,
+  ) => boolean;
   addCapturedMonster: (monster: Monster) => "storage" | "full";
   swapWithStorage:  (partyIndex: number, storageUid: string) => void;
   moveToStorage:    (partyIndex: number) => void;
@@ -160,6 +180,7 @@ export const usePlayerStore = create<PlayerState>()(
       potions:     {},
       bestFloor:   0,
       storyFlags:  { ...DEFAULT_STORY_FLAGS },
+      questStatus: {},
       craftedItems: [],
       craftedArtifacts: [],
       craftedPotions: [],
@@ -181,6 +202,25 @@ export const usePlayerStore = create<PlayerState>()(
 
       setStoryFlag: (flag) =>
         set((s) => ({ storyFlags: { ...s.storyFlags, [flag]: true } })),
+
+      acceptQuest: (questId) =>
+        set((s) => ({ questStatus: { ...s.questStatus, [questId]: "in_progress" } })),
+
+      completeQuest: (questId, objective, rewards, setsFlag) => {
+        const s = get();
+        if ((s.materials[objective.itemId] ?? 0) < objective.amount) return false;
+        const newMats = { ...s.materials };
+        newMats[objective.itemId] = (newMats[objective.itemId] ?? 0) - objective.amount;
+        for (const reward of rewards) {
+          newMats[reward.itemId] = (newMats[reward.itemId] ?? 0) + reward.amount;
+        }
+        set({
+          materials:   newMats,
+          questStatus: { ...s.questStatus, [questId]: "completed" },
+          storyFlags:  { ...s.storyFlags, [setsFlag]: true },
+        });
+        return true;
+      },
 
       addCapturedMonster: (monster) => {
         let result: "storage" | "full" = "full";
@@ -518,6 +558,8 @@ export const usePlayerStore = create<PlayerState>()(
           state.storyFlags = { ...DEFAULT_STORY_FLAGS };
         else
           state.storyFlags = { ...DEFAULT_STORY_FLAGS, ...state.storyFlags };
+        if (typeof state.questStatus !== "object" || state.questStatus === null)
+          state.questStatus = {};
       },
     }
   )

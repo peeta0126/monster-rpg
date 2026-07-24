@@ -458,6 +458,8 @@ export default function BaseCampPage() {
   const [dialogueLineIndex, setDialogueLineIndex] = useState(0);
   const bestFloor = usePlayerStore((s) => s.bestFloor);
   const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
+  const acceptQuest = usePlayerStore((s) => s.acceptQuest);
+  const completeQuest = usePlayerStore((s) => s.completeQuest);
 
   useEffect(() => {
     if (!gameRef.current) return;
@@ -508,6 +510,11 @@ export default function BaseCampPage() {
       return;
     }
     if (npcDialogue.setsFlag) setStoryFlag(npcDialogue.setsFlag);
+    if (npcDialogue.acceptQuestId) acceptQuest(npcDialogue.acceptQuestId);
+    if (npcDialogue.completeQuest) {
+      const { questId, objective, rewards, setsFlag } = npcDialogue.completeQuest;
+      completeQuest(questId, objective, rewards, setsFlag);
+    }
     setNpcDialogue(null);
     setDialogueLineIndex(0);
   };
