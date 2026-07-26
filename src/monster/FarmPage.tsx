@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePlayerStore } from "../shared/playerStore";
 import { MATERIALS } from "../shared/items";
@@ -384,6 +384,15 @@ export default function FarmPage() {
     discardMaterial, discardPotion, discardArtifact,
   } = usePlayerStore();
   const [activeTab, setActiveTab] = useState<BagTab>("all");
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      navigate(backPath, backPath === "/" ? { state: { openMenu: true } } : undefined);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [backPath, navigate]);
 
   const totalMats      = Object.values(materials).reduce((a, b) => a + b, 0);
   const totalPotions   = craftedPotions.reduce((s, p) => s + p.quantity, 0);

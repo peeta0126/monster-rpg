@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
 import { MONSTER_IMAGE_MAP, monsterImgStyle } from "./monsterImages";
@@ -391,6 +391,16 @@ export default function MonstersPage() {
   const equipModalMonster = equipModalUid
     ? ([...party, ...storage].find((m) => m.uid === equipModalUid) ?? null)
     : null;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (equipModalUid) { setEquipModalUid(null); return; }
+      navigate("/", { state: { openMenu: true } });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [equipModalUid, navigate]);
 
   const handlePartyClick = (idx: number) => {
     if (selStorage !== null) {

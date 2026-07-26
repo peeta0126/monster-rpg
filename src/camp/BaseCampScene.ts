@@ -237,8 +237,6 @@ export default class BaseCampScene extends Phaser.Scene {
     seg(660, 2300, 660, 2900);
 
     //좌표 확인용
-
-    keyboard.on("keydown-P", () => gameEvents.emit("open-dex"));
   }
 
   private createNpcs() {

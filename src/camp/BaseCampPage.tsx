@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { createBaseCampGame } from "../shared/phaser/phaserConfig";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import type { NpcDialoguePayload } from "../shared/phaser/events";
 import { monsters } from "../monster/monsters";
 import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../monster/monsterImages";
 import { usePlayerStore } from "../shared/playerStore";
-import { LEARNSET } from "../monster/learnset";
+import type { QuestStatus } from "../shared/playerStore";
+import { getFullLearnset } from "../monster/learnset";
+import { ALL_QUESTS } from "./campDialogues";
+import type { QuestDef } from "./campDialogues";
+import { getMaterial } from "../shared/items";
 
 // ── 속성 한글/색상 ──────────────────────────────────────────────────────────────
 
@@ -47,6 +51,20 @@ const MONSTER_DEX_DESC: Record<string, string> = {
   nobi:       "어디서나 볼 수 있는 친근한 생물이다. 특별한 능력은 없지만 균형 잡힌 신체 능력으로 어떤 환경에서도 살아남는다. 무리를 이루면 의외의 강함을 발휘한다.",
 };
 
+const STATUS_KO: Record<string, string> = {
+  burn: "화상", paralysis: "마비", freeze: "빙결", poison: "독",
+};
+
+const QUEST_NPC_KO: Record<QuestDef["npcId"], string> = {
+  orion: "오리온", baros: "바로스",
+};
+
+const QUEST_STATUS_BADGE: Record<QuestStatus, { label: string; className: string }> = {
+  not_accepted: { label: "미수락", className: "border-zinc-700 text-zinc-500" },
+  in_progress:  { label: "진행중", className: "border-amber-700 text-amber-400" },
+  completed:    { label: "완료",   className: "border-emerald-700 text-emerald-400" },
+};
+
 const MOVE_TYPE_COLOR: Record<string, string> = {
   fire:     "bg-red-900/60 text-red-300 border-red-800",
   water:    "bg-blue-900/60 text-blue-300 border-blue-800",
@@ -79,7 +97,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
 }) {
   const m = monsters.find(x => x.id === monsterId);
   if (!m) return null;
-  const learnset = LEARNSET[monsterId] ?? [];
+  const learnset = getFullLearnset(monsterId);
   const dexSeen   = usePlayerStore((s) => s.dexSeen);
   const chain     = getEvolutionChain(monsterId);
 
@@ -178,8 +196,8 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
           </div>
         )}
 
-        {/* 레벨업 스킬 테이블 */}
-        {seen && learnset.length > 0 && (
+        {/* 레벨업 스킬 테이블 (포획한 경우에만) */}
+        {caught && learnset.length > 0 && (
           <div>
             <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">레벨업 스킬</p>
             <div className="rounded-xl border border-zinc-800 overflow-hidden">
@@ -191,6 +209,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                     <th className="text-left px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider">속성</th>
                     <th className="text-right px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider">위력</th>
                     <th className="text-right px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider">명중</th>
+                    <th className="text-left px-4 py-2 text-[10px] text-zinc-600 uppercase tracking-wider">상태이상</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -207,15 +226,20 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                         {entry.move.power === 0 ? "—" : entry.move.power}
                       </td>
                       <td className="px-4 py-2 text-right text-zinc-500 font-mono">{entry.move.accuracy}%</td>
+                      <td className="px-4 py-2 text-zinc-500">
+                        {entry.move.statusEffect
+                          ? `${STATUS_KO[entry.move.statusEffect] ?? entry.move.statusEffect} ${entry.move.statusChance ?? 0}%`
+                          : "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {!caught && (
-              <p className="text-[10px] text-zinc-700 mt-2 text-center">* 포획 후 전체 스킬 정보 열람 가능</p>
-            )}
           </div>
+        )}
+        {seen && !caught && (
+          <p className="text-[10px] text-zinc-700 text-center">* 포획 후 학습 기술 열람 가능</p>
         )}
 
         {!seen && (
@@ -280,7 +304,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                 onClick={onClose}
                 className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200"
               >
-                닫기 (P)
+                닫기
               </button>
             </div>
 
@@ -377,6 +401,116 @@ function DexModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ── 퀘스트 로그 모달 ──────────────────────────────────────────────────────────────
+
+function QuestLogModal({ onClose }: { onClose: () => void }) {
+  const questStatus = usePlayerStore((s) => s.questStatus);
+  const materials    = usePlayerStore((s) => s.materials);
+
+  const visibleQuests = ALL_QUESTS.filter(
+    (q) => (questStatus[q.id] ?? "not_accepted") !== "not_accepted",
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex flex-col w-full max-w-lg max-h-[85vh] rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800 shrink-0">
+          <div>
+            <h2 className="text-xl font-bold text-zinc-100">퀘스트</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              진행중 {visibleQuests.filter((q) => questStatus[q.id] === "in_progress").length}
+              &nbsp;·&nbsp;
+              완료 {visibleQuests.filter((q) => questStatus[q.id] === "completed").length}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg bg-zinc-800 px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200"
+          >
+            닫기
+          </button>
+        </div>
+
+        {/* 목록 */}
+        <div className="overflow-y-auto flex-1 p-5 space-y-3">
+          {visibleQuests.length === 0 && (
+            <div className="text-center py-10 text-zinc-700">
+              <p className="text-sm">아직 진행 중인 퀘스트가 없습니다.</p>
+              <p className="text-xs mt-1 text-zinc-800">마을 사람에게 말을 걸어보세요.</p>
+            </div>
+          )}
+
+          {visibleQuests.map((q) => {
+            const status = questStatus[q.id] ?? "not_accepted";
+            const badge  = QUEST_STATUS_BADGE[status];
+            const have   = materials[q.objective.itemId] ?? 0;
+            const need   = q.objective.amount;
+            const pct    = Math.min(100, Math.round((have / need) * 100));
+            const objMat = getMaterial(q.objective.itemId);
+
+            return (
+              <div
+                key={q.id}
+                className={`rounded-xl border p-4 ${
+                  status === "completed"
+                    ? "border-zinc-800 bg-zinc-900/40 opacity-60"
+                    : "border-zinc-700 bg-zinc-900"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400 shrink-0">
+                      {QUEST_NPC_KO[q.npcId]}
+                    </span>
+                    <p className="font-bold text-zinc-100 text-sm truncate">{q.title}</p>
+                  </div>
+                  <span className={`shrink-0 rounded border px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}>
+                    {badge.label}
+                  </span>
+                </div>
+
+                {status === "in_progress" && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[11px] text-zinc-500 mb-1">
+                      <span>{objMat?.emoji ?? ""} {objMat?.name ?? q.objective.itemId}</span>
+                      <span className="font-mono">{Math.min(have, need)} / {need}</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-zinc-700">보상</span>
+                  {q.rewards.map((r) => {
+                    const mat = getMaterial(r.itemId);
+                    return (
+                      <span key={r.itemId} className="rounded bg-zinc-800/70 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                        {mat?.emoji ?? "?"} {mat?.name ?? r.itemId} ×{r.amount}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 탑 층수 선택 모달 ──────────────────────────────────────────────────────────────
 
 function TowerModal({
@@ -447,12 +581,70 @@ function TowerModal({
   );
 }
 
+// ── 메뉴 모달 ──────────────────────────────────────────────────────────────────────
+
+function MenuModal({
+  onClose,
+  onOpenQuestLog,
+  onOpenDex,
+  onGoToMonsters,
+  onGoToFarm,
+}: {
+  onClose: () => void;
+  onOpenQuestLog: () => void;
+  onOpenDex: () => void;
+  onGoToMonsters: () => void;
+  onGoToFarm: () => void;
+}) {
+  const items = [
+    { label: "퀘스트",    emoji: "📜", color: "border-orange-800/60 text-orange-300 hover:bg-orange-950/40", onClick: onOpenQuestLog },
+    { label: "내 몬스터", emoji: "👾", color: "border-indigo-800/60 text-indigo-300 hover:bg-indigo-950/40", onClick: onGoToMonsters },
+    { label: "가방",      emoji: "🎒", color: "border-amber-800/60 text-amber-300 hover:bg-amber-950/40",   onClick: onGoToFarm },
+    { label: "도감",      emoji: "📖", color: "border-zinc-600 text-zinc-300 hover:bg-zinc-800/60",         onClick: onOpenDex },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-950 p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-zinc-100">메뉴</h2>
+          <span className="text-[10px] text-zinc-600">ESC: 닫기</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          {items.map((it) => (
+            <button
+              key={it.label}
+              onClick={it.onClick}
+              className={`flex flex-col items-center gap-1.5 rounded-xl border bg-zinc-900/70 py-4 text-sm font-semibold transition active:scale-95 ${it.color}`}
+            >
+              <span className="text-2xl">{it.emoji}</span>
+              {it.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── BaseCampPage ───────────────────────────────────────────────────────────────────
 
 export default function BaseCampPage() {
   const gameRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState<boolean>(
+    () => Boolean((location.state as { openMenu?: boolean } | null)?.openMenu),
+  );
   const [dexOpen, setDexOpen]           = useState(false);
+  const [questLogOpen, setQuestLogOpen] = useState(false);
   const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string; isCatchZone: boolean } | null>(null);
   const [npcDialogue, setNpcDialogue]   = useState<NpcDialoguePayload | null>(null);
   const [dialogueLineIndex, setDialogueLineIndex] = useState(0);
@@ -481,7 +673,6 @@ export default function BaseCampPage() {
 
     const handleEnterForest  = () => navigate("/forest");
     const handleEnterWorkshop = () => navigate("/workshop");
-    const handleOpenDex = () => setDexOpen(true);
     const handleShowNpcDialogue = (payload: NpcDialoguePayload) => {
       setNpcDialogue(payload);
       setDialogueLineIndex(0);
@@ -490,14 +681,12 @@ export default function BaseCampPage() {
     gameEvents.on(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
     gameEvents.on(GAME_EVENT.ENTER_FOREST, handleEnterForest);
     gameEvents.on(GAME_EVENT.ENTER_HOUSING, handleEnterWorkshop);
-    gameEvents.on("open-dex", handleOpenDex);
     gameEvents.on(GAME_EVENT.SHOW_NPC_DIALOGUE, handleShowNpcDialogue);
 
     return () => {
       gameEvents.off(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
       gameEvents.off(GAME_EVENT.ENTER_FOREST, handleEnterForest);
       gameEvents.off(GAME_EVENT.ENTER_HOUSING, handleEnterWorkshop);
-      gameEvents.off("open-dex", handleOpenDex);
       gameEvents.off(GAME_EVENT.SHOW_NPC_DIALOGUE, handleShowNpcDialogue);
       game.destroy(true);
     };
@@ -521,17 +710,24 @@ export default function BaseCampPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === "p" || e.key === "P") && !dexOpen && !npcDialogue) setDexOpen(true);
       if (e.key === " " && npcDialogue) { e.preventDefault(); advanceNpcDialogue(); return; }
+      if (e.key === "Tab") {
+        if (npcDialogue || towerPayload || dexOpen || questLogOpen) return;
+        e.preventDefault();
+        setMenuOpen((v) => !v);
+        return;
+      }
       if (e.key === "Escape") {
         if (npcDialogue) { setNpcDialogue(null); setDialogueLineIndex(0); return; }
-        if (dexOpen) setDexOpen(false);
-        if (towerPayload) setTowerPayload(null);
+        if (dexOpen) { setDexOpen(false); setMenuOpen(true); return; }
+        if (questLogOpen) { setQuestLogOpen(false); setMenuOpen(true); return; }
+        if (towerPayload) { setTowerPayload(null); return; }
+        if (menuOpen) { setMenuOpen(false); return; }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dexOpen, towerPayload, npcDialogue, dialogueLineIndex]);
+  }, [dexOpen, questLogOpen, towerPayload, npcDialogue, dialogueLineIndex, menuOpen]);
 
   const handleTowerSelect = (floor: number) => {
     if (!towerPayload) return;
@@ -550,31 +746,27 @@ export default function BaseCampPage() {
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#111" }}>
       <div ref={gameRef} style={{ width: "100%", height: "100%" }} />
 
-      {/* 도감 버튼 */}
+      {/* 메뉴 버튼 */}
       <button
-        onClick={() => setDexOpen(true)}
+        onClick={() => setMenuOpen(true)}
         className="fixed bottom-4 right-4 z-40 rounded-xl border border-zinc-600 bg-zinc-900/90 px-4 py-2 text-sm font-semibold text-zinc-300 shadow-lg hover:bg-zinc-800 hover:text-zinc-100 backdrop-blur"
       >
-        도감 (P)
+        ☰ 메뉴 (Tab)
       </button>
 
-      {/* 내 몬스터 버튼 */}
-      <button
-        onClick={() => navigate("/monsters")}
-        className="fixed bottom-4 right-[14.5rem] z-40 rounded-xl border border-indigo-800/60 bg-zinc-900/90 px-4 py-2 text-sm font-semibold text-indigo-300 shadow-lg hover:bg-zinc-800 hover:text-indigo-200 backdrop-blur"
-      >
-        👾 내 몬스터
-      </button>
-
-      {/* 가방 버튼 */}
-      <button
-        onClick={() => navigate("/farm", { state: { from: "basecamp" } })}
-        className="fixed bottom-4 right-[7.5rem] z-40 rounded-xl border border-amber-800/60 bg-zinc-900/90 px-4 py-2 text-sm font-semibold text-amber-300 shadow-lg hover:bg-zinc-800 hover:text-amber-200 backdrop-blur"
-      >
-        🎒 가방
-      </button>
+      {menuOpen && (
+        <MenuModal
+          onClose={() => setMenuOpen(false)}
+          onOpenQuestLog={() => { setMenuOpen(false); setQuestLogOpen(true); }}
+          onOpenDex={() => { setMenuOpen(false); setDexOpen(true); }}
+          onGoToMonsters={() => navigate("/monsters")}
+          onGoToFarm={() => navigate("/farm", { state: { from: "basecamp" } })}
+        />
+      )}
 
       {dexOpen && <DexModal onClose={() => setDexOpen(false)} />}
+
+      {questLogOpen && <QuestLogModal onClose={() => setQuestLogOpen(false)} />}
 
       {towerPayload && (
         <TowerModal
