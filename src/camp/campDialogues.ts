@@ -42,7 +42,7 @@ export const BAROS_FIRST_HUNT_QUEST: QuestDef = {
   progressLines: ["아직이냐. 약초 3개는 채워와라."],
   completeLines: [
     "약초 3개, 확인했다.",
-    "쓸 만하군. 이 정도면 자격이 있다.",
+    "쓸만하군. 이 정도면 자격이 있다.",
     "받아라.",
   ],
   setsFlag: "quest_baros_done",
