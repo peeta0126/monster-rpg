@@ -6,6 +6,7 @@ import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
 import type { Move } from "../shared/game";
 import { usePlayerStore } from "../shared/playerStore";
+import { isAnomalyMove } from "../monster/learnset";
 
 // ─── 전투 승리 시 재료 드랍 ───────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export default function BattlePage() {
 
   const { updateBestFloor, updatePartyMember, addCapturedMonster,
           addToDexSeen, addToDexCaught, usePotion: consumePotion,
-          addMaterial, setStoryFlag } = usePlayerStore();
+          addMaterial, setStoryFlag, dexCaught } = usePlayerStore();
 
   const [initialParty] = useState(() => usePlayerStore.getState().party);
   const [activePartyIndex, setActivePartyIndex] = useState(0);
@@ -202,7 +203,14 @@ export default function BattlePage() {
     currentPlayer: BattleMonster, currentEnemy: BattleMonster, isPlayerAttacking: boolean,
   ): Promise<{ updated: BattleMonster; fainted: boolean }> => {
 
-    await sendLogAndWait(`${attacker.name}의 ${move.name}!`);
+    const isAnomaly = !isPlayerAttacking
+      && dexCaught.includes(attacker.id) && isAnomalyMove(attacker.id, move.id);
+    if (isAnomaly) {
+      await sendLogAndWait(`${attacker.name}의 ⚠${move.name}!`);
+      await sendLogAndWait("…이 몬스터가 쓸 수 있는 기술이 아니다.");
+    } else {
+      await sendLogAndWait(`${attacker.name}의 ${move.name}!`);
+    }
     const res = calculateDamage(attacker, defender, move);
 
     if (!res.isHit) {
@@ -232,7 +240,7 @@ export default function BattlePage() {
     const fainted = isFainted(next);
     if (fainted) await sendLogAndWait(`${defender.name}이(가) 쓰러졌다!`);
     return { updated: next, fainted };
-  }, [sendLogAndWait, syncHpToPhaser]);
+  }, [sendLogAndWait, syncHpToPhaser, dexCaught]);
 
   // ─── 스킬 선택 ──────────────────────────────────────────────────────────────────
   const handleMoveClick = useCallback(async (move: Move) => {

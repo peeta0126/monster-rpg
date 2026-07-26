@@ -4,6 +4,7 @@ import {
   ember, tackle, vineWhip, waterGun, thunderbolt, toxic, iceLeaf, spark,
   iceBeam, blizzard, bodySlam, flamethrower, surf,
   voltCrash, crystalBurst, aquaWhirl,
+  quickAttack, icePunch, tidalCrash, solarBeam, overheat, thunderStrike,
 } from "../monster/moves";
 
 // ─── 1~25층 고정 구성 ─────────────────────────────────────────────────────────────
@@ -195,7 +196,7 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
     return {
       ...scaled,
       name: "분노한 모시",
-      moves: [spark, thunderbolt, voltCrash],
+      moves: [spark, thunderbolt, quickAttack, icePunch],
       maxHp: Math.floor(scaled.maxHp * 1.5),
       attack: Math.floor(scaled.attack * 1.3),
       defense: Math.floor(scaled.defense * 1.3),
@@ -208,7 +209,7 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
     return {
       ...scaled,
       name: "격노한 모치",
-      moves: [spark, thunderbolt, voltCrash, bodySlam],
+      moves: [voltCrash, thunderbolt, bodySlam, flamethrower],
       maxHp: Math.floor(scaled.maxHp * 1.5),
       attack: Math.floor(scaled.attack * 1.35),
       defense: Math.floor(scaled.defense * 1.35),
@@ -221,7 +222,7 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
     return {
       ...scaled,
       name: "고대의 프리로",
-      moves: [iceBeam, blizzard, crystalBurst, bodySlam],
+      moves: [blizzard, crystalBurst, tidalCrash, solarBeam],
       maxHp: Math.floor(scaled.maxHp * 1.5),
       attack: Math.floor(scaled.attack * 1.4),
       defense: Math.floor(scaled.defense * 1.4),
@@ -234,7 +235,7 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
     return {
       ...scaled,
       name: "전설의 모왕",
-      moves: [thunderbolt, voltCrash, bodySlam, flamethrower],
+      moves: [thunderStrike, voltCrash, overheat, blizzard],
       maxHp: Math.floor(scaled.maxHp * 1.6),
       attack: Math.floor(scaled.attack * 1.5),
       defense: Math.floor(scaled.defense * 1.4),
@@ -273,22 +274,22 @@ export function getFloorEnemySkill(
   enemyMoves: Move[]
 ): Move | null {
   if (floor === 10) {
-    const order = ["spark", "thunderbolt", "volt-crash", "spark", "thunderbolt"];
+    const order = ["spark", "thunderbolt", "quick-attack", "spark", "ice-punch"];
     const id = order[turnIndex % order.length];
     return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
   }
   if (floor === 20) {
-    const order = ["thunderbolt", "volt-crash", "body-slam", "spark", "volt-crash"];
+    const order = ["thunderbolt", "volt-crash", "body-slam", "thunderbolt", "flamethrower"];
     const id = order[turnIndex % order.length];
     return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
   }
   if (floor === 30) {
-    const order = ["blizzard", "ice-beam", "crystal-burst", "blizzard", "body-slam"];
+    const order = ["blizzard", "crystal-burst", "blizzard", "tidal-crash", "solar-beam"];
     const id = order[turnIndex % order.length];
     return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
   }
   if (floor === 40) {
-    const order = ["volt-crash", "thunderbolt", "body-slam", "volt-crash", "flamethrower"];
+    const order = ["thunder-strike", "volt-crash", "thunder-strike", "overheat", "blizzard"];
     const id = order[turnIndex % order.length];
     return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
   }
