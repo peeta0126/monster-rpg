@@ -38,8 +38,8 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
     name: "Baros",
     spriteTexture: "Baros",
     portraitPath: "/assets/player/Baros_portrait.png",
-    x: 445,
-    y: 1185,
+    x: 430,
+    y: 1200,
     dialogues: BAROS_DIALOGUES,
   },
   {
