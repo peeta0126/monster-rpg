@@ -44,11 +44,13 @@ export function createBattleMonsterFromOwned(monster: Monster & { currentHp: num
 /**
  * 공격 속성과 방어 속성의 상성 배율 반환
  * typeChart에 정의된 값이 없으면 1배(보통)를 반환한다
+ * 방어자 타입이 null(오름 전용 무속성)이면 약점도 저항도 없이 항상 1배
  */
 export function getTypeMultiplier(
   moveType: Move["type"],
   targetType: Monster["type"]
 ): number {
+  if (targetType === null) return 1;
   return typeChart[moveType]?.[targetType] ?? 1;
 }
 
@@ -187,6 +189,14 @@ export function checkCatchCondition(
   target: BattleMonster,
   isCatchZone: boolean,
 ): { canAttempt: boolean; success: boolean; message: string } {
+  if (target.id === "ormr") {
+    return {
+      canAttempt: false,
+      success: false,
+      message: "오름은 포획할 수 없다!",
+    };
+  }
+
   if (!isCatchZone) {
     return {
       canAttempt: false,

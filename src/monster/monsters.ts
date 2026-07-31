@@ -7,6 +7,7 @@ import {
   flamethrower, surf,
   aquaWhirl,
   crystalBurst,
+  overheat, hydroPump, solarBeam, blizzard, venomStorm, gigaImpact,
 } from "./moves";
 
 export const monsters: Monster[] = [
@@ -184,6 +185,21 @@ export const monsters: Monster[] = [
     moves: [tackle, quickAttack],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 38,
+  },
+
+  // ─── 무속성 (최종 보스) ────────────────────────────────────────────────────────
+  {
+    id: "ormr",
+    name: "오름",
+    type: null,
+    maxHp: 260,
+    attack: 100,
+    defense: 70,
+    speed: 90,
+    // 7개 타입 대표 최상급 기술을 전부 보유. 실제 전투에서는 이 중 4개만 무작위로 사용(floorTable 참고)
+    moves: [overheat, hydroPump, thunderStrike, solarBeam, blizzard, venomStorm, gigaImpact],
+    level: 1, exp: 0, expToNextLevel: 100,
+    rewardExp: 300,
   },
 
 ];

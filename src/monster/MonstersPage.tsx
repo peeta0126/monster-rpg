@@ -11,6 +11,7 @@ import {
 // ─── 속성 상수 ────────────────────────────────────────────────────────────────────
 const TYPE_KO: Record<string, string> = {
   fire:"불꽃", water:"물", grass:"풀", electric:"전기", ice:"얼음", normal:"노말",
+  none:"무속성",
 };
 
 const TYPE_ACCENT: Record<string, { glow: string; border: string; bg: string; label: string }> = {
@@ -20,6 +21,7 @@ const TYPE_ACCENT: Record<string, { glow: string; border: string; bg: string; la
   electric: { glow:"rgba(234,179,8,.5)",    border:"#eab308", bg:"rgba(234,179,8,.1)",   label:"bg-yellow-900/80 text-yellow-200 border-yellow-700" },
   ice:      { glow:"rgba(103,232,249,.45)", border:"#67e8f9", bg:"rgba(103,232,249,.1)", label:"bg-cyan-900/80 text-cyan-200 border-cyan-700" },
   normal:   { glow:"rgba(161,161,170,.35)", border:"#a1a1aa", bg:"rgba(161,161,170,.08)",label:"bg-zinc-800/80 text-zinc-200 border-zinc-600" },
+  none:     { glow:"rgba(217,70,239,.4)",   border:"#d946ef", bg:"rgba(217,70,239,.1)",  label:"bg-fuchsia-900/80 text-fuchsia-200 border-fuchsia-700" },
 };
 
 function hpGradient(pct: number): string {
@@ -265,7 +267,7 @@ function MonsterCard({
 }) {
   const hpPct     = monster.maxHp === 0 ? 0 : Math.round((monster.currentHp / monster.maxHp) * 100);
   const isFainted = hpPct === 0;
-  const acc       = TYPE_ACCENT[monster.type] ?? TYPE_ACCENT.normal;
+  const acc       = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
   const imgSize   = size === "lg" ? "w-20 h-20" : size === "md" ? "w-14 h-14" : "w-11 h-11";
 
   return (
@@ -310,7 +312,7 @@ function MonsterCard({
         <div className="flex items-center justify-center gap-1 mt-0.5">
           <span className="text-[9px] font-bold text-zinc-500">Lv.{monster.level}</span>
           <span className={`rounded-full border px-1 text-[8px] font-bold ${acc.label}`} style={{ paddingTop: 0, paddingBottom: 0 }}>
-            {TYPE_KO[monster.type] ?? ""}
+            {TYPE_KO[monster.type ?? "none"] ?? ""}
           </span>
         </div>
       </div>
@@ -455,14 +457,15 @@ export default function MonstersPage() {
   const getEquippedSlots = (uid: string): string[] =>
     (equippedArtifacts[uid] ?? []).map((a) => ARTIFACT_SLOT_MAP[a.itemId]).filter(Boolean);
 
-  const storageTypes = [...new Set(storage.map((m) => m.type))];
+  const storageTypes = [...new Set(storage.map((m) => m.type))]
+    .filter((t): t is NonNullable<typeof t> => t !== null);
 
   const filteredStorage = [...storage]
     .filter((m) => typeFilter === "all" || m.type === typeFilter)
     .sort((a, b) => {
       if (sortBy === "level") return b.level - a.level;
       if (sortBy === "hp")    return (b.currentHp / b.maxHp) - (a.currentHp / a.maxHp);
-      return a.type.localeCompare(b.type);
+      return (a.type ?? "").localeCompare(b.type ?? "");
     });
 
   const faintedCount = party.filter((m) => m.currentHp === 0).length;

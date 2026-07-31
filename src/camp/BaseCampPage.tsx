@@ -17,6 +17,7 @@ import { getMaterial } from "../shared/items";
 const TYPE_KO: Record<string, string> = {
   fire: "불꽃", water: "물", grass: "풀",
   electric: "전기", ice: "얼음", normal: "노말", poison: "독",
+  none: "무속성",
 };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -27,6 +28,7 @@ const TYPE_COLOR: Record<string, string> = {
   ice:      "bg-cyan-900/70 text-cyan-200 border-cyan-700",
   normal:   "bg-zinc-800/70 text-zinc-200 border-zinc-600",
   poison:   "bg-purple-900/70 text-purple-200 border-purple-700",
+  none:     "bg-gradient-to-r from-indigo-900/70 to-fuchsia-900/70 text-fuchsia-200 border-fuchsia-700",
 };
 
 const TYPE_GROUP_LABEL: Record<string, string> = {
@@ -112,8 +114,8 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
         <div className="flex-1">
           <h3 className="text-lg font-bold text-zinc-100">{seen ? m.name : "???"}</h3>
           {seen && (
-            <span className={`inline-block rounded border px-2 py-0.5 text-xs mt-0.5 ${TYPE_COLOR[m.type] ?? TYPE_COLOR.normal}`}>
-              {TYPE_KO[m.type]}
+            <span className={`inline-block rounded border px-2 py-0.5 text-xs mt-0.5 ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
+              {TYPE_KO[m.type ?? "none"]}
             </span>
           )}
         </div>
@@ -372,8 +374,8 @@ function DexModal({ onClose }: { onClose: () => void }) {
                         {seen ? (
                           <>
                             <p className="font-bold text-zinc-100 text-sm">{m.name}</p>
-                            <span className={`mt-0.5 inline-block rounded border px-2 py-0.5 text-xs ${TYPE_COLOR[m.type] ?? TYPE_COLOR.normal}`}>
-                              {TYPE_KO[m.type] ?? m.type}
+                            <span className={`mt-0.5 inline-block rounded border px-2 py-0.5 text-xs ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
+                              {TYPE_KO[m.type ?? "none"] ?? m.type}
                             </span>
                           </>
                         ) : (

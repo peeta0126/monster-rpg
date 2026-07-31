@@ -18,7 +18,8 @@ export interface Monster {
   id: string;
   /** 한글 이름 */
   name: string;
-  type: ElementType;
+  /** null은 "무속성/전속성"(오름 전용)을 의미하며, 방어 시 모든 상성 배율이 1배로 고정된다 */
+  type: ElementType | null;
   maxHp: number;
   attack: number;
   defense: number;

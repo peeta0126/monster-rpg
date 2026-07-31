@@ -1171,9 +1171,9 @@ function EncounterScreen({ monster, area, drops, isElite, onCapture, onFlee }: {
   isElite: boolean;
   onCapture:()=>void; onFlee:()=>void;
 }) {
-  const glow = TYPE_GLOW[monster.type] ?? TYPE_GLOW.normal;
-  const typeColor = TYPE_COLOR[monster.type] ?? TYPE_COLOR.normal;
-  const typeKo = TYPE_KO[monster.type] ?? monster.type;
+  const glow = TYPE_GLOW[monster.type ?? "normal"] ?? TYPE_GLOW.normal;
+  const typeColor = TYPE_COLOR[monster.type ?? "normal"] ?? TYPE_COLOR.normal;
+  const typeKo = TYPE_KO[monster.type ?? "normal"] ?? monster.type;
 
   return (
     <div className="relative z-10 w-full max-w-sm mx-4 flex flex-col gap-0"
@@ -1297,7 +1297,7 @@ function RpsSelectScreen({ monster, area, onSelect }: {
           className="w-10 h-10 object-contain" style={monsterImgStyle(monster.id)}/>
         <div>
           <p className="text-sm font-bold text-zinc-100">{monster.name}</p>
-          <p className="text-xs text-zinc-500">Lv.{monster.level} · {TYPE_KO[monster.type]??monster.type}</p>
+          <p className="text-xs text-zinc-500">Lv.{monster.level} · {TYPE_KO[monster.type ?? "normal"]??monster.type}</p>
         </div>
         <div className="ml-auto flex flex-col items-end gap-0.5 text-[10px] text-zinc-600">
           <span>이기면 <span className="text-emerald-400 font-bold">72%</span></span>

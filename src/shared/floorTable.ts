@@ -5,7 +5,25 @@ import {
   iceBeam, blizzard, bodySlam, flamethrower, surf,
   voltCrash, crystalBurst, aquaWhirl,
   quickAttack, icePunch, tidalCrash, solarBeam, overheat, thunderStrike,
+  hydroPump, venomStorm, gigaImpact,
 } from "../monster/moves";
+
+// ─── 오름(Ormr) 전용 기술 풀 ──────────────────────────────────────────────────────
+
+/** 오름이 보유한 7개 타입 대표 최상급 기술 (매 전투 이 중 4개만 사용) */
+const ORMR_MOVE_POOL: Move[] = [
+  overheat, hydroPump, thunderStrike, solarBeam, blizzard, venomStorm, gigaImpact,
+];
+
+/** 7개 중 4개를 무작위 추출 (7C4 = 35가지 조합 전체가 나올 수 있도록 균등 셔플 후 4개 슬라이스) */
+function pickOrmrMoves(): Move[] {
+  const pool = [...ORMR_MOVE_POOL];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, 4);
+}
 
 // ─── 1~25층 고정 구성 ─────────────────────────────────────────────────────────────
 
@@ -242,6 +260,19 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
       rewardExp: Math.floor(scaled.rewardExp * 2.5),
     };
   }
+  if (floor === 50) {
+    const base = monsters.find((m) => m.id === "ormr")!;
+    const scaled = scaleToLevel(base, 60);
+    return {
+      ...scaled,
+      name: "오름",
+      moves: pickOrmrMoves(),
+      maxHp: Math.floor(scaled.maxHp * 2.2),
+      attack: Math.floor(scaled.attack * 1.8),
+      defense: Math.floor(scaled.defense * 1.7),
+      rewardExp: Math.floor(scaled.rewardExp * 3.5),
+    };
+  }
 
   // ── 11층+: 랜덤 ──
   const boss = isBossFloor(floor);
@@ -292,6 +323,10 @@ export function getFloorEnemySkill(
     const order = ["thunder-strike", "volt-crash", "thunder-strike", "overheat", "blizzard"];
     const id = order[turnIndex % order.length];
     return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
+  }
+  if (floor === 50) {
+    // 전투 시작 시 무작위로 정해진 4개 기술을 순환 사용
+    return enemyMoves[turnIndex % enemyMoves.length] ?? enemyMoves[0] ?? null;
   }
 
   const cfg = FLOOR_FIXED[floor];

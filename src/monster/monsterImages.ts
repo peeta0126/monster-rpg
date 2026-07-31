@@ -11,6 +11,7 @@ export const MONSTER_IMAGE_MAP: Record<string, string> = {
   frostorb:   "/assets/monsters/frostorb.png",
   aquavern:   "/assets/monsters/aquavern.png",
   nobi:       "/assets/monsters/nobi.png",
+  ormr:       "/assets/monsters/dragon.png",
 };
 
 /** img 태그에 적용할 style 반환 헬퍼 */

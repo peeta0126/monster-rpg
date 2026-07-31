@@ -484,7 +484,8 @@ export default function BattlePage() {
   ]);
 
   // ─── 렌더 헬퍼 ──────────────────────────────────────────────────────────────────
-  const canShowCatch = isCatchZone && enemyState.currentHp / enemyState.maxHp <= 0.3
+  const canShowCatch = isCatchZone && enemyState.id !== "ormr"
+    && enemyState.currentHp / enemyState.maxHp <= 0.3
     && !isProcessing && battleOutcome === null && !mustSwitch;
   const speedFirst = player.speed >= enemyState.speed;
   const hasPotions = POTIONS.some(p => (potionCounts[p.id] ?? 0) > 0);
