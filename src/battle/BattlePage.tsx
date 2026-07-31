@@ -302,6 +302,10 @@ export default function BattlePage() {
       for (const drop of battleDrops) {
         addMaterial(drop.id, drop.count);
       }
+      if (battleDrops.some((d) => d.id === "ormr_essence")) {
+        await sendLogAndWait("…이게 뭐지? 처음 보는 물건이다.");
+        await sendLogAndWait("촌장님이라면 아실지도 모른다. 가져가 봐야겠다.");
+      }
 
       const owned = initialParty[activePartyIndex];
       if (owned) updatePartyMember({ ...owned, ...np, uid: owned.uid });

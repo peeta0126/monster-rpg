@@ -68,7 +68,10 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
   const navigate = useNavigate();
   const { materials, craftWorkshopRecipe, craftWorkshopRecipeByQuality, grantWorkshopTestMaterials } = usePlayerStore();
 
-  const recipes = stationType === "artifact" ? ARTIFACT_RECIPES : POTION_RECIPES;
+  // "어머니의 치료약"은 재료(만물의 정수)를 실제로 얻기 전까진 존재 자체를 숨긴다
+  const recipes = stationType === "artifact"
+    ? ARTIFACT_RECIPES
+    : POTION_RECIPES.filter((r) => r.id !== "ws_mothers_cure" || (materials.ormr_essence ?? 0) > 0);
 
   const [selectedRecipeId, setSelectedRecipeId] = useState(recipes[0]?.id ?? "");
   const [activeRecipe,     setActiveRecipe]     = useState<CraftingRecipe | null>(null);
