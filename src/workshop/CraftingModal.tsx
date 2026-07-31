@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ARTIFACT_RECIPES,
   POTION_RECIPES,
@@ -64,6 +65,7 @@ interface CraftingModalProps {
 }
 
 export function CraftingModal({ open, stationType, onClose }: CraftingModalProps) {
+  const navigate = useNavigate();
   const { materials, craftWorkshopRecipe, craftWorkshopRecipeByQuality, grantWorkshopTestMaterials } = usePlayerStore();
 
   const recipes = stationType === "artifact" ? ARTIFACT_RECIPES : POTION_RECIPES;
@@ -105,6 +107,10 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
   const finishMiniGame = (rpsResult: RpsResult) => {
     if (!activeRecipe) return;
     const item = craftWorkshopRecipe(activeRecipe, rpsResult);
+    if (activeRecipe.id === "ws_mothers_cure") {
+      navigate("/ending");
+      return;
+    }
     setCraftResult(item);
     setActiveRecipe(null);
   };

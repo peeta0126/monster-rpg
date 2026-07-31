@@ -5,6 +5,7 @@ import FarmPage from "./monster/FarmPage";
 import ForestPage from "./camp/ForestPage";
 import MonstersPage from "./monster/MonstersPage";
 import WorkshopPage from "./workshop/WorkshopPage";
+import EndingPage from "./shared/EndingPage";
 
 function BattlePageWrapper() {
   const location = useLocation();
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/forest" element={<ForestPage />} />
         <Route path="/monsters" element={<MonstersPage />} />
         <Route path="/workshop" element={<WorkshopPage />} />
+        <Route path="/ending" element={<EndingPage />} />
       </Routes>
     </BrowserRouter>
   );

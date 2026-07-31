@@ -298,6 +298,7 @@ export default function BattlePage() {
 
       // 재료 드랍
       const battleDrops = rollBattleDrop(floor);
+      if (ne.id === "ormr") battleDrops.push({ id: "ormr_essence", count: 1 });
       for (const drop of battleDrops) {
         addMaterial(drop.id, drop.count);
       }

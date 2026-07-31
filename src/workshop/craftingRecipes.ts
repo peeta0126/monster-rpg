@@ -113,6 +113,18 @@ export const POTION_RECIPES: CraftingRecipe[] = [
     resultItemId:   "super_potion",     // items.ts POTIONS[1].id
     resultItemName: "슈퍼 물약",
   },
+  {
+    id:             "ws_mothers_cure",
+    name:           "어머니의 치료약",
+    description:    "만물의 정수로 만든, 모든 원소의 파장을 씻어내는 치료약입니다.",
+    difficulty:     "hard",
+    stationType:    "potion",
+    costs: [
+      { itemId: "ormr_essence", name: "만물의 정수", amount: 1 },
+    ],
+    resultItemId:   "mothers_cure_potion",  // items.ts POTIONS엔 없음 — 전투에서 쓰이지 않는 엔딩 전용 아이템
+    resultItemName: "어머니의 치료약",
+  },
 ];
 
 export const CRAFTING_RECIPES: CraftingRecipe[] = [...ARTIFACT_RECIPES, ...POTION_RECIPES];

@@ -20,7 +20,8 @@ export type StoryFlag =
   | "floor_5"
   | "floor_10"
   | "floor_20"
-  | "floor_40";
+  | "floor_40"
+  | "floor_50";
 
 export type PersistedStoryFlag =
   | "met_orion"
@@ -48,6 +49,7 @@ export function isStoryFlagSet(
     case "floor_10": return bestFloor >= 10;
     case "floor_20": return bestFloor >= 20;
     case "floor_40": return bestFloor >= 40;
+    case "floor_50": return bestFloor >= 50;
     default:         return storyFlags[flag];
   }
 }
