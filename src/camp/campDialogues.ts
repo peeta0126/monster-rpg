@@ -320,6 +320,11 @@ export function resolveNpcInteraction(
           },
         };
       }
+      const questEntry = dialogues.find((e) => e.quest === quest);
+      const storyEntry = selectDialogueEntry(dialogues, storyFlags, bestFloor);
+      if (storyEntry && storyEntry !== questEntry) {
+        return { lines: storyEntry.lines, setsFlag: storyEntry.setsFlag };
+      }
       return { lines: quest.progressLines };
     }
   }
