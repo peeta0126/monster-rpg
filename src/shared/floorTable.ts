@@ -193,6 +193,11 @@ export function isBossFloor(floor: number): boolean {
   return floor % 10 === 0;
 }
 
+// ─── 탑 최상층 ───────────────────────────────────────────────────────────────────
+
+/** 무한의 탑 최상층. 50층 오름(Ormr)이 탑의 끝 — 51층 이상은 존재하지 않는다. */
+export const MAX_TOWER_FLOOR = 50;
+
 // ─── 층별 적 생성 ────────────────────────────────────────────────────────────────
 
 export function getFloorEnemy(floor: number, excludeId?: string): Monster {

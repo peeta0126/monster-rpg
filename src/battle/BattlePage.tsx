@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { getFloorEnemy, getFloorEnemySkill, isBossFloor } from "../shared/floorTable";
+import { getFloorEnemy, getFloorEnemySkill, isBossFloor, MAX_TOWER_FLOOR } from "../shared/floorTable";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
 import type { Move } from "../shared/game";
@@ -123,6 +123,11 @@ export default function BattlePage() {
 
   const enemyTurnRef = useRef(0);
   const cancelledRef = useRef(false);
+
+  // 50층(MAX_TOWER_FLOOR)이 탑의 끝 — 51층 이상 진입 요청은 베이스캠프로 돌려보낸다
+  useEffect(() => {
+    if (floor > MAX_TOWER_FLOOR) navigate("/", { replace: true });
+  }, [floor, navigate]);
 
   useEffect(() => { cancelledRef.current = false; return () => { cancelledRef.current = true; }; }, []);
   // BattleScene의 BATTLE_LOG 리스너가 등록된 뒤에만 조작을 허용
@@ -755,7 +760,9 @@ export default function BattlePage() {
           <div className="text-center px-8 py-8 border-2 border-green-600 bg-zinc-950/95 shadow-2xl max-w-sm w-full mx-4"
             style={{ fontFamily: "'Press Start 2P', monospace" }}>
             <p className="text-3xl font-bold text-green-400 mb-3">WIN!</p>
-            <p className="text-xs text-zinc-400 mb-3 leading-relaxed">다음 스테이지로?</p>
+            <p className="text-xs text-zinc-400 mb-3 leading-relaxed">
+              {floor === MAX_TOWER_FLOOR ? "탑의 정상을 정복했다…" : "다음 스테이지로?"}
+            </p>
 
             {/* 드랍 재료 표시 */}
             {battleDrops.length > 0 && (
@@ -775,10 +782,17 @@ export default function BattlePage() {
             )}
 
             <div className="flex flex-col gap-2">
-              <button onClick={() => navigate("/battle", { state: { floor: floor + 1, isCatchZone: false } })}
-                className="w-full border-2 border-green-600 bg-green-900/70 py-3 text-xs font-bold text-green-200 hover:bg-green-800/70 transition active:scale-95">
-                &gt; 다음층 ({floor + 1}F)
-              </button>
+              {floor === MAX_TOWER_FLOOR ? (
+                <button onClick={() => navigate("/ending")}
+                  className="w-full border-2 border-amber-500 bg-amber-900/70 py-3 text-xs font-bold text-amber-200 hover:bg-amber-800/70 transition active:scale-95">
+                  &gt; 정수를 들고 마을로
+                </button>
+              ) : (
+                <button onClick={() => navigate("/battle", { state: { floor: floor + 1, isCatchZone: false } })}
+                  className="w-full border-2 border-green-600 bg-green-900/70 py-3 text-xs font-bold text-green-200 hover:bg-green-800/70 transition active:scale-95">
+                  &gt; 다음층 ({floor + 1}F)
+                </button>
+              )}
               <button onClick={() => navigate("/")}
                 className="w-full border-2 border-zinc-600 bg-zinc-800/80 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95">
                 &gt; 베이스캠프

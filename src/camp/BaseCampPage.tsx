@@ -11,6 +11,7 @@ import { getFullLearnset } from "../monster/learnset";
 import { ALL_QUESTS } from "./campDialogues";
 import type { QuestDef } from "./campDialogues";
 import { getMaterial } from "../shared/items";
+import { MAX_TOWER_FLOOR } from "../shared/floorTable";
 
 // ── 속성 한글/색상 ──────────────────────────────────────────────────────────────
 
@@ -524,7 +525,7 @@ function TowerModal({
   onSelect: (floor: number) => void;
   onClose: () => void;
 }) {
-  const maxSelectable = bestFloor + 1;
+  const maxSelectable = Math.min(bestFloor + 1, MAX_TOWER_FLOOR);
   const checkpoints: number[] = [1];
   for (let f = 5; f <= maxSelectable; f += 5) checkpoints.push(f);
   if (!checkpoints.includes(maxSelectable)) checkpoints.push(maxSelectable);
