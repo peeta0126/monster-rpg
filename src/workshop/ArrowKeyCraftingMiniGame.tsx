@@ -123,6 +123,10 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
   const stagesRef     = useRef(stages);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // 언마운트 시 대기 중인 피드백 타이머 정리 (모달을 닫아도 콜백이 뒤늦게 실행되는 것 방지)
+  useEffect(() => () => clearTimeout(feedbackTimerRef.current), []);
 
   // ─── 스테이지 완료 처리 ────────────────────────────────────────────────────
   const advanceStage = useCallback((ok: boolean) => {
@@ -130,7 +134,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
     phaseRef.current = ok ? "stage-success" : "stage-fail";
     setHistory((prev) => [...prev, ok ? "s" : "f"]);
 
-    setTimeout(() => {
+    feedbackTimerRef.current = setTimeout(() => {
       const next = stageRef.current + 1;
       if (next >= TOTAL_STAGES) {
         setPhase("done");
