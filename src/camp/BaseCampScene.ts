@@ -139,6 +139,9 @@ export default class BaseCampScene extends Phaser.Scene {
       const px = this.player.x,
         py = this.player.y;
       const nearestNpc = this.getNearestNpc(px, py);
+      const dNearestNpc = nearestNpc
+        ? Phaser.Math.Distance.Between(px, py, nearestNpc.x, nearestNpc.y)
+        : Infinity;
       const dTower = Phaser.Math.Distance.Between(
         px,
         py,
@@ -153,9 +156,8 @@ export default class BaseCampScene extends Phaser.Scene {
         HOUSE_DOOR_Y,
       );
 
-      if (nearestNpc) {
-        this.showNpcDialogue(nearestNpc);
-      } else if (dTower < 90) {
+      // 탑 판정과 NPC 상호작용 범위가 겹치는 구역에서는 더 가까운 쪽을 우선한다
+      if (dTower < 90 && dTower <= dNearestNpc) {
         setCampPosition(TOWER_X, TOWER_Y + 120);
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
           from: "basecamp",
@@ -163,6 +165,8 @@ export default class BaseCampScene extends Phaser.Scene {
           isCatchZone: false,
           floor: 1,
         });
+      } else if (nearestNpc) {
+        this.showNpcDialogue(nearestNpc);
       } else if (dForest < 130) {
         setCampPosition(FOREST_X, FOREST_Y + 80);
         gameEvents.emit(GAME_EVENT.ENTER_FOREST);
@@ -351,13 +355,18 @@ export default class BaseCampScene extends Phaser.Scene {
     const dForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
     const dHouse = Phaser.Math.Distance.Between(px, py, HOUSE_X, HOUSE_DOOR_Y);
     const nearestNpc = this.getNearestNpc(px, py);
+    const dNearestNpc = nearestNpc
+      ? Phaser.Math.Distance.Between(px, py, nearestNpc.x, nearestNpc.y)
+      : Infinity;
+    // keydown-E 핸들러와 동일한 우선순위: 탑이 더 가깝거나 같은 거리일 때만 탑 우선
+    const towerWins = dTower < 90 && dTower <= dNearestNpc;
 
     const ph = this.children.getByName("portalHint");
     const fh = this.children.getByName("forestHint");
     const hh = this.children.getByName("houseHint");
     const nh = this.children.getByName("npcHint");
 
-    if (nearestNpc && !nh) {
+    if (nearestNpc && !towerWins && !nh) {
       this.add
         .text(px - 46, py - 80, `E: ${nearestNpc.name}`, {
           fontSize: "26px",
@@ -367,9 +376,9 @@ export default class BaseCampScene extends Phaser.Scene {
         })
         .setName("npcHint")
         .setDepth(9999);
-    } else if (!nearestNpc && nh) nh.destroy();
+    } else if ((!nearestNpc || towerWins) && nh) nh.destroy();
 
-    if (dTower < 90 && !ph && !nearestNpc) {
+    if (towerWins && !ph) {
       this.add
         .text(px - 46, py - 80, "E: 탑 입장", {
           fontSize: "26px",
@@ -379,7 +388,7 @@ export default class BaseCampScene extends Phaser.Scene {
         })
         .setName("portalHint")
         .setDepth(9999);
-    } else if ((dTower >= 120 || nearestNpc) && ph) ph.destroy();
+    } else if (!towerWins && ph) ph.destroy();
 
     if (dForest < 130 && !fh) {
       this.add
