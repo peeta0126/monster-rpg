@@ -145,9 +145,10 @@ interface PlayerState {
   usePotion:    (potionId: string) => boolean;
 
   // ── 제작 공방 메서드 ──────────────────────────────────────────────────────────
-  craftWorkshopRecipe: (recipe: CraftingRecipe, rpsResult: RpsResult) => CraftedItem;
-  /** 품질을 외부(QTE 미니게임 등)에서 이미 결정한 경우 직접 전달 */
-  craftWorkshopRecipeByQuality: (recipe: CraftingRecipe, quality: ItemQuality) => CraftedItem;
+  /** 재료가 부족하면 아무것도 소모/생성하지 않고 null을 반환 */
+  craftWorkshopRecipe: (recipe: CraftingRecipe, rpsResult: RpsResult) => CraftedItem | null;
+  /** 품질을 외부(QTE 미니게임 등)에서 이미 결정한 경우 직접 전달. 재료 부족 시 null 반환 */
+  craftWorkshopRecipeByQuality: (recipe: CraftingRecipe, quality: ItemQuality) => CraftedItem | null;
   grantWorkshopTestMaterials: () => void;
   addCraftedArtifact: (instance: ArtifactInstance) => void;
   removeCraftedArtifact: (instanceId: string) => void;
@@ -328,6 +329,9 @@ export const usePlayerStore = create<PlayerState>()(
 
       craftWorkshopRecipeByQuality: (recipe, quality) => {
         const s = get();
+        for (const cost of recipe.costs) {
+          if ((s.materials[cost.itemId] ?? 0) < cost.amount) return null;
+        }
         // ── 재료 소모 ──────────────────────────────────────────────────────────────
         const newMats = { ...s.materials };
         for (const cost of recipe.costs) {

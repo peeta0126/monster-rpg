@@ -110,6 +110,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
   const finishMiniGame = (rpsResult: RpsResult) => {
     if (!activeRecipe) return;
     const item = craftWorkshopRecipe(activeRecipe, rpsResult);
+    if (!item) { setActiveRecipe(null); return; }
     if (activeRecipe.id === "ws_mothers_cure") {
       navigate("/ending");
       return;
@@ -123,6 +124,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
     if (!activeRecipe) return;
     const quality = rollArtifactQualityFromArrowResult(result.rating);
     const item = craftWorkshopRecipeByQuality(activeRecipe, quality);
+    if (!item) { setActiveRecipe(null); return; }
     setCraftResult(item);
     setActiveRecipe(null);
   };
