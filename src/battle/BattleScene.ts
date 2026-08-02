@@ -150,6 +150,8 @@ export default class BattleScene extends Phaser.Scene {
     gameEvents.on(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.onPlayerSwitch,  this);
 
     this.cameras.main.fadeIn(500, 0, 0, 0);
+
+    gameEvents.emit(GAME_EVENT.BATTLE_READY);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

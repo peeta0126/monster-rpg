@@ -114,7 +114,9 @@ export default function BattlePage() {
 
   const [player,       setPlayer]       = useState<BattleMonster>(() => createBattleMonsterFromOwned(initialPlayer));
   const [enemyState,   setEnemyState]   = useState<BattleMonster>(() => createBattleMonster(initialEnemy));
-  const [isProcessing,  setIsProcessing]  = useState(false);
+  // BattleScene.create()가 BATTLE_LOG 리스너를 등록하기 전까지는 조작을 막는다
+  // (그 전에 스킬을 쓰면 sendLogAndWait의 ACK를 영원히 못 받아 전투가 멈춤)
+  const [isProcessing,  setIsProcessing]  = useState(true);
   const [battleOutcome, setBattleOutcome] = useState<"win" | "lose" | null>(null);
   const [showResultUI,  setShowResultUI]  = useState(false);
   const [battleDrops,   setBattleDrops]   = useState<{ id: string; count: number }[]>([]);
@@ -123,6 +125,12 @@ export default function BattlePage() {
   const cancelledRef = useRef(false);
 
   useEffect(() => { cancelledRef.current = false; return () => { cancelledRef.current = true; }; }, []);
+  // BattleScene의 BATTLE_LOG 리스너가 등록된 뒤에만 조작을 허용
+  useEffect(() => {
+    const onReady = () => setIsProcessing(false);
+    gameEvents.once(GAME_EVENT.BATTLE_READY, onReady);
+    return () => { gameEvents.off(GAME_EVENT.BATTLE_READY, onReady); };
+  }, []);
   useEffect(() => {
     if (!battleOutcome) return;
     const t = setTimeout(() => setShowResultUI(true), 500);
@@ -142,7 +150,17 @@ export default function BattlePage() {
   const sendLogAndWait = useCallback((text: string): Promise<void> => {
     if (cancelledRef.current) return Promise.resolve();
     return new Promise((resolve) => {
-      gameEvents.once(GAME_EVENT.BATTLE_LOG_ACK, () => resolve());
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        gameEvents.off(GAME_EVENT.BATTLE_LOG_ACK, done);
+        resolve();
+      };
+      // 방어책: ACK가 끝내 오지 않아도 전투가 영구히 멈추지 않도록 타임아웃 처리
+      const timer = setTimeout(done, 5000);
+      gameEvents.once(GAME_EVENT.BATTLE_LOG_ACK, done);
       gameEvents.emit(GAME_EVENT.BATTLE_LOG, text);
     });
   }, []);
