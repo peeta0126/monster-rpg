@@ -160,6 +160,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 13, move: thunderbolt },
     { level: 16, move: stunNeedle },       // 확정 마비
     { level: 21, move: headbutt },         // 교차: 노말
+    { level: 24, move: zap },              // spark의 특수형 변형
     { level: 26, move: boltStrike },
     { level: 32, move: voltCrash },
     { level: 38, move: bodySlam },         // 교차: 노말
@@ -169,7 +170,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
 
   // ═══ 모왕 (전기 늑대·최종) — 전기 + 노말 피니셔 ══════════════════════════
   mossyfinal: [
-    { level:  1, move: zap },
+    { level:  1, move: spark },
     { level:  1, move: thunderbolt },
     { level:  5, move: discharge },
     { level: 10, move: quickAttack },      // 교차: 노말
