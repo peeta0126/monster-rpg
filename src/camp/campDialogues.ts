@@ -127,7 +127,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   // minFloor를 quest.requires.minFloor와 맞춰서, 3층 도달 전에는 이 fallback이 뜨지 않고
   // 바로 위 met_baros/first_capture 대사로 자연스럽게 빠지도록 한다.
   {
-    requires: "quest_baros_done",
+    requires: "quest_orion_done",
     minFloor: ORION_MOTHERS_MEDICINE_QUEST.requires.minFloor,
     quest: ORION_MOTHERS_MEDICINE_QUEST,
     lines: ["어머니 약은 이미 받았다. 고맙다."],
