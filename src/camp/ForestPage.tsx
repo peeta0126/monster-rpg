@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { monsters } from "../monster/monsters";
 import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../monster/monsterImages";
@@ -1474,6 +1474,8 @@ export default function ForestPage() {
   const [catchSuccess, setCatchSuccess] = useState<boolean|null>(null);
   const [catchPlace, setCatchPlace]   = useState<"storage"|"full"|null>(null);
   const [drops, setDrops]             = useState<{id:string;count:number}[]>([]);
+  const rpsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (rpsTimerRef.current) clearTimeout(rpsTimerRef.current); }, []);
 
   // 구역 선택 → 던전 생성
   const handleEnterArea = (a: ForestArea) => {
@@ -1564,7 +1566,8 @@ export default function ForestPage() {
     const res = getRpsResult(choice, comp);
     setPChoice(choice); setCChoice(comp); setRpsResult(res);
     setPhase("rps_result");
-    setTimeout(()=>{
+    rpsTimerRef.current = setTimeout(()=>{
+      rpsTimerRef.current = null;
       const ok = Math.random()<CATCH_RATE[res];
       setCatchSuccess(ok);
       if (ok&&wildMonster) {
@@ -1576,6 +1579,7 @@ export default function ForestPage() {
   };
 
   const exitDungeon = () => {
+    if (rpsTimerRef.current) { clearTimeout(rpsTimerRef.current); rpsTimerRef.current = null; }
     setPhase("enter"); setArea(null); setDungeonNodes([]); setCurrentNodeId("n0");
     setWildMonster(null); setPChoice(null); setCChoice(null); setRpsResult(null);
     setCatchSuccess(null); setCatchPlace(null); setDrops([]); setIsElite(false);
