@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "../shared/playerStore";
 import type { ArtifactInstance } from "../shared/crafting";
 import {
@@ -728,6 +728,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
   const [primaryId,   setPrimaryId]   = useState<string | null>(null);
   const [secondaryId, setSecondaryId] = useState<string | null>(null);
   const [toast,       setToast]       = useState<string | null>(null);
+  const busyRef = useRef(false);
 
   // 탭 변경 시 선택 초기화
   useEffect(() => {
@@ -766,12 +767,13 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
 
   // ── 레벨업 ─────────────────────────────────────────────────────────────────
   const handleLevelUp = () => {
-    if (!primary) return;
+    if (busyRef.current || !primary) return;
     const lv   = artifactLevel(primary);
     const maxLv = getEquipmentMaxLevel(primary.quality);
     if (lv >= maxLv) return;
     const cost = getEquipmentLevelUpCost(primary.quality, lv);
     if (enhancementStones < cost) return;
+    busyRef.current = true;
     const newLv          = lv + 1;
     const unlocksBonus   = newLv % 10 === 0;
     discardMaterial("enhancement_stone", cost);
@@ -781,23 +783,27 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
     } else {
       showToast(`${primary.name} Lv.${newLv} 달성!`);
     }
+    busyRef.current = false;
   };
 
   // ── 강화 ───────────────────────────────────────────────────────────────────
   const handleEnhance = () => {
-    if (!primary || !secondary) return;
+    if (busyRef.current || !primary || !secondary) return;
     const enh = artifactEnh(primary);
     if (enh >= MAX_EQUIPMENT_ENHANCEMENT) return;
     if (primary.quality !== secondary.quality) return;
+    busyRef.current = true;
     removeCraftedArtifact(secondary.instanceId);
     setSecondaryId(null);
     updateCraftedArtifact(primary.instanceId, { enhancement: enh + 1 });
     showToast(`${primary.name} +${enh + 1} 강화 완료!`);
+    busyRef.current = false;
   };
 
   // ── 분해 ───────────────────────────────────────────────────────────────────
   const handleDisassemble = () => {
-    if (!primary) return;
+    if (busyRef.current || !primary) return;
+    busyRef.current = true;
     const lv     = artifactLevel(primary);
     const enh    = artifactEnh(primary);
     const stones = getDisassembleStones(primary.quality, lv, enh);
@@ -806,14 +812,16 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
     addMaterial("enhancement_stone", stones);
     setPrimaryId(null);
     showToast(`${name} 분해 → 강화석 ×${stones}`);
+    busyRef.current = false;
   };
 
   // ── 합성 ───────────────────────────────────────────────────────────────────
   const handleSynthesize = () => {
-    if (!primary || !secondary) return;
+    if (busyRef.current || !primary || !secondary) return;
     if (!canSynthesizeArtifacts(primary, secondary)) return;
     const nextQual = getNextQuality(primary.quality);
     if (!nextQual) return;
+    busyRef.current = true;
 
     // 스탯 재계산: 기존 등급 배율 → 새 등급 배율
     const fromMult = QUALITY_MULTIPLIER[primary.quality];
@@ -842,6 +850,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
     setPrimaryId(null);
     setSecondaryId(null);
     showToast(`${QUALITY_LABEL[nextQual]} ${newInstance.name} 합성 완료!`);
+    busyRef.current = false;
   };
 
   // ── 렌더 ───────────────────────────────────────────────────────────────────
