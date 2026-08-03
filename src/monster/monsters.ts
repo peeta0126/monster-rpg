@@ -8,6 +8,7 @@ import {
   aquaWhirl,
   crystalBurst,
   overheat, hydroPump, solarBeam, blizzard, venomStorm, gigaImpact,
+  poisonSting, poisonJab, acidSpray, poisonFog,
 } from "./moves";
 
 export const monsters: Monster[] = [
@@ -186,6 +187,36 @@ export const monsters: Monster[] = [
     moves: [tackle, iceBeam, crystalBurst],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 50,
+  },
+
+  // ─── 독 (신규 2종) ──────────────────────────────────────────────────────────
+  {
+    id: "toxadon",
+    name: "톡사룡",
+    type: "poison",
+    // 맹독을 뚝뚝 흘리는 아가리와 두꺼운 꼬리를 가진 포식자 컨셉 → 물리 어태커.
+    // 독은 상성표상 약점이 전무(0개)라 공격/방어 모두 여유 있게 배분(총합 205).
+    maxHp: 125,
+    attack: 36,
+    defense: 26,
+    speed: 18,
+    moves: [tackle, poisonSting, poisonJab],
+    level: 1, exp: 0, expToNextLevel: 100,
+    rewardExp: 52,
+  },
+  {
+    id: "venomcrow",
+    name: "베노까",
+    type: "poison",
+    // 독안개를 두르고 나는 까마귀형 컨셉 → 날렵한 특수 어태커.
+    // 독 무약점 보정을 속도에 실어 회피형으로(총합 187).
+    maxHp: 100,
+    attack: 26,
+    defense: 18,
+    speed: 35,
+    moves: [tackle, acidSpray, poisonFog],
+    level: 1, exp: 0, expToNextLevel: 100,
+    rewardExp: 40,
   },
 
   // ─── 노말 ────────────────────────────────────────────────────────────────────

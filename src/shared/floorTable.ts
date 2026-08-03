@@ -155,8 +155,8 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
 
 // ─── 층 티어별 랜덤 풀 ──────────────────────────────────────────────────────────────
 
-const POOL_TIER_1  = ["flameling", "aquabe", "leafy"];
-const POOL_TIER_2  = ["burno", "bubblet", "mossy", "crystafox"];
+const POOL_TIER_1  = ["flameling", "aquabe", "leafy", "venomcrow"];
+const POOL_TIER_2  = ["burno", "bubblet", "mossy", "crystafox", "toxadon"];
 const POOL_TIER_3  = ["mossevo", "frostorb", "aquavern"];
 const POOL_TIER_4  = ["mossyfinal", "mossevo", "frostorb", "aquavern"];
 const POOL_ALL     = [...POOL_TIER_1, ...POOL_TIER_2, ...POOL_TIER_3, ...POOL_TIER_4];

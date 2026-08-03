@@ -250,6 +250,34 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 49, move: sheerCold },
   ],
 
+  // ═══ 톡사룡 (독 도마뱀) — 독 + 노말(육탄 포식자). 물리 어태커 ═════════════
+  toxadon: [
+    { level:  1, move: tackle },
+    { level:  1, move: poisonSting },
+    { level:  6, move: quickAttack },      // 교차: 노말
+    { level: 11, move: poisonJab },
+    { level: 16, move: toxic },            // 확정 독
+    { level: 22, move: headbutt },         // 교차: 노말
+    { level: 28, move: venomFang },
+    { level: 35, move: bodySlam },         // 교차: 노말
+    { level: 42, move: poisonFog },
+    { level: 50, move: venomStorm },
+  ],
+
+  // ═══ 베노까 (독 까마귀) — 독 + 노말(비행 질풍). 특수 어태커 ═══════════════
+  venomcrow: [
+    { level:  1, move: tackle },
+    { level:  1, move: acidSpray },
+    { level:  5, move: quickAttack },      // 교차: 노말
+    { level:  9, move: poisonSting },
+    { level: 14, move: toxic },            // 확정 독
+    { level: 19, move: twister },          // 교차: 노말(날갯바람)
+    { level: 25, move: poisonFog },
+    { level: 31, move: poisonJab },
+    { level: 38, move: venomFang },
+    { level: 45, move: venomStorm },
+  ],
+
   // ═══ 노비 (노말) — 만능형. 여러 타입을 얕게. 대boss 서브 요원 ═════════════
   nobi: [
     { level:  1, move: tackle },

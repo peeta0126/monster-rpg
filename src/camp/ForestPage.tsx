@@ -175,7 +175,7 @@ const FOREST_AREAS: ForestArea[] = [
   {
     id: "shallow", name: "얕은 숲", subtitle: "SHALLOW WOODS",
     description: "햇빛이 스며드는 고요한 숲. 초보 탐험가도 부담 없이 도전할 수 있습니다.",
-    monsterPool: ["flameling", "aquabe", "leafy", "nobi"],
+    monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow"],
     levelRange: [1, 8], encounterRate: 0.55, materialRate: 0.40, materialBonus: 0,
     exploreTime: 1200, danger: 1,
     particleType: "leaf",
@@ -188,7 +188,7 @@ const FOREST_AREAS: ForestArea[] = [
   {
     id: "deep", name: "깊은 숲", subtitle: "DEEP FOREST",
     description: "빛이 닿지 않는 울창한 구역. 강한 몬스터와 희귀 재료가 기다립니다.",
-    monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb"],
+    monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb", "toxadon"],
     levelRange: [8, 18], encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
     exploreTime: 1500, danger: 3,
     particleType: "firefly",
