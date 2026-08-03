@@ -1,7 +1,7 @@
 import type { Monster } from "../shared/game";
 import {
   ember, tackle, vineWhip, waterGun,
-  spark, thunderbolt, voltCrash, thunderStrike,
+  spark, thunderbolt, voltCrash, boltStrike, thunderStrike,
   iceBeam,
   quickAttack,
   flamethrower, surf,
@@ -29,10 +29,12 @@ export const monsters: Monster[] = [
     id: "burno",
     name: "버노",
     type: "fire",
-    maxHp: 100,
+    // 유리대포 컨셉 유지(공격/방어 그대로) — 화력을 낮추지 않고 HP만 SPD에서 옮겨와
+    // "한 방은 버티는" 여유를 준다. 총합은 186으로 불변.
+    maxHp: 110,
     attack: 38,
     defense: 18,
-    speed: 30,
+    speed: 20,
     moves: [tackle, ember, flamethrower],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 48,
@@ -43,10 +45,12 @@ export const monsters: Monster[] = [
     id: "aquabe",
     name: "아쿠비",
     type: "water",
+    // 확정 상태이상기가 없어 능력치로 보상. 진화 전 "특수 딜러" 정체성을 살려
+    // 공격/속도를 올리고 방어를 소폭 내림(민첩한 유생 도롱뇽). 총합 180→188.
     maxHp: 110,
-    attack: 28,
-    defense: 22,
-    speed: 20,
+    attack: 32,
+    defense: 20,
+    speed: 26,
     moves: [tackle, waterGun],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 35,
@@ -59,8 +63,10 @@ export const monsters: Monster[] = [
     id: "aquavern",
     name: "아쿠사",
     type: "water",
-    maxHp: 175,
-    attack: 58,
+    // 확정 상태이상기가 없어 능력치로 보상. 물리·특수 겸용 만능 딜러로
+    // HP/공격을 상향(방어는 소폭만 조정). 총합 316→336.
+    maxHp: 190,
+    attack: 63,
     defense: 45,
     speed: 38,
     moves: [tackle, waterGun, surf, aquaWhirl],
@@ -102,10 +108,14 @@ export const monsters: Monster[] = [
     id: "mossy",
     name: "모시",
     type: "electric",
-    maxHp: 125,
-    attack: 26,
-    defense: 26,
-    speed: 18,
+    // 전기는 타입 상성표(typeChart.ts)상 약점이 전무(0개)한 최상급 방어 타입 →
+    // 공격을 크게 낮추고 HP/방어를 올려 진화 라인의 "초반 탱커"로 재설계.
+    // 진화 후(모치/모왕)는 반대로 화력형으로 가므로 라인 전체의 총합 곡선은 그대로 유지.
+    // 총합은 195로 불변, 속도도 소폭 내려 방어형 정체성을 보강.
+    maxHp: 131,
+    attack: 17,
+    defense: 32,
+    speed: 15,
     moves: [tackle, spark],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 44,
@@ -135,11 +145,14 @@ export const monsters: Monster[] = [
     id: "mossyfinal",
     name: "모왕",
     type: "electric",
+    // 이미 최종 진화체로 충분히 강함 — 순수 화력형 정체성 유지, 능력치 추가 상향 없음.
     maxHp: 240,
     attack: 95,
     defense: 62,
     speed: 80,
-    moves: [spark, thunderbolt, voltCrash, thunderStrike],
+    // voltCrash는 이제 모치 전용 기술이라 최종 진화체 기본 무브셋에서 제외하고
+    // boltStrike로 교체(둘 다 학습 테이블에 실존해 isAnomalyMove 오탐 없음).
+    moves: [spark, thunderbolt, boltStrike, thunderStrike],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 140,
     evolutionStage: 3,
@@ -164,10 +177,12 @@ export const monsters: Monster[] = [
     id: "frostorb",
     name: "프리로",
     type: "ice",
-    maxHp: 130,
-    attack: 24,
+    // 얼음은 상성표상 약점이 불 하나뿐(1개) → "불 외엔 단단한 벽" 컨셉을 강화.
+    // 공격/속도를 소폭 덜어 HP로 옮김(총합 206 불변, 순수 방어형 심화).
+    maxHp: 136,
+    attack: 20,
     defense: 38,
-    speed: 14,
+    speed: 12,
     moves: [tackle, iceBeam, crystalBurst],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 50,
@@ -178,9 +193,11 @@ export const monsters: Monster[] = [
     id: "nobi",
     name: "노비",
     type: "normal",
-    maxHp: 118,
-    attack: 28,
-    defense: 24,
+    // 확정 상태이상기가 없고, 노말은 상성표상 약점이 전무(0개) → 이중으로 탱커
+    // 보상 대상. 공격을 소폭 낮추고 HP/방어를 크게 올려 범용 탱커로. 총합 192→208.
+    maxHp: 134,
+    attack: 24,
+    defense: 28,
     speed: 22,
     moves: [tackle, quickAttack],
     level: 1, exp: 0, expToNextLevel: 100,

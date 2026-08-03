@@ -11,16 +11,38 @@
  * 교차 타입 배정 근거 (디자인 반영):
  *   플레미  불 + 노말      : 초원을 달리는 야생마 → 몸통 계열
  *   버노    불 + 전기      : 화산 황소, 정전기 쌓인 뿔 → thunderPunch 대체 boltStrike
- *   아쿠비  물 + 얼음      : 냉수 도롱뇽 → 얼음 접목
- *   아쿠사  물 + 얼음/노말 : 진화체, 물리 겸용
+ *   아쿠비  물 + 얼음/독   : 냉수 도롱뇽 → 얼음 접목 + 피부 점액, 미진화 특수 딜러
+ *   아쿠사  물 + 얼음/노말 : 진화체, 물리·특수 겸용 만능 딜러
  *   버블릿  물 + 독        : 물 벌레, 독침
  *   리피    풀 + 얼음/독   : 잎등짝 곰, 서리 맺힌 잎 + 포자
- *   모시    전기 + 노말    : 야생 늑대, 육탄
- *   모치    전기 + 노말    : 진화체
- *   모왕    전기 + 노말    : 전기의 왕, 최고 피니셔
+ *   모시    전기 + 노말    : 야생 늑대. 전기는 상성표상 약점 0개라 진화 라인의 탱커
+ *   모치    전기 + 노말    : 진화체, 화력형으로 전환되는 과도기
+ *   모왕    전기 + 노말    : 전기의 왕, 순수 화력형 최종체
  *   크리샤  얼음 + 물      : 수정에 맺힌 물
- *   프리로  얼음 + 물/노말 : 둔중한 방벽형
- *   노비    노말 + 만능    : 정체성이 옅은 대신 여러 타입을 얕게 (대boss 서브)
+ *   프리로  얼음 + 물/노말 : 둔중한 방벽형(약점이 불 하나뿐이라 방어 특화)
+ *   노비    노말 + 만능    : 정체성이 옅은 대신 여러 타입을 얕게 (대boss 서브).
+ *                            상태이상기 없음 + 노말 약점 0개라 범용 탱커로 보상
+ *
+ * 진화 계통 전용 기술 (⭐이번 재설계의 핵심):
+ *   아쿠비 전용(아쿠사는 못 배움) : frostBreath, acidSpray
+ *   아쿠사 전용(진화 후에만)      : bodySlam, crystalLance, tidalCrash
+ *   모시 전용(모치·모왕은 못 배움): stunNeedle — 확정 마비, 포획 보조가 필요하면
+ *                                   진화 전에 반드시 챙겨야 하는 라인 최고의 선택지
+ *   모치 전용(모왕은 못 배움)     : voltCrash
+ *   모왕 전용(최종체만)           : hyperBeam, thunderStrike, gigaImpact
+ *
+ * "위력이 낮아 상위 호환에 밀려 보이는" 기술의 역할 재정의(삭제 없이 배치로 해결):
+ *   tackle       : 최저 안정 딜러. 대부분의 초반종이 Lv1부터 보유해 첫 전투부터
+ *                  명중 100%로 사고 없이 턴을 소모할 수 있는 만능 기본기
+ *   quickAttack  : 수치상 tackle과 동일하나(위력40·명중100·물리), "질풍"이라는
+ *                  이름값대로 속도형 종에게 우선 배정해 정체성을 부여하는 기술
+ *   surf         : hydroPump보다 약하지만 명중 100% — 고위력·저명중 피니셔 대신
+ *                  안정적으로 승부를 볼 때 쓰는 신뢰도 축 딜러
+ *   discharge    : thunderbolt보다 먼저 배우는 초반 실전기. 진화 전/저레벨 구간의
+ *                  주력기로 쓰다가 나중에 thunderbolt로 자연스럽게 대체되는 역할
+ *   zap          : spark의 특수형 변형. 물리/특수 구분이 대미지 계산에 반영되진
+ *                  않지만(battleUtils는 defense 단일 스탯만 사용), 전격을 세련되게
+ *                  다루기 시작한 모치의 상징 기술로 배치해 정체성을 살림
  */
 
 import {
@@ -79,32 +101,39 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
   ],
 
   // ═══ 아쿠비 (물 도롱뇽) — 물 + 얼음(냉수). 특수형 ════════════════════════
+  // 진화 라인 재설계: frostBreath·acidSpray는 "아쿠비 전용" — 아쿠사는 못 배운다.
+  // 어린 도롱뇽 특유의 냉수 분사·점액 독이라는 설정이라, 진화하면 잃는다.
+  // 이 둘을 챙기려면 진화(Lv22 권장)를 미루고 Lv20까지는 아쿠비로 다녀야 함.
+  // hydroPump(특수 최상급)도 아쿠비만의 종착점으로 남김 — 진화체는 대신 물리
+  // 최상급 tidalCrash를 갖게 되므로, "안 진화하고 특수 피니셔 vs 진화해서 물리
+  // 피니셔" 구도가 라인 전체의 선택지가 된다.
   aquabe: [
     { level:  1, move: tackle },
     { level:  1, move: waterGun },
     { level:  5, move: bubbleCannon },
     { level: 10, move: waterPulse },
-    { level: 15, move: frostBreath },      // 교차: 얼음(냉수)
-    { level: 20, move: acidSpray },        // 교차: 독(피부 점액)
-    { level: 25, move: aquaWhirl },
-    { level: 31, move: surf },
-    { level: 37, move: icePunch },         // 교차: 얼음
-    { level: 44, move: hydroPump },
+    { level: 15, move: frostBreath },      // ★아쿠비 전용 — 교차: 얼음(냉수)
+    { level: 20, move: acidSpray },        // ★아쿠비 전용 — 교차: 독(피부 점액)
+    { level: 26, move: aquaWhirl },
+    { level: 33, move: icePunch },         // 교차: 얼음
+    { level: 40, move: hydroPump },        // 아쿠비만의 특수 최종기
   ],
 
   // ═══ 아쿠사 (물 도마뱀) — 물 + 얼음/노말. 물리 겸용 진화체 ════════════════
+  // bodySlam·crystalLance·tidalCrash는 "아쿠사 전용" — 덩치가 커져야 다룰 수 있는
+  // 물리 기술이라 아쿠비 단계에선 배울 수 없다. tidalCrash(Lv50)는 진화체만의
+  // 물리 최종 피니셔로, 아쿠비 쪽 hydroPump(특수 피니셔)와 대비되는 종착점.
   aquavern: [
     { level:  1, move: tackle },
     { level:  1, move: waterGun },
-    { level:  4, move: aquaTail },
-    { level:  8, move: waterPulse },
-    { level: 13, move: aquaWhirl },
-    { level: 18, move: icePunch },         // 교차: 얼음
-    { level: 24, move: surf },
-    { level: 30, move: bodySlam },         // 교차: 노말
-    { level: 36, move: crystalLance },     // 교차: 얼음
-    { level: 42, move: hydroPump },
-    { level: 50, move: tidalCrash },
+    { level:  6, move: aquaTail },
+    { level: 11, move: waterPulse },
+    { level: 16, move: aquaWhirl },
+    { level: 21, move: icePunch },         // 교차: 얼음
+    { level: 27, move: surf },
+    { level: 33, move: bodySlam },         // ★아쿠사 전용 — 교차: 노말
+    { level: 40, move: crystalLance },     // ★아쿠사 전용 — 교차: 얼음
+    { level: 47, move: tidalCrash },       // ★아쿠사 전용 — 진화체 물리 최종기
   ],
 
   // ═══ 버블릿 (물 벌레) — 물 + 독(독침). 상태이상 전문 ══════════════════════
@@ -137,50 +166,58 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: hyperBeam },        // 교차: 노말
   ],
 
-  // ═══ 모시 (전기 늑대·기초) — 전기 + 노말(육탄) ═══════════════════════════
+  // ═══ 모시 (전기 늑대·기초) — 전기 + 노말(육탄). 진화 라인의 탱커 ═══════════
+  // stunNeedle(Lv17, 확정 마비)은 "모시 전용" — 모치/모왕은 배울 수 없다.
+  // 포획 보조용 확정 마비기가 필요하면 모시 단계에서 반드시 Lv17을 찍고
+  // 진화시켜야 하는, 이 라인에서 가장 중요한 선택지.
+  // discharge는 thunderbolt보다 먼저 배우는 초반 실전기 — 저레벨 구간의
+  // 주력기로 쓰다가 나중에 thunderbolt로 자연스럽게 대체되는 역할.
   mossy: [
+    { level:  1, move: tackle },
+    { level:  1, move: spark },
+    { level:  5, move: quickAttack },      // 교차: 노말 — 속도형 견제기
+    { level: 10, move: discharge },        // thunderbolt 전 단계 주력기
+    { level: 17, move: stunNeedle },       // ★모시 전용 — 확정 마비
+    { level: 23, move: headbutt },         // 교차: 노말
+    { level: 29, move: thunderbolt },
+    { level: 36, move: bodySlam },         // 교차: 노말
+    { level: 43, move: boltStrike },
+    { level: 50, move: thunder },
+  ],
+
+  // ═══ 모치 (전기 늑대·1차 진화) — 전기 + 노말. 화력형으로 전환 ═════════════
+  // voltCrash(Lv32)는 "모치 전용" — 모왕은 배울 수 없다(모왕은 thunderStrike로
+  // 대체). zap은 spark의 특수형 변형 — 물리/특수 구분이 실전 대미지에 반영되진
+  // 않지만, "전격을 세련되게 다루기 시작한" 모치의 상징 기술로 배치.
+  mossevo: [
     { level:  1, move: tackle },
     { level:  1, move: spark },
     { level:  5, move: quickAttack },      // 교차: 노말
     { level: 10, move: discharge },
-    { level: 15, move: headbutt },         // 교차: 노말
-    { level: 17, move: stunNeedle },       // 확정 마비
-    { level: 22, move: thunderbolt },
-    { level: 28, move: bodySlam },         // 교차: 노말
-    { level: 34, move: boltStrike },
-    { level: 41, move: thunder },
-  ],
-
-  // ═══ 모치 (전기 늑대·1차 진화) — 전기 + 노말 ═════════════════════════════
-  mossevo: [
-    { level:  1, move: tackle },
-    { level:  1, move: spark },
-    { level:  4, move: quickAttack },
-    { level:  8, move: discharge },
-    { level: 13, move: thunderbolt },
-    { level: 16, move: stunNeedle },       // 확정 마비
+    { level: 15, move: thunderbolt },
     { level: 21, move: headbutt },         // 교차: 노말
-    { level: 24, move: zap },              // spark의 특수형 변형
-    { level: 26, move: boltStrike },
-    { level: 32, move: voltCrash },
-    { level: 38, move: bodySlam },         // 교차: 노말
-    { level: 45, move: thunder },
-    { level: 52, move: thunderStrike },
+    { level: 27, move: zap },              // spark의 특수형 변형
+    { level: 32, move: voltCrash },        // ★모치 전용
+    { level: 39, move: bodySlam },         // 교차: 노말
+    { level: 46, move: thunder },
   ],
 
-  // ═══ 모왕 (전기 늑대·최종) — 전기 + 노말 피니셔 ══════════════════════════
+  // ═══ 모왕 (전기 늑대·최종) — 전기 + 노말 피니셔. 순수 화력형 ═════════════
+  // hyperBeam(Lv44)·thunderStrike(Lv52)·gigaImpact(Lv58)는 전부 "모왕 전용" —
+  // 최종 진화체만이 다룰 수 있는 궁극기 3종. tackle 없이 spark부터 시작하는
+  // 것도 의도(더 이상 몸통박치기 따위로 힘을 낭비하지 않는 완성형이라는 설정).
   mossyfinal: [
     { level:  1, move: spark },
     { level:  1, move: thunderbolt },
     { level:  5, move: discharge },
     { level: 10, move: quickAttack },      // 교차: 노말
     { level: 15, move: boltStrike },
-    { level: 20, move: voltCrash },
-    { level: 26, move: bodySlam },         // 교차: 노말
-    { level: 32, move: thunder },
-    { level: 38, move: heavyBlow },        // 교차: 노말
-    { level: 44, move: hyperBeam },        // 교차: 노말
-    { level: 52, move: thunderStrike },
+    { level: 21, move: bodySlam },         // 교차: 노말
+    { level: 28, move: thunder },
+    { level: 35, move: heavyBlow },        // 교차: 노말
+    { level: 44, move: hyperBeam },        // ★모왕 전용 — 교차: 노말
+    { level: 52, move: thunderStrike },    // ★모왕 전용
+    { level: 58, move: gigaImpact },       // ★모왕 전용 — 교차: 노말
   ],
 
   // ═══ 크리샤 (얼음 수정 여우) — 얼음 + 물(수정 물방울). 특수 딜러 ══════════
