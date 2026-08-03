@@ -266,7 +266,8 @@ function DexModal({ onClose }: { onClose: () => void }) {
 
   const typeGroups = ["fire", "water", "grass", "electric", "ice", "normal"];
 
-  const visibleMonsters = monsters;
+  // 오름(최종 보스)은 포획 불가능한 존재라 도감 완성률에 포함시키지 않는다
+  const visibleMonsters = monsters.filter((m) => m.id !== "ormr");
 
   const filteredMonsters = filter === "all"
     ? visibleMonsters
