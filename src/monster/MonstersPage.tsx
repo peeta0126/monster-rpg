@@ -11,6 +11,7 @@ import {
 // ─── 속성 상수 ────────────────────────────────────────────────────────────────────
 const TYPE_KO: Record<string, string> = {
   fire:"불꽃", water:"물", grass:"풀", electric:"전기", ice:"얼음", normal:"노말",
+  poison:"독",
   none:"무속성",
 };
 
@@ -21,6 +22,7 @@ const TYPE_ACCENT: Record<string, { glow: string; border: string; bg: string; la
   electric: { glow:"rgba(234,179,8,.5)",    border:"#eab308", bg:"rgba(234,179,8,.1)",   label:"bg-yellow-900/80 text-yellow-200 border-yellow-700" },
   ice:      { glow:"rgba(103,232,249,.45)", border:"#67e8f9", bg:"rgba(103,232,249,.1)", label:"bg-cyan-900/80 text-cyan-200 border-cyan-700" },
   normal:   { glow:"rgba(161,161,170,.35)", border:"#a1a1aa", bg:"rgba(161,161,170,.08)",label:"bg-zinc-800/80 text-zinc-200 border-zinc-600" },
+  poison:   { glow:"rgba(168,85,247,.45)",  border:"#a855f7", bg:"rgba(168,85,247,.1)",  label:"bg-purple-900/80 text-purple-200 border-purple-700" },
   none:     { glow:"rgba(217,70,239,.4)",   border:"#d946ef", bg:"rgba(217,70,239,.1)",  label:"bg-fuchsia-900/80 text-fuchsia-200 border-fuchsia-700" },
 };
 

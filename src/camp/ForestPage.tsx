@@ -231,6 +231,7 @@ const TYPE_GLOW: Record<string, string> = {
   electric: "rgba(234,179,8,0.65)",
   ice:      "rgba(103,232,249,0.55)",
   normal:   "rgba(161,161,170,0.45)",
+  poison:   "rgba(168,85,247,0.55)",
 };
 const TYPE_COLOR: Record<string, string> = {
   fire:     "bg-red-900/80 text-red-200 border-red-700",
@@ -239,9 +240,11 @@ const TYPE_COLOR: Record<string, string> = {
   electric: "bg-yellow-900/80 text-yellow-200 border-yellow-700",
   ice:      "bg-cyan-900/80 text-cyan-200 border-cyan-700",
   normal:   "bg-zinc-800/80 text-zinc-200 border-zinc-600",
+  poison:   "bg-purple-900/80 text-purple-200 border-purple-700",
 };
 const TYPE_KO: Record<string, string> = {
   fire:"불꽃", water:"물", grass:"풀", electric:"전기", ice:"얼음", normal:"노말",
+  poison:"독",
 };
 
 type RpsResult = "win" | "lose" | "draw";
