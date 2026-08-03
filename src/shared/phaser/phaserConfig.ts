@@ -1,8 +1,6 @@
 import Phaser from "phaser";
 import BaseCampScene from "../../camp/BaseCampScene";
 import BattleScene from "../../battle/BattleScene";
-export type { BattleSceneInitData } from "../../battle/battleInitStore";
-export { setBattleInitData, getBattleInitData } from "../../battle/battleInitStore";
 
 export const createBaseCampGame = (parent: string | HTMLElement) => {
   return new Phaser.Game({

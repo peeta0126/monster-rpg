@@ -11,7 +11,6 @@ export const GAME_EVENT = {
   ENTER_FOREST: "portal:enter-forest",
   /** BaseCampScene → BaseCampPage: NPC 대화창 표시 */
   SHOW_NPC_DIALOGUE: "npc:show-dialogue",
-  BATTLE_INIT: "battle:init",
   /** BattleScene → BattlePage: create() 완료, 리스너 등록됨 (스킬 조작 허용 시점) */
   BATTLE_READY: "battle:ready",
   /** BattlePage → BattleScene: HP·상태이상 갱신 */
