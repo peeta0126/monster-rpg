@@ -18,7 +18,7 @@ export const STATION_LABEL: Record<CraftingStationType, string> = {
 };
 
 // ─── 아티팩트 레시피 ──────────────────────────────────────────────────────────
-// 재료 ID는 src/data/items.ts 의 MATERIALS 기준
+// 재료 ID는 src/shared/items.ts 의 MATERIALS 기준
 
 export const ARTIFACT_RECIPES: CraftingRecipe[] = [
   {
@@ -69,7 +69,7 @@ export const ARTIFACT_RECIPES: CraftingRecipe[] = [
 ];
 
 // ─── 물약 레시피 ──────────────────────────────────────────────────────────────
-// resultItemId는 src/data/items.ts 의 POTIONS ID와 일치 → craftWorkshopRecipe에서 potions 레코드에 추가
+// resultItemId는 src/shared/items.ts 의 POTIONS ID와 일치 → craftWorkshopRecipe에서 potions 레코드에 추가
 
 export const POTION_RECIPES: CraftingRecipe[] = [
   {

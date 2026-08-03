@@ -29,6 +29,15 @@ const STAGE_KEY_COUNTS = [5, 7, 9, 11, 13] as const;
 // 스테이지별 총 제한 시간 (ms) — 키당 약 1100ms 기준
 const STAGE_TIME_LIMITS = [6_000, 8_000, 10_500, 13_000, 15_500] as const;
 
+// 전체 스테이지의 총 키 입력 수 — 등급은 스테이지 클리어 여부가 아니라
+// 이 값을 기준으로 한 "틀린 키 개수"로 결정된다
+export const TOTAL_KEYS = STAGE_KEY_COUNTS.reduce((a, b) => a + b, 0);
+
+// 틀린 키 개수에 따른 등급 경계값 (전체 키 수의 비율 기반이라 STAGE_KEY_COUNTS가
+// 바뀌어도 자동으로 맞춰짐)
+export const GREAT_MAX_WRONG = Math.ceil(TOTAL_KEYS * 0.1);
+export const GOOD_MAX_WRONG  = Math.ceil(TOTAL_KEYS * 0.25);
+
 const FEEDBACK_MS = 520;
 
 const DIRECTIONS: DirectionInput[] = ["up", "down", "left", "right"];
@@ -55,10 +64,10 @@ function makeAllStages(): DirectionInput[][] {
   );
 }
 
-function calcRating(success: number): ArrowMiniGameResult["rating"] {
-  if (success === TOTAL_STAGES) return "perfect";
-  if (success >= 4) return "great";
-  if (success >= 3) return "good";
+function calcRating(wrongCount: number): ArrowMiniGameResult["rating"] {
+  if (wrongCount === 0) return "perfect";
+  if (wrongCount <= GREAT_MAX_WRONG) return "great";
+  if (wrongCount <= GOOD_MAX_WRONG) return "good";
   return "bad";
 }
 
@@ -111,6 +120,11 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
   // 스테이지 결과 이력 ("s"=성공, "f"=실패)
   const [history, setHistory] = useState<Array<"s" | "f">>([]);
 
+  // 현재 스테이지의 키별 결과 — 틀려도 끝까지 진행하므로 각 키의 정오답을 개별 표시
+  const [keyResults, setKeyResults] = useState<Array<"pending" | "ok" | "miss">>(
+    () => Array(stages[0].length).fill("pending"),
+  );
+
   // 클로저에서 최신값 읽기 위한 refs
   const stageRef      = useRef(0);
   const keyIndexRef   = useRef(0);
@@ -120,6 +134,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
   const failRef       = useRef(0);
   const timeoutRef    = useRef(0);
   const wrongRef      = useRef(0);
+  const stageMissRef  = useRef(0); // 현재 스테이지에서 틀린 횟수 (0이어야 스테이지 "성공")
   const stagesRef     = useRef(stages);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
@@ -139,21 +154,23 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
       if (next >= TOTAL_STAGES) {
         setPhase("done");
         phaseRef.current = "done";
-        const rating = calcRating(successRef.current);
+        const rating = calcRating(wrongRef.current);
         onCompleteRef.current({
           totalStages:     TOTAL_STAGES,
           successCount:    successRef.current,
           failCount:       failRef.current,
           timeoutCount:    timeoutRef.current,
           wrongInputCount: wrongRef.current,
-          accuracy:        successRef.current / TOTAL_STAGES,
+          accuracy:        Math.max(0, 1 - wrongRef.current / TOTAL_KEYS),
           rating,
         });
       } else {
         stageRef.current    = next;
         keyIndexRef.current = 0;
+        stageMissRef.current = 0;
         setStage(next);
         setKeyIndex(0);
+        setKeyResults(Array(stagesRef.current[next].length).fill("pending"));
         stageStartRef.current = Date.now();
         setTimeProgress(1.0);
         setPhase("playing");
@@ -171,8 +188,20 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
       const progress = Math.max(0, 1 - elapsed / limit);
       setTimeProgress(progress);
       if (progress <= 0) {
+        // 시간 초과 → 남은 입력은 전부 틀린 것으로 처리하고 스테이지 종료
+        // (틀려도 끝까지 진행하는 원칙과 동일하게, 시간이 다한 스테이지도 건너뛰지 않고
+        //  남은 키를 모두 실패로 집계한 뒤 다음 스테이지로 넘어간다)
+        const stageKeys = stagesRef.current[stageRef.current];
+        const remaining = stageKeys.length - keyIndexRef.current;
+        wrongRef.current += remaining;
+        stageMissRef.current += remaining;
         timeoutRef.current++;
         failRef.current++;
+        setKeyResults((prev) => {
+          const nextResults = [...prev];
+          for (let i = keyIndexRef.current; i < stageKeys.length; i++) nextResults[i] = "miss";
+          return nextResults;
+        });
         advanceStage(false);
       }
     }, 40);
@@ -191,23 +220,29 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
 
       const stageKeys = stagesRef.current[stageRef.current];
       const target    = stageKeys[keyIndexRef.current];
+      const correct   = dir === target;
+      const idx        = keyIndexRef.current;
 
-      if (dir === target) {
-        const nextIdx = keyIndexRef.current + 1;
-        if (nextIdx >= stageKeys.length) {
-          // 이 스테이지의 모든 키 성공!
-          successRef.current++;
-          advanceStage(true);
-        } else {
-          // 다음 키로 이동
-          keyIndexRef.current = nextIdx;
-          setKeyIndex(nextIdx);
-        }
-      } else {
-        // 틀린 키 → 스테이지 실패
+      if (!correct) {
         wrongRef.current++;
-        failRef.current++;
-        advanceStage(false);
+        stageMissRef.current++;
+      }
+      setKeyResults((prev) => {
+        const nextResults = [...prev];
+        nextResults[idx] = correct ? "ok" : "miss";
+        return nextResults;
+      });
+
+      // 틀려도 스테이지를 끝내지 않고 남은 키를 계속 입력받는다
+      const nextIdx = idx + 1;
+      if (nextIdx >= stageKeys.length) {
+        // 이 스테이지의 모든 키 입력 완료 — 틀린 키가 하나도 없어야 "성공"
+        const stageOk = stageMissRef.current === 0;
+        if (stageOk) successRef.current++; else failRef.current++;
+        advanceStage(stageOk);
+      } else {
+        keyIndexRef.current = nextIdx;
+        setKeyIndex(nextIdx);
       }
     };
 
@@ -217,7 +252,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
 
   // ─── 완료 화면 ─────────────────────────────────────────────────────────────
   if (phase === "done") {
-    const rating      = calcRating(successRef.current);
+    const rating      = calcRating(wrongRef.current);
     const ratingColor = RATING_COLOR[rating];
     return (
       <div
@@ -234,7 +269,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
           {RATING_LABEL[rating]}
         </p>
         <p className="mt-1 text-center text-xs" style={{ color: C.textFaint }}>
-          {successRef.current}/{TOTAL_STAGES} 스테이지 성공 · 실패 {failRef.current}회
+          전체 {TOTAL_KEYS}키 중 틀린 키 {wrongRef.current}개 &nbsp;·&nbsp; 스테이지 완전성공 {successRef.current}/{TOTAL_STAGES}
         </p>
         <p className="mt-3 text-center text-xs animate-pulse" style={{ color: C.textFaint }}>
           품질을 결정하는 중...
@@ -347,12 +382,14 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
         />
       </div>
 
-      {/* 키 시퀀스 스트립 */}
+      {/* 키 시퀀스 스트립 — 틀린 키도 건너뛰지 않고 ✗로 표시하며 계속 진행 */}
       <div className="mb-3 flex flex-wrap justify-center gap-1">
         {stageKeys.map((key, idx) => {
-          const done    = idx < keyIndex;
-          const active  = idx === keyIndex && !isFeedback;
-          const pending = idx > keyIndex;
+          const result  = keyResults[idx] ?? "pending";
+          const done    = result !== "pending";
+          const isMiss  = result === "miss";
+          const active  = idx === keyIndex && !isFeedback && !done;
+          const pending = !done && !active;
 
           return (
             <div
@@ -364,19 +401,19 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
                 fontSize:   active ? 17 : 13,
                 flexShrink: 0,
                 background: done
-                  ? "rgba(74,222,128,0.15)"
+                  ? isMiss ? "rgba(248,113,113,0.15)" : "rgba(74,222,128,0.15)"
                   : active
                     ? "rgba(212,160,23,0.25)"
                     : "rgba(255,255,255,0.04)",
                 border: `1px solid ${
                   done
-                    ? "rgba(74,222,128,0.5)"
+                    ? isMiss ? "rgba(248,113,113,0.5)" : "rgba(74,222,128,0.5)"
                     : active
                       ? C.borderGold
                       : "rgba(255,255,255,0.08)"
                 }`,
                 color: done
-                  ? C.green
+                  ? isMiss ? C.red : C.green
                   : active
                     ? C.gold
                     : pending
@@ -387,7 +424,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
                 transition: "all 0.12s",
               }}
             >
-              {done ? "✓" : DIRECTION_LABELS[key]}
+              {done ? (isMiss ? "✗" : "✓") : DIRECTION_LABELS[key]}
             </div>
           );
         })}
@@ -431,7 +468,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
 
       {/* 하단 안내 */}
       <p className="mt-2 text-center text-[10px]" style={{ color: C.textFaint }}>
-        틀려도 계속 진행됩니다
+        틀려도 끝까지 진행되며, 틀린 키 개수로 품질이 결정됩니다
       </p>
     </div>
   );

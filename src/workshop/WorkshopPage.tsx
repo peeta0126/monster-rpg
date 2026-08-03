@@ -168,6 +168,11 @@ export default function WorkshopPage() {
   const navigate = useNavigate();
   const craftedItems = usePlayerStore((s) => s.craftedItems);
 
+  // ── 메뉴(Tab) 상태 ─────────────────────────────────────────────────────────
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuOpenRef = useRef(false);
+  useEffect(() => { menuOpenRef.current = menuOpen; }, [menuOpen]);
+
   // ── 플레이어 상태 ─────────────────────────────────────────────────────────────
   const [pos, setPos]           = useState<PlayerPos>(INITIAL_POS);
   const [direction, setDirection] = useState<Direction>("down");
@@ -210,6 +215,18 @@ export default function WorkshopPage() {
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
       keysRef.current.add(e.key);
+      if (e.key === "Tab") {
+        if (activeStationRef.current) return;
+        e.preventDefault();
+        setMenuOpen((v) => !v);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (menuOpenRef.current) { setMenuOpen(false); return; }
+        setActiveStation(null);
+        return;
+      }
+      if (menuOpenRef.current) return;
       if (e.code === "Space") {
         e.preventDefault();
         const ns = CRAFTING_STATIONS.find(
@@ -217,7 +234,6 @@ export default function WorkshopPage() {
         );
         if (ns && !activeStationRef.current) setActiveStation(ns.type);
       }
-      if (e.key === "Escape") setActiveStation(null);
     };
     const onUp = (e: KeyboardEvent) => keysRef.current.delete(e.key);
 
@@ -236,6 +252,11 @@ export default function WorkshopPage() {
         ? Math.min(now - lastTimeRef.current, 50)
         : 16;
       lastTimeRef.current = now;
+
+      if (menuOpenRef.current) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
 
       const keys = keysRef.current;
       let dx = 0; let dy = 0;
@@ -529,23 +550,11 @@ export default function WorkshopPage() {
         </h1>
       </div>
 
-      {/* 우상단 버튼 그룹 */}
-      <div className="absolute right-4 top-4 z-40 flex gap-2">
+      {/* 우상단 메뉴 버튼 */}
+      <div className="absolute right-4 top-4 z-40">
         <button
           type="button"
-          onClick={() => navigate("/monsters")}
-          style={{
-            background: "rgba(22,12,4,0.88)",
-            border: "1px solid rgba(130,100,220,0.6)",
-            color: "#c4b5fd",
-          }}
-          className="rounded-lg px-3 py-2 text-sm font-bold backdrop-blur transition hover:brightness-125"
-        >
-          👾 내 몬스터
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate("/farm", { state: { from: "workshop" } })}
+          onClick={() => setMenuOpen(true)}
           style={{
             background: "rgba(22,12,4,0.88)",
             border: "1px solid rgba(180,120,30,0.6)",
@@ -553,21 +562,21 @@ export default function WorkshopPage() {
           }}
           className="rounded-lg px-3 py-2 text-sm font-bold backdrop-blur transition hover:brightness-125"
         >
-          🎒 가방
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowCraftedPanel((v) => !v)}
-          style={{
-            background: showCraftedPanel ? "rgba(40,22,6,0.95)" : "rgba(22,12,4,0.88)",
-            border: "1px solid rgba(180,120,30,0.6)",
-            color: "#f5e6c8",
-          }}
-          className="rounded-lg px-3 py-2 text-sm font-bold backdrop-blur transition hover:brightness-125"
-        >
-          📜 제작 목록
+          ☰ 메뉴 (Tab)
         </button>
       </div>
+
+      {menuOpen && (
+        <WorkshopMenuModal
+          onClose={() => setMenuOpen(false)}
+          onGoToMonsters={() => navigate("/monsters")}
+          onGoToFarm={() => navigate("/farm", { state: { from: "workshop" } })}
+          onToggleCraftedPanel={() => {
+            setShowCraftedPanel((v) => !v);
+            setMenuOpen(false);
+          }}
+        />
+      )}
 
       {/* 최근 제작 아이템 패널 */}
       {showCraftedPanel && (
@@ -616,7 +625,7 @@ export default function WorkshopPage() {
           color: "#8b6014",
         }}
       >
-        WASD / 방향키 이동 &nbsp;·&nbsp; SPACE 상호작용
+        WASD / 방향키 이동 &nbsp;·&nbsp; SPACE 상호작용 &nbsp;·&nbsp; TAB 메뉴
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -638,6 +647,63 @@ export default function WorkshopPage() {
           onClose={() => setActiveStation(null)}
         />
       )}
+    </div>
+  );
+}
+
+// ─── 워크샵 메뉴(Tab) 모달 ───────────────────────────────────────────────────
+
+function WorkshopMenuModal({
+  onClose,
+  onGoToMonsters,
+  onGoToFarm,
+  onToggleCraftedPanel,
+}: {
+  onClose: () => void;
+  onGoToMonsters: () => void;
+  onGoToFarm: () => void;
+  onToggleCraftedPanel: () => void;
+}) {
+  const items = [
+    { label: "내 몬스터", emoji: "👾", onClick: onGoToMonsters },
+    { label: "가방",      emoji: "🎒", onClick: onGoToFarm },
+    { label: "제작 목록", emoji: "📜", onClick: onToggleCraftedPanel },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-sm rounded-2xl p-6 shadow-2xl"
+        style={{ background: "rgba(20,10,3,0.97)", border: "1px solid rgba(180,120,30,0.5)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-black" style={{ color: "#f5e6c8" }}>메뉴</h2>
+          <span className="text-[10px]" style={{ color: "#8b6014" }}>ESC: 닫기</span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5">
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              onClick={it.onClick}
+              className="flex flex-col items-center gap-1.5 rounded-xl py-4 text-sm font-semibold transition active:scale-95 hover:brightness-125"
+              style={{
+                background: "rgba(42,22,8,0.85)",
+                border: "1px solid rgba(180,120,30,0.4)",
+                color: "#f5e6c8",
+              }}
+            >
+              <span className="text-2xl">{it.emoji}</span>
+              {it.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

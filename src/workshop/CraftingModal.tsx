@@ -11,7 +11,7 @@ import type { CraftingRecipe, CraftingStationType, CraftedItem } from "../shared
 import type { RpsResult } from "../shared/craftingUtils";
 import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, ARTIFACT_STAT_LABEL, rollArtifactQualityFromArrowResult } from "../shared/craftingUtils";
 import { RockPaperScissorsMiniGame } from "./RockPaperScissorsMiniGame";
-import { ArrowKeyCraftingMiniGame } from "./ArrowKeyCraftingMiniGame";
+import { ArrowKeyCraftingMiniGame, TOTAL_KEYS, GREAT_MAX_WRONG, GOOD_MAX_WRONG } from "./ArrowKeyCraftingMiniGame";
 import type { ArrowMiniGameResult } from "./ArrowKeyCraftingMiniGame";
 
 // ─── 중세 공방 팔레트 ──────────────────────────────────────────────────────────
@@ -166,19 +166,21 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
             </p>
           </div>
 
-          {/* 테스트 재료 지급 */}
-          <button
-            type="button"
-            onClick={grantWorkshopTestMaterials}
-            className="rounded-lg px-3 py-2 text-xs font-bold transition hover:brightness-125"
-            style={{
-              background: "rgba(20,60,30,0.5)",
-              border: "1px solid rgba(34,140,60,0.5)",
-              color: "#86efac",
-            }}
-          >
-            테스트 재료
-          </button>
+          {/* 테스트 재료 지급 — 개발 환경에서만 노출 */}
+          {import.meta.env.DEV && (
+            <button
+              type="button"
+              onClick={grantWorkshopTestMaterials}
+              className="rounded-lg px-3 py-2 text-xs font-bold transition hover:brightness-125"
+              style={{
+                background: "rgba(20,60,30,0.5)",
+                border: "1px solid rgba(34,140,60,0.5)",
+                color: "#86efac",
+              }}
+            >
+              테스트 재료
+            </button>
+          )}
 
           {/* 닫기 */}
           <button
@@ -410,20 +412,23 @@ function RecipeDetailPanel({
         </p>
         {recipe.stationType === "artifact" ? (
           <div className="space-y-1" style={{ color: C.textFaint }}>
+            <p className="mb-1" style={{ color: C.textFaint }}>
+              틀려도 시험은 끝까지 진행되며, 전체 {TOTAL_KEYS}키 중 틀린 개수로 등급이 결정됩니다.
+            </p>
             <p>
-              <span style={{ color: "#d4a017" }}>완벽 (5/5)</span>
+              <span style={{ color: "#d4a017" }}>완벽 (틀린 키 0개)</span>
               {" "}— Elite 40% / Rare 50% / Normal 10%
             </p>
             <p>
-              <span style={{ color: "#4ade80" }}>훌륭 (4/5)</span>
+              <span style={{ color: "#4ade80" }}>훌륭 (틀린 키 1~{GREAT_MAX_WRONG}개)</span>
               {" "}— Elite 20% / Rare 55% / Normal 25%
             </p>
             <p>
-              <span style={{ color: "#facc15" }}>무난 (3/5)</span>
+              <span style={{ color: "#facc15" }}>무난 (틀린 키 {GREAT_MAX_WRONG + 1}~{GOOD_MAX_WRONG}개)</span>
               {" "}— Elite 5% / Rare 40% / Normal 55%
             </p>
             <p>
-              <span style={{ color: "#f87171" }}>아쉬움 (0~2/5)</span>
+              <span style={{ color: "#f87171" }}>아쉬움 (틀린 키 {GOOD_MAX_WRONG + 1}개 이상)</span>
               {" "}— Rare 15% / Normal 85%
             </p>
           </div>
