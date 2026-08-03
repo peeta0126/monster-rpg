@@ -198,6 +198,58 @@ export function isBossFloor(floor: number): boolean {
 /** 무한의 탑 최상층. 50층 오름(Ormr)이 탑의 끝 — 51층 이상은 존재하지 않는다. */
 export const MAX_TOWER_FLOOR = 50;
 
+// ─── 탑의 비밀 — 스토리 보스 전용 이상 기술 연출 ───────────────────────────────────
+/**
+ * 10/20/30/40층 보스(분노한 모시·격노한 모치·고대의 프리로·전설의 모왕)는
+ * 자기 종족의 학습 테이블에 없는 기술을 한둘 섞어 쓴다 — 정식으로 배운 게 아니라
+ * 탑 정상에 잠든 존재(오름)의 기운을 받아 억지로 쓰는 것이라는 설정.
+ * 그 기술을 전투 중 처음 쓰는 순간, 층수가 오를수록 탑의 비밀에 점점 가까워지는
+ * 대사를 띄운다. moveIds는 반드시 해당 종족 LEARNSET에는 없어야 한다 — 있으면
+ * "이상 기술"이 아니게 되어 이 연출 자체가 성립하지 않는다.
+ */
+export interface TowerSecretReveal {
+  moveIds: string[];
+  lines: string[];
+}
+
+export const TOWER_SECRET_REVEALS: Record<number, TowerSecretReveal> = {
+  10: {
+    moveIds: ["ice-punch"],
+    lines: [
+      "…어? 방금 그건 모시가 원래 쓸 수 없는 기술이었는데.",
+      "기분 탓일까. 왠지 이 탑에서 뭔가 이상한 일이 벌어지고 있는 것 같다.",
+    ],
+  },
+  20: {
+    moveIds: ["flamethrower"],
+    lines: [
+      "이번엔 불꽃이라니… 모치는 분명 전기 늑대일 텐데.",
+      "층을 오를수록 몬스터들이 원래 없던 힘을 쓰고 있다. 단순한 우연은 아닌 것 같다.",
+    ],
+  },
+  30: {
+    moveIds: ["tidal-crash", "solar-beam"],
+    lines: [
+      "물의 힘이든 태양의 힘이든, 원래 프리로의 것이 아니다.",
+      "탑 깊은 곳에서 흘러나오는 기운이 몬스터들에게 낯선 힘을 나눠주고 있는 것 같다.",
+    ],
+  },
+  40: {
+    moveIds: ["overheat", "blizzard"],
+    lines: [
+      "이 압도적인 힘… 모왕 혼자만의 것이라고는 믿기지 않는다.",
+      "탑의 정상에 잠들어 있는 무언가. 그 기운이 탑 전체의 몬스터들에게까지 미치고 있는 것이다.",
+    ],
+  },
+};
+
+/** 해당 층·기술 조합이 탑의 비밀 연출 대상이면 그 대사 묶음을 반환 */
+export function getTowerSecretReveal(floor: number, moveId: string): TowerSecretReveal | null {
+  const reveal = TOWER_SECRET_REVEALS[floor];
+  if (!reveal || !reveal.moveIds.includes(moveId)) return null;
+  return reveal;
+}
+
 // ─── 층별 적 생성 ────────────────────────────────────────────────────────────────
 
 export function getFloorEnemy(floor: number, excludeId?: string): Monster {

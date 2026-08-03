@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { getFloorEnemy, getFloorEnemySkill, isBossFloor, MAX_TOWER_FLOOR } from "../shared/floorTable";
+import { getFloorEnemy, getFloorEnemySkill, isBossFloor, MAX_TOWER_FLOOR, getTowerSecretReveal } from "../shared/floorTable";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
 import type { Move } from "../shared/game";
@@ -73,6 +73,7 @@ const TYPE_COLORS: Record<string, string> = {
   electric: "border-yellow-700 bg-yellow-950/60 hover:bg-yellow-900/60 text-yellow-200",
   ice:      "border-cyan-700   bg-cyan-950/60   hover:bg-cyan-900/60   text-cyan-200",
   normal:   "border-zinc-700   bg-zinc-900/60   hover:bg-zinc-800/60   text-zinc-200",
+  poison:   "border-purple-800 bg-purple-950/60 hover:bg-purple-900/60 text-purple-200",
 };
 function typeClass(t: string) { return TYPE_COLORS[t] ?? TYPE_COLORS.normal; }
 
@@ -123,6 +124,8 @@ export default function BattlePage() {
 
   const enemyTurnRef = useRef(0);
   const cancelledRef = useRef(false);
+  // 탑의 비밀 연출은 전투당 한 번만 (같은 보스가 금지된 기술을 여러 번 써도 재생 안 함)
+  const towerSecretShownRef = useRef(false);
 
   // 50층(MAX_TOWER_FLOOR)이 탑의 끝 — 51층 이상 진입 요청은 베이스캠프로 돌려보낸다
   useEffect(() => {
@@ -226,9 +229,19 @@ export default function BattlePage() {
     currentPlayer: BattleMonster, currentEnemy: BattleMonster, isPlayerAttacking: boolean,
   ): Promise<{ updated: BattleMonster; fainted: boolean }> => {
 
+    const secretReveal = !isPlayerAttacking && !towerSecretShownRef.current
+      ? getTowerSecretReveal(floor, move.id)
+      : null;
     const isAnomaly = !isPlayerAttacking
       && dexCaught.includes(attacker.id) && isAnomalyMove(attacker.id, move.id);
-    if (isAnomaly) {
+
+    if (secretReveal) {
+      towerSecretShownRef.current = true;
+      await sendLogAndWait(`${attacker.name}의 ⚠${move.name}!`);
+      for (const line of secretReveal.lines) {
+        await sendLogAndWait(line);
+      }
+    } else if (isAnomaly) {
       await sendLogAndWait(`${attacker.name}의 ⚠${move.name}!`);
       await sendLogAndWait("…이 몬스터가 쓸 수 있는 기술이 아니다.");
     } else {
@@ -263,7 +276,7 @@ export default function BattlePage() {
     const fainted = isFainted(next);
     if (fainted) await sendLogAndWait(`${defender.name}이(가) 쓰러졌다!`);
     return { updated: next, fainted };
-  }, [sendLogAndWait, syncHpToPhaser, dexCaught]);
+  }, [sendLogAndWait, syncHpToPhaser, dexCaught, floor]);
 
   // ─── 스킬 선택 ──────────────────────────────────────────────────────────────────
   const handleMoveClick = useCallback(async (move: Move) => {
