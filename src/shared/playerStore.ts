@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { Monster } from "./game";
 import type { CraftingRecipe, CraftedItem, ArtifactInstance, CraftedPotionStack, ItemQuality } from "./crafting";
 import { monsters } from "../monster/monsters";
+import { MAX_TOWER_FLOOR } from "./floorTable";
 import { POTIONS } from "./items";
 import { rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats } from "./craftingUtils";
 import type { RpsResult } from "./craftingUtils";
@@ -83,6 +84,9 @@ function monsterToOwned(m: Monster): OwnedMonster {
   return { ...m, uid: makeUid(), currentHp: m.maxHp };
 }
 
+/** 개발자 모드 진입 시 지급되는 보유 몬스터 레벨 (50층 테스트 대응) */
+const DEV_PARTY_LEVEL = 50;
+
 // 기존 items.ts MATERIALS ID 기준
 const WORKSHOP_TEST_MATERIALS: Record<string, number> = {
   herb:            10,
@@ -102,7 +106,7 @@ const WORKSHOP_TEST_MATERIALS: Record<string, number> = {
 // PlayerState 중 액션(함수)을 뺀 "순수 데이터" 부분. 함수는 JSON.stringify에서
 // 어차피 사라지지만, 마이그레이션 코드에서 "무엇이 저장 대상인지"를 명확히 하기 위해
 // 별도 타입으로 뽑아둔다. 새 데이터 필드를 추가할 땐 여기와 PlayerState 양쪽에 반영.
-interface PersistedPlayerState {
+export interface PersistedPlayerState {
   party: OwnedMonster[];
   storage: OwnedMonster[];
   dexSeen: string[];
@@ -241,7 +245,7 @@ function normalizeOwnedMonsterArray(raw: unknown): OwnedMonster[] {
  * 숫자→0)으로 채우고, 있는 값은 그대로 유지한다. version 분기와 무관하게 매 로드마다
  * (migrate 경로든 onRehydrateStorage 경로든) 항상 거쳐서 이중 안전장치로 쓴다.
  */
-function normalizeState(raw: Record<string, any>): PersistedPlayerState {
+export function normalizeState(raw: Record<string, any>): PersistedPlayerState {
   const fallback = createInitialState();
   const party = normalizeOwnedMonsterArray(raw.party);
 
@@ -365,6 +369,8 @@ interface PlayerState {
   discardArtifact: (instanceId: string) => void;
   releaseMonster: (uid: string) => boolean;
 
+  /** 개발자 모드 진입 시: 모든 몬스터 도감 해금 + 전 종족 보유 + 50층 도전 가능 상태로 세팅 */
+  loadDevPreset: () => void;
 
 }
 
@@ -730,6 +736,27 @@ export const usePlayerStore = create<PlayerState>()(
             newMats[id] = (newMats[id] ?? 0) + count;
           }
           return { materials: newMats };
+        });
+      },
+
+      loadDevPreset: () => {
+        const ids = monsters.map((m) => m.id);
+        const owned = monsters.map((m) => {
+          const stats = recomputeStatsForLevel(m, DEV_PARTY_LEVEL);
+          return {
+            ...m,
+            ...stats,
+            level: DEV_PARTY_LEVEL,
+            uid: makeUid(),
+            currentHp: stats.maxHp,
+          } as OwnedMonster;
+        });
+        set({
+          party:      owned.slice(0, 3),
+          storage:    owned.slice(3),
+          dexSeen:    ids,
+          dexCaught:  ids,
+          bestFloor:  MAX_TOWER_FLOOR - 1,
         });
       },
 
