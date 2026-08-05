@@ -606,6 +606,15 @@ export default function MonstersPage() {
       return (a.type ?? "").localeCompare(b.type ?? "");
     });
 
+  // 속성 필터를 바꿔서 상태창에 표시 중이던 몬스터가 목록에서 사라지면 선택/상태창도 함께 초기화
+  useEffect(() => {
+    if (selStorage && !filteredStorage.some((m) => m.uid === selStorage)) {
+      setSelStorage(null);
+      setDetailUid(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeFilter]);
+
   const faintedCount = party.filter((m) => m.currentHp === 0).length;
 
   const hint = selParty !== null
