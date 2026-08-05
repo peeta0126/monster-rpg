@@ -7,6 +7,7 @@ import { POTIONS, getMaterial } from "../shared/items";
 import type { Move } from "../shared/game";
 import { usePlayerStore } from "../shared/playerStore";
 import { isAnomalyMove } from "../monster/learnset";
+import { sumEquippedStatBonuses } from "../shared/craftingUtils";
 
 // ─── 전투 승리 시 재료 드랍 ───────────────────────────────────────────────────────
 
@@ -216,6 +217,16 @@ export default function BattlePage() {
     [initialParty, partyHp],
   );
 
+  // ─── 장착 장비 전투 보너스 ──────────────────────────────────────────────────────
+  // 장비는 전투 중 변경될 수 없으므로 매번 최신 store에서 조회해도 안전하다.
+  // maxHp는 포함하지 않는다(회복/기절 판정 등과 어긋나지 않도록 공/방/속만 반영).
+  const getEquipCombatBonus = useCallback((uid: string | undefined) => {
+    if (!uid) return { attack: 0, defense: 0, speed: 0 };
+    const equipped = usePlayerStore.getState().equippedArtifacts[uid] ?? [];
+    const totals = sumEquippedStatBonuses(equipped);
+    return { attack: totals.attack, defense: totals.defense, speed: totals.speed };
+  }, []);
+
   // ─── 버프 턴 감소 ───────────────────────────────────────────────────────────────
   const tickBuff = (m: BattleMonster): BattleMonster => {
     if (m.attackBuffTurns <= 0) return m;
@@ -224,9 +235,12 @@ export default function BattlePage() {
   };
 
   // ─── 공격 처리 ─────────────────────────────────────────────────────────────────
+  // attackerAtkBonus/defenderDefBonus: 장착 장비 보너스. 데미지 계산에만 임시로 반영하고
+  // 반환되는 updated(=defender 원본 기반)에는 섞이지 않으므로 세이브에 새어들지 않는다.
   const resolveAttack = useCallback(async (
     attacker: BattleMonster, defender: BattleMonster, move: Move,
     currentPlayer: BattleMonster, currentEnemy: BattleMonster, isPlayerAttacking: boolean,
+    attackerAtkBonus = 0, defenderDefBonus = 0,
   ): Promise<{ updated: BattleMonster; fainted: boolean }> => {
 
     const secretReveal = !isPlayerAttacking && !towerSecretShownRef.current
@@ -247,7 +261,9 @@ export default function BattlePage() {
     } else {
       await sendLogAndWait(`${attacker.name}의 ${move.name}!`);
     }
-    const res = calculateDamage(attacker, defender, move);
+    const effAttacker = attackerAtkBonus ? { ...attacker, attack: attacker.attack + attackerAtkBonus } : attacker;
+    const effDefender = defenderDefBonus ? { ...defender, defense: defender.defense + defenderDefBonus } : defender;
+    const res = calculateDamage(effAttacker, effDefender, move);
 
     if (!res.isHit) {
       await sendLogAndWait("공격이 빗나갔다!");
@@ -287,9 +303,10 @@ export default function BattlePage() {
     let np = player;
     let ne = enemyState;
 
+    const playerBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid);
     const eTurnIdx = enemyTurnRef.current;
     const eMove    = getFloorEnemySkill(floor, eTurnIdx, ne.moves) ?? getAIAction(ne, np);
-    const playerFirst = np.speed >= ne.speed;
+    const playerFirst = (np.speed + playerBonus.speed) >= ne.speed;
 
     const doPlayerTurn = async (): Promise<boolean> => {
       np = tickBuff(np);
@@ -300,7 +317,7 @@ export default function BattlePage() {
       np = ps.monster;
       for (const log of ps.logs) { syncHpToPhaser(np, ne); await sendLogAndWait(log); }
       if (ps.skipTurn) return false;
-      const res = await resolveAttack(np, ne, move, np, ne, true);
+      const res = await resolveAttack(np, ne, move, np, ne, true, playerBonus.attack, 0);
       ne = res.updated;
       return res.fainted;
     };
@@ -310,7 +327,7 @@ export default function BattlePage() {
       ne = es.monster;
       for (const log of es.logs) { syncHpToPhaser(np, ne); await sendLogAndWait(log); }
       if (es.skipTurn) return false;
-      const res = await resolveAttack(ne, np, eMove, np, ne, false);
+      const res = await resolveAttack(ne, np, eMove, np, ne, false, 0, playerBonus.defense);
       np = res.updated;
       return res.fainted;
     };
@@ -367,7 +384,7 @@ export default function BattlePage() {
   }, [
     isProcessing, battleOutcome, mustSwitch, player, enemyState, floor,
     activePartyIndex, initialParty, resolveAttack, syncHpToPhaser,
-    sendLogAndWait, finishBattle, hasAlivePartyMember,
+    sendLogAndWait, finishBattle, hasAlivePartyMember, getEquipCombatBonus,
     updatePartyMember, updateBestFloor, addToDexSeen,
   ]);
 
@@ -397,7 +414,8 @@ export default function BattlePage() {
 
     let ne = enemyState;
     const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, nextPlayer);
-    const atk = await resolveAttack(ne, nextPlayer, eMove, nextPlayer, ne, false);
+    const nextDefBonus = getEquipCombatBonus(nextOwned.uid).defense;
+    const atk = await resolveAttack(ne, nextPlayer, eMove, nextPlayer, ne, false, 0, nextDefBonus);
     const np2 = atk.updated;
     enemyTurnRef.current += 1;
 
@@ -415,6 +433,7 @@ export default function BattlePage() {
     isProcessing, battleOutcome, activePartyIndex, initialParty, player,
     enemyState, floor, partyHp, mustSwitch,
     resolveAttack, syncHpToPhaser, sendLogAndWait, finishBattle, hasAlivePartyMember,
+    getEquipCombatBonus,
   ]);
 
   // ─── 물약 사용 ──────────────────────────────────────────────────────────────────
@@ -463,7 +482,8 @@ export default function BattlePage() {
     // 적 반격 (아이템 사용 = 1턴 소비)
     let ne = enemyState;
     const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, np);
-    const atk = await resolveAttack(ne, np, eMove, np, ne, false);
+    const playerDefBonus = getEquipCombatBonus(uid).defense;
+    const atk = await resolveAttack(ne, np, eMove, np, ne, false, 0, playerDefBonus);
     np = atk.updated;
     enemyTurnRef.current += 1;
 
@@ -481,7 +501,7 @@ export default function BattlePage() {
     isProcessing, battleOutcome, mustSwitch, player, enemyState,
     floor, potionCounts, activePartyIndex, initialParty,
     consumePotion, resolveAttack, syncHpToPhaser, sendLogAndWait,
-    finishBattle, hasAlivePartyMember,
+    finishBattle, hasAlivePartyMember, getEquipCombatBonus,
   ]);
 
   // ─── 포획 ────────────────────────────────────────────────────────────────────────
@@ -502,7 +522,8 @@ export default function BattlePage() {
 
     let np = player, ne = enemyState;
     const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, np);
-    const atk = await resolveAttack(ne, np, eMove, np, ne, false);
+    const playerDefBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid).defense;
+    const atk = await resolveAttack(ne, np, eMove, np, ne, false, 0, playerDefBonus);
     np = atk.updated; enemyTurnRef.current += 1;
 
     if (atk.fainted) {
@@ -520,7 +541,7 @@ export default function BattlePage() {
   }, [
     isProcessing, battleOutcome, player, enemyState, isCatchZone, floor,
     activePartyIndex, initialParty, partyHp,
-    resolveAttack, sendLogAndWait, finishBattle,
+    resolveAttack, sendLogAndWait, finishBattle, getEquipCombatBonus,
     addCapturedMonster, addToDexCaught, hasAlivePartyMember, setStoryFlag,
   ]);
 
@@ -528,7 +549,7 @@ export default function BattlePage() {
   const canShowCatch = isCatchZone && enemyState.id !== "ormr"
     && enemyState.currentHp / enemyState.maxHp <= 0.3
     && !isProcessing && battleOutcome === null && !mustSwitch;
-  const speedFirst = player.speed >= enemyState.speed;
+  const speedFirst = (player.speed + getEquipCombatBonus(initialParty[activePartyIndex]?.uid).speed) >= enemyState.speed;
   const hasPotions = POTIONS.some(p => (potionCounts[p.id] ?? 0) > 0);
 
   // ─── 렌더 ────────────────────────────────────────────────────────────────────────
