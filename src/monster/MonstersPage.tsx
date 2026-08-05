@@ -266,8 +266,26 @@ function EquipModal({
   );
 }
 
-// ─── MonsterDetailModal ──────────────────────────────────────────────────────────
-function MonsterDetailModal({ monster, onClose }: { monster: OwnedMonster; onClose: () => void }) {
+// ─── MonsterStatusPanel ──────────────────────────────────────────────────────────
+// 파티/보관함에서 클릭한 몬스터의 정보를 보여주는 상시 패널(모달 아님).
+function MonsterStatusPanel({ monster }: { monster: OwnedMonster | null }) {
+  if (!monster) {
+    return (
+      <div className="w-72 flex-shrink-0 flex flex-col"
+        style={{ background: "rgba(10,6,2,.5)", borderRight: "1px solid rgba(140,90,20,.15)" }}>
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(140,90,20,.1)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(180,120,30,.6)" }}>STATUS</p>
+          <p className="text-sm font-black text-zinc-200">상태창</p>
+        </div>
+        <div className="flex-1 flex items-center justify-center px-6 text-center">
+          <p className="text-xs" style={{ color: "rgba(120,80,20,.5)" }}>
+            몬스터를 클릭하면<br />상세 정보가 표시됩니다
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const acc = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
   const stats: [string, number][] = [
     ["HP", monster.maxHp],
@@ -277,94 +295,78 @@ function MonsterDetailModal({ monster, onClose }: { monster: OwnedMonster; onClo
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,.78)" }}
-      onClick={onClose}
-    >
-      <div
-        className="relative rounded-2xl w-[440px] max-h-[90vh] overflow-y-auto"
-        style={{
-          background: "rgba(12,7,2,.98)",
-          border: "1px solid rgba(180,120,30,.4)",
-          boxShadow: "0 0 48px rgba(0,0,0,.8)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
+      style={{ background: "rgba(10,6,2,.5)", borderRight: "1px solid rgba(140,90,20,.15)" }}>
+      <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(140,90,20,.1)" }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(180,120,30,.6)" }}>STATUS</p>
+        <p className="text-sm font-black text-zinc-200">상태창</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
         {/* 헤더 */}
-        <div className="sticky top-0 px-5 py-4 flex items-center justify-between"
-          style={{ background: "rgba(12,7,2,.98)", borderBottom: "1px solid rgba(140,90,20,.2)" }}>
-          <div className="flex items-center gap-3">
-            <div className="relative h-14 w-14 flex items-center justify-center rounded-xl shrink-0"
-              style={{ background: acc.bg, border: `1px solid ${acc.border}` }}>
-              <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.nickname ?? monster.name}
-                className="w-11 h-11 object-contain pixel-img" style={monsterImgStyle(monster.id)} />
-            </div>
-            <div>
-              <p className="text-base font-black text-zinc-100">{monster.nickname ?? monster.name}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] font-bold text-zinc-500">Lv.{monster.level}</span>
-                <span className={`rounded-full border px-1.5 text-[9px] font-bold ${acc.label}`}>
-                  {TYPE_KO[monster.type ?? "none"] ?? ""}
-                </span>
-              </div>
+        <div className="flex items-center gap-3">
+          <div className="relative h-14 w-14 flex items-center justify-center rounded-xl shrink-0"
+            style={{ background: acc.bg, border: `1px solid ${acc.border}` }}>
+            <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.nickname ?? monster.name}
+              className="w-11 h-11 object-contain pixel-img" style={monsterImgStyle(monster.id)} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-base font-black text-zinc-100 truncate">{monster.nickname ?? monster.name}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[10px] font-bold text-zinc-500">Lv.{monster.level}</span>
+              <span className={`rounded-full border px-1.5 text-[9px] font-bold ${acc.label}`}>
+                {TYPE_KO[monster.type ?? "none"] ?? ""}
+              </span>
             </div>
           </div>
-          <button onClick={onClose}
-            className="text-base font-black transition hover:brightness-125 rounded-lg px-2 py-1"
-            style={{ color: "#8b6014", background: "rgba(40,20,4,.6)" }}>
-            ✕
-          </button>
         </div>
 
-        <div className="px-5 py-4 flex flex-col gap-5">
-          {/* 종합 능력치 */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
-              종합 능력치
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {stats.map(([label, value]) => (
-                <div key={label} className="flex flex-col items-center rounded-lg py-2"
-                  style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
-                  <span className="text-[9px] font-bold" style={{ color: "rgba(180,120,30,.6)" }}>{label}</span>
-                  <span className="text-sm font-black text-zinc-200 mt-0.5">
-                    {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : value}
-                  </span>
-                </div>
-              ))}
-            </div>
+        {/* 종합 능력치 */}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+            종합 능력치
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {stats.map(([label, value]) => (
+              <div key={label} className="flex flex-col items-center rounded-lg py-2"
+                style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
+                <span className="text-[9px] font-bold" style={{ color: "rgba(180,120,30,.6)" }}>{label}</span>
+                <span className="text-sm font-black text-zinc-200 mt-0.5">
+                  {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : value}
+                </span>
+              </div>
+            ))}
           </div>
+        </div>
 
-          {/* 보유 스킬 */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
-              보유 스킬 ({monster.moves.length})
-            </p>
-            <div className="flex flex-col gap-1.5">
-              {monster.moves.map((mv) => {
-                const mvAcc = TYPE_ACCENT[mv.type] ?? TYPE_ACCENT.normal;
-                return (
-                  <div key={mv.id} className="flex items-center gap-2 rounded-xl px-3 py-2"
-                    style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
-                    <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${mvAcc.label}`}>
-                      {TYPE_KO[mv.type] ?? mv.type}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black truncate" style={{ color: "#f5e6c8" }}>{mv.name}</p>
-                      <p className="text-[9px] mt-0.5" style={{ color: "rgba(140,90,20,.7)" }}>
-                        {MOVE_CATEGORY_KO[mv.category] ?? mv.category}
-                        {mv.statusEffect && ` · ${STATUS_KO[mv.statusEffect] ?? mv.statusEffect} ${mv.statusChance ?? 0}%`}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-[10px] font-mono text-zinc-300">위력 {mv.power === 0 ? "—" : mv.power}</p>
-                      <p className="text-[9px] font-mono" style={{ color: "rgba(140,90,20,.6)" }}>명중 {mv.accuracy}%</p>
-                    </div>
+        {/* 보유 스킬 */}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+            보유 스킬 ({monster.moves.length})
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {monster.moves.map((mv) => {
+              const mvAcc = TYPE_ACCENT[mv.type] ?? TYPE_ACCENT.normal;
+              return (
+                <div key={mv.id} className="flex items-center gap-2 rounded-xl px-3 py-2"
+                  style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
+                  <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${mvAcc.label}`}>
+                    {TYPE_KO[mv.type] ?? mv.type}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black truncate" style={{ color: "#f5e6c8" }}>{mv.name}</p>
+                    <p className="text-[9px] mt-0.5" style={{ color: "rgba(140,90,20,.7)" }}>
+                      {MOVE_CATEGORY_KO[mv.category] ?? mv.category}
+                      {mv.statusEffect && ` · ${STATUS_KO[mv.statusEffect] ?? mv.statusEffect} ${mv.statusChance ?? 0}%`}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[10px] font-mono text-zinc-300">위력 {mv.power === 0 ? "—" : mv.power}</p>
+                    <p className="text-[9px] font-mono" style={{ color: "rgba(140,90,20,.6)" }}>명중 {mv.accuracy}%</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -520,25 +522,24 @@ export default function MonstersPage() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (equipModalUid) { setEquipModalUid(null); return; }
-      if (detailUid) { setDetailUid(null); return; }
       navigate("/", { state: { openMenu: true } });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [equipModalUid, detailUid, navigate]);
+  }, [equipModalUid, navigate]);
 
   // 몬스터 클릭 시: 다른 몬스터가 이미 선택된 상태라면 파티 교체를 수행하고,
   // 아무것도 선택되지 않은 상태라면 선택 표시와 함께 상세 정보를 띄운다.
   const handlePartyClick = (idx: number) => {
     if (selStorage !== null) {
       idx < party.length ? swapWithStorage(idx, selStorage) : moveToParty(selStorage, idx);
-      setSelStorage(null); setSelParty(null); return;
+      setSelStorage(null); setSelParty(null); setDetailUid(null); return;
     }
     if (selParty !== null && selParty !== idx) {
-      swapPartySlots(selParty, idx); setSelParty(null); return;
+      swapPartySlots(selParty, idx); setSelParty(null); setDetailUid(null); return;
     }
     if (selParty === idx) {
-      setSelParty(null);
+      setSelParty(null); setDetailUid(null);
       return;
     }
     setSelParty(idx);
@@ -549,10 +550,10 @@ export default function MonstersPage() {
   const handleStorageClick = (uid: string) => {
     if (selParty !== null) {
       selParty < party.length ? swapWithStorage(selParty, uid) : moveToParty(uid, selParty);
-      setSelParty(null); setSelStorage(null); return;
+      setSelParty(null); setSelStorage(null); setDetailUid(null); return;
     }
     if (selStorage === uid) {
-      setSelStorage(null);
+      setSelStorage(null); setDetailUid(null);
       return;
     }
     setSelStorage(uid);
@@ -561,7 +562,7 @@ export default function MonstersPage() {
 
   const handleRemove = (idx: number) => {
     if (party.length <= 1) return;
-    moveToStorage(idx); setSelParty(null);
+    moveToStorage(idx); setSelParty(null); setDetailUid(null);
   };
 
   const handleRestore = () => {
@@ -586,6 +587,7 @@ export default function MonstersPage() {
     releaseMonster(uid);
     setSelParty(null);
     setSelStorage(null);
+    if (detailUid === uid) setDetailUid(null);
     if (equipModalUid === uid) setEquipModalUid(null);
   };
 
@@ -682,7 +684,7 @@ export default function MonstersPage() {
       {/* ── 콘텐츠 ── */}
       <div className="flex flex-1 overflow-hidden">
         {/* 파티 패널 */}
-        <div className="w-64 flex-shrink-0 flex flex-col"
+        <div className="w-56 flex-shrink-0 flex flex-col"
           style={{ background: "rgba(10,6,2,.5)", borderRight: "1px solid rgba(140,90,20,.15)" }}>
           <div className="px-4 py-3 flex items-center justify-between"
             style={{ borderBottom: "1px solid rgba(140,90,20,.1)" }}>
@@ -744,6 +746,9 @@ export default function MonstersPage() {
             <p className="text-[10px] text-center" style={{ color: "rgba(140,90,20,.6)" }}>{hint}</p>
           </div>
         </div>
+
+        {/* 상태창 */}
+        <MonsterStatusPanel monster={detailMonster} />
 
         {/* 보관함 */}
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -840,14 +845,6 @@ export default function MonstersPage() {
           onEquip={handleEquip}
           onUnequip={handleUnequip}
           onClose={() => setEquipModalUid(null)}
-        />
-      )}
-
-      {/* ── 상세 정보 모달 ── */}
-      {detailMonster && (
-        <MonsterDetailModal
-          monster={detailMonster}
-          onClose={() => setDetailUid(null)}
         />
       )}
     </div>
