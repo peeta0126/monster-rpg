@@ -527,6 +527,8 @@ export default function MonstersPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [equipModalUid, detailUid, navigate]);
 
+  // 몬스터 클릭 시: 다른 몬스터가 이미 선택된 상태라면 파티 교체를 수행하고,
+  // 아무것도 선택되지 않은 상태라면 선택 표시와 함께 상세 정보를 띄운다.
   const handlePartyClick = (idx: number) => {
     if (selStorage !== null) {
       idx < party.length ? swapWithStorage(idx, selStorage) : moveToParty(selStorage, idx);
@@ -535,7 +537,13 @@ export default function MonstersPage() {
     if (selParty !== null && selParty !== idx) {
       swapPartySlots(selParty, idx); setSelParty(null); return;
     }
-    setSelParty(idx === selParty ? null : idx);
+    if (selParty === idx) {
+      setSelParty(null);
+      return;
+    }
+    setSelParty(idx);
+    const m = party[idx];
+    if (m) setDetailUid(m.uid);
   };
 
   const handleStorageClick = (uid: string) => {
@@ -543,7 +551,12 @@ export default function MonstersPage() {
       selParty < party.length ? swapWithStorage(selParty, uid) : moveToParty(uid, selParty);
       setSelParty(null); setSelStorage(null); return;
     }
-    setSelStorage(uid === selStorage ? null : uid);
+    if (selStorage === uid) {
+      setSelStorage(null);
+      return;
+    }
+    setSelStorage(uid);
+    setDetailUid(uid);
   };
 
   const handleRemove = (idx: number) => {
@@ -703,16 +716,6 @@ export default function MonstersPage() {
                     </button>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setDetailUid(m.uid); }}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded transition hover:brightness-125"
-                        style={{
-                          background: "rgba(80,50,10,.3)",
-                          border: "1px solid rgba(140,90,20,.35)",
-                          color: "rgba(200,150,50,.85)",
-                        }}>
-                        상세
-                      </button>
-                      <button
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
                         className="text-[10px] font-bold px-2 py-0.5 rounded transition hover:brightness-125"
                         style={{
@@ -805,16 +808,6 @@ export default function MonstersPage() {
                       equippedSlots={getEquippedSlots(m.uid)}
                       onClick={() => handleStorageClick(m.uid)} />
                     <div className="flex items-center justify-center gap-1 px-0.5">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setDetailUid(m.uid); }}
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded transition hover:brightness-125"
-                        style={{
-                          background: "rgba(80,50,10,.3)",
-                          border: "1px solid rgba(140,90,20,.35)",
-                          color: "rgba(200,150,50,.85)",
-                        }}>
-                        상세
-                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
                         className="text-[9px] font-bold px-1.5 py-0.5 rounded transition hover:brightness-125"
