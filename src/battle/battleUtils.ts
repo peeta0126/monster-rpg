@@ -56,16 +56,24 @@ export function getTypeMultiplier(
 
 // ─── 데미지 계산 ────────────────────────────────────────────────────────────────
 
+/** 치명타 발생 시 데미지 배율 (장비 critRate로만 발동 — 몬스터 기본 치명타율은 0) */
+const CRIT_DAMAGE_MULTIPLIER = 1.5;
+
 /**
  * 데미지 계산
- * 공식: finalDamage = (attacker.attack * skill.power / defender.defense) * typeMultiplier
+ * 공식: finalDamage = (attacker.attack * skill.power / defender.defense)
+ *                      * (자속 시 1 + elementPowerBonus/100) * (치명타 시 1.5) * typeMultiplier
  * power가 0인 상태기 스킬은 데미지 없음
+ * critRateBonus/elementPowerBonus: 장착 장비의 치명타 확률/속성 능력 합산치(%). 몬스터 기본값은 0이며
+ * elementPower는 사용 기술의 속성이 공격자 자신의 속성과 같을 때만 적용된다(자속 보정).
  */
 export function calculateDamage(
   attacker: BattleMonster,
   defender: BattleMonster,
-  move: Move
-): { damage: number; isHit: boolean; multiplier: number } {
+  move: Move,
+  critRateBonus = 0,
+  elementPowerBonus = 0,
+): { damage: number; isHit: boolean; multiplier: number; isCrit: boolean } {
   const multiplier = getTypeMultiplier(move.type, defender.type);
 
   // 명중률 체크 (0~100 난수)
@@ -73,20 +81,30 @@ export function calculateDamage(
   const isHit = hitRoll <= move.accuracy;
 
   if (!isHit) {
-    return { damage: 0, isHit: false, multiplier };
+    return { damage: 0, isHit: false, multiplier, isCrit: false };
   }
 
   // 상태기(power = 0)는 데미지 없음
   if (move.power === 0) {
-    return { damage: 0, isHit: true, multiplier };
+    return { damage: 0, isHit: true, multiplier, isCrit: false };
   }
 
   // 명세 공식 적용 (공격 버프 반영)
   const effectiveAttack = attacker.attack * (attacker.attackBuffMult ?? 1.0);
-  const baseDamage = (effectiveAttack * move.power) / defender.defense;
+  let baseDamage = (effectiveAttack * move.power) / defender.defense;
+
+  // 속성 능력(자속 보정): 사용 기술이 자신의 속성과 같을 때만 적용
+  if (elementPowerBonus > 0 && move.type === attacker.type) {
+    baseDamage *= 1 + elementPowerBonus / 100;
+  }
+
+  // 치명타
+  const isCrit = critRateBonus > 0 && Math.random() * 100 < critRateBonus;
+  if (isCrit) baseDamage *= CRIT_DAMAGE_MULTIPLIER;
+
   const damage = Math.max(1, Math.floor(baseDamage * multiplier));
 
-  return { damage, isHit: true, multiplier };
+  return { damage, isHit: true, multiplier, isCrit };
 }
 
 // ─── 피해 적용 ──────────────────────────────────────────────────────────────────

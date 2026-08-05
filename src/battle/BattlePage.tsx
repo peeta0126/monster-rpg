@@ -219,12 +219,15 @@ export default function BattlePage() {
 
   // ─── 장착 장비 전투 보너스 ──────────────────────────────────────────────────────
   // 장비는 전투 중 변경될 수 없으므로 매번 최신 store에서 조회해도 안전하다.
-  // maxHp는 포함하지 않는다(회복/기절 판정 등과 어긋나지 않도록 공/방/속만 반영).
+  // maxHp는 포함하지 않는다(회복/기절 판정 등과 어긋나지 않도록 공/방/속/치명/속성만 반영).
   const getEquipCombatBonus = useCallback((uid: string | undefined) => {
-    if (!uid) return { attack: 0, defense: 0, speed: 0 };
+    if (!uid) return { attack: 0, defense: 0, speed: 0, critRate: 0, elementPower: 0 };
     const equipped = usePlayerStore.getState().equippedArtifacts[uid] ?? [];
     const totals = sumEquippedStatBonuses(equipped);
-    return { attack: totals.attack, defense: totals.defense, speed: totals.speed };
+    return {
+      attack: totals.attack, defense: totals.defense, speed: totals.speed,
+      critRate: totals.critRate, elementPower: totals.elementPower,
+    };
   }, []);
 
   // ─── 버프 턴 감소 ───────────────────────────────────────────────────────────────
@@ -235,12 +238,15 @@ export default function BattlePage() {
   };
 
   // ─── 공격 처리 ─────────────────────────────────────────────────────────────────
-  // attackerAtkBonus/defenderDefBonus: 장착 장비 보너스. 데미지 계산에만 임시로 반영하고
-  // 반환되는 updated(=defender 원본 기반)에는 섞이지 않으므로 세이브에 새어들지 않는다.
+  // attackerAtkBonus/defenderDefBonus/attackerCritRateBonus/attackerElementPowerBonus:
+  // 장착 장비 보너스. 데미지 계산에만 임시로 반영하고 반환되는 updated(=defender 원본 기반)에는
+  // 섞이지 않으므로 세이브에 새어들지 않는다. 치명타/속성 능력은 공격자 쪽 보너스만 존재한다
+  // (적은 장비를 착용하지 않으므로 항상 0).
   const resolveAttack = useCallback(async (
     attacker: BattleMonster, defender: BattleMonster, move: Move,
     currentPlayer: BattleMonster, currentEnemy: BattleMonster, isPlayerAttacking: boolean,
     attackerAtkBonus = 0, defenderDefBonus = 0,
+    attackerCritRateBonus = 0, attackerElementPowerBonus = 0,
   ): Promise<{ updated: BattleMonster; fainted: boolean }> => {
 
     const secretReveal = !isPlayerAttacking && !towerSecretShownRef.current
@@ -263,7 +269,7 @@ export default function BattlePage() {
     }
     const effAttacker = attackerAtkBonus ? { ...attacker, attack: attacker.attack + attackerAtkBonus } : attacker;
     const effDefender = defenderDefBonus ? { ...defender, defense: defender.defense + defenderDefBonus } : defender;
-    const res = calculateDamage(effAttacker, effDefender, move);
+    const res = calculateDamage(effAttacker, effDefender, move, attackerCritRateBonus, attackerElementPowerBonus);
 
     if (!res.isHit) {
       await sendLogAndWait("공격이 빗나갔다!");
@@ -275,6 +281,7 @@ export default function BattlePage() {
       next = applyDamage(defender, res.damage);
       if (isPlayerAttacking) syncHpToPhaser(currentPlayer, next);
       else                    syncHpToPhaser(next, currentEnemy);
+      if (res.isCrit) await sendLogAndWait("치명타 공격!");
       await sendLogAndWait(`${res.damage}의 피해를 입혔다.`);
     }
 
@@ -317,7 +324,10 @@ export default function BattlePage() {
       np = ps.monster;
       for (const log of ps.logs) { syncHpToPhaser(np, ne); await sendLogAndWait(log); }
       if (ps.skipTurn) return false;
-      const res = await resolveAttack(np, ne, move, np, ne, true, playerBonus.attack, 0);
+      const res = await resolveAttack(
+        np, ne, move, np, ne, true,
+        playerBonus.attack, 0, playerBonus.critRate, playerBonus.elementPower,
+      );
       ne = res.updated;
       return res.fainted;
     };
