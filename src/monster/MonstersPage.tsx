@@ -5,8 +5,12 @@ import { MONSTER_IMAGE_MAP, monsterImgStyle } from "./monsterImages";
 import type { ArtifactInstance } from "../shared/crafting";
 import {
   ARTIFACT_SLOT_MAP, ARTIFACT_SLOT_LABEL, ALL_ARTIFACT_SLOTS,
-  QUALITY_COLOR, QUALITY_LABEL, ARTIFACT_STAT_LABEL,
+  QUALITY_COLOR, QUALITY_LABEL, ARTIFACT_STAT_LABEL, sumEquippedStatBonuses,
 } from "../shared/craftingUtils";
+
+/** 파티 카드/상태창에 반영할 장비 능력치 (HP는 배틀 실수치와 어긋나지 않도록 제외) */
+export interface EquipStatBonus { attack: number; defense: number; speed: number }
+const ZERO_EQUIP_BONUS: EquipStatBonus = { attack: 0, defense: 0, speed: 0 };
 
 // ─── 속성 상수 ────────────────────────────────────────────────────────────────────
 const TYPE_KO: Record<string, string> = {
@@ -268,7 +272,9 @@ function EquipModal({
 
 // ─── MonsterStatusPanel ──────────────────────────────────────────────────────────
 // 파티/보관함에서 클릭한 몬스터의 정보를 보여주는 상시 패널(모달 아님).
-function MonsterStatusPanel({ monster }: { monster: OwnedMonster | null }) {
+function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
+  monster: OwnedMonster | null; equipBonus?: EquipStatBonus;
+}) {
   if (!monster) {
     return (
       <div className="w-72 flex-shrink-0 flex flex-col"
@@ -287,11 +293,11 @@ function MonsterStatusPanel({ monster }: { monster: OwnedMonster | null }) {
   }
 
   const acc = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
-  const stats: [string, number][] = [
-    ["HP", monster.maxHp],
-    ["공격", monster.attack],
-    ["방어", monster.defense],
-    ["속도", monster.speed],
+  const stats: [string, number, number][] = [
+    ["HP", monster.maxHp, 0],
+    ["공격", monster.attack, equipBonus.attack],
+    ["방어", monster.defense, equipBonus.defense],
+    ["속도", monster.speed, equipBonus.speed],
   ];
 
   return (
@@ -327,13 +333,14 @@ function MonsterStatusPanel({ monster }: { monster: OwnedMonster | null }) {
             종합 능력치
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {stats.map(([label, value]) => (
+            {stats.map(([label, base, bonus]) => (
               <div key={label} className="flex flex-col items-center rounded-lg py-2"
                 style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
                 <span className="text-[9px] font-bold" style={{ color: "rgba(180,120,30,.6)" }}>{label}</span>
                 <span className="text-sm font-black text-zinc-200 mt-0.5">
-                  {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : value}
+                  {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : base + bonus}
                 </span>
+                {bonus > 0 && <span className="text-[9px] font-bold text-emerald-400">+{bonus}</span>}
               </div>
             ))}
           </div>
@@ -377,11 +384,11 @@ function MonsterStatusPanel({ monster }: { monster: OwnedMonster | null }) {
 // ─── MonsterCard ────────────────────────────────────────────────────────────────
 function MonsterCard({
   monster, size = "md", selected, dimmed, onClick, showStats = false,
-  equippedSlots = [],
+  equippedSlots = [], equipBonus = ZERO_EQUIP_BONUS,
 }: {
   monster: OwnedMonster; size?: "sm" | "md" | "lg";
   selected?: boolean; dimmed?: boolean; onClick: () => void; showStats?: boolean;
-  equippedSlots?: string[];
+  equippedSlots?: string[]; equipBonus?: EquipStatBonus;
 }) {
   const hpPct     = monster.maxHp === 0 ? 0 : Math.round((monster.currentHp / monster.maxHp) * 100);
   const isFainted = hpPct === 0;
@@ -448,10 +455,15 @@ function MonsterCard({
 
       {showStats && (
         <div className="w-full px-0.5 grid grid-cols-3 gap-0.5 mt-0.5">
-          {([["공", monster.attack], ["방", monster.defense], ["속", monster.speed]] as [string, number][]).map(([l, v]) => (
+          {([
+            ["공", monster.attack, equipBonus.attack],
+            ["방", monster.defense, equipBonus.defense],
+            ["속", monster.speed, equipBonus.speed],
+          ] as [string, number, number][]).map(([l, base, bonus]) => (
             <div key={l} className="flex flex-col items-center rounded py-0.5" style={{ background: "rgba(0,0,0,.3)" }}>
               <span className="text-[8px] text-zinc-600">{l}</span>
-              <span className="text-[10px] font-bold text-zinc-300">{v}</span>
+              <span className="text-[10px] font-bold text-zinc-300">{base + bonus}</span>
+              {bonus > 0 && <span className="text-[7px] font-bold text-emerald-400 leading-none">+{bonus}</span>}
             </div>
           ))}
         </div>
@@ -595,6 +607,12 @@ export default function MonstersPage() {
   const getEquippedSlots = (uid: string): string[] =>
     (equippedArtifacts[uid] ?? []).map((a) => ARTIFACT_SLOT_MAP[a.itemId]).filter(Boolean);
 
+  // 헬퍼: 장착 장비의 공격/방어/속도 합산 보너스 (HP는 배틀 실수치와 어긋나지 않도록 제외)
+  const getEquipBonus = (uid: string): EquipStatBonus => {
+    const totals = sumEquippedStatBonuses(equippedArtifacts[uid] ?? []);
+    return { attack: totals.attack, defense: totals.defense, speed: totals.speed };
+  };
+
   const storageTypes = [...new Set(storage.map((m) => m.type))]
     .filter((t): t is NonNullable<typeof t> => t !== null);
 
@@ -713,6 +731,7 @@ export default function MonstersPage() {
                     dimmed={selStorage !== null && selParty === null}
                     showStats
                     equippedSlots={getEquippedSlots(m.uid)}
+                    equipBonus={getEquipBonus(m.uid)}
                     onClick={() => handlePartyClick(idx)} />
                   {/* 액션 버튼 행 */}
                   <div className="flex items-center justify-between px-0.5">
@@ -757,7 +776,10 @@ export default function MonstersPage() {
         </div>
 
         {/* 상태창 */}
-        <MonsterStatusPanel monster={detailMonster} />
+        <MonsterStatusPanel
+          monster={detailMonster}
+          equipBonus={detailMonster ? getEquipBonus(detailMonster.uid) : undefined}
+        />
 
         {/* 보관함 */}
         <div className="flex-1 flex flex-col overflow-hidden">

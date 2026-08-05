@@ -3,6 +3,7 @@ import type {
   ArtifactStatType,
   ArtifactBonusStat,
   ArtifactBonusStatType,
+  ArtifactInstance,
   ItemQuality,
 } from "./crafting";
 
@@ -94,6 +95,24 @@ export function getEffectiveStats(
     ...b,
     value: getEffectiveStat(b.value, level, enhancement),
   }));
+}
+
+/** 장착된 아티팩트 전체의 레벨·강화 적용 능력치 합계 (부가 능력치 중 최대 HP만 hp에 합산) */
+export function sumEquippedStatBonuses(
+  equipped: ArtifactInstance[],
+): Record<ArtifactStatType, number> {
+  const totals: Record<ArtifactStatType, number> = {
+    attack: 0, defense: 0, hp: 0, speed: 0, critRate: 0, elementPower: 0,
+  };
+  for (const a of equipped) {
+    for (const b of getEffectiveStats(a.statBonuses, a.level ?? 1, a.enhancement ?? 0)) {
+      totals[b.stat] += b.value;
+    }
+    for (const bonus of a.bonusStats ?? []) {
+      if (bonus.type === "maxHpFlat") totals.hp += bonus.value;
+    }
+  }
+  return totals;
 }
 
 // ─── 부가 능력치 풀 ────────────────────────────────────────────────────────────────
