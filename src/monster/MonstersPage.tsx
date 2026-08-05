@@ -26,6 +26,14 @@ const TYPE_ACCENT: Record<string, { glow: string; border: string; bg: string; la
   none:     { glow:"rgba(217,70,239,.4)",   border:"#d946ef", bg:"rgba(217,70,239,.1)",  label:"bg-fuchsia-900/80 text-fuchsia-200 border-fuchsia-700" },
 };
 
+const MOVE_CATEGORY_KO: Record<string, string> = {
+  physical: "물리", special: "특수", status: "상태",
+};
+
+const STATUS_KO: Record<string, string> = {
+  burn: "화상", paralysis: "마비", freeze: "빙결", poison: "독",
+};
+
 function hpGradient(pct: number): string {
   if (pct > 65) return "linear-gradient(90deg, #15803d, #22c55e)";
   if (pct > 35) return "linear-gradient(90deg, #a16207, #eab308)";
@@ -258,6 +266,112 @@ function EquipModal({
   );
 }
 
+// ─── MonsterDetailModal ──────────────────────────────────────────────────────────
+function MonsterDetailModal({ monster, onClose }: { monster: OwnedMonster; onClose: () => void }) {
+  const acc = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
+  const stats: [string, number][] = [
+    ["HP", monster.maxHp],
+    ["공격", monster.attack],
+    ["방어", monster.defense],
+    ["속도", monster.speed],
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,.78)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative rounded-2xl w-[440px] max-h-[90vh] overflow-y-auto"
+        style={{
+          background: "rgba(12,7,2,.98)",
+          border: "1px solid rgba(180,120,30,.4)",
+          boxShadow: "0 0 48px rgba(0,0,0,.8)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="sticky top-0 px-5 py-4 flex items-center justify-between"
+          style={{ background: "rgba(12,7,2,.98)", borderBottom: "1px solid rgba(140,90,20,.2)" }}>
+          <div className="flex items-center gap-3">
+            <div className="relative h-14 w-14 flex items-center justify-center rounded-xl shrink-0"
+              style={{ background: acc.bg, border: `1px solid ${acc.border}` }}>
+              <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.nickname ?? monster.name}
+                className="w-11 h-11 object-contain pixel-img" style={monsterImgStyle(monster.id)} />
+            </div>
+            <div>
+              <p className="text-base font-black text-zinc-100">{monster.nickname ?? monster.name}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-bold text-zinc-500">Lv.{monster.level}</span>
+                <span className={`rounded-full border px-1.5 text-[9px] font-bold ${acc.label}`}>
+                  {TYPE_KO[monster.type ?? "none"] ?? ""}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose}
+            className="text-base font-black transition hover:brightness-125 rounded-lg px-2 py-1"
+            style={{ color: "#8b6014", background: "rgba(40,20,4,.6)" }}>
+            ✕
+          </button>
+        </div>
+
+        <div className="px-5 py-4 flex flex-col gap-5">
+          {/* 종합 능력치 */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+              종합 능력치
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {stats.map(([label, value]) => (
+                <div key={label} className="flex flex-col items-center rounded-lg py-2"
+                  style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
+                  <span className="text-[9px] font-bold" style={{ color: "rgba(180,120,30,.6)" }}>{label}</span>
+                  <span className="text-sm font-black text-zinc-200 mt-0.5">
+                    {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 보유 스킬 */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+              보유 스킬 ({monster.moves.length})
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {monster.moves.map((mv) => {
+                const mvAcc = TYPE_ACCENT[mv.type] ?? TYPE_ACCENT.normal;
+                return (
+                  <div key={mv.id} className="flex items-center gap-2 rounded-xl px-3 py-2"
+                    style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
+                    <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${mvAcc.label}`}>
+                      {TYPE_KO[mv.type] ?? mv.type}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black truncate" style={{ color: "#f5e6c8" }}>{mv.name}</p>
+                      <p className="text-[9px] mt-0.5" style={{ color: "rgba(140,90,20,.7)" }}>
+                        {MOVE_CATEGORY_KO[mv.category] ?? mv.category}
+                        {mv.statusEffect && ` · ${STATUS_KO[mv.statusEffect] ?? mv.statusEffect} ${mv.statusChance ?? 0}%`}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[10px] font-mono text-zinc-300">위력 {mv.power === 0 ? "—" : mv.power}</p>
+                      <p className="text-[9px] font-mono" style={{ color: "rgba(140,90,20,.6)" }}>명중 {mv.accuracy}%</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MonsterCard ────────────────────────────────────────────────────────────────
 function MonsterCard({
   monster, size = "md", selected, dimmed, onClick, showStats = false,
@@ -396,15 +510,22 @@ export default function MonstersPage() {
     ? ([...party, ...storage].find((m) => m.uid === equipModalUid) ?? null)
     : null;
 
+  // 상세 정보 모달
+  const [detailUid, setDetailUid] = useState<string | null>(null);
+  const detailMonster = detailUid
+    ? ([...party, ...storage].find((m) => m.uid === detailUid) ?? null)
+    : null;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (equipModalUid) { setEquipModalUid(null); return; }
+      if (detailUid) { setDetailUid(null); return; }
       navigate("/", { state: { openMenu: true } });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [equipModalUid, navigate]);
+  }, [equipModalUid, detailUid, navigate]);
 
   const handlePartyClick = (idx: number) => {
     if (selStorage !== null) {
@@ -582,6 +703,16 @@ export default function MonstersPage() {
                     </button>
                     <div className="flex items-center gap-1">
                       <button
+                        onClick={(e) => { e.stopPropagation(); setDetailUid(m.uid); }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded transition hover:brightness-125"
+                        style={{
+                          background: "rgba(80,50,10,.3)",
+                          border: "1px solid rgba(140,90,20,.35)",
+                          color: "rgba(200,150,50,.85)",
+                        }}>
+                        상세
+                      </button>
+                      <button
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
                         className="text-[10px] font-bold px-2 py-0.5 rounded transition hover:brightness-125"
                         style={{
@@ -675,6 +806,16 @@ export default function MonstersPage() {
                       onClick={() => handleStorageClick(m.uid)} />
                     <div className="flex items-center justify-center gap-1 px-0.5">
                       <button
+                        onClick={(e) => { e.stopPropagation(); setDetailUid(m.uid); }}
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded transition hover:brightness-125"
+                        style={{
+                          background: "rgba(80,50,10,.3)",
+                          border: "1px solid rgba(140,90,20,.35)",
+                          color: "rgba(200,150,50,.85)",
+                        }}>
+                        상세
+                      </button>
+                      <button
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
                         className="text-[9px] font-bold px-1.5 py-0.5 rounded transition hover:brightness-125"
                         style={{
@@ -706,6 +847,14 @@ export default function MonstersPage() {
           onEquip={handleEquip}
           onUnequip={handleUnequip}
           onClose={() => setEquipModalUid(null)}
+        />
+      )}
+
+      {/* ── 상세 정보 모달 ── */}
+      {detailMonster && (
+        <MonsterDetailModal
+          monster={detailMonster}
+          onClose={() => setDetailUid(null)}
         />
       )}
     </div>

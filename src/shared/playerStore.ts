@@ -740,8 +740,10 @@ export const usePlayerStore = create<PlayerState>()(
       },
 
       loadDevPreset: () => {
-        const ids = monsters.map((m) => m.id);
-        const owned = monsters.map((m) => {
+        // 오름(최종 보스)은 포획 불가능한 존재라 개발자 모드에서도 보유/도감 대상에서 제외한다
+        const catchableMonsters = monsters.filter((m) => m.id !== "ormr");
+        const ids = catchableMonsters.map((m) => m.id);
+        const owned = catchableMonsters.map((m) => {
           const stats = recomputeStatsForLevel(m, DEV_PARTY_LEVEL);
           return {
             ...m,

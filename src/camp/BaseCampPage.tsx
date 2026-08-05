@@ -12,6 +12,7 @@ import { ALL_QUESTS } from "./campDialogues";
 import type { QuestDef } from "./campDialogues";
 import { getMaterial } from "../shared/items";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
+import { useAuthStore } from "../auth/authStore";
 
 // ── 속성 한글/색상 ──────────────────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ const TYPE_COLOR: Record<string, string> = {
 
 const TYPE_GROUP_LABEL: Record<string, string> = {
   fire: "불꽃", water: "물", grass: "풀",
-  electric: "전기", ice: "얼음", normal: "노말",
+  electric: "전기", ice: "얼음", normal: "노말", poison: "독",
 };
 
 // ── 몬스터 설명문 ────────────────────────────────────────────────────────────────
@@ -264,7 +265,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
   const [filter, setFilter]     = useState<string>("all");
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  const typeGroups = ["fire", "water", "grass", "electric", "ice", "normal"];
+  const typeGroups = ["fire", "water", "grass", "electric", "ice", "normal", "poison"];
 
   // 오름(최종 보스)은 포획 불가능한 존재라 도감 완성률에 포함시키지 않는다
   const visibleMonsters = monsters.filter((m) => m.id !== "ormr");
@@ -600,11 +601,15 @@ function MenuModal({
   onGoToMonsters: () => void;
   onGoToFarm: () => void;
 }) {
+  const logout = useAuthStore((s) => s.logout);
+  const isGuest = useAuthStore((s) => s.isGuest);
+
   const items = [
     { label: "퀘스트",    emoji: "📜", color: "border-orange-800/60 text-orange-300 hover:bg-orange-950/40", onClick: onOpenQuestLog },
     { label: "내 몬스터", emoji: "👾", color: "border-indigo-800/60 text-indigo-300 hover:bg-indigo-950/40", onClick: onGoToMonsters },
     { label: "가방",      emoji: "🎒", color: "border-amber-800/60 text-amber-300 hover:bg-amber-950/40",   onClick: onGoToFarm },
     { label: "도감",      emoji: "📖", color: "border-zinc-600 text-zinc-300 hover:bg-zinc-800/60",         onClick: onOpenDex },
+    { label: isGuest ? "로그인" : "로그아웃", emoji: "🚪", color: "border-red-900/60 text-red-300 hover:bg-red-950/40", onClick: logout },
   ];
 
   return (
