@@ -115,6 +115,27 @@ export function sumEquippedStatBonuses(
   return totals;
 }
 
+/**
+ * 장착된 아티팩트 전체의 부가 능력치(레벨 10마다 랜덤 해제) 합계.
+ * maxHpFlat은 sumEquippedStatBonuses의 hp에 이미 합산되므로 여기서는 제외한다.
+ * 레벨/강화 배율은 적용하지 않는다 — 부가 능력치는 해제된 값 그대로 고정.
+ */
+export function sumEquippedBonusStats(
+  equipped: ArtifactInstance[],
+): Record<Exclude<ArtifactBonusStatType, "maxHpFlat">, number> {
+  const totals = {
+    fireDamage: 0, waterDamage: 0, windDamage: 0, earthDamage: 0,
+    critDamage: 0, expBonus: 0,
+  };
+  for (const a of equipped) {
+    for (const b of a.bonusStats ?? []) {
+      if (b.type === "maxHpFlat") continue;
+      totals[b.type] += b.value;
+    }
+  }
+  return totals;
+}
+
 // ─── 부가 능력치 풀 ────────────────────────────────────────────────────────────────
 
 export interface ArtifactBonusStatDef {

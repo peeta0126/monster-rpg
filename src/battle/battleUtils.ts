@@ -1,5 +1,5 @@
 import { typeChart } from "./typeChart";
-import type { Monster, Move, StatusEffect } from "../shared/game";
+import type { Monster, Move, StatusEffect, ElementType } from "../shared/game";
 
 // ─── BattleMonster 타입 ─────────────────────────────────────────────────────────
 
@@ -62,10 +62,16 @@ const CRIT_DAMAGE_MULTIPLIER = 1.5;
 /**
  * 데미지 계산
  * 공식: finalDamage = (attacker.attack * skill.power / defender.defense)
- *                      * (자속 시 1 + elementPowerBonus/100) * (치명타 시 1.5) * typeMultiplier
+ *                      * (자속 시 1 + elementPowerBonus/100)
+ *                      * (기술 속성 데미지 부가 능력치 시 1 + elementalDamageBonus[move.type]/100)
+ *                      * (치명타 시 1.5 + critDamageBonus/100) * typeMultiplier
  * power가 0인 상태기 스킬은 데미지 없음
- * critRateBonus/elementPowerBonus: 장착 장비의 치명타 확률/속성 능력 합산치(%). 몬스터 기본값은 0이며
- * elementPower는 사용 기술의 속성이 공격자 자신의 속성과 같을 때만 적용된다(자속 보정).
+ * critRateBonus/elementPowerBonus/critDamageBonus/elementalDamageBonus: 장착 장비의 능력치
+ * 합산치(%). 몬스터 기본값은 0이다.
+ * - elementPower는 사용 기술의 속성이 공격자 자신의 속성과 같을 때만 적용된다(자속 보정).
+ * - elementalDamageBonus는 자속 여부와 무관하게 해당 속성 기술이면 항상 적용된다(부가 능력치
+ *   fireDamage/waterDamage 등). 이 게임에 존재하지 않는 속성(풍속/대지)은 애초에 어떤 기술도
+ *   해당 타입을 가질 수 없어 windDamage/earthDamage는 호출부에서 매핑되지 않는다.
  */
 export function calculateDamage(
   attacker: BattleMonster,
@@ -73,6 +79,8 @@ export function calculateDamage(
   move: Move,
   critRateBonus = 0,
   elementPowerBonus = 0,
+  elementalDamageBonus: Partial<Record<ElementType, number>> = {},
+  critDamageBonus = 0,
 ): { damage: number; isHit: boolean; multiplier: number; isCrit: boolean } {
   const multiplier = getTypeMultiplier(move.type, defender.type);
 
@@ -98,9 +106,15 @@ export function calculateDamage(
     baseDamage *= 1 + elementPowerBonus / 100;
   }
 
+  // 부가 능력치: 기술 속성별 데미지 증가 (자속 여부와 무관)
+  const typeDamageBonus = elementalDamageBonus[move.type] ?? 0;
+  if (typeDamageBonus > 0) {
+    baseDamage *= 1 + typeDamageBonus / 100;
+  }
+
   // 치명타
   const isCrit = critRateBonus > 0 && Math.random() * 100 < critRateBonus;
-  if (isCrit) baseDamage *= CRIT_DAMAGE_MULTIPLIER;
+  if (isCrit) baseDamage *= CRIT_DAMAGE_MULTIPLIER + critDamageBonus / 100;
 
   const damage = Math.max(1, Math.floor(baseDamage * multiplier));
 

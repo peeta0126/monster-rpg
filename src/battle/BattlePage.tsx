@@ -4,10 +4,19 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { getFloorEnemy, getFloorEnemySkill, isBossFloor, MAX_TOWER_FLOOR, getTowerSecretReveal } from "../shared/floorTable";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
-import type { Move } from "../shared/game";
-import { usePlayerStore } from "../shared/playerStore";
+import type { Move, ElementType } from "../shared/game";
+import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
 import { isAnomalyMove } from "../monster/learnset";
-import { sumEquippedStatBonuses } from "../shared/craftingUtils";
+import { sumEquippedStatBonuses, sumEquippedBonusStats } from "../shared/craftingUtils";
+
+/** OwnedMonster → 배틀 진입용 OwnedMonster. 장착 장비의 HP 보너스를 max/currentHp에 미리 반영한다.
+ *  (공/방/속/치명/속성 보너스와 달리 HP는 전투 내내 상태로 유지해야 하는 값이라 별도 처리) */
+function withOwnedHpBonus(m: OwnedMonster): OwnedMonster {
+  const equipped = usePlayerStore.getState().equippedArtifacts[m.uid] ?? [];
+  const hpBonus = sumEquippedStatBonuses(equipped).hp;
+  if (!hpBonus) return m;
+  return { ...m, maxHp: m.maxHp + hpBonus, currentHp: m.currentHp + hpBonus };
+}
 
 // ─── 전투 승리 시 재료 드랍 ───────────────────────────────────────────────────────
 
@@ -94,12 +103,14 @@ export default function BattlePage() {
           addToDexSeen, addToDexCaught, usePotion: consumePotion,
           addMaterial, setStoryFlag, dexCaught } = usePlayerStore();
 
-  const [initialParty] = useState(() => usePlayerStore.getState().party);
+  // 장착 장비의 HP 보너스를 미리 반영한 파티 스냅샷 (공/방/속/치명/속성은 여기서 반영하지 않고
+  // 데미지 계산 시점에만 임시로 더한다 — HP만 전투 내내 상태로 들고 있어야 하는 값이라 예외)
+  const [initialParty] = useState(() => usePlayerStore.getState().party.map(withOwnedHpBonus));
   const [activePartyIndex, setActivePartyIndex] = useState(0);
 
   const [partyHp, setPartyHp] = useState<Record<string, number>>(() => {
     const m: Record<string, number> = {};
-    for (const mon of usePlayerStore.getState().party) m[mon.uid] = mon.currentHp;
+    for (const mon of initialParty) m[mon.uid] = mon.currentHp;
     return m;
   });
   const [mustSwitch, setMustSwitch] = useState(false);
@@ -219,14 +230,28 @@ export default function BattlePage() {
 
   // ─── 장착 장비 전투 보너스 ──────────────────────────────────────────────────────
   // 장비는 전투 중 변경될 수 없으므로 매번 최신 store에서 조회해도 안전하다.
-  // maxHp는 포함하지 않는다(회복/기절 판정 등과 어긋나지 않도록 공/방/속/치명/속성만 반영).
+  // hp는 데미지 계산이 아니라 전투 진입 시점에 별도로(withOwnedHpBonus) 반영되므로
+  // 여기서는 참고용으로만 반환한다(승리 시 저장 데이터에서 다시 빼내기 위해 필요).
   const getEquipCombatBonus = useCallback((uid: string | undefined) => {
-    if (!uid) return { attack: 0, defense: 0, speed: 0, critRate: 0, elementPower: 0 };
+    if (!uid) {
+      return {
+        attack: 0, defense: 0, speed: 0, critRate: 0, elementPower: 0, hp: 0,
+        critDamage: 0, expBonus: 0, elementalDamage: {} as Partial<Record<ElementType, number>>,
+      };
+    }
     const equipped = usePlayerStore.getState().equippedArtifacts[uid] ?? [];
     const totals = sumEquippedStatBonuses(equipped);
+    const bonusTotals = sumEquippedBonusStats(equipped);
+    // 부가 능력치 fireDamage/waterDamage만 실제 존재하는 속성(fire/water)에 매핑된다.
+    // windDamage/earthDamage는 이 게임에 해당 속성 기술이 없어 의도적으로 매핑하지 않는다.
+    const elementalDamage: Partial<Record<ElementType, number>> = {};
+    if (bonusTotals.fireDamage)  elementalDamage.fire  = bonusTotals.fireDamage;
+    if (bonusTotals.waterDamage) elementalDamage.water = bonusTotals.waterDamage;
     return {
       attack: totals.attack, defense: totals.defense, speed: totals.speed,
-      critRate: totals.critRate, elementPower: totals.elementPower,
+      critRate: totals.critRate, elementPower: totals.elementPower, hp: totals.hp,
+      critDamage: bonusTotals.critDamage, expBonus: bonusTotals.expBonus,
+      elementalDamage,
     };
   }, []);
 
@@ -238,15 +263,17 @@ export default function BattlePage() {
   };
 
   // ─── 공격 처리 ─────────────────────────────────────────────────────────────────
-  // attackerAtkBonus/defenderDefBonus/attackerCritRateBonus/attackerElementPowerBonus:
-  // 장착 장비 보너스. 데미지 계산에만 임시로 반영하고 반환되는 updated(=defender 원본 기반)에는
-  // 섞이지 않으므로 세이브에 새어들지 않는다. 치명타/속성 능력은 공격자 쪽 보너스만 존재한다
-  // (적은 장비를 착용하지 않으므로 항상 0).
+  // attackerAtkBonus/defenderDefBonus/attackerCritRateBonus/attackerElementPowerBonus/
+  // attackerElementalDamageBonus/attackerCritDamageBonus: 장착 장비 보너스. 데미지 계산에만
+  // 임시로 반영하고 반환되는 updated(=defender 원본 기반)에는 섞이지 않으므로 세이브에
+  // 새어들지 않는다. 전부 공격자(플레이어) 쪽 보너스만 존재한다(적은 장비를 착용하지 않음).
   const resolveAttack = useCallback(async (
     attacker: BattleMonster, defender: BattleMonster, move: Move,
     currentPlayer: BattleMonster, currentEnemy: BattleMonster, isPlayerAttacking: boolean,
     attackerAtkBonus = 0, defenderDefBonus = 0,
     attackerCritRateBonus = 0, attackerElementPowerBonus = 0,
+    attackerElementalDamageBonus: Partial<Record<ElementType, number>> = {},
+    attackerCritDamageBonus = 0,
   ): Promise<{ updated: BattleMonster; fainted: boolean }> => {
 
     const secretReveal = !isPlayerAttacking && !towerSecretShownRef.current
@@ -269,7 +296,11 @@ export default function BattlePage() {
     }
     const effAttacker = attackerAtkBonus ? { ...attacker, attack: attacker.attack + attackerAtkBonus } : attacker;
     const effDefender = defenderDefBonus ? { ...defender, defense: defender.defense + defenderDefBonus } : defender;
-    const res = calculateDamage(effAttacker, effDefender, move, attackerCritRateBonus, attackerElementPowerBonus);
+    const res = calculateDamage(
+      effAttacker, effDefender, move,
+      attackerCritRateBonus, attackerElementPowerBonus,
+      attackerElementalDamageBonus, attackerCritDamageBonus,
+    );
 
     if (!res.isHit) {
       await sendLogAndWait("공격이 빗나갔다!");
@@ -327,6 +358,7 @@ export default function BattlePage() {
       const res = await resolveAttack(
         np, ne, move, np, ne, true,
         playerBonus.attack, 0, playerBonus.critRate, playerBonus.elementPower,
+        playerBonus.elementalDamage, playerBonus.critDamage,
       );
       ne = res.updated;
       return res.fainted;
@@ -353,7 +385,7 @@ export default function BattlePage() {
     enemyTurnRef.current += 1;
 
     if (playerWon) {
-      const earnedExp = ne.rewardExp;
+      const earnedExp = Math.floor(ne.rewardExp * (1 + playerBonus.expBonus / 100));
       const expResult = gainExp(np, earnedExp);
       np = expResult.updatedMonster;
       await sendLogAndWait(`경험치 ${earnedExp}를 획득했다!`);
@@ -371,7 +403,16 @@ export default function BattlePage() {
       }
 
       const owned = initialParty[activePartyIndex];
-      if (owned) updatePartyMember({ ...owned, ...np, uid: owned.uid });
+      if (owned) {
+        // np.maxHp/currentHp는 장비 HP 보너스가 반영된 값이므로, 저장 전에 그 비율만큼
+        // 빼내어 "장비 없는 기본 스탯" 기준으로 되돌린다(세이브에 보너스가 새어들지 않도록).
+        const hpBonus = playerBonus.hp;
+        const persistedMaxHp = np.maxHp - hpBonus;
+        const persistedCurrentHp = hpBonus > 0
+          ? Math.max(1, Math.min(persistedMaxHp, Math.round((np.currentHp * persistedMaxHp) / np.maxHp)))
+          : np.currentHp;
+        updatePartyMember({ ...owned, ...np, uid: owned.uid, maxHp: persistedMaxHp, currentHp: persistedCurrentHp });
+      }
       updateBestFloor(floor);
       addToDexSeen(ne.id);
       setPlayer(np); setEnemyState(ne);
