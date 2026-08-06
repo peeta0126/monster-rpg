@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Backend (server/) secrets & local DB — server/ also has its own .gitignore
+server/.env
+server/prisma/*.db
+server/prisma/*.db-journal
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
