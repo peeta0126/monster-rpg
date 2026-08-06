@@ -3,9 +3,10 @@ import { loginApi, ApiError } from "./api";
 import { useAuthStore } from "./authStore";
 import RegisterModal from "./RegisterModal";
 import DevCodeModal from "./DevCodeModal";
+import { sha256Hex } from "./sha256";
 
-const DEV_LOGIN_ID = "admin";
-const DEV_LOGIN_PW = "admin1234";
+// "아이디:비밀번호"의 SHA-256 해시. 번들에 평문 계정을 남기지 않기 위해 해시로만 비교한다.
+const DEV_LOGIN_HASH = "590c783dce35634a13f99f7b25482678536c9a39cf153f1bb83554aa0362e5d1";
 
 const pixelFont = { fontFamily: "var(--pixel-font, monospace)" };
 
@@ -36,7 +37,7 @@ export default function LoginForm() {
       setError("아이디와 비밀번호를 입력해주세요.");
       return;
     }
-    if (username.trim() === DEV_LOGIN_ID && password === DEV_LOGIN_PW) {
+    if ((await sha256Hex(`${username.trim()}:${password}`)) === DEV_LOGIN_HASH) {
       setError(null);
       setShowDevCode(true);
       return;

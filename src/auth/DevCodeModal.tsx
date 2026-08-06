@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { useAuthStore } from "./authStore";
 import { usePlayerStore } from "../shared/playerStore";
+import { sha256Hex } from "./sha256";
 
 const pixelFont = { fontFamily: "var(--pixel-font, monospace)" };
-const DEV_CODE = "c20963d0ddf311c9b24a01e0582b0285dff7f6e92e4b1f0e";
+// 개발자 코드의 SHA-256 해시. 번들에 평문 코드를 남기지 않기 위해 해시로만 비교한다.
+const DEV_CODE_HASH = "324443b14fdeaf62156b4e58e2167c88f5d1e75c63f4f1f48c6757b2b9320615";
 
 export default function DevCodeModal({ onClose }: { onClose: () => void }) {
   const enterDevMode = useAuthStore((s) => s.enterDevMode);
@@ -11,9 +13,9 @@ export default function DevCodeModal({ onClose }: { onClose: () => void }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (code !== DEV_CODE) {
+    if ((await sha256Hex(code)) !== DEV_CODE_HASH) {
       setError("개발자 코드가 일치하지 않습니다.");
       return;
     }
