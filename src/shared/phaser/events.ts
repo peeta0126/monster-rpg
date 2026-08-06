@@ -25,7 +25,15 @@ export const GAME_EVENT = {
   BATTLE_END: "battle:end",
   /** BattlePage → BattleScene: 플레이어 몬스터 교체 (스프라이트 변경) */
   BATTLE_PLAYER_SWITCH: "battle:player-switch",
+  /** Phaser 씬 진입점(create/update/이벤트 핸들러) 또는 전역 핸들러에서 잡힌 예외를 React로 전달 */
+  APP_ERROR: "app:error",
 } as const;
+
+export interface AppErrorPayload {
+  /** 에러 발생 지점 (씬 키, "window", "promise" 등) */
+  source: string;
+  message: string;
+}
 
 export interface NpcDialoguePayload {
   name: string;

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
+import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
 import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
@@ -92,6 +93,14 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   create() {
+    try {
+      this.createImpl();
+    } catch (error) {
+      reportSceneError(this, error);
+    }
+  }
+
+  private createImpl() {
     const mapW = 1536,
       mapH = 2730;
     this.cameras.main.setZoom(CAM_ZOOM);
@@ -135,7 +144,7 @@ export default class BaseCampScene extends Phaser.Scene {
     };
 
     // ── E 키 ────────────────────────────────────────────────────────────────────
-    keyboard.on("keydown-E", () => {
+    keyboard.on("keydown-E", safeHandler(this, () => {
       const px = this.player.x,
         py = this.player.y;
       const nearestNpc = this.getNearestNpc(px, py);
@@ -174,7 +183,7 @@ export default class BaseCampScene extends Phaser.Scene {
         setCampPosition(HOUSE_X, HOUSE_DOOR_Y + 60);
         gameEvents.emit(GAME_EVENT.ENTER_HOUSING);
       }
-    });
+    }));
     //-------충돌 관리 선------------
     const wallBodies: Phaser.GameObjects.Rectangle[] = [];
 
@@ -289,7 +298,15 @@ export default class BaseCampScene extends Phaser.Scene {
     });
   }
 
-  update(_time: number, delta: number) {
+  update(time: number, delta: number) {
+    try {
+      this.updateImpl(time, delta);
+    } catch (error) {
+      reportSceneError(this, error);
+    }
+  }
+
+  private updateImpl(_time: number, delta: number) {
     //좌표 확인용
     const pointer = this.input.activePointer;
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);

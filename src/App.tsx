@@ -8,6 +8,8 @@ import WorkshopPage from "./workshop/WorkshopPage";
 import EndingPage from "./shared/EndingPage";
 import AuthGate from "./auth/AuthGate";
 import AdminPage from "./admin/AdminPage";
+import ErrorBoundary from "./shared/ErrorBoundary";
+import AppErrorBridge from "./shared/AppErrorBridge";
 
 function BattlePageWrapper() {
   const location = useLocation();
@@ -19,18 +21,21 @@ function BattlePageWrapper() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthGate>
-        <Routes>
-          <Route path="/" element={<BaseCampPage />} />
-          <Route path="/battle" element={<BattlePageWrapper />} />
-          <Route path="/farm" element={<FarmPage />} />
-          <Route path="/forest" element={<ForestPage />} />
-          <Route path="/monsters" element={<MonstersPage />} />
-          <Route path="/workshop" element={<WorkshopPage />} />
-          <Route path="/ending" element={<EndingPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-        </Routes>
-      </AuthGate>
+      <ErrorBoundary>
+        <AppErrorBridge />
+        <AuthGate>
+          <Routes>
+            <Route path="/" element={<BaseCampPage />} />
+            <Route path="/battle" element={<BattlePageWrapper />} />
+            <Route path="/farm" element={<FarmPage />} />
+            <Route path="/forest" element={<ForestPage />} />
+            <Route path="/monsters" element={<MonstersPage />} />
+            <Route path="/workshop" element={<WorkshopPage />} />
+            <Route path="/ending" element={<EndingPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+          </Routes>
+        </AuthGate>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

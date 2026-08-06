@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
+import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
 import { getBattleInitData } from "./battleInitStore";
 import type { StatusEffect } from "../shared/game";
 import type { BattleResultPayload, BattlePlayerSwitchPayload } from "../shared/phaser/events";
@@ -94,6 +95,14 @@ export default class BattleScene extends Phaser.Scene {
   // ── 생존 플래그: false이면 모든 gameEvents 핸들러를 무시 ──
   private _isActive = false;
 
+  // ── 예외를 잡아 reportSceneError로 보내는 핸들러. on/off에서 동일 참조를 써야
+  //    리스너가 정확히 해제되므로 인스턴스 필드에 보관한다 ──
+  private safeOnStateUpdate!: (p: BattleSceneUpdatePayload) => void;
+  private safeOnBattleLog!: (message: string) => void;
+  private safeOnBattleResult!: (payload: BattleResultPayload) => void;
+  private safeOnBattleEnd!: () => void;
+  private safeOnPlayerSwitch!: (payload: BattlePlayerSwitchPayload) => void;
+
   constructor() {
     super("BattleScene");
   }
@@ -111,6 +120,14 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    try {
+      this.createImpl();
+    } catch (error) {
+      reportSceneError(this, error);
+    }
+  }
+
+  private createImpl() {
     this._isActive = true;
 
     // scene이 destroy될 때 gameEvents 리스너를 반드시 정리
@@ -143,11 +160,17 @@ export default class BattleScene extends Phaser.Scene {
       }).setOrigin(0.5, 0.5).setDepth(21);
     }
 
-    gameEvents.on(GAME_EVENT.BATTLE_STATE_UPDATE,  this.onStateUpdate,   this);
-    gameEvents.on(GAME_EVENT.BATTLE_LOG,           this.onBattleLog,     this);
-    gameEvents.on(GAME_EVENT.BATTLE_RESULT,        this.onBattleResult,  this);
-    gameEvents.on(GAME_EVENT.BATTLE_END,           this.onBattleEnd,     this);
-    gameEvents.on(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.onPlayerSwitch,  this);
+    this.safeOnStateUpdate  = safeHandler(this, this.onStateUpdate.bind(this));
+    this.safeOnBattleLog    = safeHandler(this, this.onBattleLog.bind(this));
+    this.safeOnBattleResult = safeHandler(this, this.onBattleResult.bind(this));
+    this.safeOnBattleEnd    = safeHandler(this, this.onBattleEnd.bind(this));
+    this.safeOnPlayerSwitch = safeHandler(this, this.onPlayerSwitch.bind(this));
+
+    gameEvents.on(GAME_EVENT.BATTLE_STATE_UPDATE,  this.safeOnStateUpdate);
+    gameEvents.on(GAME_EVENT.BATTLE_LOG,           this.safeOnBattleLog);
+    gameEvents.on(GAME_EVENT.BATTLE_RESULT,        this.safeOnBattleResult);
+    gameEvents.on(GAME_EVENT.BATTLE_END,           this.safeOnBattleEnd);
+    gameEvents.on(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.safeOnPlayerSwitch);
 
     this.cameras.main.fadeIn(500, 0, 0, 0);
 
@@ -545,12 +568,13 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private registerInput() {
-    this.input.keyboard!.on("keydown-Q", this.onAdvance, this);
-    this.input.keyboard!.on("keydown-SPACE", this.onAdvance, this);
+    const safeOnAdvance = safeHandler(this, this.onAdvance.bind(this));
+    this.input.keyboard!.on("keydown-Q", safeOnAdvance);
+    this.input.keyboard!.on("keydown-SPACE", safeOnAdvance);
     // 로그 박스 영역(하단) 클릭 또는 "showing" 상태면 어디 클릭해도 진행
-    this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
+    this.input.on("pointerdown", safeHandler(this, (p: Phaser.Input.Pointer) => {
       if (p.y > LOG_Y || this.logState === "showing") this.onAdvance();
-    });
+    }));
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -648,11 +672,11 @@ export default class BattleScene extends Phaser.Scene {
   private _removeGameListeners() {
     if (!this._isActive) return;
     this._isActive = false;
-    gameEvents.off(GAME_EVENT.BATTLE_STATE_UPDATE,  this.onStateUpdate,  this);
-    gameEvents.off(GAME_EVENT.BATTLE_LOG,           this.onBattleLog,    this);
-    gameEvents.off(GAME_EVENT.BATTLE_RESULT,        this.onBattleResult, this);
-    gameEvents.off(GAME_EVENT.BATTLE_END,           this.onBattleEnd,    this);
-    gameEvents.off(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.onPlayerSwitch, this);
+    gameEvents.off(GAME_EVENT.BATTLE_STATE_UPDATE,  this.safeOnStateUpdate);
+    gameEvents.off(GAME_EVENT.BATTLE_LOG,           this.safeOnBattleLog);
+    gameEvents.off(GAME_EVENT.BATTLE_RESULT,        this.safeOnBattleResult);
+    gameEvents.off(GAME_EVENT.BATTLE_END,           this.safeOnBattleEnd);
+    gameEvents.off(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.safeOnPlayerSwitch);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
