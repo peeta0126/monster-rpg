@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { RpsIcon } from "./RpsIcon";
-import type { RpsChoice } from "./RpsIcon";
+import type { RpsChoice } from "./rps";
 import type { RpsResult } from "../shared/craftingUtils";
 
 // ─── 중세 공방 팔레트 (CraftingModal과 통일) ──────────────────────────────────
@@ -20,6 +20,11 @@ const C = {
 // ─── RPS 로직 ─────────────────────────────────────────────────────────────────
 
 const RPS_CHOICES: RpsChoice[] = ["rock", "paper", "scissors"];
+
+/** 컴퓨터의 수를 뽑는다. 난수는 컴포넌트 밖에 두어 렌더 순수성 검사에 걸리지 않게 한다. */
+function pickComputerChoice(): RpsChoice {
+  return RPS_CHOICES[Math.floor(Math.random() * RPS_CHOICES.length)];
+}
 
 const RPS_LABEL: Record<RpsChoice, string> = {
   rock:     "바위",
@@ -77,7 +82,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
 
   const handleChoose = (choice: RpsChoice) => {
     if (result !== null) return;
-    const comp = RPS_CHOICES[Math.floor(Math.random() * 3)];
+    const comp = pickComputerChoice();
     setPlayerChoice(choice);
     setComputerChoice(comp);
     setResult(getResult(choice, comp));

@@ -730,21 +730,18 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
   const [toast,       setToast]       = useState<string | null>(null);
   const busyRef = useRef(false);
 
-  // 탭 변경 시 선택 초기화
-  useEffect(() => {
+  // 탭 변경 시 선택 초기화. 효과가 아니라 이벤트에서 처리한다 —
+  // 효과로 되돌리면 "이전 탭의 선택이 그려진 렌더" 한 번이 먼저 커밋되고 그 다음에 지워진다.
+  const changeTab = (next: AnvilTab) => {
+    setTab(next);
     setPrimaryId(null);
     setSecondaryId(null);
-  }, [tab]);
+  };
 
-  // primaryId가 더 이상 가방에 없으면 초기화 (분해 후 등)
-  useEffect(() => {
-    if (primaryId && !craftedArtifacts.find((a) => a.instanceId === primaryId)) {
-      setPrimaryId(null);
-    }
-    if (secondaryId && !craftedArtifacts.find((a) => a.instanceId === secondaryId)) {
-      setSecondaryId(null);
-    }
-  }, [craftedArtifacts, primaryId, secondaryId]);
+  // 가방에서 사라진 아티팩트를 가리키는 id는 따로 지우지 않는다 —
+  // 아래 primary/secondary가 항상 craftedArtifacts에서 find로 해석하므로 자연히 null이 되고,
+  // 선택 표시(=== primaryId)도 일치하는 항목이 없어 저절로 풀린다.
+  // (분해·강화 핸들러는 각자 자기 id를 직접 비운다.)
 
   // ESC 닫기
   useEffect(() => {
@@ -911,7 +908,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTab(t.id)}
+                onClick={() => changeTab(t.id)}
                 className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition hover:brightness-110"
                 style={{
                   background: active ? C.btnBg : "transparent",

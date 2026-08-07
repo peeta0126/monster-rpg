@@ -82,13 +82,8 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
     [selectedRecipeId, recipes],
   );
 
-  useEffect(() => {
-    if (!open) {
-      setActiveRecipe(null);
-      setCraftResult(null);
-      setSelectedRecipeId(recipes[0]?.id ?? "");
-    }
-  }, [open, recipes]);
+  // 닫힐 때 상태를 되돌리는 효과는 두지 않는다 — WorkshopPage가 열려 있을 때만 이 모달을
+  // 마운트하므로(open은 항상 true) 닫히면 컴포넌트째 사라지고 상태도 함께 초기화된다.
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

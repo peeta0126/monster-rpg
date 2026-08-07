@@ -115,6 +115,10 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
   const [stage, setStage]           = useState(0);
   const [keyIndex, setKeyIndex]     = useState(0); // 현재 스테이지 내 입력 위치
   const [phase, setPhase]           = useState<Phase>("playing");
+  /** 완료 화면에 표시할 최종 집계 (phase가 "done"이 되는 순간 확정된다) */
+  const [summary, setSummary] = useState<
+    { rating: ArrowMiniGameResult["rating"]; wrongInputCount: number; successCount: number } | null
+  >(null);
   const [timeProgress, setTimeProgress] = useState(1.0);
 
   // 스테이지 결과 이력 ("s"=성공, "f"=실패)
@@ -129,7 +133,9 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
   const stageRef      = useRef(0);
   const keyIndexRef   = useRef(0);
   const phaseRef      = useRef<Phase>("playing");
-  const stageStartRef = useRef(Date.now());
+  // 렌더 중 Date.now()를 부르면(useRef(Date.now())) 매 렌더마다 호출되면서 첫 값만 쓰이는 낭비가 되고,
+  // 무엇보다 "언제 측정된 시각인가"가 렌더 타이밍에 좌우된다. 실제 시작 시각은 타이머 시작 시점에 찍는다.
+  const stageStartRef = useRef(0);
   const successRef    = useRef(0);
   const failRef       = useRef(0);
   const timeoutRef    = useRef(0);
@@ -137,7 +143,8 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
   const stageMissRef  = useRef(0); // 현재 스테이지에서 틀린 횟수 (0이어야 스테이지 "성공")
   const stagesRef     = useRef(stages);
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
+  // 렌더 중에 ref를 쓰면 안 되므로(동시성 렌더에서 버려질 렌더의 값이 남을 수 있다) 커밋 후에 갱신한다
+  useEffect(() => { onCompleteRef.current = onComplete; });
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // 언마운트 시 대기 중인 피드백 타이머 정리 (모달을 닫아도 콜백이 뒤늦게 실행되는 것 방지)
@@ -155,6 +162,8 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
         setPhase("done");
         phaseRef.current = "done";
         const rating = calcRating(wrongRef.current);
+        // 완료 화면이 렌더 중에 ref를 읽지 않도록, 최종 집계는 이 시점에 상태로 확정한다
+        setSummary({ rating, wrongInputCount: wrongRef.current, successCount: successRef.current });
         onCompleteRef.current({
           totalStages:     TOTAL_STAGES,
           successCount:    successRef.current,
@@ -181,6 +190,8 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
 
   // ─── 타이머 ───────────────────────────────────────────────────────────────
   useEffect(() => {
+    // 첫 스테이지의 시작 시각은 타이머가 도는 시점 기준으로 잡는다
+    stageStartRef.current = Date.now();
     const id = setInterval(() => {
       if (phaseRef.current !== "playing") return;
       const elapsed  = Date.now() - stageStartRef.current;
@@ -252,7 +263,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
 
   // ─── 완료 화면 ─────────────────────────────────────────────────────────────
   if (phase === "done") {
-    const rating      = calcRating(wrongRef.current);
+    const rating      = summary?.rating ?? calcRating(0);
     const ratingColor = RATING_COLOR[rating];
     return (
       <div
@@ -269,7 +280,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
           {RATING_LABEL[rating]}
         </p>
         <p className="mt-1 text-center text-xs" style={{ color: C.textFaint }}>
-          전체 {TOTAL_KEYS}키 중 틀린 키 {wrongRef.current}개 &nbsp;·&nbsp; 스테이지 완전성공 {successRef.current}/{TOTAL_STAGES}
+          전체 {TOTAL_KEYS}키 중 틀린 키 {summary?.wrongInputCount ?? 0}개 &nbsp;·&nbsp; 스테이지 완전성공 {summary?.successCount ?? 0}/{TOTAL_STAGES}
         </p>
         <p className="mt-3 text-center text-xs animate-pulse" style={{ color: C.textFaint }}>
           품질을 결정하는 중...

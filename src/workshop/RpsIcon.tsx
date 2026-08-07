@@ -1,10 +1,4 @@
-export type RpsChoice = "rock" | "paper" | "scissors";
-
-export const RPS_KO: Record<RpsChoice, string> = {
-  rock: "바위",
-  paper: "보",
-  scissors: "가위",
-};
+import type { RpsChoice } from "./rps";
 
 // ─── 바위 (Rock) ───────────────────────────────────────────────────────────────
 function RockSvg({ active }: { active?: boolean }) {
