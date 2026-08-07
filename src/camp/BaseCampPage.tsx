@@ -99,11 +99,14 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
   onBack: () => void;
   onGoTo: (id: string) => void;
 }) {
+  // 훅은 조건부 return보다 먼저 호출해야 한다 — 존재하지 않는 id로 들어와 일찍 return하면
+  // 렌더마다 훅 개수가 달라져 React가 "Rendered fewer hooks than expected"로 죽는다.
+  const dexSeen = usePlayerStore((s) => s.dexSeen);
+
   const m = monsters.find(x => x.id === monsterId);
   if (!m) return null;
   const learnset = getFullLearnset(monsterId);
-  const dexSeen   = usePlayerStore((s) => s.dexSeen);
-  const chain     = getEvolutionChain(monsterId);
+  const chain    = getEvolutionChain(monsterId);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -520,12 +523,18 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
 
 function TowerModal({
   bestFloor,
+  cleared,
   onSelect,
   onClose,
+  onHeal,
+  healed,
 }: {
   bestFloor: number;
+  cleared: boolean;
   onSelect: (floor: number) => void;
   onClose: () => void;
+  onHeal: () => void;
+  healed: boolean;
 }) {
   const maxSelectable = Math.min(bestFloor + 1, MAX_TOWER_FLOOR);
   const checkpoints: number[] = [1];
@@ -541,10 +550,26 @@ function TowerModal({
         className="relative w-full max-w-sm rounded-2xl border border-blue-900/60 bg-zinc-950 p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-zinc-100 mb-1">무한의 탑</h2>
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-lg font-bold text-zinc-100">무한의 탑</h2>
+          {cleared && (
+            <span className="rounded border border-amber-600/70 bg-amber-950/50 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+              정복 완료
+            </span>
+          )}
+        </div>
         <p className="text-xs text-zinc-500 mb-4">
           {bestFloor > 0 ? `최고 도달 층: ${bestFloor}층` : "아직 탑에 오른 기록이 없습니다."}
         </p>
+
+        {/* 회복을 여기서 바로 — 예전에는 /monsters까지 갔다가 탑 앞까지 다시 걸어와야 했다 */}
+        <button
+          onClick={onHeal}
+          disabled={healed}
+          className="mb-3 w-full rounded-xl border border-sky-800/70 bg-sky-950/50 py-2 text-xs font-semibold text-sky-300 hover:bg-sky-900/50 disabled:opacity-40 transition"
+        >
+          {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
+        </button>
 
         <div className="flex flex-col gap-2">
           <button
@@ -594,17 +619,21 @@ function MenuModal({
   onOpenDex,
   onGoToMonsters,
   onGoToFarm,
+  onOpenTower,
 }: {
   onClose: () => void;
   onOpenQuestLog: () => void;
   onOpenDex: () => void;
   onGoToMonsters: () => void;
   onGoToFarm: () => void;
+  onOpenTower: () => void;
 }) {
   const logout = useAuthStore((s) => s.logout);
   const isGuest = useAuthStore((s) => s.isGuest);
 
   const items = [
+    // 탑 재도전 때마다 캐릭터를 탑까지 걸어가게 하지 않기 위해 메뉴에서도 층 선택을 연다
+    { label: "무한의 탑", emoji: "🗼", color: "border-blue-800/60 text-blue-300 hover:bg-blue-950/40",     onClick: onOpenTower },
     { label: "퀘스트",    emoji: "📜", color: "border-orange-800/60 text-orange-300 hover:bg-orange-950/40", onClick: onOpenQuestLog },
     { label: "내 몬스터", emoji: "👾", color: "border-indigo-800/60 text-indigo-300 hover:bg-indigo-950/40", onClick: onGoToMonsters },
     { label: "가방",      emoji: "🎒", color: "border-amber-800/60 text-amber-300 hover:bg-amber-950/40",   onClick: onGoToFarm },
@@ -655,9 +684,12 @@ export default function BaseCampPage() {
   const [dexOpen, setDexOpen]           = useState(false);
   const [questLogOpen, setQuestLogOpen] = useState(false);
   const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string; isCatchZone: boolean } | null>(null);
+  const [healed, setHealed] = useState(false);
   const [npcDialogue, setNpcDialogue]   = useState<NpcDialoguePayload | null>(null);
   const [dialogueLineIndex, setDialogueLineIndex] = useState(0);
   const bestFloor = usePlayerStore((s) => s.bestFloor);
+  const towerCleared = usePlayerStore((s) => s.storyFlags.tower_cleared);
+  const restorePartyHp = usePlayerStore((s) => s.restorePartyHp);
   const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
   const acceptQuest = usePlayerStore((s) => s.acceptQuest);
   const completeQuest = usePlayerStore((s) => s.completeQuest);
@@ -770,6 +802,11 @@ export default function BaseCampPage() {
           onOpenDex={() => { setMenuOpen(false); setDexOpen(true); }}
           onGoToMonsters={() => navigate("/monsters")}
           onGoToFarm={() => navigate("/farm", { state: { from: "basecamp" } })}
+          onOpenTower={() => {
+            setMenuOpen(false);
+            setHealed(false);
+            setTowerPayload({ from: "menu", portalId: "none", isCatchZone: false });
+          }}
         />
       )}
 
@@ -780,8 +817,11 @@ export default function BaseCampPage() {
       {towerPayload && (
         <TowerModal
           bestFloor={bestFloor}
+          cleared={towerCleared}
           onSelect={handleTowerSelect}
-          onClose={() => setTowerPayload(null)}
+          onClose={() => { setTowerPayload(null); setHealed(false); }}
+          onHeal={() => { restorePartyHp(); setHealed(true); }}
+          healed={healed}
         />
       )}
 

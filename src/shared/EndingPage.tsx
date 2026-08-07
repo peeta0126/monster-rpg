@@ -1,7 +1,14 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePlayerStore } from "./playerStore";
 
 export default function EndingPage() {
   const navigate = useNavigate();
+  const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
+
+  // 엔딩에 도달했다는 사실을 세이브에 남긴다.
+  // bestFloor >= 50(floor_50)은 "오름을 이겼다"까지만 알려주고 엔딩을 봤는지는 구분하지 못한다.
+  useEffect(() => { setStoryFlag("tower_cleared"); }, [setStoryFlag]);
 
   return (
     <div

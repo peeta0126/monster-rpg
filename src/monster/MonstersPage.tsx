@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
 import { MONSTER_IMAGE_MAP, monsterImgStyle } from "./monsterImages";
+import { getFullLearnset } from "./learnset";
+import { monsters } from "./monsters";
 import type { ArtifactInstance } from "../shared/crafting";
 import {
   ARTIFACT_SLOT_MAP, ARTIFACT_SLOT_LABEL, ALL_ARTIFACT_SLOTS,
@@ -346,6 +348,50 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
           </div>
         </div>
 
+        {/* 성장 — 다음 레벨까지, 다음에 배울 기술, 진화 예정 */}
+        {(() => {
+          const expPct = monster.expToNextLevel > 0
+            ? Math.min(100, (monster.exp / monster.expToNextLevel) * 100) : 0;
+          const nextLearn = getFullLearnset(monster.id).find((e) => e.level > monster.level);
+          const evoTo = monster.evolvesTo
+            ? monsters.find((m) => m.id === monster.evolvesTo) : undefined;
+          return (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+                성장
+              </p>
+              <div className="rounded-xl px-3 py-2.5"
+                style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] font-bold" style={{ color: "rgba(180,120,30,.6)" }}>다음 레벨까지</span>
+                  <span className="text-[10px] font-mono text-zinc-300">
+                    {monster.exp} / {monster.expToNextLevel}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,.07)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${expPct}%`, background: "#d4a017" }} />
+                </div>
+
+                {nextLearn && (
+                  <p className="mt-2 text-[10px]" style={{ color: "rgba(200,160,90,.85)" }}>
+                    Lv.{nextLearn.level} — <span className="font-bold text-zinc-200">{nextLearn.move.name}</span> 습득
+                  </p>
+                )}
+                {evoTo && monster.evolvesAtLevel !== undefined && (
+                  <p className="mt-1 text-[10px]" style={{ color: "rgba(200,160,90,.85)" }}>
+                    Lv.{monster.evolvesAtLevel} — <span className="font-bold text-zinc-200">{evoTo.name}</span>(으)로 진화
+                  </p>
+                )}
+                {!nextLearn && !evoTo && (
+                  <p className="mt-2 text-[10px]" style={{ color: "rgba(140,90,20,.7)" }}>
+                    더 배울 기술도, 남은 진화도 없습니다.
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 보유 스킬 */}
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
@@ -544,7 +590,8 @@ export default function MonstersPage() {
   // 아무것도 선택되지 않은 상태라면 선택 표시와 함께 상세 정보를 띄운다.
   const handlePartyClick = (idx: number) => {
     if (selStorage !== null) {
-      idx < party.length ? swapWithStorage(idx, selStorage) : moveToParty(selStorage, idx);
+      if (idx < party.length) swapWithStorage(idx, selStorage);
+      else moveToParty(selStorage, idx);
       setSelStorage(null); setSelParty(null); setDetailUid(null); return;
     }
     if (selParty !== null && selParty !== idx) {
@@ -561,7 +608,8 @@ export default function MonstersPage() {
 
   const handleStorageClick = (uid: string) => {
     if (selParty !== null) {
-      selParty < party.length ? swapWithStorage(selParty, uid) : moveToParty(uid, selParty);
+      if (selParty < party.length) swapWithStorage(selParty, uid);
+      else moveToParty(uid, selParty);
       setSelParty(null); setSelStorage(null); setDetailUid(null); return;
     }
     if (selStorage === uid) {

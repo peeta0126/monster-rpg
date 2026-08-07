@@ -10,6 +10,7 @@ import AuthGate from "./auth/AuthGate";
 import AdminPage from "./admin/AdminPage";
 import ErrorBoundary from "./shared/ErrorBoundary";
 import AppErrorBridge from "./shared/AppErrorBridge";
+import SaveIndicator from "./shared/SaveIndicator";
 
 function BattlePageWrapper() {
   const location = useLocation();
@@ -24,6 +25,7 @@ export default function App() {
       <ErrorBoundary>
         <AppErrorBridge />
         <AuthGate>
+          <SaveIndicator />
           <Routes>
             <Route path="/" element={<BaseCampPage />} />
             <Route path="/battle" element={<BattlePageWrapper />} />

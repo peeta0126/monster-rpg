@@ -168,7 +168,7 @@ export function checkStatusEffects(monster: BattleMonster): {
   }
 
   const logs: string[] = [];
-  let updated = { ...monster };
+  const updated = { ...monster };
   let skipTurn = false;
 
   switch (monster.status) {
@@ -299,6 +299,16 @@ export function getAIAction(
 // ─── 경험치 / 레벨업 ────────────────────────────────────────────────────────────
 
 /** 경험치 획득 처리. 레벨업 시 스탯 자동 증가 및 HP 전회복 */
+/**
+ * 레벨업 시 다음 레벨에 필요한 경험치가 불어나는 배율.
+ *
+ * 이 값이 1.2였을 때는 요구 경험치가 지수로 늘어나는데(100 × 1.2^(레벨-1)) 적이 주는 경험치는
+ * 층수에 비례해 선형으로만 늘어나서(rewardExp × (1 + 0.15n)), 층이 오를수록 격차가 벌어졌다.
+ * 40층 무렵엔 한 레벨에 100전투가 넘게 필요해 사실상 진행이 멈춘다.
+ * 시뮬레이션(scripts/sim)으로 1.20 / 1.14 / 1.12 / 1.10을 비교해 정한 값이다.
+ */
+export const EXP_GROWTH_RATE = 1.04;
+
 export function gainExp(monster: BattleMonster, gainedExp: number) {
   let nextMonster: BattleMonster = {
     ...monster,
@@ -312,7 +322,7 @@ export function gainExp(monster: BattleMonster, gainedExp: number) {
       ...nextMonster,
       exp: nextMonster.exp - nextMonster.expToNextLevel,
       level: nextMonster.level + 1,
-      expToNextLevel: Math.floor(nextMonster.expToNextLevel * 1.2),
+      expToNextLevel: Math.floor(nextMonster.expToNextLevel * EXP_GROWTH_RATE),
       maxHp: nextMonster.maxHp + 10,
       attack: nextMonster.attack + 3,
       defense: nextMonster.defense + 2,

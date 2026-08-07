@@ -114,6 +114,48 @@ export const POTION_RECIPES: CraftingRecipe[] = [
     resultItemName: "슈퍼 물약",
   },
   {
+    // items.ts의 POTIONS에는 맥스 물약·해독제가 있는데 공방 레시피가 없어 획득할 방법이
+    // 아예 없었다(store의 craftPotion은 어떤 화면에서도 호출되지 않는다).
+    id:             "ws_max_potion",
+    name:           "맥스 물약",
+    description:    "HP를 완전히 회복시키는 상급 물약입니다.",
+    difficulty:     "hard",
+    stationType:    "potion",
+    costs: [
+      { itemId: "herb",            name: "약초",        amount: 3 },
+      { itemId: "crystal",         name: "빛의 수정",    amount: 1 },
+      { itemId: "monster_essence", name: "몬스터 정수",  amount: 1 },
+    ],
+    resultItemId:   "max_potion",
+    resultItemName: "맥스 물약",
+  },
+  {
+    id:             "ws_antidote",
+    name:           "해독제",
+    description:    "독·화상·마비·빙결 상태를 치료합니다.",
+    difficulty:     "easy",
+    stationType:    "potion",
+    costs: [
+      { itemId: "berry", name: "열매", amount: 2 },
+    ],
+    resultItemId:   "antidote",
+    resultItemName: "해독제",
+  },
+  {
+    id:             "ws_strong_focus_potion",
+    name:           "강한 집중의 물약",
+    description:    "더 오래, 더 크게 공격력을 끌어올립니다.",
+    difficulty:     "hard",
+    stationType:    "potion",
+    costs: [
+      { itemId: "herb",       name: "약초",      amount: 2 },
+      { itemId: "crystal",    name: "빛의 수정",  amount: 1 },
+      { itemId: "magic_dust", name: "마법 가루",  amount: 1 },
+    ],
+    resultItemId:   "strong_attack_buff",
+    resultItemName: "강력 전투 물약",
+  },
+  {
     id:             "ws_mothers_cure",
     name:           "어머니의 치료약",
     description:    "만물의 정수로 만든, 모든 원소의 파장을 씻어내는 치료약입니다.",

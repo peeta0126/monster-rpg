@@ -61,3 +61,8 @@ canvas {
   animation: float-enemy 1.6s ease-in-out infinite;
   transform-origin: center bottom;
 }
+/* 공방 제작대 위치 표식 — 멀리서도 눈에 띄도록 살짝 떠 있는 느낌 */
+@keyframes workshopMarkerBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}

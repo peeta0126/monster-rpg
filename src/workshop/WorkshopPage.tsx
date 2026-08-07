@@ -491,6 +491,44 @@ export default function WorkshopPage() {
             </div>
           ))}
 
+          {/* ── 제작대 위치 표식 ────────────────────────────────────────────
+              상호작용 안내가 "가까이 가야" 뜨는 탓에, 넓은 방에 처음 들어오면
+              모루·연금술대·아티팩트 제작대가 어디인지 몰라 한 바퀴 돌아야 했다.
+              멀리서도 보이는 표식을 두되, 가까이 가면(nearStation) 하단 안내에
+              자리를 넘기고 흐려진다. */}
+          {!activeStation && CRAFTING_STATIONS.map((s) => {
+            const isNear = nearStation?.id === s.id;
+            return (
+              <div
+                key={`marker-${s.id}`}
+                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-opacity duration-200"
+                style={{ left: `${s.x}%`, top: `${s.y}%`, opacity: isNear ? 0.35 : 1 }}
+              >
+                <div
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-sm"
+                  style={{
+                    background: "rgba(18,9,2,0.85)",
+                    border: `2px solid ${isNear ? "#f5e6c8" : "rgba(212,160,23,0.9)"}`,
+                    boxShadow: "0 0 12px rgba(180,120,30,0.55)",
+                    animation: isNear ? undefined : "workshopMarkerBob 1.8s ease-in-out infinite",
+                  }}
+                >
+                  {s.type === "anvil" ? "🔨" : s.type === "potion" ? "⚗️" : "✦"}
+                </div>
+                <span
+                  className="mt-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold"
+                  style={{
+                    background: "rgba(18,9,2,0.85)",
+                    color: "#f5e6c8",
+                    border: "1px solid rgba(180,120,30,0.5)",
+                  }}
+                >
+                  {s.label}
+                </span>
+              </div>
+            );
+          })}
+
           {/* ── 디버그: 제작대 판정 원 표시 ─────────────────────────────────── */}
           {SHOW_INTERACTION_DEBUG && CRAFTING_STATIONS.map((s) => (
             <div

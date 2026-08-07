@@ -491,12 +491,15 @@ export default class BattleScene extends Phaser.Scene {
       const barX = px + 10;
       const barY = py + ph - 22;
       const barW = pw - 20;
-      this.add.text(barX, barY - 12, "HP", { fontSize: "9px", fontFamily: "monospace", color: "#7a6040" }).setDepth(9);
+      this.add.text(barX, barY - 13, "HP", { fontSize: "10px", fontFamily: "monospace", color: "#b08850" }).setDepth(9);
       this.enemyHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.enemyHpBar, barX, barY, barW, BAR_H, 1, true);
-      this.enemyHpText = this.add.text(barX + barW - 2, barY - 1, "", {
-        fontSize: "9px", fontFamily: "monospace", color: "#aa8860",
-      }).setOrigin(1, 0).setDepth(9);
+      // HP 수치는 "몇 대 더 때려야 하나"를 판단하는 핵심 정보라 캔버스가 축소돼도 읽히도록
+      // 크기와 대비를 올린다(9px/어두운 갈색 → 13px/밝은 색 + 검은 외곽선).
+      this.enemyHpText = this.add.text(barX + barW, barY - 2, "", {
+        fontSize: "13px", fontFamily: "monospace", color: "#ffe0b0",
+        stroke: "#000000", strokeThickness: 3,
+      }).setOrigin(1, 1).setDepth(10);
     } else {
       this.playerNameText = this.add.text(px + 10, py + 7, "내 몬스터 Lv.-", {
         fontSize: "11px", fontFamily: "monospace", color: "#9ac8e8",
@@ -510,12 +513,13 @@ export default class BattleScene extends Phaser.Scene {
       const barX = px + 10;
       const barY = py + ph - 22;
       const barW = pw - 20;
-      this.add.text(barX, barY - 12, "HP", { fontSize: "9px", fontFamily: "monospace", color: "#406080" }).setDepth(9);
+      this.add.text(barX, barY - 13, "HP", { fontSize: "10px", fontFamily: "monospace", color: "#6ea0c8" }).setDepth(9);
       this.playerHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.playerHpBar, barX, barY, barW, BAR_H, 1, false);
-      this.playerHpText = this.add.text(barX + barW - 2, barY - 1, "", {
-        fontSize: "9px", fontFamily: "monospace", color: "#608aaa",
-      }).setOrigin(1, 0).setDepth(9);
+      this.playerHpText = this.add.text(barX + barW, barY - 2, "", {
+        fontSize: "13px", fontFamily: "monospace", color: "#b8e0ff",
+        stroke: "#000000", strokeThickness: 3,
+      }).setOrigin(1, 1).setDepth(10);
     }
   }
 

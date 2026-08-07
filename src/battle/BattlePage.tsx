@@ -7,6 +7,7 @@ import { POTIONS, getMaterial } from "../shared/items";
 import type { Move, ElementType } from "../shared/game";
 import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
 import { isAnomalyMove } from "../monster/learnset";
+import { applyLevelGrowth } from "../monster/growth";
 import { sumEquippedStatBonuses, sumEquippedBonusStats } from "../shared/craftingUtils";
 
 /** OwnedMonster → 배틀 진입용 OwnedMonster. 장착 장비의 HP 보너스를 max/currentHp에 미리 반영한다.
@@ -25,10 +26,13 @@ function rollBattleDrop(floor: number): { id: string; count: number }[] {
   const rollChance = isBossFloor(floor) ? 0.95 : 0.45;
   if (Math.random() > rollChance) return drops;
 
-  // 층수별 드랍 테이블
+  // 층수별 드랍 테이블.
+  // monster_essence(몬스터 정수)와 enhancement_stone(강화석)은 원래 어느 전투 드랍에도 없어
+  // 상위 아티팩트 제작과 장비 레벨업이 통째로 막혀 있었다 — 상위 층 보상에 포함한다.
   const pool: string[] =
-    floor >= 21 ? ["iron_fragment", "crystal", "wood_plank"] :
-    floor >= 11 ? ["iron_fragment", "wood_plank", "leather"] :
+    floor >= 31 ? ["iron_fragment", "crystal", "monster_essence", "enhancement_stone"] :
+    floor >= 21 ? ["iron_fragment", "crystal", "wood_plank", "monster_essence", "enhancement_stone"] :
+    floor >= 11 ? ["iron_fragment", "wood_plank", "leather", "enhancement_stone"] :
                   ["wood_plank", "leather", "herb"];
 
   const count = isBossFloor(floor) ? 2 + (Math.random() < 0.5 ? 1 : 0) : 1;
@@ -87,6 +91,9 @@ const TYPE_COLORS: Record<string, string> = {
 };
 function typeClass(t: string) { return TYPE_COLORS[t] ?? TYPE_COLORS.normal; }
 
+/** 출전하지 않은 파티원이 받는 경험치 비율 (출전 몬스터 대비) */
+const BENCH_EXP_SHARE = 0.5;
+
 // ─── 컴포넌트 ────────────────────────────────────────────────────────────────────
 
 export default function BattlePage() {
@@ -101,7 +108,7 @@ export default function BattlePage() {
 
   const { updateBestFloor, updatePartyMember, addCapturedMonster,
           addToDexSeen, addToDexCaught, usePotion: consumePotion,
-          addMaterial, setStoryFlag, dexCaught } = usePlayerStore();
+          addMaterial, setStoryFlag, dexCaught, restorePartyHp } = usePlayerStore();
 
   // 장착 장비의 HP 보너스를 미리 반영한 파티 스냅샷 (공/방/속/치명/속성은 여기서 반영하지 않고
   // 데미지 계산 시점에만 임시로 더한다 — HP만 전투 내내 상태로 들고 있어야 하는 값이라 예외)
@@ -133,6 +140,21 @@ export default function BattlePage() {
   const [battleOutcome, setBattleOutcome] = useState<"win" | "lose" | null>(null);
   const [showResultUI,  setShowResultUI]  = useState(false);
   const [battleDrops,   setBattleDrops]   = useState<{ id: string; count: number }[]>([]);
+  /** 최근 전투 로그. 캔버스 로그는 한 줄씩 지나가 버려서 놓치면 확인할 방법이 없었다. */
+  const [logHistory,    setLogHistory]    = useState<string[]>([]);
+  /** 결과 화면에서 회복을 눌렀는지 (중복 클릭 방지 겸 피드백) */
+  const [healed,        setHealed]        = useState(false);
+  const [showLog,       setShowLog]       = useState(false);
+  /** 기술 칸이 찼을 때 띄우는 "무엇을 잊을까" 선택 창 */
+  const [forgetPrompt, setForgetPrompt] = useState<
+    { current: Move[]; incoming: Move; resolve: (idx: number | null) => void } | null
+  >(null);
+
+  // BATTLE_READY 시점에 최신 값을 읽기 위한 참조 (마운트 effect의 클로저는 초기값에 묶여 있다)
+  const playerRef = useRef(player);
+  const enemyRef  = useRef(enemyState);
+  playerRef.current = player;
+  enemyRef.current  = enemyState;
 
   const enemyTurnRef = useRef(0);
   const cancelledRef = useRef(false);
@@ -147,9 +169,16 @@ export default function BattlePage() {
   useEffect(() => { cancelledRef.current = false; return () => { cancelledRef.current = true; }; }, []);
   // BattleScene의 BATTLE_LOG 리스너가 등록된 뒤에만 조작을 허용
   useEffect(() => {
-    const onReady = () => setIsProcessing(false);
+    const onReady = () => {
+      setIsProcessing(false);
+      // 최초 HP를 한 번 더 보낸다. React의 마운트 effect가 씬 create()보다 먼저 돌아서
+      // 첫 BATTLE_STATE_UPDATE를 아무도 받지 못했고, 그 탓에 전투 시작 시점에는
+      // HP 수치가 빈 문자열로 남아 있었다(첫 공격이 오가야 비로소 채워졌다).
+      syncHpToPhaser(playerRef.current, enemyRef.current);
+    };
     gameEvents.once(GAME_EVENT.BATTLE_READY, onReady);
     return () => { gameEvents.off(GAME_EVENT.BATTLE_READY, onReady); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (!battleOutcome) return;
@@ -182,6 +211,7 @@ export default function BattlePage() {
       const timer = setTimeout(done, 5000);
       gameEvents.once(GAME_EVENT.BATTLE_LOG_ACK, done);
       gameEvents.emit(GAME_EVENT.BATTLE_LOG, text);
+      setLogHistory((prev) => [...prev.slice(-49), text]);
     });
   }, []);
 
@@ -216,6 +246,38 @@ export default function BattlePage() {
     gameEvents.emit(GAME_EVENT.BATTLE_RESULT, { outcome, floor });
     setBattleOutcome(outcome);
   }, [floor]);
+
+  /**
+   * 기술 칸(4개)이 찼는데 새 기술을 배울 때, 무엇을 잊을지 플레이어에게 묻는다.
+   * 예전에는 가장 약한 기술이 말없이 밀려나서, 일부러 남기고 싶은 상태이상기를 지킬 수 없었다.
+   */
+  const askWhichToForget = useCallback(
+    (current: Move[], incoming: Move) =>
+      new Promise<number | null>((resolve) => {
+        setForgetPrompt({ current, incoming, resolve });
+      }),
+    [],
+  );
+
+  const answerForget = useCallback((idx: number | null) => {
+    setForgetPrompt((p) => { p?.resolve(idx); return null; });
+  }, []);
+
+  /**
+   * 도망 — 전투를 포기하고 베이스캠프로 돌아간다.
+   * 이 전투에서 깎인 HP는 그대로 저장한다(도망이 완전 공짜면 위험한 층을 정찰만 하고 빠지는
+   * 무손실 전략이 되므로). 보스층은 도망 대상이 아니다.
+   */
+  const handleFlee = useCallback(() => {
+    if (isProcessing || battleOutcome !== null || isBossFloor(floor)) return;
+    for (let i = 0; i < initialParty.length; i++) {
+      const m = initialParty[i];
+      const hp = i === activePartyIndex ? player.currentHp : (partyHp[m.uid] ?? m.currentHp);
+      updatePartyMember({ ...m, currentHp: Math.max(0, hp) });
+    }
+    navigate("/");
+  }, [isProcessing, battleOutcome, floor, initialParty, activePartyIndex, player,
+      partyHp, updatePartyMember, navigate]);
 
   // ─── 파티 전원 기절 여부 ────────────────────────────────────────────────────────
   const hasAlivePartyMember = useCallback(
@@ -386,10 +448,29 @@ export default function BattlePage() {
 
     if (playerWon) {
       const earnedExp = Math.floor(ne.rewardExp * (1 + playerBonus.expBonus / 100));
+      const prevLevel = np.level;
       const expResult = gainExp(np, earnedExp);
       np = expResult.updatedMonster;
       await sendLogAndWait(`경험치 ${earnedExp}를 획득했다!`);
       if (expResult.leveledUp) await sendLogAndWait(`레벨이 ${np.level}(으)로 올랐다!`);
+
+      // 레벨업에 딸린 성장(기술 습득·진화)을 적용한다
+      if (expResult.leveledUp) {
+        const growth = await applyLevelGrowth(np, prevLevel, askWhichToForget);
+        np = growth.monster;
+        for (const mv of growth.forgotten) {
+          await sendLogAndWait(`${np.name}은(는) ${mv.name}을(를) 잊어버렸다...`);
+        }
+        for (const mv of growth.learned) {
+          await sendLogAndWait(`${np.name}은(는) ${mv.name}을(를) 배웠다!`);
+        }
+        if (growth.evolvedFrom) {
+          await sendLogAndWait(`…어라? ${growth.evolvedFrom}의 모습이 변하고 있다!`);
+          await sendLogAndWait(`${growth.evolvedFrom}은(는) ${np.name}(으)로 진화했다!`);
+          addToDexSeen(np.id);
+          addToDexCaught(np.id);
+        }
+      }
 
       // 재료 드랍
       const battleDrops = rollBattleDrop(floor);
@@ -413,6 +494,29 @@ export default function BattlePage() {
           : np.currentHp;
         updatePartyMember({ ...owned, ...np, uid: owned.uid, maxHp: persistedMaxHp, currentHp: persistedCurrentHp });
       }
+
+      // 출전하지 않은 파티원에게도 경험치를 나눠준다.
+      // 예전에는 마지막에 싸운 한 마리만 경험치를 받아서, 탑을 오를수록 나머지 둘이 방치되고
+      // 사실상 1마리로 50층을 가야 했다(교체는 곧 레벨 20짜리를 레벨 40 적 앞에 내놓는 일).
+      for (let i = 0; i < initialParty.length; i++) {
+        if (i === activePartyIndex) continue;
+        const mate = initialParty[i];
+        const hp = partyHp[mate.uid] ?? mate.currentHp;
+        if (hp <= 0) continue;   // 기절한 몬스터는 분배 대상에서 제외
+        const share = Math.max(1, Math.floor(earnedExp * BENCH_EXP_SHARE));
+        const bm = createBattleMonsterFromOwned({ ...mate, currentHp: hp });
+        const prev = bm.level;
+        const res = gainExp(bm, share);
+        let grownMate = res.updatedMonster;
+        if (res.leveledUp) {
+          // 대기 파티원까지 매번 물으면 승리 화면이 선택 창으로 도배된다 → 자동 판단
+          const g = await applyLevelGrowth(grownMate, prev);
+          grownMate = g.monster;
+          if (g.evolvedFrom) { addToDexSeen(grownMate.id); addToDexCaught(grownMate.id); }
+        }
+        updatePartyMember({ ...mate, ...grownMate, uid: mate.uid });
+      }
+
       updateBestFloor(floor);
       addToDexSeen(ne.id);
       setPlayer(np); setEnemyState(ne);
@@ -463,7 +567,7 @@ export default function BattlePage() {
 
     if (mustSwitch) { setIsProcessing(false); return; }
 
-    let ne = enemyState;
+    const ne = enemyState;
     const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, nextPlayer);
     const nextDefBonus = getEquipCombatBonus(nextOwned.uid).defense;
     const atk = await resolveAttack(ne, nextPlayer, eMove, nextPlayer, ne, false, 0, nextDefBonus);
@@ -531,7 +635,7 @@ export default function BattlePage() {
     syncHpToPhaser(np, enemyState);
 
     // 적 반격 (아이템 사용 = 1턴 소비)
-    let ne = enemyState;
+    const ne = enemyState;
     const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, np);
     const playerDefBonus = getEquipCombatBonus(uid).defense;
     const atk = await resolveAttack(ne, np, eMove, np, ne, false, 0, playerDefBonus);
@@ -571,7 +675,8 @@ export default function BattlePage() {
       finishBattle("win"); setIsProcessing(false); return;
     }
 
-    let np = player, ne = enemyState;
+    let np = player;
+    const ne = enemyState;
     const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, np);
     const playerDefBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid).defense;
     const atk = await resolveAttack(ne, np, eMove, np, ne, false, 0, playerDefBonus);
@@ -653,12 +758,40 @@ export default function BattlePage() {
             <span className="rounded bg-amber-950/60 px-1.5 py-0.5 text-amber-500 font-mono text-[10px] font-bold">
               {floor}F
             </span>
+            <button onClick={() => setShowLog((v) => !v)}
+              className={`text-[10px] border rounded px-1.5 py-0.5 transition ${
+                showLog ? "border-zinc-600 text-zinc-300" : "border-zinc-800 text-zinc-600 hover:text-zinc-400"}`}>
+              기록
+            </button>
+            {/* 도망: 보스층에서는 불가 (보스는 정면으로 넘어야 하는 관문) */}
+            {battleOutcome === null && (
+              <button onClick={handleFlee} disabled={isProcessing || isBossFloor(floor)}
+                title={isBossFloor(floor) ? "보스에게서는 도망칠 수 없다" : "이 전투를 포기하고 베이스캠프로"}
+                className="text-[10px] text-zinc-600 hover:text-zinc-400 border border-zinc-800 rounded px-1.5 py-0.5 disabled:opacity-30">
+                도망
+              </button>
+            )}
             <button onClick={() => navigate("/")}
               className="text-[10px] text-zinc-600 hover:text-zinc-400 border border-zinc-800 rounded px-1.5 py-0.5">
               나가기
             </button>
           </div>
         </div>
+
+        {/* 전투 기록 — 캔버스 로그는 한 줄씩 지나가므로 놓친 줄을 여기서 다시 본다 */}
+        {showLog && (
+          <div className="border-b border-zinc-800 bg-black/50 px-3 py-2">
+            <div className="max-h-24 overflow-y-auto flex flex-col-reverse gap-0.5">
+              {logHistory.length === 0
+                ? <p className="text-[10px] text-zinc-700">아직 기록이 없습니다.</p>
+                : [...logHistory].reverse().map((line, i) => (
+                    <p key={logHistory.length - i} className={`text-[10px] ${i === 0 ? "text-zinc-300" : "text-zinc-600"}`}>
+                      {line}
+                    </p>
+                  ))}
+            </div>
+          </div>
+        )}
 
         {/* 전투 중 메인 패널 */}
         {battleOutcome === null && (
@@ -839,6 +972,50 @@ export default function BattlePage() {
         )}
       </div>
 
+      {/* 기술 교체 선택 — 4칸이 찼을 때만 뜬다 */}
+      {forgetPrompt && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/75">
+          <div className="w-full max-w-md mx-4 border-2 border-amber-700 bg-zinc-950/95 p-5">
+            <p className="text-center text-sm font-bold text-amber-300 mb-1">
+              {player.name}이(가) {forgetPrompt.incoming.name}을(를) 배우려 한다!
+            </p>
+            <p className="text-center text-[10px] text-zinc-500 mb-4">
+              기술은 4개까지만 익힐 수 있다. 무엇을 잊을까?
+            </p>
+
+            <div className="mb-3 rounded border border-amber-700/60 bg-amber-950/30 px-3 py-2">
+              <p className="text-[9px] text-amber-600 mb-0.5">새 기술</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-amber-200">{forgetPrompt.incoming.name}</span>
+                <span className="text-[9px] text-amber-500/70 uppercase">{forgetPrompt.incoming.type}</span>
+              </div>
+              <p className="text-[9px] text-amber-500/70">
+                위력 {forgetPrompt.incoming.power} · 명중 {forgetPrompt.incoming.accuracy}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 mb-3">
+              {forgetPrompt.current.map((mv, i) => (
+                <button key={mv.id} onClick={() => answerForget(i)}
+                  className={`border px-2 py-1.5 text-left transition ${typeClass(mv.type)}`}
+                  style={{ borderRadius: 0 }}>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-semibold leading-tight">{mv.name}</span>
+                    <span className="text-[9px] opacity-50 uppercase shrink-0">{mv.type}</span>
+                  </div>
+                  <div className="text-[9px] opacity-45 mt-0.5">위력 {mv.power} · 명중 {mv.accuracy}</div>
+                </button>
+              ))}
+            </div>
+
+            <button onClick={() => answerForget(null)}
+              className="w-full border border-zinc-700 py-2 text-[11px] text-zinc-400 hover:bg-zinc-900 transition">
+              배우지 않는다
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 승리 오버레이 */}
       {showResultUI && battleOutcome === "win" && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65">
@@ -867,6 +1044,12 @@ export default function BattlePage() {
             )}
 
             <div className="flex flex-col gap-2">
+              {/* 회복 — 예전에는 이걸 하려고 탑에서 나가 /monsters까지 갔다가
+                  베이스캠프에서 탑까지 다시 걸어와야 했다. 결과 화면에서 바로 처리한다. */}
+              <button onClick={() => { restorePartyHp(); setHealed(true); }} disabled={healed}
+                className="w-full border-2 border-sky-700 bg-sky-950/60 py-2.5 text-[11px] font-semibold text-sky-300 hover:bg-sky-900/60 disabled:opacity-40 transition active:scale-95">
+                {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
+              </button>
               {floor === MAX_TOWER_FLOOR ? (
                 <button onClick={() => navigate("/ending")}
                   className="w-full border-2 border-amber-500 bg-amber-900/70 py-3 text-xs font-bold text-amber-200 hover:bg-amber-800/70 transition active:scale-95">
@@ -895,6 +1078,12 @@ export default function BattlePage() {
             <p className="text-3xl font-bold text-red-400 mb-4">LOSE...</p>
             <p className="text-xs text-zinc-400 mb-6 leading-relaxed">{floor}층 재도전?</p>
             <div className="flex flex-col gap-2">
+              {/* 회복 — 예전에는 이걸 하려고 탑에서 나가 /monsters까지 갔다가
+                  베이스캠프에서 탑까지 다시 걸어와야 했다. 결과 화면에서 바로 처리한다. */}
+              <button onClick={() => { restorePartyHp(); setHealed(true); }} disabled={healed}
+                className="w-full border-2 border-sky-700 bg-sky-950/60 py-2.5 text-[11px] font-semibold text-sky-300 hover:bg-sky-900/60 disabled:opacity-40 transition active:scale-95">
+                {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
+              </button>
               <button onClick={() => navigate("/battle", { state: { floor, isCatchZone } })}
                 className="w-full border-2 border-red-700 bg-red-900/70 py-3 text-xs font-bold text-red-200 hover:bg-red-800/70 transition active:scale-95">
                 &gt; 재도전 ({floor}F)

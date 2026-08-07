@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { monsters } from "../monster/monsters";
 import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../monster/monsterImages";
 import { usePlayerStore } from "../shared/playerStore";
-import { RpsIcon, RPS_KO, type RpsChoice } from "../workshop/RpsIcon";
+import { RpsIcon } from "../workshop/RpsIcon";
+import { RPS_KO, type RpsChoice } from "../workshop/rps";
 import { scaleToLevel } from "../shared/floorTable";
 import { getMaterial } from "../shared/items";
 
@@ -258,13 +259,33 @@ function getRpsResult(p: RpsChoice, c: RpsChoice): RpsResult {
   return "lose";
 }
 const CATCH_RATE: Record<RpsResult,number> = { win:.72, draw:.42, lose:.18 };
+/**
+ * 한 마리에게 허용하는 포획 시도 횟수.
+ * 예전에는 가위바위보 단판으로 끝나서, 파티를 꾸리는 일이 순전히 운이었다
+ * (첫 조우에서 지면 그 몬스터는 그냥 사라졌다). 몇 번은 더 붙어볼 수 있게 한다.
+ */
+const CATCH_ATTEMPTS = 3;
 const RPS_RESULT_DATA: Record<RpsResult,{text:string; color:string; desc:string; bg:string}> = {
   win:  { text:"승리!", color:"text-emerald-300", desc:"포획 확률 72%", bg:"from-emerald-950/80 to-emerald-900/40" },
   draw: { text:"무승부", color:"text-yellow-300",  desc:"포획 확률 42%", bg:"from-yellow-950/80 to-yellow-900/40" },
   lose: { text:"패배...", color:"text-red-300",   desc:"포획 확률 18%", bg:"from-red-950/80 to-red-900/40" },
 };
 
-const MATERIAL_POOL = ["herb", "berry", "root", "crystal", "wood_plank", "leather"];
+/**
+ * 구역별 채집 재료.
+ *
+ * 예전에는 세 구역이 같은 표(herb/berry/root/crystal/wood_plank/leather)를 썼는데,
+ * 그러면 슬라임 추출물·마법 가루·몬스터 정수가 어느 드랍 테이블에도 없어
+ * 아티팩트와 상급 물약을 아예 만들 수 없었다(퀘스트 1회 보상이 평생 전부였다).
+ * 깊이 들어갈수록 상위 재료가 나오도록 구역별로 나눠, 제작·모루가 실제로 돌아가게 한다.
+ */
+const AREA_MATERIAL_POOL: Record<string, string[]> = {
+  shallow: ["herb", "herb", "berry", "root", "wood_plank", "leather", "slime_extract"],
+  deep:    ["herb", "berry", "root", "crystal", "wood_plank", "leather",
+            "slime_extract", "iron_fragment", "magic_dust"],
+  ancient: ["herb", "root", "crystal", "crystal", "iron_fragment",
+            "magic_dust", "monster_essence", "monster_essence", "enhancement_stone"],
+};
 
 function pickMonster(area: ForestArea, elite = false) {
   const pool = elite
@@ -278,7 +299,8 @@ function pickMonster(area: ForestArea, elite = false) {
 }
 function rollDrop(area: ForestArea): {id:string; count:number}|null {
   if (Math.random()>area.materialRate) return null;
-  const id = MATERIAL_POOL[Math.floor(Math.random()*MATERIAL_POOL.length)];
+  const pool = AREA_MATERIAL_POOL[area.id] ?? AREA_MATERIAL_POOL.shallow;
+  const id = pool[Math.floor(Math.random()*pool.length)];
   const count = 1 + area.materialBonus + (Math.random()<.3?1:0);
   return { id, count };
 }
@@ -383,7 +405,7 @@ function generateDungeon(_area: ForestArea): ForestNode[] {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function LeafParticles() {
-  const leaves = useMemo(()=>Array.from({length:18},(_,i)=>({
+  const [leaves] = useState(()=>Array.from({length:18},(_,i)=>({
     id:i,
     x: Math.random()*100,
     delay: Math.random()*10,
@@ -391,7 +413,7 @@ function LeafParticles() {
     size: 5+Math.random()*7,
     color: `rgba(${30+Math.floor(Math.random()*40)},${150+Math.floor(Math.random()*70)},${40+Math.floor(Math.random()*40)},${.5+Math.random()*.4})`,
     flip: Math.random()>.5,
-  })),[]);
+  })));
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {leaves.map(l=>(
@@ -408,7 +430,7 @@ function LeafParticles() {
 }
 
 function FireflyParticles() {
-  const flies = useMemo(()=>Array.from({length:22},(_,i)=>({
+  const [flies] = useState(()=>Array.from({length:22},(_,i)=>({
     id:i,
     x:Math.random()*100,
     y:20+Math.random()*65,
@@ -416,7 +438,7 @@ function FireflyParticles() {
     dur:4+Math.random()*5,
     size:2.5+Math.random()*2,
     hue:Math.random()>.5?"170,255,160":"220,255,120",
-  })),[]);
+  })));
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {flies.map(f=>(
@@ -433,7 +455,7 @@ function FireflyParticles() {
 }
 
 function CrystalParticles() {
-  const crystals = useMemo(()=>Array.from({length:16},(_,i)=>({
+  const [crystals] = useState(()=>Array.from({length:16},(_,i)=>({
     id:i,
     x:5+Math.random()*90,
     y:10+Math.random()*80,
@@ -441,7 +463,7 @@ function CrystalParticles() {
     dur:3+Math.random()*5,
     size:3+Math.random()*4,
     hue:Math.random()>.5?"167,139,250":"196,181,253",
-  })),[]);
+  })));
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {crystals.map(c=>(
@@ -468,6 +490,36 @@ function Particles({ area }: { area: ForestArea }) {
 // 배경
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/** 고대숲 배경의 별. 렌더마다 뽑으면 상태가 바뀔 때마다 별 60개가 통째로 튀므로 한 번만 생성한다. */
+function AncientStars() {
+  const [stars] = useState(
+    () =>
+      Array.from({ length: 60 }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        top: Math.random() * 60,
+        size: 1 + Math.random() * 1.5,
+        opacity: 0.2 + Math.random() * 0.6,
+        dur: 3 + Math.random() * 4,
+        delay: Math.random() * 6,
+      })),
+  );
+
+  return (
+    <div className="absolute inset-0">
+      {stars.map((s) => (
+        <div key={s.id} className="absolute rounded-full bg-white"
+          style={{
+            left:`${s.left}%`, top:`${s.top}%`,
+            width:s.size, height:s.size,
+            opacity:s.opacity,
+            animation:`crystalDrift ${s.dur}s ease-in-out ${s.delay}s infinite alternate`,
+          }}/>
+      ))}
+    </div>
+  );
+}
+
 function ForestBackground({ area }: { area: ForestArea | null }) {
   const a = area;
   const sky1 = a?.skyTop    ?? "#061a06";
@@ -482,19 +534,7 @@ function ForestBackground({ area }: { area: ForestArea | null }) {
       <div className="absolute inset-0" style={{
         background:`radial-gradient(ellipse at 50% 0%, ${sky1} 0%, ${sky2} 60%, #030806 100%)`,
       }}/>
-      {ancient && (
-        <div className="absolute inset-0">
-          {Array.from({length:60}).map((_,i)=>(
-            <div key={i} className="absolute rounded-full bg-white"
-              style={{
-                left:`${Math.random()*100}%`, top:`${Math.random()*60}%`,
-                width:1+Math.random()*1.5, height:1+Math.random()*1.5,
-                opacity:.2+Math.random()*.6,
-                animation:`crystalDrift ${3+Math.random()*4}s ease-in-out ${Math.random()*6}s infinite alternate`,
-              }}/>
-          ))}
-        </div>
-      )}
+      {ancient && <AncientStars />}
       <svg className="absolute bottom-32 left-0 w-full" viewBox="0 0 960 240" preserveAspectRatio="xMidYMax meet">
         {[[30,240,60,90],[85,240,45,120],[145,240,58,105],[210,240,50,130],[275,240,65,95],
           [345,240,42,125],[405,240,56,110],[465,240,52,118],[525,240,64,98],[595,240,46,122],
@@ -1019,7 +1059,7 @@ const EVENTS = [
 ];
 
 function EventScreen({ onContinue }: { area: ForestArea; onContinue: () => void }) {
-  const ev = useMemo(() => EVENTS[Math.floor(Math.random() * EVENTS.length)], []);
+  const [ev] = useState(() => EVENTS[Math.floor(Math.random() * EVENTS.length)]);
   return (
     <div className="relative z-10 flex flex-col items-center gap-5 max-w-sm w-full mx-4"
       style={{ animation:"fadeInScale .4s ease both" }}>
@@ -1335,11 +1375,12 @@ function RpsSelectScreen({ monster, area, onSelect }: {
   );
 }
 
-function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catchSuccess, catchPlace, onContinue, onExit }: {
+function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catchSuccess, catchPlace, triesLeft, onRetry, onContinue, onExit }: {
   pChoice:RpsChoice; cChoice:RpsChoice; rpsResult:RpsResult;
   phase: "rps_result"|"catch_result";
   wildMonster: ReturnType<typeof pickMonster>|null;
   catchSuccess:boolean|null; catchPlace:"storage"|"full"|null;
+  triesLeft:number; onRetry:()=>void;
   onContinue:()=>void; onExit:()=>void;
 }) {
   const [showComp, setShowComp] = useState(false);
@@ -1425,12 +1466,29 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
               <>
                 <div className="text-5xl" style={{ animation:"catchShakeX .6s ease" }}>💨</div>
                 <div className="text-center">
-                  <p className="text-2xl font-black text-red-400">도망쳤다...</p>
-                  <p className="text-sm text-zinc-500 mt-1">{wildMonster?.name}이(가) 사라졌습니다.</p>
+                  <p className="text-2xl font-black text-red-400">
+                    {triesLeft > 0 ? "놓쳤다!" : "도망쳤다..."}
+                  </p>
+                  <p className="text-sm text-zinc-500 mt-1">
+                    {triesLeft > 0
+                      ? `${wildMonster?.name}이(가) 아직 근처에 있다. (남은 시도 ${triesLeft}회)`
+                      : `${wildMonster?.name}이(가) 사라졌습니다.`}
+                  </p>
                 </div>
               </>
             )}
             <div className="flex gap-3 w-full">
+              {!catchSuccess && triesLeft > 0 && (
+                <button onClick={onRetry}
+                  className="flex-1 rounded-xl py-2.5 text-sm font-bold transition active:scale-95"
+                  style={{
+                    background: "rgba(52,211,153,.18)",
+                    border: "1px solid rgba(52,211,153,.5)",
+                    color: "#6ee7b7",
+                  }}>
+                  다시 시도 ({triesLeft})
+                </button>
+              )}
               <button onClick={onContinue}
                 className="flex-1 rounded-xl py-2.5 text-sm font-bold transition active:scale-95"
                 style={{
@@ -1475,6 +1533,8 @@ export default function ForestPage() {
   const [cChoice, setCChoice]         = useState<RpsChoice|null>(null);
   const [rpsResult, setRpsResult]     = useState<RpsResult|null>(null);
   const [catchSuccess, setCatchSuccess] = useState<boolean|null>(null);
+  /** 지금 조우한 몬스터에게 남은 포획 시도 횟수 */
+  const [catchTriesLeft, setCatchTriesLeft] = useState(CATCH_ATTEMPTS);
   const [catchPlace, setCatchPlace]   = useState<"storage"|"full"|null>(null);
   const [drops, setDrops]             = useState<{id:string;count:number}[]>([]);
   const rpsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1510,6 +1570,14 @@ export default function ForestPage() {
     return () => clearTimeout(t);
   }, [phase, pendingNodeId, area]);
 
+  // 현재 노드를 클리어 처리. handleEnterNode보다 먼저 선언해야 한다 —
+  // 뒤에 두면 선언 전 참조(TDZ)가 되어, 렌더 중 호출되는 경로가 하나라도 생기면 즉시 터진다.
+  const markCleared = useCallback(() => {
+    setDungeonNodes(prev => prev.map(n =>
+      n.id === currentNodeId ? { ...n, cleared: true } : n
+    ));
+  }, [currentNodeId]);
+
   // 노드 도착 후 진입
   const handleEnterNode = useCallback(() => {
     const node = dungeonNodes.find(n => n.id === currentNodeId);
@@ -1539,17 +1607,12 @@ export default function ForestPage() {
       setDrops(collected);
       setWildMonster(mon);
       setIsElite(elite);
+      setCatchTriesLeft(CATCH_ATTEMPTS);
       addToDexSeen(mon.id);
       setPhase("encounter");
       return;
     }
-  }, [dungeonNodes, currentNodeId, area, addMaterial, addToDexSeen]);
-
-  const markCleared = useCallback(() => {
-    setDungeonNodes(prev => prev.map(n =>
-      n.id === currentNodeId ? { ...n, cleared: true } : n
-    ));
-  }, [currentNodeId]);
+  }, [dungeonNodes, currentNodeId, area, addMaterial, addToDexSeen, markCleared]);
 
   // 노드 처리 완료 → 맵으로 복귀 or 던전 완료
   const returnToMap = useCallback(() => {
@@ -1576,6 +1639,8 @@ export default function ForestPage() {
       if (ok&&wildMonster) {
         addToDexCaught(wildMonster.id);
         setCatchPlace(addCapturedMonster(wildMonster));
+      } else {
+        setCatchTriesLeft((n) => Math.max(0, n - 1));
       }
       setPhase("catch_result");
     }, 2600);
@@ -1586,6 +1651,7 @@ export default function ForestPage() {
     setPhase("enter"); setArea(null); setDungeonNodes([]); setCurrentNodeId("n0");
     setWildMonster(null); setPChoice(null); setCChoice(null); setRpsResult(null);
     setCatchSuccess(null); setCatchPlace(null); setDrops([]); setIsElite(false);
+    setCatchTriesLeft(CATCH_ATTEMPTS);
   };
 
   const totalPotions = Object.values(potions).reduce((a,b)=>a+b, 0);
@@ -1708,6 +1774,8 @@ export default function ForestPage() {
             pChoice={pChoice} cChoice={cChoice} rpsResult={rpsResult}
             phase={phase as "rps_result"|"catch_result"}
             wildMonster={wildMonster} catchSuccess={catchSuccess} catchPlace={catchPlace}
+            triesLeft={catchTriesLeft}
+            onRetry={() => { setPChoice(null); setCChoice(null); setRpsResult(null); setCatchSuccess(null); setPhase("rps_select"); }}
             onContinue={returnToMap} onExit={exitDungeon}
           />
         )}

@@ -181,7 +181,7 @@ export function scaleToLevel(base: Monster, targetLevel: number): Monster {
     attack: base.attack + n * 3,
     defense: base.defense + n * 2,
     speed: base.speed + n * 2,
-    rewardExp: Math.floor(base.rewardExp * (1 + n * 0.15)),
+    rewardExp: Math.floor(base.rewardExp * (1 + n * 0.22)),
     expToNextLevel: Math.floor(base.expToNextLevel * Math.pow(1.2, n)),
     exp: 0,
   };
@@ -267,66 +267,66 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
   // ── 보스층 ──
   if (floor === 10) {
     const base = monsters.find((m) => m.id === "mossy")!;
-    const scaled = scaleToLevel(base, 15);
+    const scaled = scaleToLevel(base, 11);
     return {
       ...scaled,
       name: "분노한 모시",
       moves: [spark, thunderbolt, quickAttack, icePunch],
       maxHp: Math.floor(scaled.maxHp * 1.5),
       attack: Math.floor(scaled.attack * 1.3),
-      defense: Math.floor(scaled.defense * 1.3),
-      rewardExp: Math.floor(scaled.rewardExp * 2),
+      defense: Math.floor(scaled.defense * 1.2),
+      rewardExp: Math.floor(scaled.rewardExp * 2.4),
     };
   }
   if (floor === 20) {
     const base = monsters.find((m) => m.id === "mossevo")!;
-    const scaled = scaleToLevel(base, 25);
+    const scaled = scaleToLevel(base, 20);
     return {
       ...scaled,
       name: "격노한 모치",
       moves: [voltCrash, thunderbolt, bodySlam, flamethrower],
-      maxHp: Math.floor(scaled.maxHp * 1.5),
-      attack: Math.floor(scaled.attack * 1.35),
-      defense: Math.floor(scaled.defense * 1.35),
-      rewardExp: Math.floor(scaled.rewardExp * 2),
+      maxHp: Math.floor(scaled.maxHp * 1.2),
+      attack: Math.floor(scaled.attack * 1.05),
+      defense: Math.floor(scaled.defense * 1.15),
+      rewardExp: Math.floor(scaled.rewardExp * 2.4),
     };
   }
   if (floor === 30) {
     const base = monsters.find((m) => m.id === "frostorb")!;
-    const scaled = scaleToLevel(base, 35);
+    const scaled = scaleToLevel(base, 31);
     return {
       ...scaled,
       name: "고대의 프리로",
       moves: [blizzard, crystalBurst, tidalCrash, solarBeam],
-      maxHp: Math.floor(scaled.maxHp * 1.5),
-      attack: Math.floor(scaled.attack * 1.4),
-      defense: Math.floor(scaled.defense * 1.4),
-      rewardExp: Math.floor(scaled.rewardExp * 2),
+      maxHp: Math.floor(scaled.maxHp * 1.45),
+      attack: Math.floor(scaled.attack * 1.7),
+      defense: Math.floor(scaled.defense * 1.2),
+      rewardExp: Math.floor(scaled.rewardExp * 2.4),
     };
   }
   if (floor === 40) {
     const base = monsters.find((m) => m.id === "mossyfinal")!;
-    const scaled = scaleToLevel(base, 48);
+    const scaled = scaleToLevel(base, 40);
     return {
       ...scaled,
       name: "전설의 모왕",
       moves: [thunderStrike, voltCrash, overheat, blizzard],
-      maxHp: Math.floor(scaled.maxHp * 1.6),
-      attack: Math.floor(scaled.attack * 1.5),
-      defense: Math.floor(scaled.defense * 1.4),
-      rewardExp: Math.floor(scaled.rewardExp * 2.5),
+      maxHp: Math.floor(scaled.maxHp * 1.25),
+      attack: Math.floor(scaled.attack * 1.1),
+      defense: Math.floor(scaled.defense * 1.25),
+      rewardExp: Math.floor(scaled.rewardExp * 2.8),
     };
   }
   if (floor === 50) {
     const base = monsters.find((m) => m.id === "ormr")!;
-    const scaled = scaleToLevel(base, 60);
+    const scaled = scaleToLevel(base, 51);
     return {
       ...scaled,
       name: "오름",
       moves: pickOrmrMoves(),
-      maxHp: Math.floor(scaled.maxHp * 2.2),
-      attack: Math.floor(scaled.attack * 1.8),
-      defense: Math.floor(scaled.defense * 1.7),
+      maxHp: Math.floor(scaled.maxHp * 1.5),
+      attack: Math.floor(scaled.attack * 1.15),
+      defense: Math.floor(scaled.defense * 1.05),
       rewardExp: Math.floor(scaled.rewardExp * 3.5),
     };
   }
@@ -338,7 +338,7 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
     .map((id) => monsters.find((m) => m.id === id)!)
     .filter((m) => !!m && m.id !== excludeId);
   const base = pool[Math.floor(Math.random() * pool.length)];
-  const level = boss ? floor + 5 : floor;
+  const level = boss ? floor + 3 : floor;
   const scaled = scaleToLevel(base, level);
 
   if (boss) {

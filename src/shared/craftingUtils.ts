@@ -243,7 +243,9 @@ export function getEquipmentMaxLevel(quality: ItemQuality): number {
  */
 export function getEquipmentLevelUpCost(quality: ItemQuality, currentLevel: number): number {
   const mult = ({ normal: 1, rare: 2, elite: 3 } as const)[quality];
-  return Math.ceil(currentLevel / 3) * mult;
+  // 예전 계수(레벨/3)로는 Rare 하나를 만렙까지 올리는 데 강화석 약 550개가 필요했고,
+  // 분해로만 강화석이 나오던 구조와 겹쳐 사실상 아무도 만렙을 못 봤다.
+  return Math.ceil(currentLevel / 6) * mult;
 }
 
 /**
@@ -255,7 +257,7 @@ export function getDisassembleStones(
   level: number,
   enhancement: number,
 ): number {
-  const base = ({ normal: 3, rare: 8, elite: 18 } as const)[quality];
+  const base = ({ normal: 5, rare: 12, elite: 25 } as const)[quality];
   const levelBonus       = Math.floor(level / 5);
   const enhancementBonus = enhancement * 2;
   return base + levelBonus + enhancementBonus;
@@ -276,12 +278,12 @@ export function canSynthesizeArtifacts(
   if (a.instanceId === b.instanceId) return false;
   if (a.quality !== b.quality)       return false;
   if (a.quality === "elite")         return false;
+  // 양쪽 모두 만렙+최대강화를 요구하면 투자를 두 번 해야 해서 상위 등급에 도달할 수 없었다.
+  // 성장시킨 쪽(a)만 조건을 채우면 되고, 재료로 소모될 b는 같은 등급이기만 하면 된다.
   const maxLv = EQUIPMENT_MAX_LEVEL[a.quality];
   return (
     (a.level ?? 1) >= maxLv &&
-    (b.level ?? 1) >= maxLv &&
-    (a.enhancement ?? 0) >= MAX_EQUIPMENT_ENHANCEMENT &&
-    (b.enhancement ?? 0) >= MAX_EQUIPMENT_ENHANCEMENT
+    (a.enhancement ?? 0) >= MAX_EQUIPMENT_ENHANCEMENT
   );
 }
 

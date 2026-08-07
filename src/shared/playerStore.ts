@@ -5,8 +5,12 @@ import type { CraftingRecipe, CraftedItem, ArtifactInstance, CraftedPotionStack,
 import { monsters } from "../monster/monsters";
 import { MAX_TOWER_FLOOR } from "./floorTable";
 import { POTIONS } from "./items";
-import { rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats } from "./craftingUtils";
+import {
+  rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats,
+  getEquipmentMaxLevel, MAX_EQUIPMENT_ENHANCEMENT,
+} from "./craftingUtils";
 import type { RpsResult } from "./craftingUtils";
+import { ARTIFACT_RECIPES } from "../workshop/craftingRecipes";
 
 // ─── 스토리 플래그 ──────────────────────────────────────────────────────────────
 
@@ -18,6 +22,7 @@ export type StoryFlag =
   | "first_capture"
   | "quest_baros_done"
   | "quest_orion_done"
+  | "tower_cleared"
   | "floor_5"
   | "floor_10"
   | "floor_20"
@@ -29,7 +34,9 @@ export type PersistedStoryFlag =
   | "met_baros"
   | "first_capture"
   | "quest_baros_done"
-  | "quest_orion_done";
+  | "quest_orion_done"
+  /** 오름을 쓰러뜨리고 엔딩까지 본 상태. bestFloor >= 50(floor_50)과 달리 "엔딩을 봤는가"를 가린다. */
+  | "tower_cleared";
 
 const DEFAULT_STORY_FLAGS: Record<PersistedStoryFlag, boolean> = {
   met_orion: false,
@@ -37,6 +44,7 @@ const DEFAULT_STORY_FLAGS: Record<PersistedStoryFlag, boolean> = {
   first_capture: false,
   quest_baros_done: false,
   quest_orion_done: false,
+  tower_cleared: false,
 };
 
 export function isStoryFlagSet(
@@ -86,6 +94,43 @@ function monsterToOwned(m: Monster): OwnedMonster {
 
 /** 개발자 모드 진입 시 지급되는 보유 몬스터 레벨 (50층 테스트 대응) */
 const DEV_PARTY_LEVEL = 50;
+
+/** 개발자 프리셋 파티(선두 3마리). 50층 시험이 목적이라 최종 진화체 위주로 고른다. */
+const DEV_PARTY_IDS = ["mossyfinal", "aquavern", "frostorb"];
+
+/** 개발자 프리셋이 파티에 장착시키는 아티팩트 — 정식 레시피(ARTIFACT_RECIPES)의 만렙 엘리트 버전 */
+const DEV_PRESET_ARTIFACTS = ARTIFACT_RECIPES.map((r) => ({
+  itemId: r.resultItemId,
+  name:   r.resultItemName,
+  description: r.description,
+  baseStats: r.baseStats ?? [],
+}));
+
+/** 개발자 프리셋 물약 — 50층은 물약 운용을 전제로 한 난이도라 넉넉히 지급한다 */
+const DEV_PRESET_POTIONS: Record<string, number> = {
+  potion: 20, super_potion: 20, max_potion: 20, antidote: 10,
+  attack_buff: 10, strong_attack_buff: 10,
+};
+
+/** 엘리트 등급 + 해당 등급 만렙 + 최대 강화 상태의 아티팩트 인스턴스를 만든다 */
+function makeDevArtifact(def: (typeof DEV_PRESET_ARTIFACTS)[number]): ArtifactInstance {
+  const quality: ItemQuality = "elite";
+  const level = getEquipmentMaxLevel(quality);
+  return {
+    instanceId: makeUid(),
+    itemId:     def.itemId,
+    name:       def.name,
+    quality,
+    description: def.description,
+    statBonuses: applyArtifactQualityStats(def.baseStats, quality),
+    createdAt:  Date.now(),
+    level,
+    enhancement: MAX_EQUIPMENT_ENHANCEMENT,
+    source:     "crafting",
+    // 레벨 10마다 해제되는 부가 능력치도 만렙 기준으로 채워둔다
+    bonusStats: rollBonusStats(def.itemId, 1, level, []),
+  };
+}
 
 // 기존 items.ts MATERIALS ID 기준
 const WORKSHOP_TEST_MATERIALS: Record<string, number> = {
@@ -185,8 +230,10 @@ function recomputeStatsForLevel(base: Monster, level: number) {
  *   남긴 뒤 저장된 값을 최대한 그대로 보존한다(재계산할 기준 종 정의 자체가 없으므로).
  */
 function normalizeOwnedMonster(raw: unknown): OwnedMonster | null {
-  if (!raw || typeof raw !== "object" || typeof (raw as any).id !== "string") return null;
-  const r = raw as Record<string, any>;
+  if (!raw || typeof raw !== "object") return null;
+  // 세이브에서 막 꺼낸 값이라 형태를 신뢰할 수 없다. 필드마다 개별적으로 검사한다.
+  const r = raw as Record<string, unknown>;
+  if (typeof r.id !== "string") return null;
   const base = monsters.find((m) => m.id === r.id);
 
   if (!base) {
@@ -198,23 +245,23 @@ function normalizeOwnedMonster(raw: unknown): OwnedMonster | null {
     return {
       id: r.id,
       name: typeof r.name === "string" ? r.name : r.id,
-      type: r.type ?? null,
+      type: (r.type ?? null) as OwnedMonster["type"],
       maxHp: typeof r.maxHp === "number" ? r.maxHp : 1,
       attack: typeof r.attack === "number" ? r.attack : 0,
       defense: typeof r.defense === "number" ? r.defense : 0,
       speed: typeof r.speed === "number" ? r.speed : 0,
-      moves: Array.isArray(r.moves) ? r.moves : [],
+      moves: (Array.isArray(r.moves) ? r.moves : []) as OwnedMonster["moves"],
       level: typeof r.level === "number" ? r.level : 1,
       exp: typeof r.exp === "number" ? r.exp : 0,
       expToNextLevel: typeof r.expToNextLevel === "number" ? r.expToNextLevel : 100,
       rewardExp: typeof r.rewardExp === "number" ? r.rewardExp : 0,
-      evolutionStage: r.evolutionStage,
-      evolutionChainId: r.evolutionChainId,
-      evolvesTo: r.evolvesTo,
-      evolvesFrom: r.evolvesFrom,
-      evolvesAtLevel: r.evolvesAtLevel,
+      evolutionStage: r.evolutionStage as OwnedMonster["evolutionStage"],
+      evolutionChainId: r.evolutionChainId as OwnedMonster["evolutionChainId"],
+      evolvesTo: r.evolvesTo as OwnedMonster["evolvesTo"],
+      evolvesFrom: r.evolvesFrom as OwnedMonster["evolvesFrom"],
+      evolvesAtLevel: r.evolvesAtLevel as OwnedMonster["evolvesAtLevel"],
       uid: typeof r.uid === "string" ? r.uid : makeUid(),
-      nickname: r.nickname,
+      nickname: r.nickname as OwnedMonster["nickname"],
       currentHp: typeof r.currentHp === "number" ? r.currentHp : (typeof r.maxHp === "number" ? r.maxHp : 1),
     };
   }
@@ -227,7 +274,7 @@ function normalizeOwnedMonster(raw: unknown): OwnedMonster | null {
     ...base,
     ...r,
     uid: typeof r.uid === "string" ? r.uid : makeUid(),
-    moves: Array.isArray(r.moves) && r.moves.length > 0 ? r.moves : base.moves,
+    moves: (Array.isArray(r.moves) && r.moves.length > 0 ? r.moves : base.moves) as OwnedMonster["moves"],
     level,
     ...recomputed,
     // 재계산으로 maxHp가 줄었을 수 있으니 현재 HP는 새 상한을 넘지 않게 clamp
@@ -245,7 +292,10 @@ function normalizeOwnedMonsterArray(raw: unknown): OwnedMonster[] {
  * 숫자→0)으로 채우고, 있는 값은 그대로 유지한다. version 분기와 무관하게 매 로드마다
  * (migrate 경로든 onRehydrateStorage 경로든) 항상 거쳐서 이중 안전장치로 쓴다.
  */
-export function normalizeState(raw: Record<string, any>): PersistedPlayerState {
+export function normalizeState(input: object): PersistedPlayerState {
+  // 세이브(서버/로컬)에서 온 값도, 스토어 상태 객체도 들어온다. 어느 쪽이든 필드별로 검사하므로
+  // 여기서는 인덱싱 가능한 형태로만 좁힌다.
+  const raw = input as Record<string, unknown>;
   const fallback = createInitialState();
   const party = normalizeOwnedMonsterArray(raw.party);
 
@@ -262,12 +312,13 @@ export function normalizeState(raw: Record<string, any>): PersistedPlayerState {
       ...DEFAULT_STORY_FLAGS,
       ...(raw.storyFlags && typeof raw.storyFlags === "object" ? raw.storyFlags : {}),
     },
-    questStatus: raw.questStatus && typeof raw.questStatus === "object" ? raw.questStatus : {},
-    craftedItems:      Array.isArray(raw.craftedItems) ? raw.craftedItems : [],
-    craftedArtifacts:  Array.isArray(raw.craftedArtifacts) ? raw.craftedArtifacts : [],
-    craftedPotions:    Array.isArray(raw.craftedPotions) ? raw.craftedPotions : [],
-    equippedArtifacts: raw.equippedArtifacts && typeof raw.equippedArtifacts === "object"
-      ? raw.equippedArtifacts : {},
+    questStatus: (raw.questStatus && typeof raw.questStatus === "object"
+      ? raw.questStatus : {}) as PersistedPlayerState["questStatus"],
+    craftedItems:      (Array.isArray(raw.craftedItems) ? raw.craftedItems : []) as PersistedPlayerState["craftedItems"],
+    craftedArtifacts:  (Array.isArray(raw.craftedArtifacts) ? raw.craftedArtifacts : []) as PersistedPlayerState["craftedArtifacts"],
+    craftedPotions:    (Array.isArray(raw.craftedPotions) ? raw.craftedPotions : []) as PersistedPlayerState["craftedPotions"],
+    equippedArtifacts: (raw.equippedArtifacts && typeof raw.equippedArtifacts === "object"
+      ? raw.equippedArtifacts : {}) as PersistedPlayerState["equippedArtifacts"],
   };
 }
 
@@ -285,7 +336,7 @@ export function normalizeState(raw: Record<string, any>): PersistedPlayerState {
  */
 function migrate(persistedState: unknown, version: number): PersistedPlayerState {
   try {
-    const raw = (persistedState && typeof persistedState === "object" ? persistedState : {}) as Record<string, any>;
+    const raw = persistedState && typeof persistedState === "object" ? persistedState : {};
 
     if (version < 1) {
       // v0(버전 개념 이전) → v1: 이 시점 기준 필드 누락은 전부 normalizeState가 처리.
@@ -743,7 +794,13 @@ export const usePlayerStore = create<PlayerState>()(
         // 오름(최종 보스)은 포획 불가능한 존재라 개발자 모드에서도 보유/도감 대상에서 제외한다
         const catchableMonsters = monsters.filter((m) => m.id !== "ormr");
         const ids = catchableMonsters.map((m) => m.id);
-        const owned = catchableMonsters.map((m) => {
+        // monsters.ts 앞 3종은 초반 스타터(플레미·버노·아쿠비)라, 그대로 파티에 넣으면
+        // 만렙 장비를 껴도 50층을 시험할 수 없다. 최종 진화체 위주로 강한 순서대로 세운다.
+        const partyIds = DEV_PARTY_IDS.filter((id) => catchableMonsters.some((m) => m.id === id));
+        const owned = [
+          ...partyIds.map((id) => catchableMonsters.find((m) => m.id === id)!),
+          ...catchableMonsters.filter((m) => !partyIds.includes(m.id)),
+        ].map((m) => {
           const stats = recomputeStatsForLevel(m, DEV_PARTY_LEVEL);
           return {
             ...m,
@@ -753,12 +810,24 @@ export const usePlayerStore = create<PlayerState>()(
             currentHp: stats.maxHp,
           } as OwnedMonster;
         });
+        const party = owned.slice(0, 3);
+
+        // 파티 3마리에게 만렙 엘리트 아티팩트 풀세트를 장착시킨다.
+        // 레벨 50 파티만으로는 50층 오름(HP 1870 / 공격 498 / 방어 319)을 이길 수 없어
+        // "50층 테스트 대응"이라는 이 프리셋의 목적 자체가 성립하지 않는다.
+        const equippedArtifacts: Record<string, ArtifactInstance[]> = {};
+        for (const m of party) {
+          equippedArtifacts[m.uid] = DEV_PRESET_ARTIFACTS.map(makeDevArtifact);
+        }
+
         set({
-          party:      owned.slice(0, 3),
+          party,
           storage:    owned.slice(3),
           dexSeen:    ids,
           dexCaught:  ids,
           bestFloor:  MAX_TOWER_FLOOR - 1,
+          potions:    { ...DEV_PRESET_POTIONS },
+          equippedArtifacts,
         });
       },
 
