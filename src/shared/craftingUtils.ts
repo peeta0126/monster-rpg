@@ -233,6 +233,17 @@ export const EQUIPMENT_MAX_LEVEL: Record<ItemQuality, number> = {
 /** 최대 강화 수치 (+5) */
 export const MAX_EQUIPMENT_ENHANCEMENT = 5;
 
+/**
+ * 강화 성공 확률. +0→+1은 확정이고, 올라갈수록 낮아진다.
+ * 실패해도 강화 수치가 내려가지는 않고 재료만 소모된다 — 되돌릴 수 없는 손실은 만들지 않는다.
+ * (index = 현재 강화 수치)
+ */
+export const ENHANCEMENT_SUCCESS_RATE = [1.0, 0.9, 0.75, 0.6, 0.45] as const;
+
+export function getEnhancementSuccessRate(enhancement: number): number {
+  return ENHANCEMENT_SUCCESS_RATE[enhancement] ?? 0;
+}
+
 export function getEquipmentMaxLevel(quality: ItemQuality): number {
   return EQUIPMENT_MAX_LEVEL[quality];
 }

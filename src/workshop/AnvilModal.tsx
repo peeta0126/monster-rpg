@@ -7,6 +7,7 @@ import {
   QUALITY_MULTIPLIER,
   ARTIFACT_STAT_LABEL,
   MAX_EQUIPMENT_ENHANCEMENT,
+  getEnhancementSuccessRate,
   getEquipmentMaxLevel,
   getEquipmentLevelUpCost,
   getDisassembleStones,
@@ -453,9 +454,16 @@ function EnhancePanel({
                 cursor: "not-allowed" }
         }
       >
-        {isMax ? "최대 강화" : canDo ? "⚡  강화하기" : "재료를 선택하세요"}
+        {isMax
+          ? "최대 강화"
+          : canDo ? `⚡  강화하기 (성공률 ${Math.round(getEnhancementSuccessRate(enh) * 100)}%)`
+          : "재료를 선택하세요"}
       </button>
-      {/* TODO: 향후 강화 실패 확률 추가 예정 */}
+      {!isMax && (
+        <p className="text-center text-[10px]" style={{ color: C.textFaint }}>
+          실패해도 강화 수치는 내려가지 않습니다. 재료만 사라집니다.
+        </p>
+      )}
     </div>
   );
 }
@@ -790,10 +798,16 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
     if (enh >= MAX_EQUIPMENT_ENHANCEMENT) return;
     if (primary.quality !== secondary.quality) return;
     busyRef.current = true;
+    // 재료는 성공 여부와 무관하게 소모된다. 실패해도 강화 수치가 내려가지는 않으므로
+    // "되돌릴 수 없는 손실"은 없고, 재료 한 개를 잃을 뿐이다.
     removeCraftedArtifact(secondary.instanceId);
     setSecondaryId(null);
-    updateCraftedArtifact(primary.instanceId, { enhancement: enh + 1 });
-    showToast(`${primary.name} +${enh + 1} 강화 완료!`);
+    if (Math.random() < getEnhancementSuccessRate(enh)) {
+      updateCraftedArtifact(primary.instanceId, { enhancement: enh + 1 });
+      showToast(`${primary.name} +${enh + 1} 강화 성공!`);
+    } else {
+      showToast(`강화 실패… ${primary.name}은(는) +${enh} 그대로다. (재료 소모)`);
+    }
     busyRef.current = false;
   };
 

@@ -559,7 +559,24 @@ export const usePlayerStore = create<PlayerState>()(
       usePotion: (potionId) => {
         const s = get();
         if ((s.potions[potionId] ?? 0) <= 0) return false;
-        set({ potions: { ...s.potions, [potionId]: s.potions[potionId] - 1 } });
+
+        // 물약 재고는 두 곳에 있다 — 전투가 쓰는 potions(수량)와 가방 화면이 보여주는
+        // craftedPotions(등급별 스택). 제작과 버리기는 둘 다 갱신하는데 여기서만 potions를
+        // 줄여서, 전투에서 쓸수록 가방 표시 수량이 실제보다 많아졌다. 같이 줄인다.
+        // 등급이 낮은 스택부터 소모한다(좋은 걸 남긴다).
+        const order: Record<string, number> = { normal: 0, rare: 1, elite: 2 };
+        const target = s.craftedPotions
+          .filter((p) => p.itemId === potionId && p.quantity > 0)
+          .sort((a, b) => (order[a.quality] ?? 0) - (order[b.quality] ?? 0))[0];
+
+        set({
+          potions: { ...s.potions, [potionId]: s.potions[potionId] - 1 },
+          craftedPotions: target
+            ? s.craftedPotions
+                .map((p) => (p.stackId === target.stackId ? { ...p, quantity: p.quantity - 1 } : p))
+                .filter((p) => p.quantity > 0)
+            : s.craftedPotions,
+        });
         return true;
       },
 

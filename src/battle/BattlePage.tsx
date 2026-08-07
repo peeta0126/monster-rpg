@@ -540,6 +540,7 @@ export default function BattlePage() {
     isProcessing, battleOutcome, mustSwitch, player, enemyState, floor,
     activePartyIndex, initialParty, resolveAttack, syncHpToPhaser,
     sendLogAndWait, finishBattle, hasAlivePartyMember, getEquipCombatBonus,
+    addMaterial, addToDexCaught, askWhichToForget, partyHp,
     updatePartyMember, updateBestFloor, addToDexSeen,
   ]);
 
@@ -696,7 +697,7 @@ export default function BattlePage() {
     setIsProcessing(false);
   }, [
     isProcessing, battleOutcome, player, enemyState, isCatchZone, floor,
-    activePartyIndex, initialParty, partyHp,
+    activePartyIndex, initialParty,
     resolveAttack, sendLogAndWait, finishBattle, getEquipCombatBonus,
     addCapturedMonster, addToDexCaught, hasAlivePartyMember, setStoryFlag,
   ]);

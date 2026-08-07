@@ -22,7 +22,7 @@ import {
   applyArtifactQualityStats, getEquipmentMaxLevel, getEquipmentLevelUpCost,
   getDisassembleStones, getNextQuality, canSynthesizeArtifacts,
   sumEquippedStatBonuses, sumEquippedBonusStats, rollBonusStats,
-  MAX_EQUIPMENT_ENHANCEMENT, QUALITY_MULTIPLIER, ARTIFACT_SLOT_MAP,
+  MAX_EQUIPMENT_ENHANCEMENT, QUALITY_MULTIPLIER, ARTIFACT_SLOT_MAP, getEnhancementSuccessRate,
 } from "../../src/shared/craftingUtils";
 import { ARTIFACT_RECIPES, POTION_RECIPES } from "../../src/workshop/craftingRecipes";
 import { POTIONS } from "../../src/shared/items";
@@ -492,14 +492,16 @@ export function levelUpArtifact(s: SimState, id: string): boolean {
   return true;
 }
 
-/** 강화 1회 — 같은 등급의 다른 아티팩트를 재료로 소모한다 */
+/** 강화 1회 — 같은 등급의 다른 아티팩트를 재료로 소모한다. 실패해도 재료는 사라진다. */
 export function enhanceArtifact(s: SimState, targetId: string, materialId: string): boolean {
   const t = findArtifact(s, targetId);
   const m = s.artifacts.find((a) => a.instanceId === materialId);
   if (!t || !m || t.quality !== m.quality) return false;
-  if ((t.enhancement ?? 0) >= MAX_EQUIPMENT_ENHANCEMENT) return false;
+  const enh = t.enhancement ?? 0;
+  if (enh >= MAX_EQUIPMENT_ENHANCEMENT) return false;
   s.artifacts = s.artifacts.filter((a) => a.instanceId !== materialId);
-  t.enhancement = (t.enhancement ?? 0) + 1;
+  if (Math.random() >= getEnhancementSuccessRate(enh)) return false;   // 실패
+  t.enhancement = enh + 1;
   return true;
 }
 

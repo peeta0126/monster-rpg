@@ -146,10 +146,11 @@ async function simulateRun(seed: number): Promise<RunStats> {
       // 2) 같은 등급의 여분을 재료로 +5까지 강화
       for (const a of equippedList()) {
         let guard = 0;
-        while ((a.enhancement ?? 0) < MAX_EQUIPMENT_ENHANCEMENT && guard++ < 10) {
+        while ((a.enhancement ?? 0) < MAX_EQUIPMENT_ENHANCEMENT && guard++ < 30) {
           const mat = s.artifacts.find((x) => x.quality === a.quality && x.instanceId !== a.instanceId);
-          if (!mat || !enhanceArtifact(s, a.instanceId, mat.instanceId)) break;
-          st.artifactEnhances++;
+          if (!mat) break;                       // 재료가 없으면 중단
+          // 실패해도 재료만 잃으므로, 재료가 남아 있는 한 계속 시도한다
+          if (enhanceArtifact(s, a.instanceId, mat.instanceId)) st.artifactEnhances++;
         }
       }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createBaseCampGame } from "../shared/phaser/phaserConfig";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
@@ -733,7 +733,10 @@ export default function BaseCampPage() {
     };
   }, [navigate]);
 
-  const advanceNpcDialogue = () => {
+  // 키 핸들러 effect가 이 함수를 참조하므로 useCallback으로 고정한다.
+  // 매 렌더 새로 만들면 effect 의존성에 넣을 수 없고(리스너를 매번 재등록하게 된다),
+  // 빼면 오래된 클로저를 잡아 대화가 엉뚱한 줄에서 멈출 수 있다.
+  const advanceNpcDialogue = useCallback(() => {
     if (!npcDialogue) return;
     if (dialogueLineIndex < npcDialogue.lines.length - 1) {
       setDialogueLineIndex((i) => i + 1);
@@ -747,7 +750,7 @@ export default function BaseCampPage() {
     }
     setNpcDialogue(null);
     setDialogueLineIndex(0);
-  };
+  }, [npcDialogue, dialogueLineIndex, setStoryFlag, acceptQuest, completeQuest]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -768,7 +771,7 @@ export default function BaseCampPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dexOpen, questLogOpen, towerPayload, npcDialogue, dialogueLineIndex, menuOpen]);
+  }, [dexOpen, questLogOpen, towerPayload, npcDialogue, dialogueLineIndex, menuOpen, advanceNpcDialogue]);
 
   const handleTowerSelect = (floor: number) => {
     if (!towerPayload) return;
