@@ -17,6 +17,11 @@ server/.env
 server/prisma/*.db
 server/prisma/*.db-journal
 
+# Playwright (자동 플레이) 산출물
+/test-results
+/playwright-report
+/e2e/artifacts
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
