@@ -3,16 +3,25 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../prismaClient.js";
 import { env } from "../env.js";
+import { asyncHandler } from "../asyncHandler.js";
+import { rateLimit } from "../middleware/rateLimit.js";
 
 export const authRouter = Router();
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 
+/** 같은 IP에서 15분간 20회 — 정상 플레이어는 닿지 않지만 비밀번호 대입은 막히는 수준 */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+});
+
 function issueToken(userId: string): string {
   return jwt.sign({ userId }, env.jwtSecret, { expiresIn: env.jwtExpiresIn as jwt.SignOptions["expiresIn"] });
 }
 
-authRouter.post("/register", async (req, res) => {
+authRouter.post("/register", authLimiter, asyncHandler(async (req, res) => {
   const { username, password } = req.body ?? {};
 
   if (typeof username !== "string" || typeof password !== "string") {
@@ -38,9 +47,9 @@ authRouter.post("/register", async (req, res) => {
   const user = await prisma.user.create({ data: { username, passwordHash } });
 
   res.status(201).json({ token: issueToken(user.id), username: user.username });
-});
+}));
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", authLimiter, asyncHandler(async (req, res) => {
   const { username, password } = req.body ?? {};
 
   if (typeof username !== "string" || typeof password !== "string") {
@@ -61,4 +70,4 @@ authRouter.post("/login", async (req, res) => {
   }
 
   res.json({ token: issueToken(user.id), username: user.username });
-});
+}));
