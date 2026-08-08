@@ -36,6 +36,42 @@ export const HEX = Object.fromEntries(
   Object.entries(PALETTE).map(([k, v]) => [k, Number.parseInt(v.slice(1), 16)]),
 ) as Record<PaletteName, number>;
 
+/**
+ * 속성 7종 → 팔레트 토큰.
+ *
+ * 원래 각 속성이 Tailwind 기본 램프(red/blue/green/yellow/cyan/zinc/purple)를 하나씩
+ * 쓰고 있었다. 마스터 팔레트는 색상환을 다 덮지 않아서 "빨강→ember, 파랑→mist" 식으로
+ * 기계적으로 접으면 불/전기가 같은 색, 물/얼음이 같은 색이 되어 속성 구분이 사라진다.
+ *
+ * 그래서 색상만이 아니라 명도까지 써서 7개를 전부 다르게 배치했다. 이 표가 숲·전투·
+ * 몬스터 화면의 단일 출처다 — 화면마다 따로 정하지 말 것.
+ */
+export const ELEMENT_COLOR = {
+  fire:     "ember600",  // 짙은 화염
+  electric: "ember500",  // 밝은 화염 — fire 보다 한 단계 밝게 해서 구분
+  water:    "mist500",   // 짙은 청록
+  ice:      "mist300",   // 밝은 청록 — water 보다 밝게
+  grass:    "moss500",
+  poison:   "earth500",  // 팔레트에 보라가 없다. 탁한 흙빛으로 대체 (ART_DIRECTION 1-2 표에 보라 추가 시 교체)
+  normal:   "sand300",
+} as const satisfies Record<string, PaletteName>;
+
+/**
+ * 속성 칩(작은 태그) 의 Tailwind 클래스. 배경·테두리가 속성을 구분하고,
+ * 글자색은 어두운 패널 위에서 4.5:1 을 넘기는 토큰만 쓴다 — ember-600/mist-500/
+ * moss-500/earth-500 은 본문 글자로 쓰기엔 너무 어두워서(2.7~3.4:1) sand-200 으로 뺐다.
+ * 색을 못 보는 사람에게도 테두리 밝기 차이로 구분이 남는다.
+ */
+export const ELEMENT_CHIP_CLASS: Record<keyof typeof ELEMENT_COLOR, string> = {
+  fire:     "bg-ember-600/25 text-sand-200 border-ember-600",
+  electric: "bg-ember-500/20 text-ember-500 border-ember-500",
+  water:    "bg-mist-500/25  text-sand-200 border-mist-500",
+  ice:      "bg-mist-300/20  text-mist-300 border-mist-300",
+  grass:    "bg-moss-500/25  text-sand-200 border-moss-500",
+  poison:   "bg-earth-500/30 text-sand-200 border-earth-500",
+  normal:   "bg-shadow-700/80 text-sand-300 border-stone-600",
+};
+
 /** `rgba(r, g, b, a)` 문자열. 그림자·오버레이는 검정 대신 shadow-800/900 을 쓴다. */
 export function rgba(name: PaletteName, alpha: number): string {
   const n = HEX[name];

@@ -7,6 +7,7 @@ import { RpsIcon } from "../workshop/RpsIcon";
 import { RPS_KO, type RpsChoice } from "../workshop/rps";
 import { scaleToLevel } from "../shared/floorTable";
 import { getMaterial } from "../shared/items";
+import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CSS 애니메이션 키프레임
@@ -180,10 +181,10 @@ const FOREST_AREAS: ForestArea[] = [
     levelRange: [1, 8], encounterRate: 0.55, materialRate: 0.40, materialBonus: 0,
     exploreTime: 1200, danger: 1,
     particleType: "leaf",
-    skyTop: "#061a06", skyBottom: "#0d2e0d",
-    fogColor: "rgba(34,197,94,0.08)", groundColor: "#1a2e10",
-    accentColor: "#4ade80", glowColor: "rgba(74,222,128,0.25)",
-    borderGlow: "rgba(74,222,128,0.5)",
+    skyTop: PALETTE.shadow900, skyBottom: PALETTE.shadow700,
+    fogColor: rgba("moss500", 0.10), groundColor: PALETTE.stone600,
+    accentColor: PALETTE.moss500, glowColor: rgba("moss500", 0.25),
+    borderGlow: rgba("moss500", 0.5),
     recommendedText: "추천: 처음 방문 탐험가",
   },
   {
@@ -193,10 +194,10 @@ const FOREST_AREAS: ForestArea[] = [
     levelRange: [8, 18], encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
     exploreTime: 1500, danger: 3,
     particleType: "firefly",
-    skyTop: "#020d08", skyBottom: "#051a10",
-    fogColor: "rgba(20,184,166,0.08)", groundColor: "#0a1e15",
-    accentColor: "#2dd4bf", glowColor: "rgba(45,212,191,0.22)",
-    borderGlow: "rgba(45,212,191,0.55)",
+    skyTop: PALETTE.shadow900, skyBottom: PALETTE.shadow800,
+    fogColor: rgba("mist500", 0.10), groundColor: PALETTE.shadow700,
+    accentColor: PALETTE.mist500, glowColor: rgba("mist500", 0.22),
+    borderGlow: rgba("mist500", 0.55),
     recommendedText: "추천: Lv.5 이상 파티",
   },
   {
@@ -206,43 +207,32 @@ const FOREST_AREAS: ForestArea[] = [
     levelRange: [18, 32], encounterRate: 0.75, materialRate: 0.65, materialBonus: 2,
     exploreTime: 1800, danger: 5,
     particleType: "crystal",
-    skyTop: "#05020f", skyBottom: "#0e0520",
-    fogColor: "rgba(139,92,246,0.1)", groundColor: "#0e0820",
-    accentColor: "#a78bfa", glowColor: "rgba(167,139,250,0.25)",
-    borderGlow: "rgba(167,139,250,0.6)",
+    skyTop: PALETTE.shadow900, skyBottom: PALETTE.stone600,
+    fogColor: rgba("ember700", 0.10), groundColor: PALETTE.earth500,
+    accentColor: PALETTE.ember500, glowColor: rgba("ember500", 0.25),
+    borderGlow: rgba("ember500", 0.6),
     recommendedText: "⚠ 경고: 고레벨 파티 필수",
   },
 ];
 
 // ── 노드 스타일 ───────────────────────────────────────────────────────────────
+// 노드 7종. 팔레트에 색상환이 다 없어서 색만으로는 7개를 못 가른다 —
+// 아이콘(형태)이 1차 구분이고 색은 보조다. 글자색은 전부 4.5:1 을 넘기는 토큰만 썼다.
 const NODE_META: Record<ForestNodeType, { icon: string; label: string; color: string; bg: string }> = {
-  start:    { icon: "🌲", label: "입구",     color: "#86efac", bg: "rgba(134,239,172,0.15)" },
-  battle:   { icon: "⚔️", label: "전투",     color: "#f87171", bg: "rgba(248,113,113,0.15)" },
-  material: { icon: "🌿", label: "채집",     color: "#fbbf24", bg: "rgba(251,191,36,0.15)"  },
-  event:    { icon: "❓", label: "이벤트",   color: "#a78bfa", bg: "rgba(167,139,250,0.15)" },
-  rest:     { icon: "🔥", label: "휴식",     color: "#fb923c", bg: "rgba(251,146,60,0.15)"  },
-  elite:    { icon: "💀", label: "강적",     color: "#e879f9", bg: "rgba(232,121,249,0.15)" },
-  boss:     { icon: "👁", label: "보스",     color: "#ef4444", bg: "rgba(239,68,68,0.18)"   },
+  start:    { icon: "🌲", label: "입구",     color: PALETTE.sand300,  bg: rgba("moss500",  0.18) },
+  battle:   { icon: "⚔️", label: "전투",     color: PALETTE.ember500, bg: rgba("ember600", 0.18) },
+  material: { icon: "🌿", label: "채집",     color: PALETTE.sand200,  bg: rgba("moss500",  0.22) },
+  event:    { icon: "❓", label: "이벤트",   color: PALETTE.mist300,  bg: rgba("mist500",  0.18) },
+  rest:     { icon: "🔥", label: "휴식",     color: PALETTE.ember500, bg: rgba("ember500", 0.14) },
+  elite:    { icon: "💀", label: "강적",     color: PALETTE.sand200,  bg: rgba("earth500", 0.28) },
+  boss:     { icon: "👁", label: "보스",     color: PALETTE.cream100, bg: rgba("ember700", 0.32) },
 };
 
-const TYPE_GLOW: Record<string, string> = {
-  fire:     "rgba(239,68,68,0.55)",
-  water:    "rgba(59,130,246,0.55)",
-  grass:    "rgba(34,197,94,0.55)",
-  electric: "rgba(234,179,8,0.65)",
-  ice:      "rgba(103,232,249,0.55)",
-  normal:   "rgba(161,161,170,0.45)",
-  poison:   "rgba(168,85,247,0.55)",
-};
-const TYPE_COLOR: Record<string, string> = {
-  fire:     "bg-red-900/80 text-red-200 border-red-700",
-  water:    "bg-blue-900/80 text-blue-200 border-blue-700",
-  grass:    "bg-green-900/80 text-green-200 border-green-700",
-  electric: "bg-yellow-900/80 text-yellow-200 border-yellow-700",
-  ice:      "bg-cyan-900/80 text-cyan-200 border-cyan-700",
-  normal:   "bg-zinc-800/80 text-zinc-200 border-zinc-600",
-  poison:   "bg-purple-900/80 text-purple-200 border-purple-700",
-};
+// 속성 색은 shared/palette.ts 의 ELEMENT_COLOR 가 단일 출처다. 여기서 따로 정하지 않는다.
+const TYPE_GLOW: Record<string, string> = Object.fromEntries(
+  Object.entries(ELEMENT_COLOR).map(([type, token]) => [type, rgba(token, 0.55)]),
+);
+const TYPE_COLOR: Record<string, string> = ELEMENT_CHIP_CLASS;
 const TYPE_KO: Record<string, string> = {
   fire:"불꽃", water:"물", grass:"풀", electric:"전기", ice:"얼음", normal:"노말",
   poison:"독",
@@ -266,9 +256,9 @@ const CATCH_RATE: Record<RpsResult,number> = { win:.72, draw:.42, lose:.18 };
  */
 const CATCH_ATTEMPTS = 3;
 const RPS_RESULT_DATA: Record<RpsResult,{text:string; color:string; desc:string; bg:string}> = {
-  win:  { text:"승리!", color:"text-emerald-300", desc:"포획 확률 72%", bg:"from-emerald-950/80 to-emerald-900/40" },
-  draw: { text:"무승부", color:"text-yellow-300",  desc:"포획 확률 42%", bg:"from-yellow-950/80 to-yellow-900/40" },
-  lose: { text:"패배...", color:"text-red-300",   desc:"포획 확률 18%", bg:"from-red-950/80 to-red-900/40" },
+  win:  { text:"승리!", color:"text-moss-500", desc:"포획 확률 72%", bg:"from-moss-500/80 to-moss-500/40" },
+  draw: { text:"무승부", color:"text-ember-500",  desc:"포획 확률 42%", bg:"from-ember-700/80 to-ember-700/40" },
+  lose: { text:"패배...", color:"text-ember-500",   desc:"포획 확률 18%", bg:"from-ember-700/80 to-ember-700/40" },
 };
 
 /**
@@ -522,17 +512,22 @@ function AncientStars() {
 
 function ForestBackground({ area }: { area: ForestArea | null }) {
   const a = area;
-  const sky1 = a?.skyTop    ?? "#061a06";
-  const sky2 = a?.skyBottom ?? "#0d2e0d";
-  const fog  = a?.fogColor  ?? "rgba(34,197,94,0.08)";
-  const gnd  = a?.groundColor ?? "#1a2e10";
+  const sky1 = a?.skyTop    ?? PALETTE.shadow900;
+  const sky2 = a?.skyBottom ?? PALETTE.shadow700;
+  const fog  = a?.fogColor  ?? rgba("moss500", 0.08);
+  const gnd  = a?.groundColor ?? PALETTE.stone600;
   const ancient = a?.id==="ancient";
   const deep    = a?.id==="deep";
+
+  // 나무 실루엣 2겹. 구역마다 다른 색을 줘야 "다른 숲에 왔다"가 읽힌다 —
+  // 원경(far)은 하늘에 가까운 색, 근경(near)은 항상 가장 어두운 색으로 깊이를 만든다.
+  const farTree  = ancient ? PALETTE.stone600 : deep ? PALETTE.shadow800 : PALETTE.shadow700;
+  const nearTree = ancient ? PALETTE.earth500 : PALETTE.shadow900;
 
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden>
       <div className="absolute inset-0" style={{
-        background:`radial-gradient(ellipse at 50% 0%, ${sky1} 0%, ${sky2} 60%, #030806 100%)`,
+        background:`radial-gradient(ellipse at 50% 0%, ${sky1} 0%, ${sky2} 60%, ${PALETTE.shadow900} 100%)`,
       }}/>
       {ancient && <AncientStars />}
       <svg className="absolute bottom-32 left-0 w-full" viewBox="0 0 960 240" preserveAspectRatio="xMidYMax meet">
@@ -541,7 +536,7 @@ function ForestBackground({ area }: { area: ForestArea | null }) {
           [655,240,59,108],[715,240,52,114],[775,240,65,94],[835,240,44,126],[895,240,59,105],[950,240,52,112]]
           .map(([cx,by,hw,h],i)=>(
             <polygon key={i} points={`${cx-hw},${by} ${cx},${by-h} ${cx+hw},${by}`}
-              fill={ancient?"#0a0618":deep?"#020d08":"#0a1f0a"}
+              fill={farTree}
               opacity={.7+Math.sin(i)*.1}/>
           ))}
       </svg>
@@ -551,9 +546,9 @@ function ForestBackground({ area }: { area: ForestArea | null }) {
           .map(([cx,by,hw,h],i)=>(
             <g key={i} style={{ animation:`treeSway ${3+i*.3}s ease-in-out ${i*.4}s infinite alternate` }}>
               <polygon points={`${cx-hw},${by} ${cx},${by-h} ${cx+hw},${by}`}
-                fill={ancient?"#080412":deep?"#041208":"#061506"} opacity=".95"/>
+                fill={nearTree} opacity=".95"/>
               <polygon points={`${cx-hw*.3},${by} ${cx-hw*.08},${by-h*.65} ${cx},${by-h}`}
-                fill={ancient?"rgba(100,40,200,.06)":deep?"rgba(20,100,60,.07)":"rgba(30,100,30,.07)"}/>
+                fill={ancient?"rgba(168, 61, 31, .06)":deep?"rgba(92, 147, 150, .07)":"rgba(122, 132, 85, .07)"}/>
             </g>
           ))}
       </svg>
@@ -568,7 +563,7 @@ function ForestBackground({ area }: { area: ForestArea | null }) {
         {Array.from({length:32}).map((_,i)=>{
           const x=(i*31)+Math.sin(i*1.9)*9;
           const h=14+Math.sin(i*2.5)*9;
-          const col = ancient?"rgba(80,40,160,.6)":deep?"rgba(10,60,40,.7)":"rgba(20,80,20,.8)";
+          const col = ancient?"rgba(168, 61, 31, .6)":deep?"rgba(92, 147, 150, .7)":"rgba(122, 132, 85, .8)";
           return (
             <g key={i}>
               <polygon points={`${x},60 ${x-5},${60-h} ${x+4},60`} fill={col}/>
@@ -580,10 +575,10 @@ function ForestBackground({ area }: { area: ForestArea | null }) {
       <div className="absolute inset-0 pointer-events-none"
         style={{
           background: ancient
-            ? "radial-gradient(ellipse 50% 25% at 50% 5%, rgba(120,60,220,.08) 0%, transparent 80%)"
+            ? "radial-gradient(ellipse 50% 25% at 50% 5%, rgba(168, 61, 31, .08) 0%, transparent 80%)"
             : deep
-              ? "radial-gradient(ellipse 50% 20% at 50% 5%, rgba(20,160,100,.06) 0%, transparent 80%)"
-              : "radial-gradient(ellipse 55% 22% at 50% 5%, rgba(80,200,70,.07) 0%, transparent 80%)",
+              ? "radial-gradient(ellipse 50% 20% at 50% 5%, rgba(92, 147, 150, .06) 0%, transparent 80%)"
+              : "radial-gradient(ellipse 55% 22% at 50% 5%, rgba(122, 132, 85, .07) 0%, transparent 80%)",
         }}/>
       {[45,60,72].map((pct,i)=>(
         <div key={i} className="absolute inset-x-0 pointer-events-none h-8"
@@ -645,11 +640,11 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
           </div>
           <div className="flex items-baseline gap-2">
             <h3 className="text-xl font-black" style={{ color:area.accentColor }}>{area.name}</h3>
-            <span className="text-xs font-bold text-zinc-500">
+            <span className="text-xs font-bold text-sand-300">
               {"★".repeat(area.danger)}{"☆".repeat(5-area.danger)}
             </span>
           </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">{area.description}</p>
+          <p className="text-xs text-sand-300 leading-relaxed">{area.description}</p>
           <div className="flex flex-wrap gap-1 mt-1">
             {monsterTypes.map((t)=>(
               <span key={t}
@@ -662,14 +657,14 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
         </div>
         <div className="flex flex-col gap-2 items-end shrink-0">
           <div className="text-right">
-            <p className="text-[10px] text-zinc-600 uppercase tracking-wider">레벨</p>
+            <p className="text-[10px] text-earth-400 uppercase tracking-wider">레벨</p>
             <p className="text-sm font-bold" style={{ color:area.accentColor }}>
               {area.levelRange[0]}~{area.levelRange[1]}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-zinc-600 uppercase tracking-wider">맵 구조</p>
-            <p className="text-sm font-bold text-zinc-300">랜덤 생성</p>
+            <p className="text-[10px] text-earth-400 uppercase tracking-wider">맵 구조</p>
+            <p className="text-sm font-bold text-sand-200">랜덤 생성</p>
           </div>
           <div className="mt-1 px-3 py-1.5 text-xs font-bold"
             style={{
@@ -747,15 +742,15 @@ function DungeonMapScreen({
 
       {/* 헤더 */}
       <div className="text-center">
-        <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-0.5">NODE MAP</p>
-        <p className="text-lg font-black text-zinc-100">{area.name} 탐험</p>
-        <p className="text-xs text-zinc-500">진행 {current.depth} / {MAX_DEPTH}</p>
+        <p className="text-[10px] uppercase tracking-widest text-sand-300 mb-0.5">NODE MAP</p>
+        <p className="text-lg font-black text-cream-100">{area.name} 탐험</p>
+        <p className="text-xs text-sand-300">진행 {current.depth} / {MAX_DEPTH}</p>
       </div>
 
       {/* 가로 노드맵 */}
       <div className="w-full rounded-2xl overflow-hidden"
         style={{
-          background: "rgba(6,8,6,0.88)",
+          background: "rgba(13, 18, 35, 0.88)",
           border: `1px solid ${area.borderGlow}`,
           backdropFilter: "blur(12px)",
         }}>
@@ -780,7 +775,7 @@ function DungeonMapScreen({
                   return (
                     <line key={`${node.id}-${nextId}`}
                       x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                      stroke={active ? area.accentColor : "rgba(255,255,255,0.08)"}
+                      stroke={active ? area.accentColor : "rgba(243, 229, 185, 0.08)"}
                       strokeWidth={active ? 1.5 : 0.8}
                       strokeDasharray={active ? "none" : "5 3"}
                       opacity={active ? 0.5 : 0.22}
@@ -816,8 +811,8 @@ function DungeonMapScreen({
                     )}
                     {/* 노드 원 */}
                     <circle cx={x} cy={y} r={15}
-                      fill={isCleared ? meta.bg : isReachable ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.02)"}
-                      stroke={isCurrent ? area.accentColor : isReachable ? meta.color : "rgba(255,255,255,0.12)"}
+                      fill={isCleared ? meta.bg : isReachable ? "rgba(243, 229, 185, 0.06)" : "rgba(243, 229, 185, 0.02)"}
+                      stroke={isCurrent ? area.accentColor : isReachable ? meta.color : "rgba(243, 229, 185, 0.12)"}
                       strokeWidth={isCurrent ? 2.5 : isReachable ? 1.5 : 0.8}
                       opacity={dimmed ? 0.22 : 1}
                     />
@@ -831,14 +826,14 @@ function DungeonMapScreen({
                     {/* BOSS 라벨 */}
                     {node.type === "boss" && node.revealed && (
                       <text x={x} y={y + 25} textAnchor="middle" dominantBaseline="middle"
-                        fontSize={7} fill="#ef4444" opacity={0.8}
+                        fontSize={7} fill={PALETTE.ember500} opacity={0.8}
                         style={{ userSelect:"none", pointerEvents:"none" }}>
                         BOSS
                       </text>
                     )}
                     {/* 디버그 */}
                     {SHOW_EXPLORE_MAP_DEBUG && (
-                      <text x={x} y={y - 20} textAnchor="middle" fontSize={6} fill="#888888"
+                      <text x={x} y={y - 20} textAnchor="middle" fontSize={6} fill={PALETTE.sand300}
                         style={{ userSelect:"none", pointerEvents:"none" }}>
                         {node.id}({node.depth},{node.col})
                       </text>
@@ -857,7 +852,7 @@ function DungeonMapScreen({
             return (
               <div key={t} className="flex items-center gap-1">
                 <span className="text-[10px]">{m.icon}</span>
-                <span className="text-[9px] text-zinc-600">{m.label}</span>
+                <span className="text-[9px] text-earth-400">{m.label}</span>
               </div>
             );
           })}
@@ -867,7 +862,7 @@ function DungeonMapScreen({
       {/* 이동 선택 버튼 (y 좌표 순 정렬 → 위/중/아래 라벨) */}
       {sortedNext.length > 0 && (
         <div className="w-full flex flex-col gap-2">
-          <p className="text-xs text-zinc-500 text-center">어느 방향으로 탐사하시겠습니까?</p>
+          <p className="text-xs text-sand-300 text-center">어느 방향으로 탐사하시겠습니까?</p>
           <div className={`grid gap-2 ${
             sortedNext.length === 1 ? "grid-cols-1" :
             sortedNext.length === 2 ? "grid-cols-2" : "grid-cols-3"
@@ -877,7 +872,7 @@ function DungeonMapScreen({
                 onClick={() => onSelectNode(node.id)}
                 className="flex flex-col items-center gap-1.5 rounded-xl py-3 px-2 transition-all active:scale-95"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
+                  background: "rgba(243, 229, 185, 0.04)",
                   border: `1.5px solid ${area.accentColor}50`,
                   color: area.accentColor,
                 }}>
@@ -885,7 +880,7 @@ function DungeonMapScreen({
                 <span className="text-xs font-bold">
                   {getNextDirLabel(i, sortedNext.length)}
                 </span>
-                <span className="text-[9px] text-zinc-600">미지의 공간</span>
+                <span className="text-[9px] text-earth-400">미지의 공간</span>
               </button>
             ))}
           </div>
@@ -894,7 +889,7 @@ function DungeonMapScreen({
 
       {/* 귀환 */}
       <button onClick={onExit}
-        className="w-full rounded-xl border border-zinc-700 bg-zinc-900/60 py-2.5 text-sm text-zinc-500 hover:text-zinc-300 transition">
+        className="w-full rounded-xl border border-stone-600 bg-shadow-800/60 py-2.5 text-sm text-sand-300 hover:text-sand-200 transition">
         ← 숲 떠나기
       </button>
     </div>
@@ -942,10 +937,10 @@ function ExploringScreen({ area }: { area: ForestArea }) {
         <p className="text-xs uppercase tracking-widest mb-2" style={{ color:area.accentColor, opacity:.7 }}>
           {area.subtitle}
         </p>
-        <p className="text-2xl font-black text-zinc-100 mb-1">이동 중<span style={{ display:"inline-block", minWidth:"2.5ch", textAlign:"left" }}>{".".repeat(dots+1)}</span></p>
-        <p className="text-sm text-zinc-500">미지의 공간으로 향하고 있습니다</p>
+        <p className="text-2xl font-black text-cream-100 mb-1">이동 중<span style={{ display:"inline-block", minWidth:"2.5ch", textAlign:"left" }}>{".".repeat(dots+1)}</span></p>
+        <p className="text-sm text-sand-300">미지의 공간으로 향하고 있습니다</p>
       </div>
-      <div className="w-full h-1 rounded-full bg-zinc-800 overflow-hidden">
+      <div className="w-full h-1 rounded-full bg-shadow-700 overflow-hidden">
         <div className="h-full rounded-full transition-all"
           style={{
             width:`${Math.min((step/(area.exploreTime/400*.8))*100,95)}%`,
@@ -969,15 +964,15 @@ function NodeArrivedScreen({ node, onContinue }: {
       style={{ animation:"fadeInScale .4s ease both" }}>
       <div className="w-full rounded-2xl overflow-hidden text-center"
         style={{
-          background:"rgba(8,10,8,0.88)",
+          background:"rgba(13, 18, 35, 0.88)",
           border:`1px solid ${meta.color}50`,
           backdropFilter:"blur(14px)",
         }}>
         <div className="px-6 pt-8 pb-4" style={{ background:`linear-gradient(to bottom, ${meta.bg}, transparent)` }}>
           <div className="text-6xl mb-3" style={{ animation:"nodeReveal .6s ease both" }}>{meta.icon}</div>
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">ARRIVED</p>
+          <p className="text-xs uppercase tracking-widest text-sand-300 mb-1">ARRIVED</p>
           <p className="text-2xl font-black" style={{ color: meta.color }}>{meta.label} 구역</p>
-          <p className="text-sm text-zinc-400 mt-2">
+          <p className="text-sm text-sand-300 mt-2">
             {node.type === "battle"   && "야생 몬스터가 기다리고 있습니다!"}
             {node.type === "material" && "희귀 재료를 발견했습니다!"}
             {node.type === "event"    && "수상한 기운이 감돌고 있습니다..."}
@@ -1012,31 +1007,31 @@ function RestScreen({ onContinue }: { area: ForestArea; onContinue: () => void }
       style={{ animation:"slideInUp .4s ease both" }}>
       <div className="w-full rounded-2xl overflow-hidden"
         style={{
-          background:"rgba(8,10,8,0.85)",
-          border:"1px solid rgba(251,146,60,0.35)",
+          background:"rgba(13, 18, 35, 0.85)",
+          border:"1px solid rgba(233, 148, 65, 0.35)",
           backdropFilter:"blur(14px)",
         }}>
-        <div className="px-6 pt-7 pb-5 text-center" style={{ background:"linear-gradient(to bottom, rgba(251,146,60,0.08), transparent)" }}>
+        <div className="px-6 pt-7 pb-5 text-center" style={{ background:"linear-gradient(to bottom, rgba(233, 148, 65, 0.08), transparent)" }}>
           <div className="text-5xl mb-3" style={{ animation:"monsterFloat 3s ease-in-out infinite" }}>🔥</div>
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">REST AREA</p>
-          <p className="text-xl font-black text-zinc-100">모닥불 휴식처</p>
-          <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
+          <p className="text-xs uppercase tracking-widest text-sand-300 mb-1">REST AREA</p>
+          <p className="text-xl font-black text-cream-100">모닥불 휴식처</p>
+          <p className="text-sm text-sand-300 mt-2 leading-relaxed">
             숲 한가운데서 모닥불을 발견했다.<br/>
             잠시 쉬어가며 체력을 회복했다.
           </p>
         </div>
         <div className="px-6 pb-6 flex flex-col gap-3">
           <div className="flex items-center gap-3 rounded-xl p-3"
-            style={{ background:"rgba(251,146,60,0.08)", border:"1px solid rgba(251,146,60,0.2)" }}>
+            style={{ background:"rgba(233, 148, 65, 0.08)", border:"1px solid rgba(233, 148, 65, 0.2)" }}>
             <span className="text-2xl">💚</span>
-            <p className="text-sm text-orange-300 font-semibold">HP 소량 회복 (구현 예정)</p>
+            <p className="text-sm text-ember-500 font-semibold">HP 소량 회복 (구현 예정)</p>
           </div>
           <button onClick={onContinue}
             className="w-full rounded-xl py-3 text-sm font-bold transition active:scale-95"
             style={{
-              background:"linear-gradient(135deg, rgba(251,146,60,0.2), rgba(251,146,60,0.08))",
-              border:"1.5px solid rgba(251,146,60,0.5)",
-              color:"#fb923c",
+              background:"linear-gradient(135deg, rgba(233, 148, 65, 0.2), rgba(233, 148, 65, 0.08))",
+              border:"1.5px solid rgba(233, 148, 65, 0.5)",
+              color:PALETTE.ember500,
             }}>
             계속 탐험하기 →
           </button>
@@ -1065,27 +1060,27 @@ function EventScreen({ onContinue }: { area: ForestArea; onContinue: () => void 
       style={{ animation:"fadeInScale .4s ease both" }}>
       <div className="w-full rounded-2xl overflow-hidden"
         style={{
-          background:"rgba(8,8,14,0.88)",
-          border:"1px solid rgba(167,139,250,0.35)",
+          background:"rgba(13, 18, 35, 0.88)",
+          border:"1px solid rgba(92, 147, 150, 0.35)",
           backdropFilter:"blur(14px)",
         }}>
-        <div className="px-6 pt-7 pb-4 text-center" style={{ background:"linear-gradient(to bottom, rgba(167,139,250,0.08), transparent)" }}>
+        <div className="px-6 pt-7 pb-4 text-center" style={{ background:"linear-gradient(to bottom, rgba(92, 147, 150, 0.08), transparent)" }}>
           <div className="text-5xl mb-3" style={{ animation:"monsterFloat 3.5s ease-in-out infinite" }}>{ev.icon}</div>
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">RANDOM EVENT</p>
-          <p className="text-xl font-black text-purple-300">{ev.title}</p>
-          <p className="text-sm text-zinc-400 mt-2 leading-relaxed">{ev.desc}</p>
+          <p className="text-xs uppercase tracking-widest text-sand-300 mb-1">RANDOM EVENT</p>
+          <p className="text-xl font-black text-mist-300">{ev.title}</p>
+          <p className="text-sm text-sand-300 mt-2 leading-relaxed">{ev.desc}</p>
         </div>
         <div className="px-6 pb-6 flex flex-col gap-3">
-          <div className="rounded-xl p-3 text-sm text-zinc-300"
-            style={{ background:"rgba(167,139,250,0.06)", border:"1px solid rgba(167,139,250,0.15)" }}>
+          <div className="rounded-xl p-3 text-sm text-sand-200"
+            style={{ background:"rgba(92, 147, 150, 0.06)", border:"1px solid rgba(92, 147, 150, 0.15)" }}>
             결과: {ev.reward}
           </div>
           <button onClick={onContinue}
             className="w-full rounded-xl py-3 text-sm font-bold transition active:scale-95"
             style={{
-              background:"linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.08))",
-              border:"1.5px solid rgba(167,139,250,0.5)",
-              color:"#a78bfa",
+              background:"linear-gradient(135deg, rgba(92, 147, 150, 0.2), rgba(92, 147, 150, 0.08))",
+              border:"1.5px solid rgba(92, 147, 150, 0.5)",
+              color:PALETTE.mist300,
             }}>
             계속 탐험하기 →
           </button>
@@ -1105,16 +1100,16 @@ function BossClearedScreen({ area, onExit }: { area: ForestArea; onExit: () => v
       style={{ animation:"fadeInScale .5s ease both" }}>
       <div className="w-full rounded-2xl overflow-hidden text-center"
         style={{
-          background:"rgba(8,6,14,0.9)",
-          border:"2px solid rgba(239,68,68,0.5)",
+          background:"rgba(13, 18, 35, 0.9)",
+          border:"2px solid rgba(168, 61, 31, 0.5)",
           backdropFilter:"blur(16px)",
-          boxShadow:"0 0 40px rgba(239,68,68,0.2)",
+          boxShadow:"0 0 40px rgba(168, 61, 31, 0.2)",
         }}>
-        <div className="px-6 pt-8 pb-6" style={{ background:"linear-gradient(to bottom, rgba(239,68,68,0.12), transparent)" }}>
+        <div className="px-6 pt-8 pb-6" style={{ background:"linear-gradient(to bottom, rgba(168, 61, 31, 0.12), transparent)" }}>
           <div className="text-6xl mb-4" style={{ animation:"nodeReveal .8s ease both" }}>🏆</div>
-          <p className="text-xs uppercase tracking-widest text-red-500 mb-1">DUNGEON CLEARED</p>
-          <p className="text-3xl font-black text-zinc-100 mb-2">{area.name} 정복!</p>
-          <p className="text-sm text-zinc-400 leading-relaxed">
+          <p className="text-xs uppercase tracking-widest text-ember-500 mb-1">DUNGEON CLEARED</p>
+          <p className="text-3xl font-black text-cream-100 mb-2">{area.name} 정복!</p>
+          <p className="text-sm text-sand-300 leading-relaxed">
             깊은 숲의 끝까지 탐사했습니다.<br/>모든 비밀을 밝혀냈습니다.
           </p>
         </div>
@@ -1122,10 +1117,10 @@ function BossClearedScreen({ area, onExit }: { area: ForestArea; onExit: () => v
           <button onClick={onExit}
             className="w-full rounded-xl py-3 text-sm font-black transition active:scale-95"
             style={{
-              background:"linear-gradient(135deg, rgba(239,68,68,0.3), rgba(239,68,68,0.12))",
-              border:"2px solid rgba(239,68,68,0.6)",
-              color:"#f87171",
-              boxShadow:"0 4px 20px rgba(239,68,68,0.2)",
+              background:"linear-gradient(135deg, rgba(168, 61, 31, 0.3), rgba(168, 61, 31, 0.12))",
+              border:"2px solid rgba(168, 61, 31, 0.6)",
+              color:PALETTE.ember500,
+              boxShadow:"0 4px 20px rgba(168, 61, 31, 0.2)",
             }}>
             베이스캠프로 귀환
           </button>
@@ -1147,14 +1142,14 @@ function ItemDropScreen({ drops, area, onContinue, onExit }: {
       style={{ animation:"slideInUp .5s ease both" }}>
       <div className="w-full rounded-2xl overflow-hidden"
         style={{
-          background:"rgba(8,12,8,0.82)",
+          background:"rgba(13, 18, 35, 0.82)",
           border:`1px solid ${area.accentColor}40`,
           backdropFilter:"blur(14px)",
         }}>
         <div className="px-6 pt-6 pb-4 text-center"
           style={{ background:`linear-gradient(to bottom, ${area.glowColor}, transparent)` }}>
-          <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">ITEM FOUND</p>
-          <p className="text-2xl font-black text-zinc-100">재료 발견!</p>
+          <p className="text-xs uppercase tracking-widest text-sand-300 mb-1">ITEM FOUND</p>
+          <p className="text-2xl font-black text-cream-100">재료 발견!</p>
         </div>
         <div className="px-6 pb-2 flex flex-col gap-3">
           {drops.map((d,i)=>{
@@ -1162,16 +1157,16 @@ function ItemDropScreen({ drops, area, onContinue, onExit }: {
             return (
               <div key={i} className="flex items-center gap-4 rounded-xl p-4"
                 style={{
-                  background:"rgba(255,255,255,0.04)",
-                  border:"1px solid rgba(255,255,255,0.07)",
+                  background:"rgba(243, 229, 185, 0.04)",
+                  border:"1px solid rgba(243, 229, 185, 0.07)",
                   animation:`itemDrop .4s ease ${i*.12}s both`,
                 }}>
-                <div className="text-4xl" style={{ filter:"drop-shadow(0 0 8px rgba(255,200,50,.4))" }}>
+                <div className="text-4xl" style={{ filter:"drop-shadow(0 0 8px rgba(233, 148, 65, .4))" }}>
                   {mat?.emoji ?? "🌿"}
                 </div>
                 <div className="flex-1">
-                  <p className="text-base font-bold text-zinc-100">{mat?.name ?? d.id}</p>
-                  <p className="text-xs text-zinc-500">{mat?.description}</p>
+                  <p className="text-base font-bold text-cream-100">{mat?.name ?? d.id}</p>
+                  <p className="text-xs text-sand-300">{mat?.description}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-black font-mono"
@@ -1194,7 +1189,7 @@ function ItemDropScreen({ drops, area, onContinue, onExit }: {
             계속 탐험
           </button>
           <button onClick={onExit}
-            className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900/60 py-3 text-sm text-zinc-400 hover:bg-zinc-800/80 transition active:scale-95">
+            className="flex-1 rounded-xl border border-stone-600 bg-shadow-800/60 py-3 text-sm text-sand-300 hover:bg-shadow-700/80 transition active:scale-95">
             귀환
           </button>
         </div>
@@ -1226,16 +1221,16 @@ function EncounterScreen({ monster, area, drops, isElite, onCapture, onFlee }: {
           style={{ animation:"encounterFlash .6s ease both" }}>
           {isElite ? "💀" : "❕"}
         </div>
-        <p className="text-xs uppercase tracking-[.25em] text-zinc-500">
+        <p className="text-xs uppercase tracking-[.25em] text-sand-300">
           {isElite ? "ELITE ENCOUNTER" : "WILD ENCOUNTER"}
         </p>
       </div>
       <div className="rounded-2xl overflow-hidden"
         style={{
-          background:"rgba(8,10,8,0.85)",
-          border:`1px solid ${isElite ? "rgba(232,121,249,0.5)" : area.borderGlow}`,
+          background:"rgba(13, 18, 35, 0.85)",
+          border:`1px solid ${isElite ? "rgba(132, 75, 63, 0.5)" : area.borderGlow}`,
           backdropFilter:"blur(16px)",
-          boxShadow:`0 0 40px ${isElite ? "rgba(232,121,249,0.2)" : area.glowColor}, inset 0 0 30px rgba(0,0,0,.5)`,
+          boxShadow:`0 0 40px ${isElite ? "rgba(132, 75, 63, 0.2)" : area.glowColor}, inset 0 0 30px rgba(13, 18, 35, .5)`,
         }}>
         <div className="relative flex items-center justify-center py-8"
           style={{ background:`radial-gradient(ellipse at 50% 60%, ${glow} 0%, transparent 70%)` }}>
@@ -1265,14 +1260,14 @@ function EncounterScreen({ monster, area, drops, isElite, onCapture, onFlee }: {
         <div className="px-5 pb-5 flex flex-col gap-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xl font-black text-zinc-100">{monster.name}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xl font-black text-cream-100">{monster.name}</p>
+              <p className="text-xs text-sand-300 mt-0.5">
                 {isElite ? "강적 · " : "야생 몬스터 · "}{area.name}
               </p>
             </div>
             <div className="flex flex-col items-end gap-1.5">
-              <div className="rounded-full bg-zinc-800 border border-zinc-700 px-2.5 py-1">
-                <span className="text-xs font-bold text-zinc-300">Lv.<span className="text-zinc-100 font-black">{monster.level}</span></span>
+              <div className="rounded-full bg-shadow-700 border border-stone-600 px-2.5 py-1">
+                <span className="text-xs font-bold text-sand-200">Lv.<span className="text-cream-100 font-black">{monster.level}</span></span>
               </div>
               <span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${typeColor}`}>
                 {typeKo}
@@ -1281,9 +1276,9 @@ function EncounterScreen({ monster, area, drops, isElite, onCapture, onFlee }: {
           </div>
           {drops.length>0 && (
             <div className="flex items-center gap-2 rounded-xl p-2.5"
-              style={{ background:"rgba(255,200,50,.06)", border:"1px solid rgba(255,200,50,.15)" }}>
+              style={{ background:"rgba(233, 148, 65, .06)", border:"1px solid rgba(233, 148, 65, .15)" }}>
               <span className="text-base">🌿</span>
-              <p className="text-xs text-yellow-400 font-semibold">
+              <p className="text-xs text-ember-500 font-semibold">
                 {drops.map((d)=>`${getMaterial(d.id)?.emoji??"🌿"} ${getMaterial(d.id)?.name??d.id} ×${d.count}`).join("  ")} 획득!
               </p>
             </div>
@@ -1300,7 +1295,7 @@ function EncounterScreen({ monster, area, drops, isElite, onCapture, onFlee }: {
               포획 시도
             </button>
             <button onClick={onFlee}
-              className="flex-1 rounded-xl border border-zinc-700/80 bg-zinc-900/70 py-3 text-sm font-bold text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/80 transition active:scale-95">
+              className="flex-1 rounded-xl border border-stone-600/80 bg-shadow-800/70 py-3 text-sm font-bold text-sand-300 hover:text-sand-200 hover:bg-shadow-700/80 transition active:scale-95">
               도망가기
             </button>
           </div>
@@ -1315,9 +1310,9 @@ function EncounterScreen({ monster, area, drops, isElite, onCapture, onFlee }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const RPS_CARD_STYLES: Record<RpsChoice, { border: string; shadow: string; label: string; bg: string }> = {
-  scissors: { border:"#ef4444", shadow:"rgba(239,68,68,.35)", label:"가위", bg:"rgba(239,68,68,.1)" },
-  rock:     { border:"#6b7280", shadow:"rgba(107,114,128,.35)", label:"바위", bg:"rgba(107,114,128,.1)" },
-  paper:    { border:"#eab308", shadow:"rgba(234,179,8,.35)", label:"보",  bg:"rgba(234,179,8,.1)" },
+  scissors: { border:PALETTE.ember700, shadow:"rgba(168, 61, 31, .35)", label:"가위", bg:"rgba(168, 61, 31, .1)" },
+  rock:     { border:PALETTE.stone600, shadow:"rgba(66, 61, 70, .35)", label:"바위", bg:"rgba(66, 61, 70, .1)" },
+  paper:    { border:PALETTE.ember500, shadow:"rgba(233, 148, 65, .35)", label:"보",  bg:"rgba(233, 148, 65, .1)" },
 };
 
 function RpsSelectScreen({ monster, area, onSelect }: {
@@ -1331,21 +1326,21 @@ function RpsSelectScreen({ monster, area, onSelect }: {
     <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-md mx-4"
       style={{ animation:"slideInUp .4s ease both" }}>
       <div className="text-center">
-        <p className="text-xs uppercase tracking-[.2em] text-zinc-500 mb-1">CATCH ATTEMPT</p>
-        <p className="text-2xl font-black text-zinc-100">가위바위보!</p>
+        <p className="text-xs uppercase tracking-[.2em] text-sand-300 mb-1">CATCH ATTEMPT</p>
+        <p className="text-2xl font-black text-cream-100">가위바위보!</p>
       </div>
       <div className="flex items-center gap-3 rounded-xl px-4 py-2.5"
-        style={{ background:"rgba(10,12,10,.8)", border:`1px solid ${area.borderGlow}`, backdropFilter:"blur(10px)" }}>
+        style={{ background:"rgba(13, 18, 35, .8)", border:`1px solid ${area.borderGlow}`, backdropFilter:"blur(10px)" }}>
         <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.name}
           className="w-10 h-10 object-contain" style={monsterImgStyle(monster.id)}/>
         <div>
-          <p className="text-sm font-bold text-zinc-100">{monster.name}</p>
-          <p className="text-xs text-zinc-500">Lv.{monster.level} · {TYPE_KO[monster.type ?? "normal"]??monster.type}</p>
+          <p className="text-sm font-bold text-cream-100">{monster.name}</p>
+          <p className="text-xs text-sand-300">Lv.{monster.level} · {TYPE_KO[monster.type ?? "normal"]??monster.type}</p>
         </div>
-        <div className="ml-auto flex flex-col items-end gap-0.5 text-[10px] text-zinc-600">
-          <span>이기면 <span className="text-emerald-400 font-bold">72%</span></span>
-          <span>비기면 <span className="text-yellow-400 font-bold">42%</span></span>
-          <span>지면 <span className="text-red-400 font-bold">18%</span></span>
+        <div className="ml-auto flex flex-col items-end gap-0.5 text-[10px] text-earth-400">
+          <span>이기면 <span className="text-moss-500 font-bold">72%</span></span>
+          <span>비기면 <span className="text-ember-500 font-bold">42%</span></span>
+          <span>지면 <span className="text-ember-500 font-bold">18%</span></span>
         </div>
       </div>
       <div className="flex gap-4 w-full">
@@ -1359,18 +1354,18 @@ function RpsSelectScreen({ monster, area, onSelect }: {
               onMouseLeave={()=>setHovered(null)}
               className="flex-1 flex flex-col items-center gap-3 rounded-2xl py-5 px-2 transition-all duration-150"
               style={{
-                background: isHov ? `linear-gradient(145deg, ${st.bg.replace('.1','.22')}, ${st.bg})` : `linear-gradient(145deg, ${st.bg}, rgba(0,0,0,.2))`,
+                background: isHov ? `linear-gradient(145deg, ${st.bg.replace('.1','.22')}, ${st.bg})` : `linear-gradient(145deg, ${st.bg}, rgba(13, 18, 35, .2))`,
                 border:`1.5px solid ${isHov ? st.border : `${st.border}60`}`,
                 boxShadow: isHov ? `0 8px 28px ${st.shadow}, 0 0 0 1px ${st.border}40` : "none",
                 transform: isHov ? "translateY(-6px) scale(1.04)" : "none",
               }}>
               <RpsIcon choice={c} className="w-16 h-16" active={isHov}/>
-              <span className="text-sm font-black text-zinc-200">{st.label}</span>
+              <span className="text-sm font-black text-sand-200">{st.label}</span>
             </button>
           );
         })}
       </div>
-      <p className="text-xs text-zinc-700 -mt-2">클릭해서 선택하세요</p>
+      <p className="text-xs text-earth-400 -mt-2">클릭해서 선택하세요</p>
     </div>
   );
 }
@@ -1392,50 +1387,50 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
     <div className="relative z-10 flex flex-col items-center gap-5 w-full max-w-md mx-4"
       style={{ animation:"slideInUp .4s ease both" }}>
       <div className="w-full rounded-2xl overflow-hidden"
-        style={{ background:"rgba(8,10,8,0.88)", border:"1px solid rgba(255,255,255,0.08)", backdropFilter:"blur(16px)" }}>
+        style={{ background:"rgba(13, 18, 35, 0.88)", border:"1px solid rgba(243, 229, 185, 0.08)", backdropFilter:"blur(16px)" }}>
         {phase==="catch_result" && (
           <div className={`px-6 py-4 text-center bg-gradient-to-b ${res.bg}`}>
             <p className={`text-3xl font-black ${res.color}`} style={{ animation:"numberPop .5s ease both" }}>{res.text}</p>
-            <p className="text-sm text-zinc-400 mt-0.5">{res.desc}</p>
+            <p className="text-sm text-sand-300 mt-0.5">{res.desc}</p>
           </div>
         )}
         <div className="flex items-center gap-3 px-6 py-5 justify-center">
           <div className={`flex flex-col items-center gap-2 flex-1 transition-all ${winnerIsPlayer?"scale-105":""}`}>
-            <p className="text-[10px] uppercase tracking-widest text-zinc-500">나</p>
+            <p className="text-[10px] uppercase tracking-widest text-sand-300">나</p>
             <div className="rounded-2xl p-4 transition-all"
               style={{
-                background: winnerIsPlayer?"rgba(52,211,153,.12)":"rgba(255,255,255,.04)",
-                border: winnerIsPlayer?"1px solid rgba(52,211,153,.4)":"1px solid rgba(255,255,255,.06)",
-                boxShadow: winnerIsPlayer?"0 0 20px rgba(52,211,153,.15)":"none",
+                background: winnerIsPlayer?"rgba(122, 132, 85, .12)":"rgba(243, 229, 185, .04)",
+                border: winnerIsPlayer?"1px solid rgba(122, 132, 85, .4)":"1px solid rgba(243, 229, 185, .06)",
+                boxShadow: winnerIsPlayer?"0 0 20px rgba(122, 132, 85, .15)":"none",
               }}>
               <RpsIcon choice={pChoice} className="w-16 h-16" active={winnerIsPlayer}/>
             </div>
-            <p className="text-xs font-bold text-zinc-300">{RPS_KO[pChoice]}</p>
+            <p className="text-xs font-bold text-sand-200">{RPS_KO[pChoice]}</p>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <p className="text-xl font-black text-zinc-600">VS</p>
+            <p className="text-xl font-black text-earth-400">VS</p>
             {phase==="rps_result" && !showComp && (
-              <p className="text-xs text-zinc-600 animate-pulse">공개 중...</p>
+              <p className="text-xs text-earth-400 animate-pulse">공개 중...</p>
             )}
           </div>
           <div className={`flex flex-col items-center gap-2 flex-1 transition-all ${winnerIsComp?"scale-105":""}`}>
-            <p className="text-[10px] uppercase tracking-widest text-zinc-500">{wildMonster?.name??"몬스터"}</p>
+            <p className="text-[10px] uppercase tracking-widest text-sand-300">{wildMonster?.name??"몬스터"}</p>
             <div className="rounded-2xl p-4 transition-all overflow-hidden"
               style={{
-                background: winnerIsComp?"rgba(248,113,113,.12)":"rgba(255,255,255,.04)",
-                border: winnerIsComp?"1px solid rgba(248,113,113,.4)":"1px solid rgba(255,255,255,.06)",
+                background: winnerIsComp?"rgba(233, 148, 65, .12)":"rgba(243, 229, 185, .04)",
+                border: winnerIsComp?"1px solid rgba(233, 148, 65, .4)":"1px solid rgba(243, 229, 185, .06)",
                 opacity: showComp?1:0,
                 animation: showComp?"rpsReveal .4s ease both":"none",
               }}>
               <RpsIcon choice={cChoice} className="w-16 h-16" active={winnerIsComp}/>
             </div>
-            <p className={`text-xs font-bold text-zinc-300 transition-opacity ${showComp?"opacity-100":"opacity-0"}`}>{RPS_KO[cChoice]}</p>
+            <p className={`text-xs font-bold text-sand-200 transition-opacity ${showComp?"opacity-100":"opacity-0"}`}>{RPS_KO[cChoice]}</p>
           </div>
         </div>
         {phase==="rps_result" && showComp && (
           <div className="px-6 pb-5 text-center">
             <p className={`text-lg font-black ${res.color}`}>{res.text}</p>
-            <p className="text-xs text-zinc-600 mt-1 animate-pulse">포획 시도 중...</p>
+            <p className="text-xs text-earth-400 mt-1 animate-pulse">포획 시도 중...</p>
           </div>
         )}
         {phase==="catch_result" && catchSuccess!==null && (
@@ -1444,11 +1439,11 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
               <>
                 <div className="relative flex items-center justify-center w-full">
                   <div className="absolute rounded-full"
-                    style={{ width:80, height:80, background:"rgba(52,211,153,.15)", animation:"successBurst .8s ease both" }}/>
+                    style={{ width:80, height:80, background:"rgba(122, 132, 85, .15)", animation:"successBurst .8s ease both" }}/>
                   {wildMonster && (
                     <img src={MONSTER_IMAGE_MAP[wildMonster.id]} alt={wildMonster.name}
                       className="relative w-20 h-20 object-contain"
-                      style={{ ...monsterImgStyle(wildMonster?.id??""), animation:"catchBounce .6s ease 2", filter:"drop-shadow(0 0 12px rgba(52,211,153,.5))" }}/>
+                      style={{ ...monsterImgStyle(wildMonster?.id??""), animation:"catchBounce .6s ease 2", filter:"drop-shadow(0 0 12px rgba(122, 132, 85, .5))" }}/>
                   )}
                   {Array.from({length:6}).map((_,i)=>(
                     <div key={i} className="absolute text-lg"
@@ -1456,8 +1451,8 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
                   ))}
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-black text-emerald-300" style={{ filter:"drop-shadow(0 0 8px rgba(52,211,153,.5))" }}>포획 성공! 🎉</p>
-                  <p className="text-sm text-zinc-400 mt-1">
+                  <p className="text-2xl font-black text-moss-500" style={{ filter:"drop-shadow(0 0 8px rgba(122, 132, 85, .5))" }}>포획 성공! 🎉</p>
+                  <p className="text-sm text-sand-300 mt-1">
                     {wildMonster?.name}이(가){" "}{catchPlace==="storage"?"농장 보관함에 저장되었습니다!":"농장이 가득 차서 놓아줬습니다..."}
                   </p>
                 </div>
@@ -1466,10 +1461,10 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
               <>
                 <div className="text-5xl" style={{ animation:"catchShakeX .6s ease" }}>💨</div>
                 <div className="text-center">
-                  <p className="text-2xl font-black text-red-400">
+                  <p className="text-2xl font-black text-ember-500">
                     {triesLeft > 0 ? "놓쳤다!" : "도망쳤다..."}
                   </p>
-                  <p className="text-sm text-zinc-500 mt-1">
+                  <p className="text-sm text-sand-300 mt-1">
                     {triesLeft > 0
                       ? `${wildMonster?.name}이(가) 아직 근처에 있다. (남은 시도 ${triesLeft}회)`
                       : `${wildMonster?.name}이(가) 사라졌습니다.`}
@@ -1482,9 +1477,9 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
                 <button onClick={onRetry}
                   className="flex-1 rounded-xl py-2.5 text-sm font-bold transition active:scale-95"
                   style={{
-                    background: "rgba(52,211,153,.18)",
-                    border: "1px solid rgba(52,211,153,.5)",
-                    color: "#6ee7b7",
+                    background: "rgba(122, 132, 85, .18)",
+                    border: "1px solid rgba(122, 132, 85, .5)",
+                    color: PALETTE.moss500,
                   }}>
                   다시 시도 ({triesLeft})
                 </button>
@@ -1492,14 +1487,14 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
               <button onClick={onContinue}
                 className="flex-1 rounded-xl py-2.5 text-sm font-bold transition active:scale-95"
                 style={{
-                  background:"linear-gradient(135deg, rgba(74,222,128,.18), rgba(74,222,128,.08))",
-                  border:"1px solid rgba(74,222,128,.45)",
-                  color:"#4ade80",
+                  background:"linear-gradient(135deg, rgba(122, 132, 85, .18), rgba(122, 132, 85, .08))",
+                  border:"1px solid rgba(122, 132, 85, .45)",
+                  color:PALETTE.moss500,
                 }}>
                 계속 탐험
               </button>
               <button onClick={onExit}
-                className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900/60 py-2.5 text-sm text-zinc-400 hover:bg-zinc-800/80 transition active:scale-95">
+                className="flex-1 rounded-xl border border-stone-600 bg-shadow-800/60 py-2.5 text-sm text-sand-300 hover:bg-shadow-700/80 transition active:scale-95">
                 귀환
               </button>
             </div>
@@ -1669,18 +1664,18 @@ export default function ForestPage() {
       {/* 상단 UI */}
       <div className="absolute top-4 left-0 right-0 z-30 flex items-center justify-between px-4">
         <button onClick={phase==="enter" ? ()=>navigate("/") : exitDungeon}
-          className="rounded-xl border border-zinc-700/60 bg-black/50 px-3 py-1.5 text-sm text-zinc-400 hover:text-zinc-200 hover:bg-black/70 backdrop-blur transition">
+          className="rounded-xl border border-stone-600/60 bg-black/50 px-3 py-1.5 text-sm text-sand-300 hover:text-sand-200 hover:bg-black/70 backdrop-blur transition">
           {phase==="enter" ? "← 베이스캠프" : "← 탈출"}
         </button>
         <div className="flex items-center gap-2">
           {area && (
             <div className="rounded-xl px-3 py-1.5 text-xs font-bold backdrop-blur"
-              style={{ background:"rgba(0,0,0,.5)", border:`1px solid ${area.borderGlow}`, color: area.accentColor }}>
+              style={{ background:"rgba(13, 18, 35, .5)", border:`1px solid ${area.borderGlow}`, color: area.accentColor }}>
               {area.name} {currentNode && phase!=="enter" ? `· ${currentNode.depth}/${maxDepth}` : ""}
             </div>
           )}
           {totalPotions>0 && (
-            <div className="rounded-xl border border-zinc-700/60 bg-black/50 px-3 py-1.5 text-xs text-zinc-400 backdrop-blur">
+            <div className="rounded-xl border border-stone-600/60 bg-black/50 px-3 py-1.5 text-xs text-sand-300 backdrop-blur">
               🎒 ×{totalPotions}
             </div>
           )}
@@ -1694,9 +1689,9 @@ export default function ForestPage() {
         {phase==="enter" && (
           <div className="flex flex-col items-center gap-5 w-full max-w-lg">
             <div className="text-center mb-2">
-              <p className="text-xs uppercase tracking-[.25em] text-zinc-600 mb-1">EXPEDITION</p>
-              <h1 className="text-3xl font-black text-zinc-100">숲 탐험</h1>
-              <p className="text-sm text-zinc-500 mt-1">탐험할 구역을 선택하세요</p>
+              <p className="text-xs uppercase tracking-[.25em] text-earth-400 mb-1">EXPEDITION</p>
+              <h1 className="text-3xl font-black text-cream-100">숲 탐험</h1>
+              <p className="text-sm text-sand-300 mt-1">탐험할 구역을 선택하세요</p>
             </div>
             {FOREST_AREAS.map((a,i)=>{
               const locked =
@@ -1707,12 +1702,12 @@ export default function ForestPage() {
                   <AreaCard area={a} index={i} onClick={()=>{ if(!locked) handleEnterArea(a); }}/>
                   {locked && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2"
-                      style={{ background:"rgba(0,0,0,.72)", border:"2px solid rgba(100,80,20,.3)", borderRadius:0 }}>
+                      style={{ background:"rgba(13, 18, 35, .72)", border:"2px solid rgba(132, 75, 63, .3)", borderRadius:0 }}>
                       <span className="text-2xl">🔒</span>
-                      <p className="text-xs font-bold text-zinc-400" style={{ fontFamily:"var(--pixel-font,monospace)", fontSize:9 }}>
+                      <p className="text-xs font-bold text-sand-300" style={{ fontFamily:"var(--pixel-font,monospace)", fontSize:9 }}>
                         {a.id==="deep" ? "무한의 탑 11층 도달 시 해금" : "무한의 탑 21층 도달 시 해금"}
                       </p>
-                      <p className="text-[9px] text-zinc-600">현재 최고 층: {bestFloor}층</p>
+                      <p className="text-[9px] text-earth-400">현재 최고 층: {bestFloor}층</p>
                     </div>
                   )}
                 </div>
