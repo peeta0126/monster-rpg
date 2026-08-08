@@ -292,65 +292,18 @@ await sharp('public/assets/basecamp/basecamp-bg.png')
    베이스캠프와 동일한 체감이 됩니다.
 2. (대안) 공방도 Phaser 씬으로 이전 — 일관성은 최고지만 709줄 재작성이라 비용이 큽니다.
 
-#### B. 배경 재생성 (에셋 작업 — 우선순위 낮음)
+#### B. 배경 재생성 — 완료 (2026-08-08)
 
-새 `housing_bg.png` 생성 조건:
+새 배경 `housing_bg` 로 교체했다. 2400×1792 (이전 835×714 의 7.2배 픽셀 수).
+비율이 1.170 → 1.339 로 바뀌어 좌표계를 통째로 다시 잡았다.
 
-- 해상도 1536×1310 이상 (현재 835×714의 3.4배 픽셀 수)
-- 시점: 베이스캠프와 동일한 3/4 탑다운 (현재 공방도 3/4이라 시점은 맞음)
-- 팔레트: 위 1-2 마스터 팔레트. 특히 현재 공방은 붉은 갈색(`#653A33`, `#5D2827`)에 치우쳐 있고
-  베이스캠프는 올리브/이끼색(`#7A8455`, `#515A52`)이 강합니다. → 공방에 이끼 초록과
-  `shadow-800`(`#183B4F`) 계열 그림자를 섞어 톤을 맞출 것
-- 광원: 좌상단 (베이스캠프와 동일)
-- 창밖 풍경은 베이스캠프의 벚꽃·초목과 같은 색으로
+- 경로 상수: `src/shared/assetPaths.ts` 의 `WORKSHOP_BACKGROUND_*`
+- 좌표·충돌·제작대·출입구: `src/workshop/workshopLayout.ts` (한 벌만 둔다)
+- 검증: `tests/workshopLayout.test.ts`(BFS 도달성 포함) · `design/workshop.spec.ts`
 
-생성 프롬프트 템플릿:
-
-```
-탑다운 3/4 시점 판타지 제작 공방 실내, 고밀도 픽셀아트,
-Moonlighter / Stardew Valley 스타일, 1536x1310,
-좌상단 광원, 검정 아웃라인 없음,
-팔레트: 딥 틸 그림자 #183B4F, 목재 #844B3F, 석재 #423D46,
-샌드 하이라이트 #E0C69B, 이끼 초록 #7A8455, 화염 강조 #E99441,
-모루·연금술 작업대·아티팩트 제작대·책장·침대 배치,
-따뜻한 실내 조명, 창밖에 초록 나무와 벚꽃
-```
-
-→ 첨부 참조 이미지로 `basecamp-bg.png`를 함께 넣으면 톤이 훨씬 잘 맞습니다
-(Nano Banana Pro / Flux Kontext의 스타일 전이 기능 활용).
-
-#### B. 코드 수정 (에셋 없이도 지금 가능)
-
-```diff
-- const PLAYER_DISPLAY = 110;
-+ const PLAYER_DISPLAY = 128;   // 64 × 2 (정수배 필수)
-
-- style={{ objectFit: "fill" }}
-+ style={{ objectFit: "contain" }}
-```
-
-#### C. 상호작용 UI 규격 통일
-
-현재 SPACE 안내 배지가 하드코딩 색(`#b47828`, `#f5e6c8`, `rgba(18,9,2,0.94)`)을 씁니다.
-→ 공용 컴포넌트 `<InteractionPrompt>`로 분리하고 토큰 사용:
-
-```tsx
-// src/shared/ui/InteractionPrompt.tsx
-export function InteractionPrompt({ keyLabel = "SPACE", children }: Props) {
-  return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-earth-500/75
-                    bg-shadow-900/94 px-5 py-2.5 font-pixel text-sm text-sand-200
-                    shadow-[0_0_28px_rgba(233,148,65,0.25)]">
-      <span className="rounded bg-ember-500 px-2 py-0.5 text-xs font-black
-                       tracking-wider text-shadow-900">{keyLabel}</span>
-      <span>{children}</span>
-    </div>
-  );
-}
-```
-
-→ 공방·베이스캠프·숲에서 전부 이걸 씁니다. **같은 UI가 화면마다 다르게 생긴 게 "일관성 없음"의
-실체입니다.**
+좌표를 고칠 일이 생기면 `SHOW_COLLISION_DEBUG = true` 로 켜고 `npm run design:shot`
+으로 찍어 눈으로 확인할 것. 카메라가 1.5배라 방이 잘리므로, 전체를 보려면
+`WorkshopPage.tsx` 의 `CAMERA_ZOOM` 을 잠시 1.0 으로 두면 된다.
 
 ### 3-2. 전투 UI (`src/battle/BattlePage.tsx`, 912줄) — 2순위
 
