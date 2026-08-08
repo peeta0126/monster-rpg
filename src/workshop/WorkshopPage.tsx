@@ -9,7 +9,7 @@ import { PALETTE } from "../shared/palette";
 import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { getPlayerFrame, type Dir8 } from "../shared/playerSprite";
 
-const BG_URL = "/assets/housing/housing_bg.png";
+const BG_URL = "/assets/housing/housing_bg.webp";
 
 // 이미지 원본 크기 (835 × 714) — 비율 고정용
 const BG_W = 835;

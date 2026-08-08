@@ -44,7 +44,7 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
     id: "baros",
     name: "Baros",
     spriteTexture: "Baros",
-    portraitPath: "/assets/player/Baros_portrait.png",
+    portraitPath: "/assets/player/Baros_portrait.webp",
     x: 430,
     y: 1200,
     dialogues: BAROS_DIALOGUES,
@@ -53,7 +53,7 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
     id: "orion",
     name: "Orion",
     spriteTexture: "Orion",
-    portraitPath: "/assets/player/Orion_portrait.png",
+    portraitPath: "/assets/player/Orion_portrait.webp",
     x: 1090,
     y: 1950,
     dialogues: ORION_DIALOGUES,
@@ -82,8 +82,8 @@ export default class BaseCampScene extends Phaser.Scene {
     // 8방향 아틀라스가 들어오면 아래 player-* 개별 PNG 목록을 지우고 이 줄을 켠다.
     // playerSprite.ts 의 ASSET_MODE 를 "atlas" 로 바꾸는 것과 한 세트다.
     // this.load.aseprite(PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON);
-    this.load.image("basecamp-bg", "/assets/basecamp/basecamp-bg.png");
-    this.load.image("basecamp-bg-1", "/assets/basecamp/basecamp-bg-1.png");
+    this.load.image("basecamp-bg", "/assets/basecamp/basecamp-bg.webp");
+    this.load.image("basecamp-bg-1", "/assets/basecamp/basecamp-bg-1.webp");
     this.load.image("player-up", "/assets/player/player-up.png");
     this.load.image("player-up-1", "/assets/player/player-up-1.png");
     this.load.image("player-up-2", "/assets/player/player-up-2.png");

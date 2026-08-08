@@ -10,4 +10,4 @@ export const LOGIN_BACKGROUND_ASPECT_RATIO = 2624 / 1632;
 
 /** 베이스캠프 필드 배경. Phaser 씬이 로드하는 것과 같은 파일이라, 다른 화면에서
  *  흐린 배경으로 재활용하면 대개 캐시에서 바로 나온다. */
-export const BASECAMP_BACKGROUND_IMAGE = "/assets/basecamp/basecamp-bg.png";
+export const BASECAMP_BACKGROUND_IMAGE = "/assets/basecamp/basecamp-bg.webp";

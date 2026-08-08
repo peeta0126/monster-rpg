@@ -16,6 +16,7 @@
     "design:before": "cross-env SHOT_LABEL=before npm run design:shot",
     "design:after": "cross-env SHOT_LABEL=after npm run design:shot",
     "design:sheet": "node design/contact-sheet.mjs",
+    "optimize:assets": "node scripts/optimize-assets.mjs",
     "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
