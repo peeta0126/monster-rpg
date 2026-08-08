@@ -623,6 +623,8 @@ function MenuModal({
   onGoToMonsters,
   onGoToFarm,
   onOpenTower,
+  towerCleared,
+  onReplayEnding,
 }: {
   onClose: () => void;
   onOpenQuestLog: () => void;
@@ -630,6 +632,8 @@ function MenuModal({
   onGoToMonsters: () => void;
   onGoToFarm: () => void;
   onOpenTower: () => void;
+  towerCleared: boolean;
+  onReplayEnding: () => void;
 }) {
   const logout = useAuthStore((s) => s.logout);
   const isGuest = useAuthStore((s) => s.isGuest);
@@ -643,6 +647,10 @@ function MenuModal({
     { label: "가방",      emoji: "🎒", color: "border-ember-700/60 text-ember-500 hover:bg-ember-700/11",   onClick: onGoToFarm },
     { label: "도감",      emoji: "📖", color: "border-stone-600 text-sand-200 hover:bg-shadow-700/60",         onClick: onOpenDex },
     { label: "소리",      emoji: "🔊", color: "border-stone-600 text-sand-200 hover:bg-shadow-700/60",         onClick: () => setShowAudio((v) => !v) },
+    // 엔딩을 본 사람만 다시 볼 수 있다
+    ...(towerCleared
+      ? [{ label: "엔딩 다시 보기", emoji: "🏆", color: "border-ember-500/70 text-ember-500 hover:bg-ember-500/10", onClick: onReplayEnding }]
+      : []),
     { label: isGuest ? "로그인" : "로그아웃", emoji: "🚪", color: "border-ember-700/60 text-ember-500 hover:bg-ember-700/11", onClick: logout },
   ];
 
@@ -656,7 +664,14 @@ function MenuModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-title-sm font-bold text-cream-100">메뉴</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-title-sm font-bold text-cream-100">메뉴</h2>
+            {towerCleared && (
+              <span className="rounded border border-ember-500/70 px-1.5 py-0.5 text-pixel-sm font-bold text-ember-500">
+                클리어
+              </span>
+            )}
+          </div>
           <span className="text-pixel-sm text-earth-400">ESC: 닫기</span>
         </div>
 
@@ -834,6 +849,8 @@ export default function BaseCampPage() {
           onOpenDex={() => { setMenuOpen(false); setDexOpen(true); }}
           onGoToMonsters={() => navigate("/monsters")}
           onGoToFarm={() => navigate("/farm", { state: { from: "basecamp" } })}
+          towerCleared={towerCleared}
+          onReplayEnding={() => { setMenuOpen(false); navigate("/ending"); }}
           onOpenTower={() => {
             setMenuOpen(false);
             setHealed(false);
