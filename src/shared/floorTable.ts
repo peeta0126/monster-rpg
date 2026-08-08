@@ -181,7 +181,13 @@ export function scaleToLevel(base: Monster, targetLevel: number): Monster {
     attack: base.attack + n * 3,
     defense: base.defense + n * 2,
     speed: base.speed + n * 2,
-    rewardExp: Math.floor(base.rewardExp * (1 + n * 0.22)),
+    // 계수 0.22 → 0.30. 11~25층 고정 구성을 되살리자 그 층들이 전부 진짜 전투가 되면서
+    // 30층 이후 도달 레벨이 전부 보스 아래로 내려갔다(-1.1 ~ -3.3). 예전엔 그 층들이
+    // 공짜라 레벨을 미리 벌어뒀던 것이라, 그만큼을 경험치로 정직하게 메운다.
+    // scripts/sim/expSweep.mjs (40판): 0.22 → 탑전투 124.9 / 재도전 15.6 / 레벨차 -1.1~-3.3
+    //                                  0.30 → 탑전투  92.5 / 재도전  8.5 / 레벨차 +1.4~+2.9
+    //                                  0.40 → 탑전투  79.1 / 재도전  6.2 / 레벨차 +3.6~+10.4 (헐거움)
+    rewardExp: Math.floor(base.rewardExp * (1 + n * 0.30)),
     expToNextLevel: Math.floor(base.expToNextLevel * Math.pow(1.2, n)),
     exp: 0,
   };
@@ -253,8 +259,13 @@ export function getTowerSecretReveal(floor: number, moveId: string): TowerSecret
 // ─── 층별 적 생성 ────────────────────────────────────────────────────────────────
 
 export function getFloorEnemy(floor: number, excludeId?: string): Monster {
-  // ── 1~9층: 고정 구성 ──
-  if (floor <= 9 && FLOOR_FIXED[floor]) {
+  // ── 고정 구성 층 (1~9, 11~25) ──
+  // 예전에 조건이 `floor <= 9` 라서 11~25층 구성 15개가 통째로 죽어 있었다. 그 층들은
+  // 랜덤 풀에서 뽑혔는데, getFloorEnemySkill 쪽에는 같은 제한이 없어 없는 몬스터의
+  // 스킬 순서를 뒤졌다. 그러다 이름이 겹치는 몸통박치기를 찾아내 적이 자기 최약체
+  // 기술만 반복하는 층이 생겼다 — 19층이 405전투 1패였던 이유다. 그렇게 공짜로 올라와
+  // 20층 보스 앞에서 처음 제대로 맞았다.
+  if (FLOOR_FIXED[floor]) {
     const cfg = FLOOR_FIXED[floor];
     if (cfg.monsterId !== excludeId) {
       const base = monsters.find((m) => m.id === cfg.monsterId);
@@ -388,6 +399,12 @@ export function getFloorEnemySkill(
 
   const cfg = FLOOR_FIXED[floor];
   if (!cfg) return null;
+
+  // 지정 순서에 나오는 기술을 적이 전부 갖고 있을 때만 이 표를 따른다.
+  // 일부만 겹치면 그 층의 적이 아니라는 뜻이고, 겹치는 것만 골라 쓰면 대개
+  // 몸통박치기 같은 최약체 기술만 반복하게 된다. 그럴 땐 null 을 주고 AI 에 맡긴다.
+  const ids = new Set(enemyMoves.map((m) => m.id));
+  if (!cfg.skillOrder.every((id) => ids.has(id))) return null;
 
   const skillId = cfg.skillOrder[turnIndex % cfg.skillOrder.length];
   return enemyMoves.find((m) => m.id === skillId) ?? null;
