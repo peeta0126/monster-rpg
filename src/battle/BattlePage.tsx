@@ -58,7 +58,6 @@ import {
   createBattleMonsterFromOwned,
   gainExp,
   getAIAction,
-  getTypeMultiplier,
   isFainted,
   type BattleMonster,
 } from "./battleUtils";
@@ -66,8 +65,9 @@ import {
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { createBattleGame } from "../shared/phaser/phaserConfig";
 import { setBattleInitData } from "./battleInitStore";
+import { StatBar } from "../shared/ui";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
-import { StatBar, EmptyState } from "../shared/ui";
+import { BattleCommandMenu } from "./BattleCommandMenu";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
 
@@ -81,12 +81,6 @@ type BattleRouteState = {
 const STATUS_LABELS: Record<string, string> = {
   paralysis: "⚡마비", poison: "☠독", freeze: "❄빙결", burn: "🔥화상",
 };
-
-// 기술 버튼 색은 shared/palette.ts 의 ELEMENT_CHIP_CLASS 가 단일 출처다.
-// 여기서 따로 정하면 숲·몬스터 화면과 속성 색이 어긋난다.
-function typeClass(t: string) {
-  return ELEMENT_CHIP_CLASS[t as keyof typeof ELEMENT_CHIP_CLASS] ?? ELEMENT_CHIP_CLASS.normal;
-}
 
 /** 출전하지 않은 파티원이 받는 경험치 비율 (출전 몬스터 대비) */
 const BENCH_EXP_SHARE = 0.5;
@@ -119,8 +113,6 @@ export default function BattlePage() {
   });
   const [mustSwitch, setMustSwitch] = useState(false);
 
-  // 가방 패널 표시 여부
-  const [showBag, setShowBag] = useState(false);
   // 실시간 물약 재고 (사용 시 갱신)
   const [potionCounts, setPotionCounts] = useState<Record<string, number>>(
     () => usePlayerStore.getState().potions,
@@ -402,7 +394,6 @@ export default function BattlePage() {
   const handleMoveClick = useCallback(async (move: Move) => {
     if (isProcessing || battleOutcome !== null || mustSwitch) return;
     setIsProcessing(true);
-    setShowBag(false);
 
     let np = player;
     let ne = enemyState;
@@ -569,7 +560,6 @@ export default function BattlePage() {
     setActivePartyIndex(partyIdx);
     setPlayer(nextPlayer);
     setMustSwitch(false);
-    setShowBag(false);
     syncHpToPhaser(nextPlayer, enemyState);
     gameEvents.emit(GAME_EVENT.BATTLE_PLAYER_SWITCH, { partyIndex: partyIdx, name: nextOwned.name, level: nextOwned.level });
 
@@ -607,7 +597,6 @@ export default function BattlePage() {
     if ((potionCounts[potionId] ?? 0) <= 0) return;
 
     setIsProcessing(true);
-    setShowBag(false);
 
     // 물약 소모
     const ok = consumePotion(potionId);
@@ -715,7 +704,16 @@ export default function BattlePage() {
     && enemyState.currentHp / enemyState.maxHp <= 0.3
     && !isProcessing && battleOutcome === null && !mustSwitch;
   const speedFirst = (player.speed + getEquipCombatBonus(initialParty[activePartyIndex]?.uid).speed) >= enemyState.speed;
-  const hasPotions = POTIONS.some(p => (potionCounts[p.id] ?? 0) > 0);
+  // 메뉴에 넘길 물약 목록. 효과 설명은 여기서 한 번만 만든다.
+  const potionEntries = POTIONS.map((p) => {
+    const e = p.effect;
+    const effectLabel =
+      e.type === "heal"        ? `HP +${e.amount}` :
+      e.type === "full_heal"   ? "HP 완전 회복" :
+      e.type === "cure_status" ? "상태이상 치료" :
+      e.type === "buff_attack" ? `공격 ×${e.multiplier} (${e.turns}턴)` : "";
+    return { id: p.id, name: p.name, emoji: p.emoji, effectLabel, count: potionCounts[p.id] ?? 0 };
+  });
 
   // ─── 렌더 ────────────────────────────────────────────────────────────────────────
   return (
@@ -761,14 +759,6 @@ export default function BattlePage() {
                 showLog ? "border-stone-600 text-sand-200" : "border-shadow-700 text-earth-400 hover:text-sand-300"}`}>
               기록
             </button>
-            {/* 도망: 보스층에서는 불가 (보스는 정면으로 넘어야 하는 관문) */}
-            {battleOutcome === null && (
-              <button onClick={handleFlee} disabled={isProcessing || isBossFloor(floor)}
-                title={isBossFloor(floor) ? "보스에게서는 도망칠 수 없다" : "이 전투를 포기하고 베이스캠프로"}
-                className="text-pixel-sm text-earth-400 hover:text-sand-300 border border-shadow-700 rounded px-1.5 py-0.5 disabled:opacity-30">
-                도망
-              </button>
-            )}
             <button onClick={() => navigate("/")}
               className="text-pixel-sm text-earth-400 hover:text-sand-300 border border-shadow-700 rounded px-1.5 py-0.5">
               나가기
@@ -845,122 +835,30 @@ export default function BattlePage() {
             </div>
 
             {/* ─── 오른쪽 액션 영역 ──────────────────────── */}
-            <div className="flex-1 p-2 flex flex-col gap-1.5 min-w-0">
-
-              {/* 강제 교체 */}
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2">
               {mustSwitch ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center">
-                  <p className="text-ember-500 font-bold text-pixel-sm">{player.name}이(가) 기절했다!</p>
-                  <p className="text-sand-300 text-pixel-sm">← 왼쪽에서 다음 몬스터를 선택하세요</p>
-                </div>
-              ) : showBag ? (
-                /* ──── 가방 패널 ──── */
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-pixel-sm text-sand-300 font-semibold">🎒 가방 — 물약</p>
-                    <button onClick={() => setShowBag(false)}
-                      className="text-pixel-sm text-earth-400 hover:text-sand-300 border border-shadow-700 rounded px-1.5 py-0.5">
-                      닫기
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto flex flex-col gap-1">
-                    {POTIONS.map(p => {
-                      const cnt = potionCounts[p.id] ?? 0;
-                      const effectLabel = (() => {
-                        const e = p.effect;
-                        if (e.type === "heal")        return `HP +${e.amount}`;
-                        if (e.type === "full_heal")   return "HP 완전 회복";
-                        if (e.type === "cure_status") return "상태이상 치료";
-                        if (e.type === "buff_attack") return `공격 ×${e.multiplier} (${e.turns}턴)`;
-                        return "";
-                      })();
-                      return (
-                        <button key={p.id}
-                          onClick={() => cnt > 0 && handleUsePotion(p.id)}
-                          disabled={cnt <= 0 || isProcessing}
-                          className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition
-                            ${cnt > 0
-                              ? "border-ember-700/50 bg-ember-700/10 hover:bg-ember-700/16 text-cream-100"
-                              : "border-shadow-700 bg-shadow-800/20 text-earth-400 cursor-not-allowed opacity-50"
-                            }`}
-                        >
-                          <span className="text-title-sm shrink-0">{p.emoji}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-pixel-sm font-semibold leading-tight truncate">{p.name}</p>
-                            <p className="text-pixel-sm opacity-70 leading-tight">{effectLabel}</p>
-                          </div>
-                          <span className={`text-pixel-sm font-mono font-bold shrink-0 ${cnt > 0 ? "text-ember-500" : "text-earth-400"}`}>
-                            ×{cnt}
-                          </span>
-                        </button>
-                      );
-                    })}
-                    {!hasPotions && (
-                      <EmptyState icon="🧪" title="보유한 물약이 없습니다"
-                        description="제작 공방의 연금술 제작대에서 만들 수 있어요." />
-                    )}
-                  </div>
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+                  <p className="text-pixel-sm font-bold text-ember-500">{player.name}이(가) 기절했다!</p>
+                  <p className="text-pixel-sm text-sand-300">← 왼쪽에서 다음 몬스터를 선택하세요</p>
                 </div>
               ) : (
-                /* ──── 기술 4슬롯 ──── */
                 <>
-                  {/* 가방 토글 버튼 (우상단) */}
-                  <div className="flex items-center justify-end">
-                    <button
-                      onClick={() => setShowBag(true)}
-                      disabled={isProcessing}
-                      className={`flex items-center gap-1 text-pixel-sm rounded border px-1.5 py-0.5 transition
-                        ${hasPotions
-                          ? "border-ember-700/60 text-ember-500 hover:bg-ember-700/11"
-                          : "border-shadow-700 text-earth-400"
-                        } disabled:opacity-30`}
-                    >
-                      🎒 가방 {hasPotions && <span className="text-ember-500 font-bold">●</span>}
-                    </button>
-                  </div>
+                  <BattleCommandMenu
+                    moves={player.moves}
+                    enemyType={enemyState.type ?? "normal"}
+                    potions={potionEntries}
+                    disabled={isProcessing}
+                    canFlee={!isBossFloor(floor)}
+                    fleeBlockedReason="보스는 못 피한다"
+                    onUseMove={handleMoveClick}
+                    onUsePotion={handleUsePotion}
+                    onFlee={handleFlee}
+                  />
 
-                  {/* 기술 2×2 — 항상 4슬롯, 높이 균일 */}
-                  <div className="grid grid-cols-2 grid-rows-2 gap-1.5 flex-1">
-                    {[0, 1, 2, 3].map(i => {
-                      const move = player.moves[i];
-                      if (!move) {
-                        return (
-                          <div key={`empty-${i}`}
-                            className="border border-shadow-700/40 bg-shadow-800/10 flex items-center justify-center min-h-[52px]"
-                            style={{ borderRadius: 0 }}>
-                            <span className="text-shadow-800 text-pixel-sm">—</span>
-                          </div>
-                        );
-                      }
-                      const mult = getTypeMultiplier(move.type, enemyState.type);
-                      return (
-                        <button key={move.id}
-                          onClick={() => handleMoveClick(move)}
-                          disabled={isProcessing}
-                          style={{ borderRadius: 0 }}
-                          className={`group relative border-2 px-2 py-1.5 text-left transition
-                            hover:brightness-125 focus-visible:brightness-125 disabled:opacity-30 min-h-[52px] ${typeClass(move.type)}`}
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-pixel-sm leading-tight">
-                              <span className="invisible mr-1 group-hover:visible group-focus-visible:visible">▶</span>
-                              {move.name}
-                            </span>
-                            <span className="text-pixel-sm opacity-50 uppercase shrink-0">{move.type}</span>
-                          </div>
-                          <div className="text-pixel-sm opacity-45 mt-0.5">위력 {move.power} · 명중 {move.accuracy}</div>
-                          {mult >= 2   && <div className="text-pixel-sm text-moss-500 font-semibold mt-0.5">▲ 효과 굉장!</div>}
-                          {mult === 0  && <div className="text-pixel-sm text-earth-400 mt-0.5">✕ 효과 없음</div>}
-                          {mult > 0 && mult < 1 && <div className="text-pixel-sm text-ember-500 mt-0.5">▼ 효과 미미</div>}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* 포획 버튼 */}
                   {canShowCatch && (
                     <button onClick={handleCatch} disabled={isProcessing}
-                      className="w-full rounded-lg border border-mist-500 bg-mist-500/15 py-1.5 text-pixel-sm font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-30 transition">
+                      data-testid="cmd-catch"
+                      className="w-full rounded-lg border border-mist-500 bg-mist-500/15 py-1.5 text-pixel-sm font-semibold text-mist-300 transition hover:bg-mist-500/25 disabled:opacity-30">
                       포획 시도 {enemyState.status ? "(상태이상 보너스)" : ""}
                     </button>
                   )}
@@ -1000,7 +898,7 @@ export default function BattlePage() {
             <div className="grid grid-cols-2 gap-1.5 mb-3">
               {forgetPrompt.current.map((mv, i) => (
                 <button key={mv.id} onClick={() => answerForget(i)}
-                  className={`border px-2 py-1.5 text-left transition ${typeClass(mv.type)}`}
+                  className={`border px-2 py-1.5 text-left transition ${ELEMENT_CHIP_CLASS[mv.type as keyof typeof ELEMENT_CHIP_CLASS] ?? ELEMENT_CHIP_CLASS.normal}`}
                   style={{ borderRadius: 0 }}>
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-pixel-sm font-semibold leading-tight">{mv.name}</span>

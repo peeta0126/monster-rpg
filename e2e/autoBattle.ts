@@ -8,8 +8,9 @@ import { expect, type Locator, type Page } from "@playwright/test";
 /** 한 층에서 허용할 최대 턴 수 — 무한 루프 방지용 안전장치 */
 const MAX_TURNS_PER_FLOOR = 300;
 
-export const moveButtons = (page: Page) =>
-  page.locator("button").filter({ hasText: "위력" });
+/** 2단 메뉴의 기술 버튼들 (공격/스킬 하위에서만 보인다) */
+export const moveButtons = (page: Page) => page.locator('[data-testid^="move-"]');
+const MOVE_GROUPS = ["cmd-attack", "cmd-skill"] as const;
 
 export const winOverlay = (page: Page) => page.getByText("WIN!", { exact: true });
 export const loseOverlay = (page: Page) => page.getByText("LOSE...", { exact: true });
@@ -23,12 +24,14 @@ async function isVisible(loc: Locator): Promise<boolean> {
   return (await loc.count()) > 0 && (await loc.first().isVisible());
 }
 
-/** 기술 버튼이 하나라도 눌릴 수 있는 상태인가 (= 조작 대기 중) */
+/**
+ * 1단 메뉴가 떠 있고 공격·스킬 중 하나라도 누를 수 있으면 조작 대기 중이다.
+ * 기술은 2단에 있어서 예전처럼 "위력" 버튼 존재 여부로는 못 본다.
+ */
 export async function canAct(page: Page): Promise<boolean> {
-  const buttons = moveButtons(page);
-  const count = await buttons.count();
-  for (let i = 0; i < count; i++) {
-    if (await buttons.nth(i).isEnabled()) return true;
+  for (const id of MOVE_GROUPS) {
+    const b = page.getByTestId(id);
+    if ((await b.count()) > 0 && (await b.first().isEnabled())) return true;
   }
   return false;
 }
@@ -76,27 +79,46 @@ export async function advanceLogs(page: Page, timeoutMs = 60_000): Promise<void>
 }
 
 interface MoveOption {
-  index: number;
+  /** 어느 1단 항목 아래에 있는지 */
+  group: (typeof MOVE_GROUPS)[number];
+  testId: string;
   power: number;
   superEffective: boolean;
   noEffect: boolean;
 }
 
+/** 공격·스킬 두 그룹을 차례로 열어 기술을 전부 훑고 1단으로 돌아온다 */
 async function readMoves(page: Page): Promise<MoveOption[]> {
-  const buttons = moveButtons(page);
-  const count = await buttons.count();
   const options: MoveOption[] = [];
-  for (let i = 0; i < count; i++) {
-    const text = (await buttons.nth(i).innerText()).replace(/\s+/g, " ");
-    const power = Number(text.match(/위력 (\d+)/)?.[1] ?? 0);
-    options.push({
-      index: i,
-      power,
-      superEffective: text.includes("효과 굉장"),
-      noEffect: text.includes("효과 없음"),
-    });
+  for (const group of MOVE_GROUPS) {
+    const entry = page.getByTestId(group);
+    if ((await entry.count()) === 0 || !(await entry.first().isEnabled())) continue;
+    await entry.first().click();
+
+    const buttons = moveButtons(page);
+    const count = await buttons.count();
+    for (let i = 0; i < count; i++) {
+      const btn = buttons.nth(i);
+      const testId = await btn.getAttribute("data-testid");
+      if (!testId) continue;
+      const text = (await btn.innerText()).replace(/\s+/g, " ");
+      options.push({
+        group,
+        testId,
+        power: Number(text.match(/위력 (\d+)/)?.[1] ?? 0),
+        superEffective: text.includes("효과 굉장"),
+        noEffect: text.includes("효과 없음"),
+      });
+    }
+    await page.getByTestId("cmd-back").click();
   }
   return options;
+}
+
+/** 고른 기술을 실제로 사용한다 (그룹을 다시 열고 클릭) */
+async function selectMove(page: Page, choice: MoveOption): Promise<void> {
+  await page.getByTestId(choice.group).first().click();
+  await page.getByTestId(choice.testId).first().click();
 }
 
 /** 상성 우위 > 위력 순으로 최선의 기술을 고른다 */
@@ -122,19 +144,19 @@ async function playerHpRatio(page: Page): Promise<number> {
 
 /** 회복 물약을 사용하고 true 반환 (맥스 → 슈퍼 → 일반 순) */
 async function tryUseHealingPotion(page: Page): Promise<boolean> {
-  const bagButton = page.locator("button").filter({ hasText: "🎒 가방" });
-  if (!(await isVisible(bagButton)) || !(await bagButton.first().isEnabled())) return false;
+  const bag = page.getByTestId("cmd-bag");
+  if ((await bag.count()) === 0 || !(await bag.first().isEnabled())) return false;
 
-  await bagButton.first().click();
-  for (const name of ["맥스 물약", "슈퍼 물약", "물약"]) {
-    const potion = page.locator("button").filter({ hasText: name });
+  await bag.first().click();
+  for (const id of ["max_potion", "super_potion", "potion"]) {
+    const potion = page.getByTestId(`potion-${id}`);
     if ((await potion.count()) > 0 && (await potion.first().isEnabled())) {
-      await potion.first().click();
+      await potion.first().click();   // 사용하면 메뉴가 알아서 1단으로 돌아온다
       await advanceLogs(page);
       return true;
     }
   }
-  await page.locator("button").filter({ hasText: "닫기" }).first().click();
+  await page.getByTestId("cmd-back").click();
   return false;
 }
 
@@ -183,7 +205,7 @@ export async function playFloor(page: Page, floor: number): Promise<void> {
     const choice = pickMove(options);
     if (!choice) throw new Error(`${floor}층: 사용할 수 있는 기술이 없습니다`);
 
-    await moveButtons(page).nth(choice.index).click();
+    await selectMove(page, choice);
     await advanceLogs(page);
   }
 
