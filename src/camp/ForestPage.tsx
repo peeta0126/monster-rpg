@@ -8,6 +8,8 @@ import { RPS_KO, type RpsChoice } from "../workshop/rps";
 import { scaleToLevel } from "../shared/floorTable";
 import { getMaterial } from "../shared/items";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
+import { FOREST_AREAS, type ForestArea } from "./forest/areas";
+import { ForestBackground, Particles } from "./forest/ForestBackground";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CSS 애니메이션 키프레임
@@ -161,59 +163,6 @@ interface ForestNode {
   revealed: boolean; // 도착 후 true
 }
 
-interface ForestArea {
-  id: string; name: string; subtitle: string; description: string;
-  monsterPool: string[]; levelRange: [number, number];
-  encounterRate: number; materialRate: number; materialBonus: number;
-  exploreTime: number;
-  danger: number;
-  particleType: "leaf" | "firefly" | "crystal";
-  skyTop: string; skyBottom: string; fogColor: string; groundColor: string;
-  accentColor: string; glowColor: string; borderGlow: string;
-  recommendedText: string;
-}
-
-const FOREST_AREAS: ForestArea[] = [
-  {
-    id: "shallow", name: "얕은 숲", subtitle: "SHALLOW WOODS",
-    description: "햇빛이 스며드는 고요한 숲. 초보 탐험가도 부담 없이 도전할 수 있습니다.",
-    monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow"],
-    levelRange: [1, 8], encounterRate: 0.55, materialRate: 0.40, materialBonus: 0,
-    exploreTime: 1200, danger: 1,
-    particleType: "leaf",
-    skyTop: PALETTE.shadow900, skyBottom: PALETTE.shadow700,
-    fogColor: rgba("moss500", 0.14), groundColor: PALETTE.moss500,
-    accentColor: PALETTE.moss500, glowColor: rgba("moss500", 0.25),
-    borderGlow: rgba("moss500", 0.5),
-    recommendedText: "추천: 처음 방문 탐험가",
-  },
-  {
-    id: "deep", name: "깊은 숲", subtitle: "DEEP FOREST",
-    description: "빛이 닿지 않는 울창한 구역. 강한 몬스터와 희귀 재료가 기다립니다.",
-    monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb", "toxadon"],
-    levelRange: [8, 18], encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
-    exploreTime: 1500, danger: 3,
-    particleType: "firefly",
-    skyTop: PALETTE.shadow900, skyBottom: PALETTE.shadow800,
-    fogColor: rgba("mist500", 0.10), groundColor: PALETTE.shadow700,
-    accentColor: PALETTE.mist500, glowColor: rgba("mist500", 0.22),
-    borderGlow: rgba("mist500", 0.55),
-    recommendedText: "추천: Lv.5 이상 파티",
-  },
-  {
-    id: "ancient", name: "고대 숲", subtitle: "ANCIENT DEPTHS",
-    description: "마력이 깃든 태고의 숲. 전설적인 몬스터가 출몰하며, 생환을 장담할 수 없습니다.",
-    monsterPool: ["mossevo", "mossyfinal", "aquavern", "crystafox", "frostorb"],
-    levelRange: [18, 32], encounterRate: 0.75, materialRate: 0.65, materialBonus: 2,
-    exploreTime: 1800, danger: 5,
-    particleType: "crystal",
-    skyTop: PALETTE.shadow900, skyBottom: PALETTE.stone600,
-    fogColor: rgba("ember700", 0.10), groundColor: PALETTE.earth500,
-    accentColor: PALETTE.ember500, glowColor: rgba("ember500", 0.25),
-    borderGlow: rgba("ember500", 0.6),
-    recommendedText: "⚠ 경고: 고레벨 파티 필수",
-  },
-];
 
 // ── 노드 스타일 ───────────────────────────────────────────────────────────────
 // 노드 7종. 팔레트에 색상환이 다 없어서 색만으로는 7개를 못 가른다 —
@@ -390,214 +339,12 @@ function generateDungeon(_area: ForestArea): ForestNode[] {
   return nodes;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 파티클 컴포넌트
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function LeafParticles() {
-  const [leaves] = useState(()=>Array.from({length:18},(_,i)=>({
-    id:i,
-    x: Math.random()*100,
-    delay: Math.random()*10,
-    dur: 7+Math.random()*7,
-    size: 5+Math.random()*7,
-    color: `rgba(${30+Math.floor(Math.random()*40)},${150+Math.floor(Math.random()*70)},${40+Math.floor(Math.random()*40)},${.5+Math.random()*.4})`,
-    flip: Math.random()>.5,
-  })));
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {leaves.map(l=>(
-        <div key={l.id} className="absolute" style={{
-          left:`${l.x}%`, top:"-3%",
-          width:l.size, height:l.size*.55,
-          background:l.color,
-          borderRadius:"50% 0 50% 0",
-          animation:`${l.flip?"leafFallR":"leafFall"} ${l.dur}s linear ${l.delay}s infinite`,
-        }}/>
-      ))}
-    </div>
-  );
-}
-
-function FireflyParticles() {
-  const [flies] = useState(()=>Array.from({length:22},(_,i)=>({
-    id:i,
-    x:Math.random()*100,
-    y:20+Math.random()*65,
-    delay:Math.random()*8,
-    dur:4+Math.random()*5,
-    size:2.5+Math.random()*2,
-    hue:Math.random()>.5?"170,255,160":"220,255,120",
-  })));
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {flies.map(f=>(
-        <div key={f.id} className="absolute rounded-full" style={{
-          left:`${f.x}%`, top:`${f.y}%`,
-          width:f.size, height:f.size,
-          background:`rgba(${f.hue},1)`,
-          boxShadow:`0 0 ${f.size*3}px ${f.size}px rgba(${f.hue},.6)`,
-          animation:`fireflyFloat ${f.dur}s ease-in-out ${f.delay}s infinite`,
-        }}/>
-      ))}
-    </div>
-  );
-}
-
-function CrystalParticles() {
-  const [crystals] = useState(()=>Array.from({length:16},(_,i)=>({
-    id:i,
-    x:5+Math.random()*90,
-    y:10+Math.random()*80,
-    delay:Math.random()*8,
-    dur:3+Math.random()*5,
-    size:3+Math.random()*4,
-    hue:Math.random()>.5?"167,139,250":"196,181,253",
-  })));
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {crystals.map(c=>(
-        <div key={c.id} className="absolute" style={{
-          left:`${c.x}%`, bottom:`${c.y}%`,
-          width:c.size, height:c.size*1.5,
-          clipPath:"polygon(50% 0%,100% 60%,50% 100%,0% 60%)",
-          background:`rgba(${c.hue},.9)`,
-          filter:`blur(.5px) drop-shadow(0 0 3px rgba(${c.hue},.8))`,
-          animation:`crystalDrift ${c.dur}s ease-in ${c.delay}s infinite`,
-        }}/>
-      ))}
-    </div>
-  );
-}
-
-function Particles({ area }: { area: ForestArea }) {
-  if (area.particleType==="leaf")    return <LeafParticles/>;
-  if (area.particleType==="firefly") return <FireflyParticles/>;
-  return <CrystalParticles/>;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 배경
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/** 고대숲 배경의 별. 렌더마다 뽑으면 상태가 바뀔 때마다 별 60개가 통째로 튀므로 한 번만 생성한다. */
-function AncientStars() {
-  const [stars] = useState(
-    () =>
-      Array.from({ length: 60 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        top: Math.random() * 60,
-        size: 1 + Math.random() * 1.5,
-        opacity: 0.2 + Math.random() * 0.6,
-        dur: 3 + Math.random() * 4,
-        delay: Math.random() * 6,
-      })),
-  );
-
-  return (
-    <div className="absolute inset-0">
-      {stars.map((s) => (
-        <div key={s.id} className="absolute rounded-full bg-white"
-          style={{
-            left:`${s.left}%`, top:`${s.top}%`,
-            width:s.size, height:s.size,
-            opacity:s.opacity,
-            animation:`crystalDrift ${s.dur}s ease-in-out ${s.delay}s infinite alternate`,
-          }}/>
-      ))}
-    </div>
-  );
-}
-
-function ForestBackground({ area }: { area: ForestArea | null }) {
-  const a = area;
-  const sky1 = a?.skyTop    ?? PALETTE.shadow900;
-  const sky2 = a?.skyBottom ?? PALETTE.shadow700;
-  const fog  = a?.fogColor  ?? rgba("moss500", 0.08);
-  const gnd  = a?.groundColor ?? PALETTE.stone600;
-  const ancient = a?.id==="ancient";
-  const deep    = a?.id==="deep";
-
-  // 나무 실루엣 2겹. 구역마다 다른 색을 줘야 "다른 숲에 왔다"가 읽힌다 —
-  // 원경(far)은 하늘에 가까운 색, 근경(near)은 항상 가장 어두운 색으로 깊이를 만든다.
-  const farTree  = ancient ? PALETTE.stone600 : deep ? PALETTE.shadow800 : PALETTE.shadow700;
-  const nearTree = ancient ? PALETTE.earth500 : PALETTE.shadow900;
-
-  return (
-    <div className="absolute inset-0 overflow-hidden" aria-hidden>
-      <div className="absolute inset-0" style={{
-        background:`radial-gradient(ellipse at 50% 0%, ${sky1} 0%, ${sky2} 60%, ${PALETTE.shadow900} 100%)`,
-      }}/>
-      {ancient && <AncientStars />}
-      <svg className="absolute bottom-32 left-0 w-full" viewBox="0 0 960 240" preserveAspectRatio="xMidYMax meet">
-        {[[30,240,60,90],[85,240,45,120],[145,240,58,105],[210,240,50,130],[275,240,65,95],
-          [345,240,42,125],[405,240,56,110],[465,240,52,118],[525,240,64,98],[595,240,46,122],
-          [655,240,59,108],[715,240,52,114],[775,240,65,94],[835,240,44,126],[895,240,59,105],[950,240,52,112]]
-          .map(([cx,by,hw,h],i)=>(
-            <polygon key={i} points={`${cx-hw},${by} ${cx},${by-h} ${cx+hw},${by}`}
-              fill={farTree}
-              opacity={.7+Math.sin(i)*.1}/>
-          ))}
-      </svg>
-      <svg className="absolute bottom-24 left-0 w-full" viewBox="0 0 960 320" preserveAspectRatio="xMidYMax meet">
-        {[[-20,320,82,180],[75,320,70,200],[180,320,88,170],[300,320,74,190],[410,320,90,185],
-          [520,320,66,205],[630,320,84,178],[740,320,76,195],[850,320,86,182],[960,320,72,198]]
-          .map(([cx,by,hw,h],i)=>(
-            <g key={i} style={{ animation:`treeSway ${3+i*.3}s ease-in-out ${i*.4}s infinite alternate` }}>
-              <polygon points={`${cx-hw},${by} ${cx},${by-h} ${cx+hw},${by}`}
-                fill={nearTree} opacity=".95"/>
-              <polygon points={`${cx-hw*.3},${by} ${cx-hw*.08},${by-h*.65} ${cx},${by-h}`}
-                fill={ancient?"rgba(168, 61, 31, .06)":deep?"rgba(92, 147, 150, .07)":"rgba(122, 132, 85, .07)"}/>
-            </g>
-          ))}
-      </svg>
-      <div className="absolute inset-x-0 bottom-24 h-40 pointer-events-none"
-        style={{
-          background:`linear-gradient(to top, ${gnd}cc 0%, ${fog} 60%, transparent 100%)`,
-          animation:"fogDrift 8s ease-in-out infinite",
-        }}/>
-      <div className="absolute bottom-0 left-0 right-0 h-28"
-        style={{ background:`linear-gradient(to top, ${gnd} 0%, ${gnd}cc 60%, transparent 100%)` }}/>
-      <svg className="absolute bottom-24 left-0 w-full" viewBox="0 0 960 60" preserveAspectRatio="xMidYMax meet">
-        {Array.from({length:32}).map((_,i)=>{
-          const x=(i*31)+Math.sin(i*1.9)*9;
-          const h=14+Math.sin(i*2.5)*9;
-          const col = ancient?"rgba(168, 61, 31, .6)":deep?"rgba(92, 147, 150, .7)":"rgba(122, 132, 85, .8)";
-          return (
-            <g key={i}>
-              <polygon points={`${x},60 ${x-5},${60-h} ${x+4},60`} fill={col}/>
-              <polygon points={`${x+9},60 ${x+3},${60-h*.8} ${x+14},60`} fill={col} opacity=".7"/>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="absolute inset-0 pointer-events-none"
-        style={{
-          background: ancient
-            ? "radial-gradient(ellipse 50% 25% at 50% 5%, rgba(168, 61, 31, .08) 0%, transparent 80%)"
-            : deep
-              ? "radial-gradient(ellipse 50% 20% at 50% 5%, rgba(92, 147, 150, .06) 0%, transparent 80%)"
-              : "radial-gradient(ellipse 55% 22% at 50% 5%, rgba(122, 132, 85, .07) 0%, transparent 80%)",
-        }}/>
-      {[45,60,72].map((pct,i)=>(
-        <div key={i} className="absolute inset-x-0 pointer-events-none h-8"
-          style={{
-            bottom:`${pct}%`,
-            background:`linear-gradient(to right, transparent 0%, ${fog} 30%, ${fog} 70%, transparent 100%)`,
-            opacity:.6,
-            animation:`mist ${6+i*2}s ease-in-out ${i*1.5}s infinite`,
-          }}/>
-      ))}
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 구역 선택 카드
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; onClick: ()=>void }) {
+function AreaCard({ area, index, locked, onClick }: { area: ForestArea; index: number; locked?: boolean; onClick: ()=>void }) {
   const monsterTypes = [...new Set(
     area.monsterPool.map((id)=>monsters.find((m)=>m.id===id)?.type ?? "normal")
   )];
@@ -608,10 +355,14 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
       className="relative w-full overflow-hidden border-2 text-left transition-all
         hover:scale-[1.01] active:scale-[.99] group"
       style={{
-        borderColor: area.borderGlow,
+        // 잠긴 카드는 채도를 죽이고 발광을 없애 열린 카드와 확실히 갈라놓는다.
+        // 반투명 오버레이만 씌우면 아래 텍스트가 비쳐서 안내문과 겹쳐 읽힌다.
+        borderColor: locked ? PALETTE.stone600 : area.borderGlow,
         borderRadius: 0,
-        boxShadow: `4px 4px 0px ${area.glowColor}, inset 0 0 40px ${area.glowColor}`,
+        boxShadow: locked ? "none" : `4px 4px 0px ${area.glowColor}, inset 0 0 40px ${area.glowColor}`,
         background: `linear-gradient(135deg, ${area.skyTop}f0 0%, ${area.skyBottom}e0 100%)`,
+        filter: locked ? "saturate(.2) brightness(.5)" : undefined,
+        cursor: locked ? "not-allowed" : "pointer",
         animationDelay: `${index*0.1}s`,
         animation: "slideInUp .5s ease both",
       }}
@@ -1697,15 +1448,15 @@ export default function ForestPage() {
                 (a.id === "ancient" && bestFloor < 21);
               return (
                 <div key={a.id} className="relative w-full">
-                  <AreaCard area={a} index={i} onClick={()=>{ if(!locked) handleEnterArea(a); }}/>
+                  <AreaCard area={a} index={i} locked={locked} onClick={()=>{ if(!locked) handleEnterArea(a); }}/>
                   {locked && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2"
-                      style={{ background:"rgba(13, 18, 35, .72)", border:"2px solid rgba(132, 75, 63, .3)", borderRadius:0 }}>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 border-2 border-stone-600"
+                      style={{ background:"rgba(13, 18, 35, .82)", borderRadius:0 }}>
                       <span className="text-pixel-md">🔒</span>
-                      <p className="text-pixel-sm font-bold text-sand-300" style={{ fontFamily:"var(--font-pixel)", fontSize: 12 }}>
-                        {a.id==="deep" ? "무한의 탑 11층 도달 시 해금" : "무한의 탑 21층 도달 시 해금"}
+                      <p className="text-pixel-sm font-bold text-cream-100">
+                        무한의 탑 {a.id==="deep" ? 11 : 21}층 도달 시 해금
                       </p>
-                      <p className="text-pixel-sm text-earth-400">현재 최고 층: {bestFloor}층</p>
+                      <p className="text-pixel-sm text-sand-300">현재 최고 층: {bestFloor}층</p>
                     </div>
                   )}
                 </div>
