@@ -714,7 +714,7 @@ export default function BattlePage() {
       <div ref={gameRef} className="relative flex-1 min-h-0" />
 
       {/* ══════════ 하단 배틀 패널 ══════════ */}
-      <div className="shrink-0 border-t-2 border-earth-500 bg-shadow-900">
+      <div data-testid="battle-panel" className="shrink-0 border-t-2 border-earth-500 bg-shadow-900">
 
         {/* 상태 바 — HP는 전투에서 가장 자주 보는 정보라 바를 크게 잡는다 */}
         <div className="flex items-center justify-between border-b border-earth-500/40 px-3 py-2 text-pixel-sm">

@@ -112,7 +112,8 @@ function pickMove(options: MoveOption[]): MoveOption | null {
 
 /** 상단 상태바의 "현재HP/최대HP"를 읽어 비율을 반환 */
 async function playerHpRatio(page: Page): Promise<number> {
-  const panel = await page.locator("div.bg-\\[\\#0e0b06\\]").first().innerText();
+  // 클래스가 아니라 data-testid 로 잡는다 — 디자인이 바뀌어도 안 깨진다
+  const panel = await page.getByTestId("battle-panel").first().innerText();
   const m = panel.match(/(\d+)\/(\d+)/);
   if (!m) return 1;
   const [, cur, max] = m;
