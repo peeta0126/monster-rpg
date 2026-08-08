@@ -3,6 +3,7 @@ import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
 import { markSceneReady } from "../shared/phaser/sceneReady";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
+import { PALETTE, withAlpha } from "../shared/palette";
 import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
 import type { DialogueEntry } from "./campDialogues";
@@ -390,8 +391,8 @@ export default class BaseCampScene extends Phaser.Scene {
       this.add
         .text(px - 46, py - 80, `E: ${nearestNpc.name}`, {
           fontSize: "26px",
-          color: "#f8e6b0",
-          backgroundColor: "#000000aa",
+          color: PALETTE.sand200,
+          backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },
         })
         .setName("npcHint")
@@ -402,8 +403,8 @@ export default class BaseCampScene extends Phaser.Scene {
       this.add
         .text(px - 46, py - 80, "E: 탑 입장", {
           fontSize: "26px",
-          color: "#aad4f5",
-          backgroundColor: "#000000aa",
+          color: PALETTE.sand200,
+          backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },
         })
         .setName("portalHint")
@@ -414,8 +415,8 @@ export default class BaseCampScene extends Phaser.Scene {
       this.add
         .text(px - 46, py - 80, "E: 숲 입장", {
           fontSize: "26px",
-          color: "#88ee44",
-          backgroundColor: "#000000aa",
+          color: PALETTE.sand200,
+          backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },
         })
         .setName("forestHint")
@@ -426,8 +427,8 @@ export default class BaseCampScene extends Phaser.Scene {
       this.add
         .text(px - 46, py - 80, "E: 집 입장", {
           fontSize: "26px",
-          color: "#ffe4b5",
-          backgroundColor: "#000000aa",
+          color: PALETTE.sand200,
+          backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },
         })
         .setName("houseHint")
