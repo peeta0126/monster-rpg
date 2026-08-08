@@ -1,4 +1,4 @@
-import { BASECAMP_BACKGROUND_IMAGE } from "../assetPaths";
+import { BASECAMP_BACKGROUND_BLURRED } from "../assetPaths";
 
 /**
  * 화면 뒤에 까는 배경 레이어. 순수 검정 대신 이걸 쓴다.
@@ -15,7 +15,7 @@ export function GameBackground({ tint }: { tint?: string }) {
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       <div className="absolute inset-0 bg-linear-to-b from-shadow-900 via-shadow-700 to-shadow-900" />
       <img
-        src={BASECAMP_BACKGROUND_IMAGE}
+        src={BASECAMP_BACKGROUND_BLURRED}
         alt=""
         className="absolute inset-0 h-full w-full object-cover opacity-25"
         style={{ filter: "blur(10px) brightness(0.3) saturate(0.75)" }}

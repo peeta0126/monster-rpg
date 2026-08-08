@@ -1,7 +1,64 @@
-import Phaser from "phaser";
 import type { PersistedStoryFlag } from "../playerStore";
 
-export const gameEvents = new Phaser.Events.EventEmitter();
+/**
+ * React ↔ Phaser 공용 이벤트 버스.
+ *
+ * Phaser.Events.EventEmitter 를 쓰지 않는다. 이 파일은 main.tsx 가 임포트하는데,
+ * Phaser 를 물고 오면 캔버스를 안 쓰는 화면(숲·가방·몬스터·공방)에서도 phaser 청크
+ * 325KB 를 함께 받게 된다. 버스가 Phaser 에 기대야 할 이유도 없다 —
+ * 필요한 건 on/off/once/emit 뿐이다.
+ */
+type Listener = (...args: never[]) => void;
+
+class EventBus {
+  private map = new Map<string, { fn: Listener; once: boolean }[]>();
+
+  on(event: string, fn: Listener): this {
+    this.add(event, fn, false);
+    return this;
+  }
+
+  once(event: string, fn: Listener): this {
+    this.add(event, fn, true);
+    return this;
+  }
+
+  /** fn 을 생략하면 그 이벤트의 리스너를 전부 제거한다 */
+  off(event: string, fn?: Listener): this {
+    if (!fn) { this.map.delete(event); return this; }
+    const list = this.map.get(event);
+    if (!list) return this;
+    const next = list.filter((l) => l.fn !== fn);
+    if (next.length) this.map.set(event, next);
+    else this.map.delete(event);
+    return this;
+  }
+
+  emit(event: string, ...args: unknown[]): boolean {
+    const list = this.map.get(event);
+    if (!list?.length) return false;
+    // 핸들러 안에서 off/on 을 부르는 경우가 있어 복사본을 순회한다
+    for (const l of [...list]) {
+      if (l.once) this.off(event, l.fn);
+      (l.fn as (...a: unknown[]) => void)(...args);
+    }
+    return true;
+  }
+
+  removeAllListeners(event?: string): this {
+    if (event) this.map.delete(event);
+    else this.map.clear();
+    return this;
+  }
+
+  private add(event: string, fn: Listener, once: boolean) {
+    const list = this.map.get(event) ?? [];
+    list.push({ fn, once });
+    this.map.set(event, list);
+  }
+}
+
+export const gameEvents = new EventBus();
 
 export const GAME_EVENT = {
   ENTER_BATTLE: "portal:enter-battle",

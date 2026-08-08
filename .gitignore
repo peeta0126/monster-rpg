@@ -37,3 +37,6 @@ server/prisma/*.db-journal
 *.njsproj
 *.sln
 *.sw?
+
+# 폰트 서브셋 산출물 — 빌드 때 생성된다 (scripts/subset-fonts.mjs)
+/public/assets/fonts/

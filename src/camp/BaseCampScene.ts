@@ -5,6 +5,7 @@ import { markSceneReady } from "../shared/phaser/sceneReady";
 import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
 import { PALETTE, withAlpha } from "../shared/palette";
+import { BASECAMP_BACKGROUND_IMAGE } from "../shared/assetPaths";
 import {
   dirFromVector, getPlayerTextureKey, DIRS_8, PLAYER_ATLAS_KEY, type Dir8,
 } from "../shared/playerSprite";
@@ -82,7 +83,7 @@ export default class BaseCampScene extends Phaser.Scene {
     // 8방향 아틀라스가 들어오면 아래 player-* 개별 PNG 목록을 지우고 이 줄을 켠다.
     // playerSprite.ts 의 ASSET_MODE 를 "atlas" 로 바꾸는 것과 한 세트다.
     // this.load.aseprite(PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON);
-    this.load.image("basecamp-bg", "/assets/basecamp/basecamp-bg.webp");
+    this.load.image("basecamp-bg", BASECAMP_BACKGROUND_IMAGE);
     this.load.image("basecamp-bg-1", "/assets/basecamp/basecamp-bg-1.webp");
     this.load.image("player-up", "/assets/player/player-up.png");
     this.load.image("player-up-1", "/assets/player/player-up-1.png");

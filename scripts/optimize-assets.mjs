@@ -35,6 +35,15 @@ const ART = [
   "assets/player/Baros_portrait.png",
 ];
 
+/**
+ * 흐리게 깔아 쓰는 배경의 저해상도 사본.
+ * GameBackground / ForestBackground 는 blur(10~14px) + brightness(0.3) 으로 뭉개서 쓴다.
+ * 원본 517KB 를 받을 이유가 없다 — 가로 640px 이면 블러 후 구분이 안 된다.
+ */
+const BLURRED_COPIES = [
+  { src: "assets/basecamp/basecamp-bg.png", out: "assets/basecamp/basecamp-bg-blur.webp", width: 640 },
+];
+
 /** 로그인 키아트 — WebP 를 만들되 PNG 폴백을 남긴다(단, 절반 해상도로 줄여서) */
 const KEY_ART = { src: "start-loading.png", fallbackWidth: 1312 };
 
@@ -127,6 +136,20 @@ async function main() {
       const a = (await sizeOf(out)) + (await sizeOf(src));
       before += b; after += a;
       rows.push([`${KEY_ART.src} (webp + png 폴백)`, b, a]);
+    }
+  }
+
+  // 흐린 배경용 축소본. 원본(webp)이 이미 만들어진 뒤라 그걸 입력으로 쓴다.
+  for (const c of BLURRED_COPIES) {
+    const src = path.join(PUBLIC, c.src.replace(/\.png$/i, ".webp"));
+    const out = path.join(PUBLIC, c.out);
+    if (DRY) { console.log(`blur  ${c.out} (${c.width}px)`); continue; }
+    try {
+      await sharp(src).resize({ width: c.width }).webp({ quality: 78, effort: 6 }).toFile(out);
+      after += await sizeOf(out);
+      rows.push([c.out, 0, await sizeOf(out)]);
+    } catch {
+      console.warn(`[optimize] ${c.src} 원본이 없어 흐린 사본을 건너뜁니다`);
     }
   }
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PALETTE, rgba } from "../../shared/palette";
-import { BASECAMP_BACKGROUND_IMAGE } from "../../shared/assetPaths";
+import { BASECAMP_BACKGROUND_BLURRED } from "../../shared/assetPaths";
 import type { ForestArea } from "./areas";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -151,7 +151,7 @@ export function ForestBackground({ area }: { area: ForestArea | null }) {
       {/* 중경 — 베이스캠프 배경을 흐리게 깔아 밋밋한 그라디언트에 질감을 준다.
           아래로 갈수록 사라지게 마스크를 걸어 나무 실루엣과 자연스럽게 이어붙인다. */}
       <img
-        src={BASECAMP_BACKGROUND_IMAGE}
+        src={BASECAMP_BACKGROUND_BLURRED}
         alt=""
         className="absolute inset-x-0 top-0 h-3/5 w-full object-cover opacity-20"
         style={{

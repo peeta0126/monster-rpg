@@ -5,8 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>monster-rpg</title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
+    <!-- 폰트는 자체 호스팅한다. CDN 원본은 한자 6,777자를 포함해 1.2MB 인데
+         게임에는 한 글자도 안 나온다. scripts/subset-fonts.mjs 가 빌드 때
+         소스에 실제로 쓰인 글자만 뽑아 65KB 로 줄인다. @font-face 는 src/index.css. -->
+    <link rel="preload" href="/assets/fonts/Galmuri11.woff2" as="font" type="font/woff2" crossorigin>
   </head>
   <body>
     <div id="root"></div>

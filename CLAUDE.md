@@ -11,3 +11,5 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
 - 여백은 4px 그리드. Tailwind 임의값(p-[13px]) 금지.
 - UI 변경 후 `npm run design:shot` 실행하고 PNG 를 Read 로 직접 확인할 것.
 - Phaser 캔버스는 접근성 트리에 안 잡힌다. browser_snapshot 대신 스크린샷을 쓸 것.
+- 한국어 문구를 추가하면 폰트 서브셋이 다시 돌아야 한다. 빌드에 물려 있지만
+  dev 서버만 볼 때 글자가 폴백으로 나오면 `npm run fonts:subset`.

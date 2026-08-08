@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* 서브셋 폰트 (scripts/subset-fonts.mjs 가 빌드 때 생성).
+   swap: 폰트가 늦어도 글자는 먼저 보인다 — 22KB 라 사실상 즉시 도착한다. */
+@font-face {
+  font-family: "Galmuri11";
+  src: url("/assets/fonts/Galmuri11.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Galmuri11";
+  src: url("/assets/fonts/Galmuri11-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Galmuri14";
+  src: url("/assets/fonts/Galmuri14.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
 /* 마스터 팔레트 — docs/ART_DIRECTION.md 1-2 표가 원본.
    새 색은 표에 먼저 추가하고 여기에 등록한다. 검정·순백은 쓰지 않는다. */
 @theme {
