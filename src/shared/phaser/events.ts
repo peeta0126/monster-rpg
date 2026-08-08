@@ -25,6 +25,10 @@ export const GAME_EVENT = {
   BATTLE_END: "battle:end",
   /** BattlePage → BattleScene: 플레이어 몬스터 교체 (스프라이트 변경) */
   BATTLE_PLAYER_SWITCH: "battle:player-switch",
+  /** BattlePage → BattleScene: 한 방 맞았다. 연출(흔들림·플래시·데미지 숫자)용 */
+  BATTLE_HIT: "battle:hit",
+  /** BattlePage → BattleScene: 반짝임 한 번 (레벨업·포획 성공) */
+  BATTLE_SPARKLE: "battle:sparkle",
   /** Phaser 씬 진입점(create/update/이벤트 핸들러) 또는 전역 핸들러에서 잡힌 예외를 React로 전달 */
   APP_ERROR: "app:error",
 } as const;
@@ -47,6 +51,17 @@ export interface NpcDialoguePayload {
     rewards: { itemId: string; amount: number }[];
     setsFlag: PersistedStoryFlag;
   };
+}
+
+export interface BattleHitPayload {
+  /** 맞은 쪽 */
+  target: "enemy" | "player";
+  damage: number;
+  /** 속성 상성 배율. 2 이상이면 약점, 1 미만이면 반감 */
+  multiplier: number;
+  isCrit: boolean;
+  isHit: boolean;
+  category: "physical" | "special" | "status";
 }
 
 export interface BattlePlayerSwitchPayload {

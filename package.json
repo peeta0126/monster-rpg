@@ -16,6 +16,7 @@
     "design:before": "cross-env SHOT_LABEL=before npm run design:shot",
     "design:after": "cross-env SHOT_LABEL=after npm run design:shot",
     "design:sheet": "node design/contact-sheet.mjs",
+    "design:fx": "playwright test --config design/playwright.config.ts -g \"fx:\"",
     "design:visual": "playwright test --config design/playwright.config.ts -g visual",
     "design:visual:update": "playwright test --config design/playwright.config.ts -g visual --update-snapshots",
     "optimize:assets": "node scripts/optimize-assets.mjs",

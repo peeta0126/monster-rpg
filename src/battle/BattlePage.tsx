@@ -361,6 +361,13 @@ export default function BattlePage() {
       attackerElementalDamageBonus, attackerCritDamageBonus,
     );
 
+    // 연출용 신호. 계산 결과를 그대로 넘길 뿐, 여기서 아무것도 바꾸지 않는다.
+    const hitTarget = isPlayerAttacking ? "enemy" : "player";
+    gameEvents.emit(GAME_EVENT.BATTLE_HIT, {
+      target: hitTarget, damage: res.damage, multiplier: res.multiplier,
+      isCrit: res.isCrit, isHit: res.isHit, category: move.category,
+    });
+
     if (!res.isHit) {
       await sendLogAndWait("공격이 빗나갔다!");
       return { updated: defender, fainted: false };
@@ -449,7 +456,10 @@ export default function BattlePage() {
       const expResult = gainExp(np, earnedExp);
       np = expResult.updatedMonster;
       await sendLogAndWait(`경험치 ${earnedExp}를 획득했다!`);
-      if (expResult.leveledUp) await sendLogAndWait(`레벨이 ${np.level}(으)로 올랐다!`);
+      if (expResult.leveledUp) {
+        gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "player");
+        await sendLogAndWait(`레벨이 ${np.level}(으)로 올랐다!`);
+      }
 
       // 레벨업에 딸린 성장(기술 습득·진화)을 적용한다
       if (expResult.leveledUp) {
@@ -666,6 +676,7 @@ export default function BattlePage() {
     if (!res.canAttempt) { setIsProcessing(false); return; }
 
     if (res.success) {
+      gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "enemy");
       const captureResult = addCapturedMonster(enemyState);
       addToDexCaught(enemyState.id);
       if (captureResult === "storage") setStoryFlag("first_capture");

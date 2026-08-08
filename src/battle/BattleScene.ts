@@ -6,7 +6,7 @@ import { markSceneReady } from "../shared/phaser/sceneReady";
 import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
 import { PALETTE, HEX, hpToken } from "../shared/palette";
 import type { StatusEffect } from "../shared/game";
-import type { BattleResultPayload, BattlePlayerSwitchPayload } from "../shared/phaser/events";
+import type { BattleResultPayload, BattlePlayerSwitchPayload, BattleHitPayload } from "../shared/phaser/events";
 
 export interface BattleSceneUpdatePayload {
   playerHp: number;
@@ -101,6 +101,18 @@ export default class BattleScene extends Phaser.Scene {
   private prevPlayerHp = -1;
   private prevEnemyHp  = -1;
 
+  // ── HP 바 애니메이션 ──
+  // cur 은 실제 값을 빠르게 따라가고, ghost 는 뒤에서 천천히 쫓아온다.
+  // 둘의 간격이 "방금 얼마나 깎였는지"를 보여준다 (JRPG/격겜 관례).
+  private hpAnim = {
+    enemy:  { cur: 1, ghost: 1 },
+    player: { cur: 1, ghost: 1 },
+  };
+
+  /** 스킵 대상 연출 트윈. 무한 반복(둥실거림)은 여기 넣지 않는다. */
+  private fxTweens = new Set<Phaser.Tweens.Tween>();
+  private reduceMotion = false;
+
   // ── 생존 플래그: false이면 모든 gameEvents 핸들러를 무시 ──
   private _isActive = false;
 
@@ -111,6 +123,8 @@ export default class BattleScene extends Phaser.Scene {
   private safeOnBattleResult!: (payload: BattleResultPayload) => void;
   private safeOnBattleEnd!: () => void;
   private safeOnPlayerSwitch!: (payload: BattlePlayerSwitchPayload) => void;
+  private safeOnHit!: (payload: BattleHitPayload) => void;
+  private safeOnSparkle!: (target: "enemy" | "player") => void;
 
   constructor() {
     super("BattleScene");
@@ -180,6 +194,13 @@ export default class BattleScene extends Phaser.Scene {
     gameEvents.on(GAME_EVENT.BATTLE_RESULT,        this.safeOnBattleResult);
     gameEvents.on(GAME_EVENT.BATTLE_END,           this.safeOnBattleEnd);
     gameEvents.on(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.safeOnPlayerSwitch);
+    this.safeOnHit     = safeHandler(this, this.onHit.bind(this));
+    this.safeOnSparkle = safeHandler(this, this.onSparkle.bind(this));
+    gameEvents.on(GAME_EVENT.BATTLE_HIT,     this.safeOnHit);
+    gameEvents.on(GAME_EVENT.BATTLE_SPARKLE, this.safeOnSparkle);
+
+    this.reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    this.registerFxSkip();
 
     this.cameras.main.fadeIn(500, 0, 0, 0);
 
@@ -518,7 +539,7 @@ export default class BattleScene extends Phaser.Scene {
       const barW = pw - 20;
       this.add.text(barX, barY - 13, "HP", { fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand300 }).setDepth(9);
       this.enemyHpBar = this.add.graphics().setDepth(9);
-      this.drawBar(this.enemyHpBar, barX, barY, barW, BAR_H, 1, true);
+      this.drawBar(this.enemyHpBar, barX, barY, barW, BAR_H, 1);
       // HP 수치는 "몇 대 더 때려야 하나"를 판단하는 핵심 정보라 캔버스가 축소돼도 읽히도록
       // 크기와 대비를 올린다(9px/어두운 갈색 → 13px/밝은 색 + 검은 외곽선).
       this.enemyHpText = this.add.text(barX + barW, barY - 2, "", {
@@ -540,7 +561,7 @@ export default class BattleScene extends Phaser.Scene {
       const barW = pw - 20;
       this.add.text(barX, barY - 13, "HP", { fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300 }).setDepth(9);
       this.playerHpBar = this.add.graphics().setDepth(9);
-      this.drawBar(this.playerHpBar, barX, barY, barW, BAR_H, 1, false);
+      this.drawBar(this.playerHpBar, barX, barY, barW, BAR_H, 1);
       this.playerHpText = this.add.text(barX + barW, barY - 2, "", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300,
         stroke: PALETTE.shadow900, strokeThickness: 3,
@@ -670,10 +691,10 @@ export default class BattleScene extends Phaser.Scene {
 
   private onStateUpdate(p: BattleSceneUpdatePayload) {
     if (!this._isActive) return;
-    this.drawBar(this.enemyHpBar, E_BAR_X, E_BAR_Y, BAR_W_INNER, BAR_H, p.enemyHp / p.enemyMaxHp, true);
+    this.animateBar("enemy",  p.enemyHp / p.enemyMaxHp);
     this.enemyHpText.setText(`${p.enemyHp}/${p.enemyMaxHp}`);
 
-    this.drawBar(this.playerHpBar, P_BAR_X, P_BAR_Y, BAR_W_INNER, BAR_H, p.playerHp / p.playerMaxHp, false);
+    this.animateBar("player", p.playerHp / p.playerMaxHp);
     this.playerHpText.setText(`${p.playerHp}/${p.playerMaxHp}`);
 
     this.enemyStatusBadge.setText(this.statusLabel(p.enemyStatus));
@@ -681,9 +702,10 @@ export default class BattleScene extends Phaser.Scene {
     if (p.enemyStatus) this.enemyStatusBadge.setColor(this.statusColor(p.enemyStatus));
     if (p.playerStatus) this.playerStatusBadge.setColor(this.statusColor(p.playerStatus));
 
-    // HP 감소 시에만 쉐이크 (prevHP < 0 이면 초기화 직후이므로 스킵)
-    if (this.prevEnemyHp  >= 0 && p.enemyHp  < this.prevEnemyHp)  this.shake(this.enemySprite);
-    if (this.prevPlayerHp >= 0 && p.playerHp < this.prevPlayerHp) this.shake(this.playerSprite);
+    // 흔들림·플래시는 BATTLE_HIT 이 담당한다(데미지 크기와 치명타 여부를 알아야 해서).
+    // 여기서는 쓰러짐만 본다.
+    if (this.prevEnemyHp  > 0 && p.enemyHp  <= 0) this.playFaint("enemy");
+    if (this.prevPlayerHp > 0 && p.playerHp <= 0) this.playFaint("player");
     this.prevEnemyHp  = p.enemyHp;
     this.prevPlayerHp = p.playerHp;
   }
@@ -706,6 +728,8 @@ export default class BattleScene extends Phaser.Scene {
     gameEvents.off(GAME_EVENT.BATTLE_RESULT,        this.safeOnBattleResult);
     gameEvents.off(GAME_EVENT.BATTLE_END,           this.safeOnBattleEnd);
     gameEvents.off(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.safeOnPlayerSwitch);
+    gameEvents.off(GAME_EVENT.BATTLE_HIT,           this.safeOnHit);
+    gameEvents.off(GAME_EVENT.BATTLE_SPARKLE,       this.safeOnSparkle);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -766,15 +790,24 @@ export default class BattleScene extends Phaser.Scene {
   // 그리기 헬퍼
   // ─────────────────────────────────────────────────────────────────────────────
 
-  private drawBar(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, ratio: number, _isEnemy: boolean) {
+  private drawBar(
+    g: Phaser.GameObjects.Graphics,
+    x: number, y: number, w: number, h: number,
+    ratio: number, ghostRatio = ratio,
+  ) {
     g.clear();
     const r = Math.max(0, Math.min(1, ratio));
-    const col = HEX[hpToken(r * 100)];
-    // 픽셀아트: sharp rect
+    const ghost = Math.max(r, Math.min(1, ghostRatio));
+
     g.fillStyle(HEX.shadow900, 1);
     g.fillRect(x, y, w, h);
+    // 잔상 — 방금 깎인 만큼이 회색으로 남았다가 뒤늦게 줄어든다
+    if (ghost > r) {
+      g.fillStyle(HEX.stone600, 1);
+      g.fillRect(x, y, Math.floor(w * ghost), h);
+    }
     if (r > 0) {
-      g.fillStyle(col, 1);
+      g.fillStyle(HEX[hpToken(r * 100)], 1);
       g.fillRect(x, y, Math.floor(w * r), h);
     }
     g.lineStyle(1, HEX.earth500, 0.8);
@@ -790,9 +823,154 @@ export default class BattleScene extends Phaser.Scene {
     return { paralysis: PALETTE.ember500, poison: PALETTE.earth500, freeze: PALETTE.mist300, burn: PALETTE.ember600 }[s] ?? PALETTE.cream100;
   }
 
-  private shake(sprite: Phaser.GameObjects.Image) {
-    const ox = sprite.x;
-    this.tweens.add({ targets: sprite, x: ox + 8, duration: 42, yoyo: true, repeat: 3, ease: "Linear", onComplete: () => { sprite.x = ox; } });
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 타격 연출
+  //
+  // 전투 계산에는 손대지 않는다. BattlePage 가 이미 계산해 놓은 결과를 받아 그리기만 한다.
+  // 전부 합쳐 1초를 넘기지 않고, 클릭/스페이스로 즉시 건너뛸 수 있다.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /** 스킵 가능한 연출 트윈으로 등록. 무한 반복(둥실거림)은 넣지 않는다. */
+  private fx(config: Phaser.Types.Tweens.TweenBuilderConfig): Phaser.Tweens.Tween {
+    const t = this.tweens.add(config);
+    this.fxTweens.add(t);
+    t.once("complete", () => this.fxTweens.delete(t));
+    return t;
+  }
+
+  private registerFxSkip() {
+    const skip = () => this.skipFx();
+    this.input.on("pointerdown", skip);
+    this.input.keyboard?.on("keydown-SPACE", skip);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.off("pointerdown", skip);
+      this.input.keyboard?.off("keydown-SPACE", skip);
+    });
+  }
+
+  /** 진행 중인 연출을 끝 상태로 즉시 밀어붙인다. 반복 플레이에서 필수. */
+  private skipFx() {
+    for (const t of [...this.fxTweens]) {
+      if (t.isPlaying() || t.isPaused()) t.complete();
+    }
+    this.fxTweens.clear();
+    this.enemySprite?.clearTint();
+    this.playerSprite?.clearTint();
+    this.enemySprite?.setX(ENEMY_X);
+    this.playerSprite?.setX(PLAYER_X);
+    // 남은 데미지 숫자는 즉시 정리
+    for (const obj of this.children.list.slice()) {
+      if (obj.getData?.("fxText")) obj.destroy();
+    }
+    // HP 바도 목표값으로 스냅
+    for (const side of ["enemy", "player"] as const) {
+      this.hpAnim[side].ghost = this.hpAnim[side].cur;
+    }
+    this.redrawBars();
+  }
+
+  private onHit(p: BattleHitPayload) {
+    if (!this._isActive) return;
+    const victim   = p.target === "enemy" ? this.enemySprite : this.playerSprite;
+    const attacker = p.target === "enemy" ? this.playerSprite : this.enemySprite;
+    if (!victim || !attacker) return;
+
+    // 공격 모션 — 물리는 대상 쪽으로 파고들고, 특수는 뒤로 당겼다 앞으로
+    const towardVictim = Math.sign(victim.x - attacker.x) || 1;
+    const lunge = p.category === "special" ? -14 : 22;
+    const ax = p.target === "enemy" ? PLAYER_X : ENEMY_X;
+    this.fx({
+      targets: attacker, x: ax + towardVictim * lunge,
+      duration: 90, yoyo: true, ease: "Quad.Out",
+      onComplete: () => attacker.setX(ax),
+    });
+
+    if (!p.isHit) {
+      this.floatText(victim.x, victim.y - 40, "MISS", PALETTE.sand300, 16);
+      return;
+    }
+
+    this.time.delayedCall(90, () => {
+      if (!this._isActive) return;
+
+      // 흰 플래시 — 맞은 순간을 프레임 단위로 알린다
+      victim.setTintFill(HEX.cream100);
+      this.time.delayedCall(80, () => victim.clearTint());
+
+      const vx = p.target === "enemy" ? ENEMY_X : PLAYER_X;
+      if (!this.reduceMotion) {
+        this.fx({
+          targets: victim, x: vx + 6,
+          duration: 40, yoyo: true, repeat: 3, ease: "Linear",
+          onComplete: () => victim.setX(vx),
+        });
+        // 카메라 셰이크는 데미지에 비례하되 상한을 둔다. 넘기면 화면이 멀미난다.
+        const ratio = Math.min(1, p.damage / 60);
+        this.cameras.main.shake(150, 0.002 + ratio * 0.006);
+      }
+
+      if (p.damage > 0) {
+        const crit = p.isCrit;
+        const weak = p.multiplier >= 2;
+        const size  = crit ? 32 : weak ? 24 : 16;
+        const color = crit ? PALETTE.cream100 : weak ? PALETTE.ember500 : PALETTE.sand200;
+        const label = crit ? `${p.damage}!` : String(p.damage);
+        this.floatText(victim.x, victim.y - 40, label, color, size);
+      }
+    });
+  }
+
+  /** 위로 떠오르며 사라지는 텍스트 (데미지·MISS) */
+  private floatText(x: number, y: number, text: string, color: string, size: number) {
+    const t = this.add.text(x, y, text, {
+      fontSize: `${size}px`, fontFamily: PIXEL_FONT, resolution: textResolution(),
+      color, stroke: PALETTE.shadow900, strokeThickness: 4, fontStyle: "bold",
+    }).setOrigin(0.5, 0.5).setDepth(60);
+    t.setData("fxText", true);
+    this.fx({
+      targets: t, y: y - 46, alpha: { from: 1, to: 0 },
+      duration: 620, ease: "Quad.Out",
+      onComplete: () => t.destroy(),
+    });
+  }
+
+  private onSparkle(target: "enemy" | "player") {
+    if (!this._isActive) return;
+    const sprite = target === "enemy" ? this.enemySprite : this.playerSprite;
+    if (!sprite) return;
+    sprite.setTintFill(HEX.cream100);
+    this.fx({
+      targets: sprite, alpha: { from: 1, to: 0.4 },
+      duration: 110, yoyo: true, repeat: 2,
+      onComplete: () => { sprite.clearTint(); sprite.setAlpha(1); },
+    });
+  }
+
+  /** 쓰러짐 — 페이드아웃 + 살짝 가라앉기 */
+  private playFaint(target: "enemy" | "player") {
+    const sprite = target === "enemy" ? this.enemySprite : this.playerSprite;
+    const baseY  = target === "enemy" ? ENEMY_Y : PLAYER_Y;
+    if (!sprite) return;
+    this.fx({
+      targets: sprite, alpha: 0, y: baseY + 18,
+      duration: 420, ease: "Quad.In",
+    });
+  }
+
+  private redrawBars() {
+    this.drawBar(this.enemyHpBar,  E_BAR_X, E_BAR_Y, BAR_W_INNER, BAR_H,
+      this.hpAnim.enemy.cur, this.hpAnim.enemy.ghost);
+    this.drawBar(this.playerHpBar, P_BAR_X, P_BAR_Y, BAR_W_INNER, BAR_H,
+      this.hpAnim.player.cur, this.hpAnim.player.ghost);
+  }
+
+  /** HP 바를 목표값으로 애니메이션. cur 는 빠르게, ghost 는 뒤늦게 따라온다. */
+  private animateBar(side: "enemy" | "player", ratio: number) {
+    const st = this.hpAnim[side];
+    this.fx({ targets: st, cur: ratio, duration: 260, ease: "Quad.Out",
+      onUpdate: () => this.redrawBars() });
+    this.fx({ targets: st, ghost: ratio, duration: 420, delay: 260, ease: "Quad.Out",
+      onUpdate: () => this.redrawBars() });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
