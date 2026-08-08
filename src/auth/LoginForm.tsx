@@ -8,7 +8,7 @@ import { sha256Hex } from "./sha256";
 // "아이디:비밀번호"의 SHA-256 해시. 번들에 평문 계정을 남기지 않기 위해 해시로만 비교한다.
 const DEV_LOGIN_HASH = "590c783dce35634a13f99f7b25482678536c9a39cf153f1bb83554aa0362e5d1";
 
-const pixelFont = { fontFamily: "var(--pixel-font, monospace)" };
+const pixelFont = { fontFamily: "var(--font-pixel)" };
 
 function CornerBracket({ position }: { position: "tl" | "tr" | "bl" | "br" }) {
   const pos = {
@@ -58,9 +58,9 @@ export default function LoginForm() {
     }
   }
 
-  const inputSize = { fontSize: "clamp(12px,1.25vw,16px)" };
-  const labelSize = { ...pixelFont, fontSize: "clamp(9px,0.95vw,12px)" };
-  const btnSize = { ...pixelFont, fontSize: "clamp(10px,1.05vw,13px)" };
+  const inputSize = { fontSize: 16 };
+  const labelSize = { ...pixelFont, fontSize: 12 };
+  const btnSize = { ...pixelFont, fontSize: 12 };
 
   return (
     <div className="relative">
@@ -70,13 +70,13 @@ export default function LoginForm() {
       <CornerBracket position="br" />
 
       <form
-        className="flex flex-col gap-2 rounded-lg border-2 border-ember-700/50 bg-gradient-to-b from-shadow-900/92 to-shadow-800/85 p-[clamp(11px,1.7vw,18px)] backdrop-blur-sm"
+        className="flex flex-col gap-2 rounded-lg border-2 border-ember-700/50 bg-gradient-to-b from-shadow-900/92 to-shadow-800/85 p-4 backdrop-blur-sm"
         style={{ boxShadow: "0 0 26px rgba(233,148,65,0.2), inset 0 1px 0 rgba(243,229,185,0.06)" }}
         onSubmit={(e) => { e.preventDefault(); submitLogin(); }}
       >
         <div className="mb-0.5 flex items-center gap-2 text-ember-500/60">
           <span className="h-px flex-1 bg-gradient-to-r from-transparent to-ember-700/70" />
-          <span style={{ ...pixelFont, fontSize: "clamp(10px,1vw,13px)" }}>여행자 등록</span>
+          <span style={{ ...pixelFont, fontSize: 12 }}>여행자 등록</span>
           <span className="h-px flex-1 bg-gradient-to-l from-transparent to-ember-700/70" />
         </div>
 
@@ -109,7 +109,7 @@ export default function LoginForm() {
         {error && (
           <p
             className="rounded border border-ember-700/60 bg-ember-700/11 px-2 py-1 text-ember-500"
-            style={{ fontSize: "clamp(10px,0.95vw,13px)" }}
+            style={{ fontSize: 12 }}
           >
             {error}
           </p>
@@ -139,7 +139,7 @@ export default function LoginForm() {
           type="button"
           onClick={continueAsGuest}
           className="mt-0.5 text-center text-sand-300 underline decoration-dotted decoration-earth-400 underline-offset-2 transition hover:text-ember-500 hover:decoration-ember-500"
-          style={{ fontSize: "clamp(10px,0.95vw,13px)" }}
+          style={{ fontSize: 12 }}
         >
           🧭 게스트로 시작
         </button>

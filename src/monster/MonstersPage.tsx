@@ -79,7 +79,7 @@ function ReleaseBtn({ disabled, onRelease }: { disabled: boolean; onRelease: () 
 
   if (disabled) {
     return (
-      <button disabled className="text-[10px] font-bold px-2 py-0.5 rounded"
+      <button disabled className="text-pixel-sm font-bold px-2 py-0.5 rounded"
         style={{ background: "rgba(13, 18, 35, .2)", border: "1px solid rgba(132, 75, 63, .043)", color: "rgba(132, 75, 63, .215)" }}>
         놓아주기
       </button>
@@ -99,7 +99,7 @@ function ReleaseBtn({ disabled, onRelease }: { disabled: boolean; onRelease: () 
 
   return (
     <button onClick={handleClick}
-      className="text-[10px] font-bold px-2 py-0.5 rounded transition"
+      className="text-pixel-sm font-bold px-2 py-0.5 rounded transition"
       style={{
         background: pending ? "rgba(168, 61, 31, .317)" : "rgba(13, 18, 35, .25)",
         border: pending ? "1px solid rgba(168, 61, 31, .897)" : "1px solid rgba(132, 75, 63, .239)",
@@ -151,11 +151,11 @@ function EquipModal({
         <div className="sticky top-0 px-5 py-4 flex items-center justify-between"
           style={{ background: "rgba(13, 18, 35, .98)", borderBottom: "1px solid rgba(132, 75, 63, .255)" }}>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: PALETTE.sand300 }}>장비 관리</p>
-            <p className="text-base font-black text-cream-100">{monster.nickname ?? monster.name}</p>
+            <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: PALETTE.sand300 }}>장비 관리</p>
+            <p className="text-title-sm font-black text-cream-100">{monster.nickname ?? monster.name}</p>
           </div>
           <button onClick={onClose}
-            className="text-base font-black transition hover:brightness-125 rounded-lg px-2 py-1"
+            className="text-title-sm font-black transition hover:brightness-125 rounded-lg px-2 py-1"
             style={{ color: PALETTE.sand300, background: "rgba(13, 18, 35, .8)" }}>
             ✕
           </button>
@@ -164,7 +164,7 @@ function EquipModal({
         <div className="px-5 py-4 flex flex-col gap-5">
           {/* 현재 장착 슬롯 */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
+            <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
               장착 중인 장비 (슬롯 클릭 → 가방 필터)
             </p>
             <div className="flex flex-col gap-2">
@@ -181,20 +181,20 @@ function EquipModal({
                     }}
                     onClick={() => setSelectedSlot(isActive ? null : slot)}
                   >
-                    <span className="w-16 text-[11px] font-bold shrink-0" style={{ color: PALETTE.sand300 }}>
+                    <span className="w-16 text-pixel-sm font-bold shrink-0" style={{ color: PALETTE.sand300 }}>
                       {ARTIFACT_SLOT_LABEL[slot]}
                     </span>
                     {item ? (
                       <>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black truncate" style={{ color: PALETTE.cream100 }}>{item.name}</p>
-                          <p className="text-[9px] font-bold mt-0.5" style={{ color: QUALITY_COLOR[item.quality] }}>
+                          <p className="text-pixel-sm font-black truncate" style={{ color: PALETTE.cream100 }}>{item.name}</p>
+                          <p className="text-pixel-sm font-bold mt-0.5" style={{ color: QUALITY_COLOR[item.quality] }}>
                             {QUALITY_LABEL[item.quality]}
                           </p>
                           {item.statBonuses && item.statBonuses.length > 0 && (
                             <div className="flex flex-wrap gap-0.5 mt-1">
                               {item.statBonuses.map((sb, i) => (
-                                <span key={i} className="text-[8px] px-1 py-0.5 rounded"
+                                <span key={i} className="text-pixel-sm px-1 py-0.5 rounded"
                                   style={{ background: "rgba(132, 75, 63, .154)", color: PALETTE.ember500 }}>
                                   {ARTIFACT_STAT_LABEL[sb.stat]} +{sb.value}
                                 </span>
@@ -204,7 +204,7 @@ function EquipModal({
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); onUnequip(item.instanceId); }}
-                          className="text-[9px] font-bold px-2 py-0.5 rounded shrink-0 transition hover:brightness-125"
+                          className="text-pixel-sm font-bold px-2 py-0.5 rounded shrink-0 transition hover:brightness-125"
                           style={{
                             background: "rgba(168, 61, 31, .236)",
                             border: "1px solid rgba(168, 61, 31, .547)",
@@ -215,7 +215,7 @@ function EquipModal({
                         </button>
                       </>
                     ) : (
-                      <p className="text-[10px]" style={{ color: "rgba(205, 178, 126, .08)" }}>— 비어있음 —</p>
+                      <p className="text-pixel-sm" style={{ color: "rgba(205, 178, 126, .08)" }}>— 비어있음 —</p>
                     )}
                   </div>
                 );
@@ -225,11 +225,11 @@ function EquipModal({
 
           {/* 가방의 아티팩트 */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
+            <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
               가방의 아티팩트{selectedSlot ? ` — ${ARTIFACT_SLOT_LABEL[selectedSlot]} 필터` : ""}
             </p>
             {visibleArtifacts.length === 0 ? (
-              <p className="text-center py-5 text-xs" style={{ color: "rgba(205, 178, 126, .1)" }}>
+              <p className="text-center py-5 text-pixel-sm" style={{ color: "rgba(205, 178, 126, .1)" }}>
                 {selectedSlot
                   ? `장착 가능한 ${ARTIFACT_SLOT_LABEL[selectedSlot]}이 없습니다.`
                   : "가방에 아티팩트가 없습니다."}
@@ -246,24 +246,24 @@ function EquipModal({
                       border: `1px solid ${QUALITY_COLOR[a.quality]}44`,
                     }}
                   >
-                    <p className="text-[11px] font-black leading-tight" style={{ color: PALETTE.cream100 }}>{a.name}</p>
-                    <p className="text-[9px] font-bold mt-0.5" style={{ color: QUALITY_COLOR[a.quality] }}>
+                    <p className="text-pixel-sm font-black leading-tight" style={{ color: PALETTE.cream100 }}>{a.name}</p>
+                    <p className="text-pixel-sm font-bold mt-0.5" style={{ color: QUALITY_COLOR[a.quality] }}>
                       {QUALITY_LABEL[a.quality]}
                     </p>
-                    <p className="text-[9px] mt-0.5" style={{ color: "rgba(132, 75, 63, .891)" }}>
+                    <p className="text-pixel-sm mt-0.5" style={{ color: "rgba(132, 75, 63, .891)" }}>
                       {ARTIFACT_SLOT_LABEL[ARTIFACT_SLOT_MAP[a.itemId]] ?? "알 수 없음"}
                     </p>
                     {a.statBonuses && a.statBonuses.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-0.5">
                         {a.statBonuses.map((sb, i) => (
-                          <span key={i} className="text-[8px] px-1 py-0.5 rounded"
+                          <span key={i} className="text-pixel-sm px-1 py-0.5 rounded"
                             style={{ background: "rgba(132, 75, 63, .154)", color: PALETTE.ember500 }}>
                             {ARTIFACT_STAT_LABEL[sb.stat]} +{sb.value}
                           </span>
                         ))}
                       </div>
                     )}
-                    <div className="mt-1.5 text-center text-[9px] font-black rounded py-0.5"
+                    <div className="mt-1.5 text-center text-pixel-sm font-black rounded py-0.5"
                       style={{ background: "rgba(132, 75, 63, .351)", color: PALETTE.sand300 }}>
                       장착하기
                     </div>
@@ -288,11 +288,11 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
       <div className="w-72 flex-shrink-0 flex flex-col"
         style={{ background: "rgba(13, 18, 35, .5)", borderRight: "1px solid rgba(132, 75, 63, .191)" }}>
         <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
-          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STATUS</p>
-          <p className="text-sm font-black text-sand-200">상태창</p>
+          <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STATUS</p>
+          <p className="text-pixel-sm font-black text-sand-200">상태창</p>
         </div>
         <div className="flex-1 flex items-center justify-center px-6 text-center">
-          <p className="text-xs" style={{ color: "rgba(205, 178, 126, .1)" }}>
+          <p className="text-pixel-sm" style={{ color: "rgba(205, 178, 126, .1)" }}>
             몬스터를 클릭하면<br />상세 정보가 표시됩니다
           </p>
         </div>
@@ -312,8 +312,8 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
     <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
       style={{ background: "rgba(13, 18, 35, .5)", borderRight: "1px solid rgba(132, 75, 63, .191)" }}>
       <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STATUS</p>
-        <p className="text-sm font-black text-sand-200">상태창</p>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STATUS</p>
+        <p className="text-pixel-sm font-black text-sand-200">상태창</p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
@@ -325,10 +325,10 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
               className="w-11 h-11 object-contain pixel-img" style={monsterImgStyle(monster.id)} />
           </div>
           <div className="min-w-0">
-            <p className="text-base font-black text-cream-100 truncate">{monster.nickname ?? monster.name}</p>
+            <p className="text-title-sm font-black text-cream-100 truncate">{monster.nickname ?? monster.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[10px] font-bold text-sand-300">Lv.{monster.level}</span>
-              <span className={`rounded-full border px-1.5 text-[9px] font-bold ${acc.label}`}>
+              <span className="text-pixel-sm font-bold text-sand-300">Lv.{monster.level}</span>
+              <span className={`rounded-full border px-1.5 text-pixel-sm font-bold ${acc.label}`}>
                 {TYPE_KO[monster.type ?? "none"] ?? ""}
               </span>
             </div>
@@ -337,18 +337,18 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
 
         {/* 종합 능력치 */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
+          <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
             종합 능력치
           </p>
           <div className="grid grid-cols-2 gap-2">
             {stats.map(([label, base, bonus]) => (
               <div key={label} className="flex flex-col items-center rounded-lg py-2"
                 style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(132, 75, 63, .105)" }}>
-                <span className="text-[9px] font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>{label}</span>
-                <span className="text-sm font-black text-sand-200 mt-0.5">
+                <span className="text-pixel-sm font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>{label}</span>
+                <span className="text-pixel-sm font-black text-sand-200 mt-0.5">
                   {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : base + bonus}
                 </span>
-                {bonus > 0 && <span className="text-[9px] font-bold text-moss-500">+{bonus}</span>}
+                {bonus > 0 && <span className="text-pixel-sm font-bold text-moss-500">+{bonus}</span>}
               </div>
             ))}
           </div>
@@ -363,14 +363,14 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
             ? monsters.find((m) => m.id === monster.evolvesTo) : undefined;
           return (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
+              <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
                 성장
               </p>
               <div className="rounded-xl px-3 py-2.5"
                 style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(132, 75, 63, .105)" }}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>다음 레벨까지</span>
-                  <span className="text-[10px] font-mono text-sand-200">
+                  <span className="text-pixel-sm font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>다음 레벨까지</span>
+                  <span className="text-pixel-sm font-mono text-sand-200">
                     {monster.exp} / {monster.expToNextLevel}
                   </span>
                 </div>
@@ -379,17 +379,17 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
                 </div>
 
                 {nextLearn && (
-                  <p className="mt-2 text-[10px]" style={{ color: "rgba(205, 178, 126, .698)" }}>
+                  <p className="mt-2 text-pixel-sm" style={{ color: "rgba(205, 178, 126, .698)" }}>
                     Lv.{nextLearn.level} — <span className="font-bold text-sand-200">{nextLearn.move.name}</span> 습득
                   </p>
                 )}
                 {evoTo && monster.evolvesAtLevel !== undefined && (
-                  <p className="mt-1 text-[10px]" style={{ color: "rgba(205, 178, 126, .698)" }}>
+                  <p className="mt-1 text-pixel-sm" style={{ color: "rgba(205, 178, 126, .698)" }}>
                     Lv.{monster.evolvesAtLevel} — <span className="font-bold text-sand-200">{evoTo.name}</span>(으)로 진화
                   </p>
                 )}
                 {!nextLearn && !evoTo && (
-                  <p className="mt-2 text-[10px]" style={{ color: "rgba(132, 75, 63, .891)" }}>
+                  <p className="mt-2 text-pixel-sm" style={{ color: "rgba(132, 75, 63, .891)" }}>
                     더 배울 기술도, 남은 진화도 없습니다.
                   </p>
                 )}
@@ -400,7 +400,7 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
 
         {/* 보유 스킬 */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
+          <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
             보유 스킬 ({monster.moves.length})
           </p>
           <div className="flex flex-col gap-1.5">
@@ -409,19 +409,19 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
               return (
                 <div key={mv.id} className="flex items-center gap-2 rounded-xl px-3 py-2"
                   style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(132, 75, 63, .105)" }}>
-                  <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${mvAcc.label}`}>
+                  <span className={`shrink-0 rounded border px-1.5 py-0.5 text-pixel-sm font-bold ${mvAcc.label}`}>
                     {TYPE_KO[mv.type] ?? mv.type}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black truncate" style={{ color: PALETTE.cream100 }}>{mv.name}</p>
-                    <p className="text-[9px] mt-0.5" style={{ color: "rgba(132, 75, 63, .891)" }}>
+                    <p className="text-pixel-sm font-black truncate" style={{ color: PALETTE.cream100 }}>{mv.name}</p>
+                    <p className="text-pixel-sm mt-0.5" style={{ color: "rgba(132, 75, 63, .891)" }}>
                       {MOVE_CATEGORY_KO[mv.category] ?? mv.category}
                       {mv.statusEffect && ` · ${STATUS_KO[mv.statusEffect] ?? mv.statusEffect} ${mv.statusChance ?? 0}%`}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-[10px] font-mono text-sand-200">위력 {mv.power === 0 ? "—" : mv.power}</p>
-                    <p className="text-[9px] font-mono" style={{ color: "rgba(132, 75, 63, .764)" }}>명중 {mv.accuracy}%</p>
+                    <p className="text-pixel-sm font-mono text-sand-200">위력 {mv.power === 0 ? "—" : mv.power}</p>
+                    <p className="text-pixel-sm font-mono" style={{ color: "rgba(132, 75, 63, .764)" }}>명중 {mv.accuracy}%</p>
                   </div>
                 </div>
               );
@@ -465,7 +465,7 @@ function MonsterCard({
       {isFainted && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl"
           style={{ background: "rgba(13, 18, 35, .55)", backdropFilter: "blur(1px)" }}>
-          <span className="text-xs font-black text-ember-500 tracking-widest rotate-[-15deg] opacity-90">기절</span>
+          <span className="text-pixel-sm font-black text-ember-500 tracking-widest rotate-[-15deg] opacity-90">기절</span>
         </div>
       )}
 
@@ -487,8 +487,8 @@ function MonsterCard({
           {monster.nickname ?? monster.name}
         </p>
         <div className="flex items-center justify-center gap-1 mt-0.5">
-          <span className="text-[9px] font-bold text-sand-300">Lv.{monster.level}</span>
-          <span className={`rounded-full border px-1 text-[8px] font-bold ${acc.label}`} style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <span className="text-pixel-sm font-bold text-sand-300">Lv.{monster.level}</span>
+          <span className={`rounded-full border px-1 text-pixel-sm font-bold ${acc.label}`} style={{ paddingTop: 0, paddingBottom: 0 }}>
             {TYPE_KO[monster.type ?? "none"] ?? ""}
           </span>
         </div>
@@ -496,8 +496,8 @@ function MonsterCard({
 
       <div className="w-full px-0.5">
         <div className="flex justify-between items-center mb-0.5">
-          <span className="text-[8px] text-earth-400 font-bold">HP</span>
-          <span className="text-[8px] text-sand-300">{monster.currentHp}/{monster.maxHp}</span>
+          <span className="text-pixel-sm text-earth-400 font-bold">HP</span>
+          <span className="text-pixel-sm text-sand-300">{monster.currentHp}/{monster.maxHp}</span>
         </div>
         <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: "rgba(13, 18, 35, .5)" }}>
           <div className="h-full rounded-full transition-all"
@@ -513,9 +513,9 @@ function MonsterCard({
             ["속", monster.speed, equipBonus.speed],
           ] as [string, number, number][]).map(([l, base, bonus]) => (
             <div key={l} className="flex flex-col items-center rounded py-0.5" style={{ background: "rgba(13, 18, 35, .3)" }}>
-              <span className="text-[8px] text-earth-400">{l}</span>
-              <span className="text-[10px] font-bold text-sand-200">{base + bonus}</span>
-              {bonus > 0 && <span className="text-[7px] font-bold text-moss-500 leading-none">+{bonus}</span>}
+              <span className="text-pixel-sm text-earth-400">{l}</span>
+              <span className="text-pixel-sm font-bold text-sand-200">{base + bonus}</span>
+              {bonus > 0 && <span className="text-pixel-sm font-bold text-moss-500 leading-none">+{bonus}</span>}
             </div>
           ))}
         </div>
@@ -524,7 +524,7 @@ function MonsterCard({
       {equippedSlots.length > 0 && (
         <div className="w-full flex items-center gap-0.5 justify-center flex-wrap mt-0.5">
           {equippedSlots.map((slot) => (
-            <span key={slot} className="text-[7px] px-1 rounded font-bold"
+            <span key={slot} className="text-pixel-sm px-1 rounded font-bold"
               style={{ background: "rgba(132, 75, 63, .468)", color: PALETTE.sand300, border: "1px solid rgba(132, 75, 63, .702)" }}>
               {ARTIFACT_SLOT_LABEL[slot]}
             </span>
@@ -546,9 +546,9 @@ function EmptyPartySlot({ index, selected, onClick }: { index: number; selected?
       }}>
       <div className="w-10 h-10 rounded-full flex items-center justify-center"
         style={{ background: selected ? "rgba(233, 148, 65, .17)" : "rgba(132, 75, 63, .052)", border: "1px dashed rgba(132, 75, 63, .382)" }}>
-        <span className="text-xl" style={{ color: selected ? PALETTE.ember500 : "rgba(205, 178, 126, .1)" }}>+</span>
+        <span className="text-pixel-md" style={{ color: selected ? PALETTE.ember500 : "rgba(205, 178, 126, .1)" }}>+</span>
       </div>
-      <span className="text-[10px] font-semibold" style={{ color: selected ? PALETTE.ember500 : "rgba(205, 178, 126, .1)" }}>슬롯 {index + 1}</span>
+      <span className="text-pixel-sm font-semibold" style={{ color: selected ? PALETTE.ember500 : "rgba(205, 178, 126, .1)" }}>슬롯 {index + 1}</span>
     </button>
   );
 }
@@ -711,13 +711,13 @@ export default function MonstersPage() {
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate("/")}
-              className="rounded-xl px-3 py-1.5 text-sm font-semibold transition"
+              className="rounded-xl px-3 py-1.5 text-pixel-sm font-semibold transition"
               style={{ background: "rgba(13, 18, 35, .8)", border: "1px solid rgba(132, 75, 63, .382)", color: "rgba(205, 178, 126, .59)" }}>
               ← 베이스캠프
             </button>
             <div>
-              <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>MONSTERS</p>
-              <p className="text-base font-black text-cream-100">내 몬스터</p>
+              <p className="text-pixel-sm uppercase tracking-widest font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>MONSTERS</p>
+              <p className="text-title-sm font-black text-cream-100">내 몬스터</p>
             </div>
           </div>
 
@@ -729,21 +729,21 @@ export default function MonstersPage() {
               ].map((s) => (
                 <div key={s.label} className="text-center px-3 py-1.5 rounded-xl"
                   style={{ background: "rgba(13, 18, 35, .6)", border: "1px solid rgba(132, 75, 63, .07)" }}>
-                  <p className="text-[9px] text-earth-400 uppercase tracking-wider">{s.label}</p>
-                  <p className="text-sm font-black text-sand-200">{s.value}</p>
+                  <p className="text-pixel-sm text-earth-400 uppercase tracking-wider">{s.label}</p>
+                  <p className="text-pixel-sm font-black text-sand-200">{s.value}</p>
                 </div>
               ))}
               {bestFloor > 0 && (
                 <div className="text-center px-3 py-1.5 rounded-xl"
                   style={{ background: "rgba(13, 18, 35, .6)", border: "1px solid rgba(132, 75, 63, .471)" }}>
-                  <p className="text-[9px] uppercase tracking-wider" style={{ color: "rgba(132, 75, 63, 1)" }}>최고층</p>
-                  <p className="text-sm font-black" style={{ color: PALETTE.ember500 }}>{bestFloor}F</p>
+                  <p className="text-pixel-sm uppercase tracking-wider" style={{ color: "rgba(132, 75, 63, 1)" }}>최고층</p>
+                  <p className="text-pixel-sm font-black" style={{ color: PALETTE.ember500 }}>{bestFloor}F</p>
                 </div>
               )}
             </div>
 
             <button onClick={handleRestore}
-              className="relative rounded-xl px-4 py-2 text-sm font-black transition overflow-hidden"
+              className="relative rounded-xl px-4 py-2 text-pixel-sm font-black transition overflow-hidden"
               style={{
                 background: faintedCount > 0 ? "linear-gradient(135deg,rgba(13, 18, 35, .8),rgba(13, 18, 35, .9))" : "rgba(13, 18, 35, .6)",
                 border: faintedCount > 0 ? "1px solid rgba(122, 132, 85, .979)" : "1px solid rgba(132, 75, 63, .091)",
@@ -770,8 +770,8 @@ export default function MonstersPage() {
           <div className="px-4 py-3 flex items-center justify-between"
             style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>PARTY</p>
-              <p className="text-sm font-black text-sand-200">전투 파티 <span className="text-sand-300 font-normal">({party.length}/3)</span></p>
+              <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>PARTY</p>
+              <p className="text-pixel-sm font-black text-sand-200">전투 파티 <span className="text-sand-300 font-normal">({party.length}/3)</span></p>
             </div>
           </div>
 
@@ -792,7 +792,7 @@ export default function MonstersPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleRemove(idx); }}
                       disabled={party.length <= 1}
-                      className="text-[10px] font-semibold transition"
+                      className="text-pixel-sm font-semibold transition"
                       style={{ color: party.length <= 1 ? "rgba(205, 178, 126, .04)" : "rgba(205, 178, 126, .11)" }}
                       onMouseEnter={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = PALETTE.sand300; }}
                       onMouseLeave={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = "rgba(205, 178, 126, .11)"; }}>
@@ -801,7 +801,7 @@ export default function MonstersPage() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded transition hover:brightness-125"
+                        className="text-pixel-sm font-bold px-2 py-0.5 rounded transition hover:brightness-125"
                         style={{
                           background: "rgba(24, 59, 79, .531)",
                           border: "1px solid rgba(92, 147, 150, .29)",
@@ -825,7 +825,7 @@ export default function MonstersPage() {
           </div>
 
           <div className="px-4 py-3" style={{ borderTop: "1px solid rgba(132, 75, 63, .127)" }}>
-            <p className="text-[10px] text-center" style={{ color: "rgba(132, 75, 63, .764)" }}>{hint}</p>
+            <p className="text-pixel-sm text-center" style={{ color: "rgba(132, 75, 63, .764)" }}>{hint}</p>
           </div>
         </div>
 
@@ -840,8 +840,8 @@ export default function MonstersPage() {
           <div className="px-4 py-3 flex flex-wrap items-center gap-2"
             style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)", background: "rgba(13, 18, 35, .3)" }}>
             <div className="mr-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STORAGE</p>
-              <p className="text-sm font-black text-sand-200">보관함 <span className="text-sand-300 font-normal">({storage.length}/30)</span></p>
+              <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STORAGE</p>
+              <p className="text-pixel-sm font-black text-sand-200">보관함 <span className="text-sand-300 font-normal">({storage.length}/30)</span></p>
             </div>
 
             <div className="flex gap-1 flex-wrap">
@@ -849,7 +849,7 @@ export default function MonstersPage() {
                 const acc = t === "all" ? null : TYPE_ACCENT[t];
                 return (
                   <button key={t} onClick={() => setTypeFilter(t)}
-                    className="rounded-full px-2.5 py-0.5 text-[10px] font-bold transition"
+                    className="rounded-full px-2.5 py-0.5 text-pixel-sm font-bold transition"
                     style={{
                       background: typeFilter === t ? (acc ? acc.bg : "rgba(233, 148, 65, .17)") : "rgba(13, 18, 35, .6)",
                       border: typeFilter === t ? `1px solid ${acc?.border ?? PALETTE.ember500}` : "1px solid rgba(132, 75, 63, .255)",
@@ -864,7 +864,7 @@ export default function MonstersPage() {
             <div className="flex gap-1 ml-auto">
               {([["level", "레벨"], ["hp", "HP"], ["type", "속성"]] as [SortKey, string][]).map(([k, l]) => (
                 <button key={k} onClick={() => setSortBy(k)}
-                  className="rounded-lg px-2 py-0.5 text-[10px] font-bold transition"
+                  className="rounded-lg px-2 py-0.5 text-pixel-sm font-bold transition"
                   style={{
                     background: sortBy === k ? "rgba(233, 148, 65, .136)" : "rgba(13, 18, 35, .6)",
                     border: `1px solid ${sortBy === k ? "rgba(233, 148, 65, .509)" : "rgba(132, 75, 63, .255)"}`,
@@ -879,15 +879,15 @@ export default function MonstersPage() {
           <div className="flex-1 overflow-y-auto p-3">
             {storage.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
-                <div className="text-5xl opacity-20">📦</div>
+                <div className="text-pixel-lg opacity-20">📦</div>
                 <div>
                   <p className="font-bold text-sand-300 mb-1">보관함이 비어 있습니다</p>
-                  <p className="text-xs text-earth-400">숲 탐험에서 몬스터를 포획하면<br />이곳에 자동으로 저장됩니다.</p>
+                  <p className="text-pixel-sm text-earth-400">숲 탐험에서 몬스터를 포획하면<br />이곳에 자동으로 저장됩니다.</p>
                 </div>
               </div>
             ) : filteredStorage.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 gap-2 text-center">
-                <p className="text-sm text-earth-400">{TYPE_KO[typeFilter]} 속성 몬스터가 없습니다.</p>
+                <p className="text-pixel-sm text-earth-400">{TYPE_KO[typeFilter]} 속성 몬스터가 없습니다.</p>
               </div>
             ) : (
               <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}>
@@ -900,7 +900,7 @@ export default function MonstersPage() {
                     <div className="flex items-center justify-center gap-1 px-0.5">
                       <button
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded transition hover:brightness-125"
+                        className="text-pixel-sm font-bold px-1.5 py-0.5 rounded transition hover:brightness-125"
                         style={{
                           background: "rgba(24, 59, 79, .531)",
                           border: "1px solid rgba(92, 147, 150, .29)",

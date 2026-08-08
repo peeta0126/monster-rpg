@@ -83,8 +83,8 @@ function DiscardBtn({
   };
 
   const base = small
-    ? "rounded px-1.5 py-0.5 text-[9px] font-black transition"
-    : "rounded-lg px-2 py-1 text-[10px] font-black transition";
+    ? "rounded px-1.5 py-0.5 text-pixel-sm font-black transition"
+    : "rounded-lg px-2 py-1 text-pixel-sm font-black transition";
 
   return (
     <button
@@ -116,18 +116,18 @@ function MaterialsSection({
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
+          <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
             style={{ color: "rgba(132, 75, 63, 1)" }}>MATERIALS</p>
-          <p className="text-sm font-black text-sand-200">보유 재료</p>
+          <p className="text-pixel-sm font-black text-sand-200">보유 재료</p>
         </div>
-        <p className="text-lg font-black font-mono"
+        <p className="text-title-sm font-black font-mono"
           style={{ color: total > 0 ? PALETTE.ember500 : "rgba(205, 178, 126, .08)" }}>
           {total}
         </p>
       </div>
 
       {total === 0 ? (
-        <p className="text-xs text-earth-400 py-4 text-center">
+        <p className="text-pixel-sm text-earth-400 py-4 text-center">
           숲 탐험에서 재료를 획득할 수 있습니다.
         </p>
       ) : (
@@ -149,17 +149,17 @@ function MaterialsSection({
                     className="w-10 h-10 pixel-img"
                     style={{ imageRendering: "pixelated", filter: "drop-shadow(0 0 6px rgba(122, 132, 85, .783))" }} />
                 ) : (
-                  <div className="w-10 h-10 flex items-center justify-center text-2xl">{mat.emoji}</div>
+                  <div className="w-10 h-10 flex items-center justify-center text-pixel-md">{mat.emoji}</div>
                 )}
-                <p className="text-[10px] font-bold text-sand-200 text-center">{mat.name}</p>
-                <p className="text-xl font-black font-mono mt-1" style={{ color: PALETTE.moss500 }}>×{cnt}</p>
+                <p className="text-pixel-sm font-bold text-sand-200 text-center">{mat.name}</p>
+                <p className="text-pixel-md font-black font-mono mt-1" style={{ color: PALETTE.moss500 }}>×{cnt}</p>
 
                 {/* 버리기 버튼 */}
                 <div className="flex gap-1 mt-0.5">
                   <button
                     type="button"
                     onClick={() => discardMaterial(mat.id, 1)}
-                    className="rounded px-1.5 py-0.5 text-[9px] font-black transition"
+                    className="rounded px-1.5 py-0.5 text-pixel-sm font-black transition"
                     style={{ background: "rgba(13, 18, 35, .5)", border: "1px solid rgba(132, 75, 63, .235)", color: "rgba(194, 88, 40, .663)" }}
                   >
                     −1
@@ -194,8 +194,8 @@ function PotionsSection({
       <div className="flex flex-col items-center gap-3 py-8 text-center">
         <img src={tabBagImg} alt="" className="w-12 h-12 pixel-img opacity-15"
           style={{ imageRendering: "pixelated" }} />
-        <p className="text-sm font-bold text-sand-300">보유 물약이 없습니다</p>
-        <p className="text-xs text-earth-400">제작 공방의 연금술 제작대에서 물약을 만들어 보세요.</p>
+        <p className="text-pixel-sm font-bold text-sand-300">보유 물약이 없습니다</p>
+        <p className="text-pixel-sm text-earth-400">제작 공방의 연금술 제작대에서 물약을 만들어 보세요.</p>
       </div>
     );
   }
@@ -203,9 +203,9 @@ function PotionsSection({
   return (
     <div>
       <div className="mb-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
+        <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
           style={{ color: "rgba(132, 75, 63, 1)" }}>POTIONS</p>
-        <p className="text-sm font-black text-sand-200">
+        <p className="text-pixel-sm font-black text-sand-200">
           보유 물약{" "}
           <span className="text-ember-500 font-mono">
             ×{craftedPotions.reduce((s, p) => s + p.quantity, 0)}
@@ -231,17 +231,17 @@ function PotionsSection({
                   <img src={POTION_IMG[stack.itemId]} alt={stack.name}
                     className="w-10 h-10 pixel-img" style={{ imageRendering: "pixelated" }} />
                 ) : (
-                  <div className="w-10 h-10 flex items-center justify-center text-2xl">🧪</div>
+                  <div className="w-10 h-10 flex items-center justify-center text-pixel-md">🧪</div>
                 )}
                 <div className="absolute -top-1 -right-1 rounded-full w-5 h-5 flex items-center justify-center"
-                  style={{ background: color, fontSize: 9, fontWeight: 900, color: PALETTE.shadow900, animation: "countPop .4s ease both" }}>
+                  style={{ background: color, fontSize: 12, fontWeight: 900, color: PALETTE.shadow900, animation: "countPop .4s ease both" }}>
                   {stack.quantity}
                 </div>
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-cream-100 truncate">{stack.name}</p>
-                <p className="text-[10px] font-bold mt-0.5" style={{ color }}>
+                <p className="text-pixel-sm font-black text-cream-100 truncate">{stack.name}</p>
+                <p className="text-pixel-sm font-bold mt-0.5" style={{ color }}>
                   {QUALITY_LABEL[stack.quality]}
                 </p>
               </div>
@@ -251,7 +251,7 @@ function PotionsSection({
                 <button
                   type="button"
                   onClick={() => discardPotion(stack.stackId, 1)}
-                  className="rounded px-1.5 py-0.5 text-[9px] font-black transition"
+                  className="rounded px-1.5 py-0.5 text-pixel-sm font-black transition"
                   style={{ background: "rgba(13, 18, 35, .5)", border: "1px solid rgba(132, 75, 63, .235)", color: "rgba(194, 88, 40, .663)" }}
                 >
                   −1
@@ -283,10 +283,10 @@ function ArtifactsSection({
   if (craftedArtifacts.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <div className="text-4xl opacity-20">🔮</div>
-        <p className="text-sm font-bold text-sand-300">보유 아티팩트가 없습니다</p>
-        <p className="text-xs text-earth-400">제작 공방의 아티팩트 제작대에서 만들어 보세요.</p>
-        <p className="text-xs text-earth-400">제작 후 내 몬스터 메뉴에서 장착할 수 있습니다.</p>
+        <div className="text-pixel-lg opacity-20">🔮</div>
+        <p className="text-pixel-sm font-bold text-sand-300">보유 아티팩트가 없습니다</p>
+        <p className="text-pixel-sm text-earth-400">제작 공방의 아티팩트 제작대에서 만들어 보세요.</p>
+        <p className="text-pixel-sm text-earth-400">제작 후 내 몬스터 메뉴에서 장착할 수 있습니다.</p>
       </div>
     );
   }
@@ -294,9 +294,9 @@ function ArtifactsSection({
   return (
     <div>
       <div className="mb-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
+        <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
           style={{ color: "rgba(132, 75, 63, 1)" }}>ARTIFACTS</p>
-        <p className="text-sm font-black text-sand-200">보유 아티팩트 <span className="text-ember-500 font-mono">{craftedArtifacts.length}개</span></p>
+        <p className="text-pixel-sm font-black text-sand-200">보유 아티팩트 <span className="text-ember-500 font-mono">{craftedArtifacts.length}개</span></p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -312,28 +312,28 @@ function ArtifactsSection({
                 animation: `bagIn .35s ease ${i * .07}s both`,
               }}>
               <div className="p-4 flex items-start gap-3">
-                <div className="w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center text-2xl"
+                <div className="w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center text-pixel-md"
                   style={{ background: "rgba(13, 18, 35, .35)", border: `1px solid ${color}44` }}>
                   {ARTIFACT_EMOJI[item.itemId] ?? "✨"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-cream-100">{item.name}</p>
+                  <p className="text-pixel-sm font-black text-cream-100">{item.name}</p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] font-bold" style={{ color }}>
+                    <span className="text-pixel-sm font-bold" style={{ color }}>
                       {QUALITY_LABEL[item.quality]}
                     </span>
                     {item.level !== undefined && (
-                      <span className="text-[10px] font-bold text-sand-300">
+                      <span className="text-pixel-sm font-bold text-sand-300">
                         Lv.{item.level}
                       </span>
                     )}
                     {item.enhancement !== undefined && item.enhancement > 0 && (
-                      <span className="text-[10px] font-black" style={{ color: PALETTE.ember500 }}>
+                      <span className="text-pixel-sm font-black" style={{ color: PALETTE.ember500 }}>
                         +{item.enhancement}
                       </span>
                     )}
                     {item.source === "synthesis" && (
-                      <span className="rounded-full px-1.5 py-0.5 text-[9px] font-black"
+                      <span className="rounded-full px-1.5 py-0.5 text-pixel-sm font-black"
                         style={{ background: "rgba(174, 226, 213, .088)", color: PALETTE.mist300,
                           border: "1px solid rgba(174, 226, 213, .131)" }}>
                         합성
@@ -351,7 +351,7 @@ function ArtifactsSection({
                   <div className="rounded-lg p-3 space-y-1"
                     style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(243, 229, 185, .064)" }}>
                     {item.statBonuses.map((b) => (
-                      <p key={b.stat} className="text-xs font-bold flex justify-between"
+                      <p key={b.stat} className="text-pixel-sm font-bold flex justify-between"
                         style={{ color: PALETTE.sand300 }}>
                         <span style={{ color: "rgba(132, 75, 63, 1)" }}>
                           {ARTIFACT_STAT_LABEL[b.stat as ArtifactStatType] ?? b.stat}
@@ -422,14 +422,14 @@ export default function FarmPage() {
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate(backPath)}
-              className="rounded-xl px-3 py-1.5 text-sm font-semibold transition"
+              className="rounded-xl px-3 py-1.5 text-pixel-sm font-semibold transition"
               style={{ background: "rgba(13, 18, 35, .8)", border: "1px solid rgba(132, 75, 63, .382)", color: "rgba(205, 178, 126, .59)" }}>
               {backLabel}
             </button>
             <div>
-              <p className="text-[10px] uppercase tracking-widest font-bold"
+              <p className="text-pixel-sm uppercase tracking-widest font-bold"
                 style={{ color: "rgba(132, 75, 63, 1)" }}>BAG</p>
-              <p className="text-base font-black text-cream-100">가방</p>
+              <p className="text-title-sm font-black text-cream-100">가방</p>
             </div>
           </div>
 
@@ -442,8 +442,8 @@ export default function FarmPage() {
             ].map((s) => (
               <div key={s.label} className="text-center px-3 py-1.5 rounded-xl"
                 style={{ background: "rgba(13, 18, 35, .6)", border: "1px solid rgba(132, 75, 63, .07)" }}>
-                <p className="text-[9px] text-earth-400 uppercase tracking-wider">{s.label}</p>
-                <p className="text-sm font-black text-sand-200">{s.icon} {s.value}</p>
+                <p className="text-pixel-sm text-earth-400 uppercase tracking-wider">{s.label}</p>
+                <p className="text-pixel-sm font-black text-sand-200">{s.icon} {s.value}</p>
               </div>
             ))}
           </div>
@@ -456,7 +456,7 @@ export default function FarmPage() {
             const b = badge[tab.id];
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className="relative flex items-center gap-2 px-5 py-3 text-sm font-bold transition-all"
+                className="relative flex items-center gap-2 px-5 py-3 text-pixel-sm font-bold transition-all"
                 style={{
                   color: isActive ? PALETTE.ember500 : "rgba(205, 178, 126, .12)",
                   borderBottom: isActive ? `2px solid ` : "2px solid transparent",
@@ -464,7 +464,7 @@ export default function FarmPage() {
                 }}>
                 <span>{tab.label}</span>
                 {b > 0 && (
-                  <span className="rounded-full px-1.5 text-[9px] font-black"
+                  <span className="rounded-full px-1.5 text-pixel-sm font-black"
                     style={{
                       background: isActive ? "rgba(233, 148, 65, .283)" : "rgba(132, 75, 63, .105)",
                       color: isActive ? PALETTE.ember500 : "rgba(205, 178, 126, .12)",
@@ -505,9 +505,9 @@ export default function FarmPage() {
 
         {activeTab === "all" && totalMats === 0 && totalPotions === 0 && totalArtifacts === 0 && (
           <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-            <div className="text-5xl opacity-20">🎒</div>
+            <div className="text-pixel-lg opacity-20">🎒</div>
             <p className="font-bold text-sand-300">가방이 비어 있습니다</p>
-            <p className="text-xs text-earth-400">
+            <p className="text-pixel-sm text-earth-400">
               숲 탐험에서 재료를 얻고,<br />
               제작 공방에서 아이템을 만들어 보세요.
             </p>

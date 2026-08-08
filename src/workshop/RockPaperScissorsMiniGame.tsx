@@ -100,15 +100,15 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
       {/* 헤더 */}
       <div className="mb-4">
         <p
-          className="text-[10px] font-bold uppercase tracking-widest"
+          className="text-pixel-sm font-bold uppercase tracking-widest"
           style={{ color: C.goldDim }}
         >
           ✦ 시험의 시간 ✦
         </p>
-        <p className="mt-1 text-sm font-bold" style={{ color: C.textPrimary }}>
+        <p className="mt-1 text-pixel-sm font-bold" style={{ color: C.textPrimary }}>
           <span style={{ color: C.gold }}>{craftingItemName}</span> 제작 품질 결정
         </p>
-        <p className="mt-1 text-xs" style={{ color: C.textFaint }}>
+        <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>
           가위바위보 결과에 따라 아이템 품질이 결정됩니다.
         </p>
       </div>
@@ -117,7 +117,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
       {result === null ? (
         <>
           <p
-            className="mb-3 text-center text-sm font-bold"
+            className="mb-3 text-center text-pixel-sm font-bold"
             style={{ color: C.textMuted }}
           >
             — 선택하세요 —
@@ -137,7 +137,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
               >
                 <RpsIcon choice={choice} className="h-14 w-14" />
                 <span
-                  className="text-xs font-bold"
+                  className="text-pixel-sm font-bold"
                   style={{ color: C.textMuted }}
                 >
                   {RPS_LABEL[choice]}
@@ -155,11 +155,11 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
               className="flex flex-col items-center gap-2 rounded-xl p-3"
               style={{ background: C.card, border: `1px solid ${C.border}` }}
             >
-              <p className="text-xs font-bold" style={{ color: C.textFaint }}>
+              <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
                 내 선택
               </p>
               <RpsIcon choice={playerChoice!} active className="h-16 w-16" />
-              <p className="text-sm font-black" style={{ color: C.textPrimary }}>
+              <p className="text-pixel-sm font-black" style={{ color: C.textPrimary }}>
                 {RPS_LABEL[playerChoice!]}
               </p>
             </div>
@@ -168,11 +168,11 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
               className="flex flex-col items-center gap-2 rounded-xl p-3"
               style={{ background: C.card, border: `1px solid ${C.border}` }}
             >
-              <p className="text-xs font-bold" style={{ color: C.textFaint }}>
+              <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
                 상대 선택
               </p>
               <RpsIcon choice={computerChoice!} className="h-16 w-16" />
-              <p className="text-sm font-black" style={{ color: C.textPrimary }}>
+              <p className="text-pixel-sm font-black" style={{ color: C.textPrimary }}>
                 {RPS_LABEL[computerChoice!]}
               </p>
             </div>
@@ -188,12 +188,12 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
             }}
           >
             <p
-              className="text-xl font-black tracking-wide"
+              className="text-pixel-md font-black tracking-wide"
               style={{ color: RESULT_COLOR[result] }}
             >
               {RESULT_LABEL[result]}
             </p>
-            <p className="mt-1 text-xs" style={{ color: C.textFaint }}>
+            <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>
               {QUALITY_HINT[result]}
             </p>
           </div>
@@ -202,7 +202,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
           <button
             type="button"
             onClick={() => onFinish(result)}
-            className="w-full rounded-lg py-3 text-sm font-black transition hover:brightness-125"
+            className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
             style={{
               background: "rgba(132, 75, 63, .515)",
               border: `1px solid rgba(233, 148, 65, .605)`,

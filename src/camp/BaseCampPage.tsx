@@ -113,18 +113,18 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
       {/* 헤더 */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-shadow-700 shrink-0">
         <button onClick={onBack}
-          className="rounded-lg bg-shadow-700 px-3 py-1.5 text-sm text-sand-300 hover:text-sand-200 flex items-center gap-1">
+          className="rounded-lg bg-shadow-700 px-3 py-1.5 text-pixel-sm text-sand-300 hover:text-sand-200 flex items-center gap-1">
           ← 도감
         </button>
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-cream-100">{seen ? m.name : "???"}</h3>
+          <h3 className="text-title-sm font-bold text-cream-100">{seen ? m.name : "???"}</h3>
           {seen && (
-            <span className={`inline-block rounded border px-2 py-0.5 text-xs mt-0.5 ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
+            <span className={`inline-block rounded border px-2 py-0.5 text-pixel-sm mt-0.5 ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
               {TYPE_KO[m.type ?? "none"]}
             </span>
           )}
         </div>
-        {caught && <span className="text-xs font-bold text-moss-500 border border-moss-500 rounded px-2 py-0.5">포획</span>}
+        {caught && <span className="text-pixel-sm font-bold text-moss-500 border border-moss-500 rounded px-2 py-0.5">포획</span>}
       </div>
 
       <div className="overflow-y-auto flex-1 p-5 space-y-5">
@@ -139,8 +139,8 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
             <div className="flex-1 grid grid-cols-2 gap-2">
               {([["HP", m.maxHp], ["공격", m.attack], ["방어", m.defense], ["속도", m.speed]] as [string, number][]).map(([label, val]) => (
                 <div key={label} className="bg-shadow-800 rounded-lg p-2.5 border border-shadow-700">
-                  <p className="text-[10px] text-earth-400 uppercase tracking-wider">{label}</p>
-                  <p className="text-lg font-black text-cream-100">{val}</p>
+                  <p className="text-pixel-sm text-earth-400 uppercase tracking-wider">{label}</p>
+                  <p className="text-title-sm font-black text-cream-100">{val}</p>
                 </div>
               ))}
             </div>
@@ -150,7 +150,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
         {/* 진화 체인 */}
         {chain && (
           <div className="bg-shadow-800/60 rounded-xl border border-shadow-700 p-4">
-            <p className="text-[10px] text-earth-400 uppercase tracking-wider mb-3">진화 계열</p>
+            <p className="text-pixel-sm text-earth-400 uppercase tracking-wider mb-3">진화 계열</p>
             <div className="flex items-center justify-center gap-1">
               {chain.map((cm, i) => {
                 const isCurrent = cm.id === monsterId;
@@ -161,9 +161,9 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                   <div key={cm.id} className="flex items-center gap-1">
                     {i > 0 && (
                       <div className="flex flex-col items-center px-1">
-                        <span className="text-ember-500 text-sm leading-none">→</span>
+                        <span className="text-ember-500 text-pixel-sm leading-none">→</span>
                         {evoLevel && (
-                          <span className="text-[9px] text-ember-700 leading-none mt-0.5">Lv.{evoLevel}</span>
+                          <span className="text-pixel-sm text-ember-700 leading-none mt-0.5">Lv.{evoLevel}</span>
                         )}
                       </div>
                     )}
@@ -182,7 +182,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                           style={isSeen ? { ...monsterImgStyle(cm.id), mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.5 }}
                         />
                       </div>
-                      <span className={`text-[11px] font-semibold ${isCurrent ? "text-ember-500" : isSeen ? "text-sand-200" : "text-sand-300"}`}>
+                      <span className={`text-pixel-sm font-semibold ${isCurrent ? "text-ember-500" : isSeen ? "text-sand-200" : "text-sand-300"}`}>
                         {cm.name}
                       </span>
                     </button>
@@ -196,8 +196,8 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
         {/* 설명문 */}
         {seen && (
           <div className="bg-shadow-800/60 rounded-xl border border-shadow-700 p-4">
-            <p className="text-[10px] text-earth-400 uppercase tracking-wider mb-2">도감 설명</p>
-            <p className="text-sm text-sand-200 leading-relaxed">
+            <p className="text-pixel-sm text-earth-400 uppercase tracking-wider mb-2">도감 설명</p>
+            <p className="text-pixel-sm text-sand-200 leading-relaxed">
               {MONSTER_DEX_DESC[m.id] ?? "아직 알려진 정보가 없다."}
             </p>
           </div>
@@ -206,17 +206,17 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
         {/* 레벨업 스킬 테이블 (포획한 경우에만) */}
         {caught && learnset.length > 0 && (
           <div>
-            <p className="text-[10px] text-earth-400 uppercase tracking-wider mb-2">레벨업 스킬</p>
+            <p className="text-pixel-sm text-earth-400 uppercase tracking-wider mb-2">레벨업 스킬</p>
             <div className="rounded-xl border border-shadow-700 overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-pixel-sm">
                 <thead>
                   <tr className="bg-shadow-800 border-b border-shadow-700">
-                    <th className="text-left px-4 py-2 text-[10px] text-earth-400 uppercase tracking-wider w-16">레벨</th>
-                    <th className="text-left px-4 py-2 text-[10px] text-earth-400 uppercase tracking-wider">스킬</th>
-                    <th className="text-left px-4 py-2 text-[10px] text-earth-400 uppercase tracking-wider">속성</th>
-                    <th className="text-right px-4 py-2 text-[10px] text-earth-400 uppercase tracking-wider">위력</th>
-                    <th className="text-right px-4 py-2 text-[10px] text-earth-400 uppercase tracking-wider">명중</th>
-                    <th className="text-left px-4 py-2 text-[10px] text-earth-400 uppercase tracking-wider">상태이상</th>
+                    <th className="text-left px-4 py-2 text-pixel-sm text-earth-400 uppercase tracking-wider w-16">레벨</th>
+                    <th className="text-left px-4 py-2 text-pixel-sm text-earth-400 uppercase tracking-wider">스킬</th>
+                    <th className="text-left px-4 py-2 text-pixel-sm text-earth-400 uppercase tracking-wider">속성</th>
+                    <th className="text-right px-4 py-2 text-pixel-sm text-earth-400 uppercase tracking-wider">위력</th>
+                    <th className="text-right px-4 py-2 text-pixel-sm text-earth-400 uppercase tracking-wider">명중</th>
+                    <th className="text-left px-4 py-2 text-pixel-sm text-earth-400 uppercase tracking-wider">상태이상</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -225,7 +225,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                       <td className="px-4 py-2 font-bold text-ember-500">{entry.level}</td>
                       <td className="px-4 py-2 text-cream-100 font-medium">{entry.move.name}</td>
                       <td className="px-4 py-2">
-                        <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${MOVE_TYPE_COLOR[entry.move.type] ?? MOVE_TYPE_COLOR.normal}`}>
+                        <span className={`rounded border px-1.5 py-0.5 text-pixel-sm font-semibold ${MOVE_TYPE_COLOR[entry.move.type] ?? MOVE_TYPE_COLOR.normal}`}>
                           {TYPE_KO[entry.move.type] ?? entry.move.type}
                         </span>
                       </td>
@@ -246,13 +246,13 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
           </div>
         )}
         {seen && !caught && (
-          <p className="text-[10px] text-earth-400 text-center">* 포획 후 학습 기술 열람 가능</p>
+          <p className="text-pixel-sm text-earth-400 text-center">* 포획 후 학습 기술 열람 가능</p>
         )}
 
         {!seen && (
           <div className="text-center py-8 text-earth-400">
-            <p className="text-3xl mb-2">?</p>
-            <p className="text-sm">아직 조우한 적 없는 몬스터입니다.</p>
+            <p className="text-title-md mb-2">?</p>
+            <p className="text-pixel-sm">아직 조우한 적 없는 몬스터입니다.</p>
           </div>
         )}
       </div>
@@ -301,8 +301,8 @@ function DexModal({ onClose }: { onClose: () => void }) {
             {/* 헤더 */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-shadow-700 shrink-0">
               <div>
-                <h2 className="text-xl font-bold text-cream-100">몬스터 도감</h2>
-                <p className="text-xs text-sand-300 mt-0.5">
+                <h2 className="text-pixel-md font-bold text-cream-100">몬스터 도감</h2>
+                <p className="text-pixel-sm text-sand-300 mt-0.5">
                   조우 {dexSeen.filter(id => monsters.find(m=>m.id===id)).length}/{visibleMonsters.length}
                   &nbsp;·&nbsp;
                   포획 {dexCaught.filter(id => monsters.find(m=>m.id===id)).length}/{visibleMonsters.length}
@@ -310,7 +310,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
               </div>
               <button
                 onClick={onClose}
-                className="rounded-lg bg-shadow-700 px-3 py-1 text-sm text-sand-300 hover:text-sand-200"
+                className="rounded-lg bg-shadow-700 px-3 py-1 text-pixel-sm text-sand-300 hover:text-sand-200"
               >
                 닫기
               </button>
@@ -320,7 +320,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
             <div className="flex gap-1.5 px-5 py-3 overflow-x-auto shrink-0 border-b border-shadow-700/50">
               <button
                 onClick={() => setFilter("all")}
-                className={`rounded-lg px-3 py-1 text-xs font-semibold whitespace-nowrap transition
+                className={`rounded-lg px-3 py-1 text-pixel-sm font-semibold whitespace-nowrap transition
                   ${filter === "all" ? "bg-stone-600 text-white" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
               >
                 전체
@@ -329,7 +329,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                 <button
                   key={t}
                   onClick={() => setFilter(t)}
-                  className={`rounded-lg px-3 py-1 text-xs font-semibold whitespace-nowrap transition
+                  className={`rounded-lg px-3 py-1 text-pixel-sm font-semibold whitespace-nowrap transition
                     ${filter === t ? "bg-stone-600 text-white" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
                 >
                   {TYPE_GROUP_LABEL[t]}
@@ -356,7 +356,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                             : "border-shadow-700 bg-shadow-800/30"}`}
                     >
                       {/* 포획 뱃지 고정 높이 영역 - 없어도 공간 유지 */}
-                      <span className={`self-end text-xs font-bold h-4 leading-none ${caught ? "text-moss-500" : "invisible"}`}>포획</span>
+                      <span className={`self-end text-pixel-sm font-bold h-4 leading-none ${caught ? "text-moss-500" : "invisible"}`}>포획</span>
 
                       <div className="relative h-20 w-20 flex items-center justify-center bg-white rounded-lg overflow-hidden">
                         {seen ? (
@@ -379,15 +379,15 @@ function DexModal({ onClose }: { onClose: () => void }) {
                       <div className="text-center w-full">
                         {seen ? (
                           <>
-                            <p className="font-bold text-cream-100 text-sm">{m.name}</p>
-                            <span className={`mt-0.5 inline-block rounded border px-2 py-0.5 text-xs ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
+                            <p className="font-bold text-cream-100 text-pixel-sm">{m.name}</p>
+                            <span className={`mt-0.5 inline-block rounded border px-2 py-0.5 text-pixel-sm ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
                               {TYPE_KO[m.type ?? "none"] ?? m.type}
                             </span>
                           </>
                         ) : (
                           <>
-                            <p className="font-bold text-earth-400 text-sm">???</p>
-                            <span className="mt-0.5 inline-block rounded border px-2 py-0.5 text-xs border-stone-600 bg-shadow-700/50 text-earth-400">
+                            <p className="font-bold text-earth-400 text-pixel-sm">???</p>
+                            <span className="mt-0.5 inline-block rounded border px-2 py-0.5 text-pixel-sm border-stone-600 bg-shadow-700/50 text-earth-400">
                               미발견
                             </span>
                           </>
@@ -395,7 +395,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                       </div>
 
                       {seen && (
-                        <span className="text-[9px] text-earth-400 mt-auto">탭하여 상세보기</span>
+                        <span className="text-pixel-sm text-earth-400 mt-auto">탭하여 상세보기</span>
                       )}
                     </button>
                   );
@@ -431,8 +431,8 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-shadow-700 shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-cream-100">퀘스트</h2>
-            <p className="text-xs text-sand-300 mt-0.5">
+            <h2 className="text-pixel-md font-bold text-cream-100">퀘스트</h2>
+            <p className="text-pixel-sm text-sand-300 mt-0.5">
               진행중 {visibleQuests.filter((q) => questStatus[q.id] === "in_progress").length}
               &nbsp;·&nbsp;
               완료 {visibleQuests.filter((q) => questStatus[q.id] === "completed").length}
@@ -440,7 +440,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg bg-shadow-700 px-3 py-1 text-sm text-sand-300 hover:text-sand-200"
+            className="rounded-lg bg-shadow-700 px-3 py-1 text-pixel-sm text-sand-300 hover:text-sand-200"
           >
             닫기
           </button>
@@ -450,8 +450,8 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
         <div className="overflow-y-auto flex-1 p-5 space-y-3">
           {visibleQuests.length === 0 && (
             <div className="text-center py-10 text-earth-400">
-              <p className="text-sm">아직 진행 중인 퀘스트가 없습니다.</p>
-              <p className="text-xs mt-1 text-shadow-800">마을 사람에게 말을 걸어보세요.</p>
+              <p className="text-pixel-sm">아직 진행 중인 퀘스트가 없습니다.</p>
+              <p className="text-pixel-sm mt-1 text-shadow-800">마을 사람에게 말을 걸어보세요.</p>
             </div>
           )}
 
@@ -474,19 +474,19 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="rounded border border-stone-600 bg-shadow-700 px-1.5 py-0.5 text-[10px] text-sand-300 shrink-0">
+                    <span className="rounded border border-stone-600 bg-shadow-700 px-1.5 py-0.5 text-pixel-sm text-sand-300 shrink-0">
                       {QUEST_NPC_KO[q.npcId]}
                     </span>
-                    <p className="font-bold text-cream-100 text-sm truncate">{q.title}</p>
+                    <p className="font-bold text-cream-100 text-pixel-sm truncate">{q.title}</p>
                   </div>
-                  <span className={`shrink-0 rounded border px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}>
+                  <span className={`shrink-0 rounded border px-2 py-0.5 text-pixel-sm font-semibold ${badge.className}`}>
                     {badge.label}
                   </span>
                 </div>
 
                 {status === "in_progress" && (
                   <div className="mt-3">
-                    <div className="flex items-center justify-between text-[11px] text-sand-300 mb-1">
+                    <div className="flex items-center justify-between text-pixel-sm text-sand-300 mb-1">
                       <span>{objMat?.emoji ?? ""} {objMat?.name ?? q.objective.itemId}</span>
                       <span className="font-mono">{Math.min(have, need)} / {need}</span>
                     </div>
@@ -500,11 +500,11 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
                 )}
 
                 <div className="mt-3 flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] text-earth-400">보상</span>
+                  <span className="text-pixel-sm text-earth-400">보상</span>
                   {q.rewards.map((r) => {
                     const mat = getMaterial(r.itemId);
                     return (
-                      <span key={r.itemId} className="rounded bg-shadow-700/70 px-1.5 py-0.5 text-[10px] text-sand-300">
+                      <span key={r.itemId} className="rounded bg-shadow-700/70 px-1.5 py-0.5 text-pixel-sm text-sand-300">
                         {mat?.emoji ?? "?"} {mat?.name ?? r.itemId} ×{r.amount}
                       </span>
                     );
@@ -551,14 +551,14 @@ function TowerModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 mb-1">
-          <h2 className="text-lg font-bold text-cream-100">무한의 탑</h2>
+          <h2 className="text-title-sm font-bold text-cream-100">무한의 탑</h2>
           {cleared && (
-            <span className="rounded border border-ember-500/70 bg-ember-700/15 px-1.5 py-0.5 text-[10px] font-bold text-ember-500">
+            <span className="rounded border border-ember-500/70 bg-ember-700/15 px-1.5 py-0.5 text-pixel-sm font-bold text-ember-500">
               정복 완료
             </span>
           )}
         </div>
-        <p className="text-xs text-sand-300 mb-4">
+        <p className="text-pixel-sm text-sand-300 mb-4">
           {bestFloor > 0 ? `최고 도달 층: ${bestFloor}층` : "아직 탑에 오른 기록이 없습니다."}
         </p>
 
@@ -566,7 +566,7 @@ function TowerModal({
         <button
           onClick={onHeal}
           disabled={healed}
-          className="mb-3 w-full rounded-xl border border-mist-500/70 bg-mist-500/15 py-2 text-xs font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-40 transition"
+          className="mb-3 w-full rounded-xl border border-mist-500/70 bg-mist-500/15 py-2 text-pixel-sm font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-40 transition"
         >
           {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
         </button>
@@ -574,20 +574,20 @@ function TowerModal({
         <div className="flex flex-col gap-2">
           <button
             onClick={() => onSelect(1)}
-            className="w-full rounded-xl border border-stone-600 bg-shadow-700/70 py-2.5 text-sm font-semibold text-sand-200 hover:bg-stone-600 transition"
+            className="w-full rounded-xl border border-stone-600 bg-shadow-700/70 py-2.5 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600 transition"
           >
             1층부터 시작
           </button>
 
           {bestFloor >= 1 && (
             <>
-              <div className="text-xs text-earth-400 text-center pt-1">— 이어하기 —</div>
+              <div className="text-pixel-sm text-earth-400 text-center pt-1">— 이어하기 —</div>
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {checkpoints.filter((f) => f > 1).map((f) => (
                   <button
                     key={f}
                     onClick={() => onSelect(f)}
-                    className={`rounded-xl border py-2 text-sm font-bold transition
+                    className={`rounded-xl border py-2 text-pixel-sm font-bold transition
                       ${f === maxSelectable
                         ? "border-mist-500 bg-mist-500/15 text-mist-300 hover:bg-mist-500/25"
                         : "border-stone-600 bg-shadow-700/60 text-sand-200 hover:bg-stone-600"}`}
@@ -602,7 +602,7 @@ function TowerModal({
 
         <button
           onClick={onClose}
-          className="mt-4 w-full rounded-xl border border-shadow-700 py-2 text-sm text-sand-300 hover:text-sand-200 transition"
+          className="mt-4 w-full rounded-xl border border-shadow-700 py-2 text-pixel-sm text-sand-300 hover:text-sand-200 transition"
         >
           취소
         </button>
@@ -651,8 +651,8 @@ function MenuModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-cream-100">메뉴</h2>
-          <span className="text-[10px] text-earth-400">ESC: 닫기</span>
+          <h2 className="text-title-sm font-bold text-cream-100">메뉴</h2>
+          <span className="text-pixel-sm text-earth-400">ESC: 닫기</span>
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
@@ -660,9 +660,9 @@ function MenuModal({
             <button
               key={it.label}
               onClick={it.onClick}
-              className={`flex flex-col items-center gap-1.5 rounded-xl border bg-shadow-800/70 py-4 text-sm font-semibold transition active:scale-95 ${it.color}`}
+              className={`flex flex-col items-center gap-1.5 rounded-xl border bg-shadow-800/70 py-4 text-pixel-sm font-semibold transition active:scale-95 ${it.color}`}
             >
-              <span className="text-2xl">{it.emoji}</span>
+              <span className="text-pixel-md">{it.emoji}</span>
               {it.label}
             </button>
           ))}
@@ -793,7 +793,7 @@ export default function BaseCampPage() {
       {/* 메뉴 버튼 */}
       <button
         onClick={() => setMenuOpen(true)}
-        className="fixed bottom-4 right-4 z-40 rounded-xl border border-stone-600 bg-shadow-800/90 px-4 py-2 text-sm font-semibold text-sand-200 shadow-lg hover:bg-shadow-700 hover:text-cream-100 backdrop-blur"
+        className="fixed bottom-4 right-4 z-40 rounded-xl border border-stone-600 bg-shadow-800/90 px-4 py-2 text-pixel-sm font-semibold text-sand-200 shadow-lg hover:bg-shadow-700 hover:text-cream-100 backdrop-blur"
       >
         ☰ 메뉴 (Tab)
       </button>
@@ -849,12 +849,12 @@ export default function BaseCampPage() {
             {/* 대사 영역 */}
             <div className="flex-1 flex flex-col justify-between p-4">
               <div>
-                <p className="text-ember-500 font-bold text-base mb-2">{npcDialogue.name}</p>
-                <p className="text-cream-100 text-sm leading-relaxed">
+                <p className="text-ember-500 font-bold text-title-sm mb-2">{npcDialogue.name}</p>
+                <p className="text-cream-100 text-pixel-sm leading-relaxed">
                   {npcDialogue.lines[dialogueLineIndex]}
                 </p>
               </div>
-              <p className="text-earth-400 text-xs self-end">
+              <p className="text-earth-400 text-pixel-sm self-end">
                 {dialogueLineIndex < npcDialogue.lines.length - 1
                   ? "클릭 / Space: 다음  ·  ESC: 닫기"
                   : "클릭 / Space: 닫기  ·  ESC: 닫기"}

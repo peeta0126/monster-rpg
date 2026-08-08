@@ -3,7 +3,7 @@ import { useAuthStore } from "./authStore";
 import { usePlayerStore } from "../shared/playerStore";
 import { sha256Hex } from "./sha256";
 
-const pixelFont = { fontFamily: "var(--pixel-font, monospace)" };
+const pixelFont = { fontFamily: "var(--font-pixel)" };
 // 개발자 코드의 SHA-256 해시. 번들에 평문 코드를 남기지 않기 위해 해시로만 비교한다.
 const DEV_CODE_HASH = "324443b14fdeaf62156b4e58e2167c88f5d1e75c63f4f1f48c6757b2b9320615";
 
@@ -23,8 +23,8 @@ export default function DevCodeModal({ onClose }: { onClose: () => void }) {
     enterDevMode();
   }
 
-  const fieldSize = { fontSize: "clamp(11px,1.1vw,14px)" };
-  const labelSize = { ...pixelFont, fontSize: "clamp(9px,0.9vw,11px)" };
+  const fieldSize = { fontSize: 16 };
+  const labelSize = { ...pixelFont, fontSize: 12 };
 
   return (
     <div
@@ -37,13 +37,13 @@ export default function DevCodeModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-cream-100" style={{ ...pixelFont, fontSize: "clamp(11px,1.1vw,14px)" }}>
+          <h2 className="text-cream-100" style={{ ...pixelFont, fontSize: 16 }}>
             개발자 모드
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-lg leading-none text-sand-300 transition hover:text-sand-200"
+            className="text-title-sm leading-none text-sand-300 transition hover:text-sand-200"
             aria-label="닫기"
           >
             ×
@@ -68,7 +68,7 @@ export default function DevCodeModal({ onClose }: { onClose: () => void }) {
           {error && (
             <p
               className="rounded border border-ember-700/60 bg-ember-700/11 px-2 py-1 text-ember-500"
-              style={{ fontSize: "clamp(10px,0.95vw,13px)" }}
+              style={{ fontSize: 12 }}
             >
               {error}
             </p>
@@ -77,7 +77,7 @@ export default function DevCodeModal({ onClose }: { onClose: () => void }) {
           <button
             type="submit"
             className="mt-1 rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 py-2 font-bold text-cream-100 transition [text-shadow:0_1px_1px_rgba(13,18,35,0.6)] hover:brightness-110 active:translate-y-px active:shadow-none"
-            style={{ ...pixelFont, fontSize: "clamp(10px,1.05vw,13px)", boxShadow: "0 2px 0 rgba(168,61,31,0.7), 0 0 12px rgba(233,148,65,0.25)" }}
+            style={{ ...pixelFont, fontSize: 12, boxShadow: "0 2px 0 rgba(168,61,31,0.7), 0 0 12px rgba(233,148,65,0.25)" }}
           >
             입장
           </button>

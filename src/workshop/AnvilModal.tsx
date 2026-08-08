@@ -111,20 +111,20 @@ function ArtifactCard({
     >
       <div className="flex items-center gap-2.5">
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-title-sm"
           style={{ background: "rgba(132, 75, 63, .282)", border: `1px solid ${color}44` }}
         >
           {ARTIFACT_EMOJI[artifact.itemId] ?? "✨"}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-black" style={{ color: C.textPrimary }}>
+          <p className="truncate text-pixel-sm font-black" style={{ color: C.textPrimary }}>
             {artifact.name}
           </p>
           <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
-            <span className="text-[10px]" style={{ color: C.textFaint }}>Lv.{lv}</span>
+            <span className="text-pixel-sm font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
+            <span className="text-pixel-sm" style={{ color: C.textFaint }}>Lv.{lv}</span>
             {enh > 0 && (
-              <span className="text-[10px] font-black" style={{ color: C.gold }}>+{enh}</span>
+              <span className="text-pixel-sm font-black" style={{ color: C.gold }}>+{enh}</span>
             )}
           </div>
         </div>
@@ -170,13 +170,13 @@ function LevelUpPanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 레벨업 ✦
         </p>
-        <p className="mt-1 text-base font-black" style={{ color: C.textPrimary }}>
+        <p className="mt-1 text-title-sm font-black" style={{ color: C.textPrimary }}>
           {artifact.name}
         </p>
-        <span className="text-xs font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
+        <span className="text-pixel-sm font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
       </div>
 
       {/* 레벨 바 */}
@@ -185,8 +185,8 @@ function LevelUpPanel({
         style={{ background: C.card, border: `1px solid ${C.border}` }}
       >
         <div className="flex justify-between items-end mb-1.5">
-          <p className="text-xs font-bold" style={{ color: C.textFaint }}>현재 레벨</p>
-          <p className="text-sm font-black font-mono" style={{ color: isMax ? C.gold : C.textPrimary }}>
+          <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>현재 레벨</p>
+          <p className="text-pixel-sm font-black font-mono" style={{ color: isMax ? C.gold : C.textPrimary }}>
             {lv} / {maxLv}
           </p>
         </div>
@@ -202,10 +202,10 @@ function LevelUpPanel({
           />
         </div>
         {isMax
-          ? <p className="mt-1.5 text-center text-[10px] font-black" style={{ color: C.gold }}>✦ 최대 레벨 달성 ✦</p>
+          ? <p className="mt-1.5 text-center text-pixel-sm font-black" style={{ color: C.gold }}>✦ 최대 레벨 달성 ✦</p>
           : willUnlockNext
-            ? <p className="mt-1.5 text-center text-[10px] font-bold" style={{ color: PALETTE.mist300 }}>✦ 다음 레벨업 시 부가 능력치 해제! ✦</p>
-            : <p className="mt-1.5 text-center text-[10px]" style={{ color: C.textFaint }}>
+            ? <p className="mt-1.5 text-center text-pixel-sm font-bold" style={{ color: PALETTE.mist300 }}>✦ 다음 레벨업 시 부가 능력치 해제! ✦</p>
+            : <p className="mt-1.5 text-center text-pixel-sm" style={{ color: C.textFaint }}>
                 부가 능력치 해제까지 {levelsToUnlock}레벨 남음
               </p>
         }
@@ -216,13 +216,13 @@ function LevelUpPanel({
         className="rounded-lg p-3 space-y-1.5"
         style={{ background: C.card, border: `1px solid ${C.border}` }}
       >
-        <p className="text-[10px] font-bold mb-2" style={{ color: C.textFaint }}>
+        <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>
           능력치 <span style={{ color: C.textFaint, fontWeight: 400 }}>(Lv.{lv} +{enh} 기준)</span>
         </p>
         {currentStats.map((s, i) => {
           const diff = nextStats[i].value - s.value;
           return (
-            <div key={s.stat} className="flex items-center justify-between text-xs">
+            <div key={s.stat} className="flex items-center justify-between text-pixel-sm">
               <span style={{ color: C.textMuted }}>{ARTIFACT_STAT_LABEL[s.stat]}</span>
               <div className="flex items-center gap-1.5 font-mono font-bold">
                 <span style={{ color: C.textPrimary }}>{s.value}</span>
@@ -230,7 +230,7 @@ function LevelUpPanel({
                   <>
                     <span style={{ color: C.textFaint }}>→</span>
                     <span style={{ color: C.green }}>{nextStats[i].value}</span>
-                    <span className="text-[10px] font-normal" style={{ color: C.green }}>(+{diff})</span>
+                    <span className="text-pixel-sm font-normal" style={{ color: C.green }}>(+{diff})</span>
                   </>
                 )}
               </div>
@@ -244,12 +244,12 @@ function LevelUpPanel({
         className="rounded-lg p-3"
         style={{ background: C.card, border: `1px solid ${C.border}` }}
       >
-        <p className="text-[10px] font-bold mb-2" style={{ color: C.textFaint }}>
+        <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>
           부가 능력치{" "}
           <span style={{ color: C.textFaint, fontWeight: 400 }}>({bonusStats.length}/{maxUnlocks})</span>
         </p>
         {bonusStats.length === 0 ? (
-          <p className="text-[10px] text-center py-1" style={{ color: C.textFaint }}>
+          <p className="text-pixel-sm text-center py-1" style={{ color: C.textFaint }}>
             Lv.10 달성 시 첫 번째 부가 능력치 해제
           </p>
         ) : (
@@ -257,7 +257,7 @@ function LevelUpPanel({
             {bonusStats.map((b, i) => (
               <div
                 key={i}
-                className="flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-bold"
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-pixel-sm font-bold"
                 style={{
                   background: "rgba(92, 147, 150, .133)",
                   border:     "1px solid rgba(92, 147, 150, .4)",
@@ -266,7 +266,7 @@ function LevelUpPanel({
               >
                 <span>✦</span>
                 <span>{b.label}</span>
-                <span className="ml-auto text-[9px] font-normal" style={{ color: "rgba(92, 147, 150, .8)" }}>
+                <span className="ml-auto text-pixel-sm font-normal" style={{ color: "rgba(92, 147, 150, .8)" }}>
                   Lv.{(i + 1) * 10} 해제
                 </span>
               </div>
@@ -277,7 +277,7 @@ function LevelUpPanel({
               return (
                 <div
                   key={`locked-${i}`}
-                  className="flex items-center gap-1.5 rounded px-2 py-1 text-[11px]"
+                  className="flex items-center gap-1.5 rounded px-2 py-1 text-pixel-sm"
                   style={{
                     background: "rgba(243, 229, 185, .038)",
                     border:     "1px solid rgba(243, 229, 185, .089)",
@@ -286,7 +286,7 @@ function LevelUpPanel({
                 >
                   <span>?</span>
                   <span>미해제</span>
-                  <span className="ml-auto text-[9px]" style={{ color: C.textFaint }}>
+                  <span className="ml-auto text-pixel-sm" style={{ color: C.textFaint }}>
                     Lv.{unlockLv} 달성 필요
                   </span>
                 </div>
@@ -303,14 +303,14 @@ function LevelUpPanel({
           style={{ background: C.card, border: `1px solid ${C.border}` }}
         >
           <div className="flex justify-between">
-            <span className="text-xs" style={{ color: C.textFaint }}>필요 강화석</span>
-            <span className="text-sm font-black" style={{ color: stones >= cost ? C.green : C.red }}>
+            <span className="text-pixel-sm" style={{ color: C.textFaint }}>필요 강화석</span>
+            <span className="text-pixel-sm font-black" style={{ color: stones >= cost ? C.green : C.red }}>
               🪨 {cost}개
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-xs" style={{ color: C.textFaint }}>보유 강화석</span>
-            <span className="text-sm font-black font-mono" style={{ color: C.textPrimary }}>
+            <span className="text-pixel-sm" style={{ color: C.textFaint }}>보유 강화석</span>
+            <span className="text-pixel-sm font-black font-mono" style={{ color: C.textPrimary }}>
               {stones}개
             </span>
           </div>
@@ -321,7 +321,7 @@ function LevelUpPanel({
         type="button"
         onClick={onLevelUp}
         disabled={!canDo}
-        className="w-full rounded-lg py-3 text-sm font-black transition hover:brightness-125"
+        className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
         style={
           canDo
             ? { background: willUnlockNext ? "rgba(92, 147, 150, .194)" : C.btnBg,
@@ -367,13 +367,13 @@ function EnhancePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 강화 ✦
         </p>
-        <p className="mt-1 text-base font-black" style={{ color: C.textPrimary }}>
+        <p className="mt-1 text-title-sm font-black" style={{ color: C.textPrimary }}>
           {target.name}
         </p>
-        <span className="text-xs font-bold" style={{ color }}>{QUALITY_LABEL[target.quality]}</span>
+        <span className="text-pixel-sm font-bold" style={{ color }}>{QUALITY_LABEL[target.quality]}</span>
       </div>
 
       {/* 강화 수치 표시 */}
@@ -381,7 +381,7 @@ function EnhancePanel({
         className="rounded-lg p-3"
         style={{ background: C.card, border: `1px solid ${C.border}` }}
       >
-        <p className="text-[10px] font-bold mb-2" style={{ color: C.textFaint }}>강화 수치</p>
+        <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>강화 수치</p>
         <div className="flex justify-center gap-1.5">
           {Array.from({ length: MAX_EQUIPMENT_ENHANCEMENT }, (_, i) => {
             const filled = i < enh;
@@ -389,7 +389,7 @@ function EnhancePanel({
             return (
               <div
                 key={i}
-                className="flex h-8 w-8 items-center justify-center rounded font-black text-sm"
+                className="flex h-8 w-8 items-center justify-center rounded font-black text-pixel-sm"
                 style={{
                   background: filled ? "rgba(233, 148, 65, .252)" : next ? "rgba(233, 148, 65, .101)" : "rgba(243, 229, 185, .064)",
                   border: `1px solid ${filled ? C.borderGold : next ? "rgba(233, 148, 65, .302)" : "rgba(243, 229, 185, .102)"}`,
@@ -401,7 +401,7 @@ function EnhancePanel({
             );
           })}
         </div>
-        <p className="mt-2 text-center text-sm font-black" style={{ color: isMax ? C.gold : C.textPrimary }}>
+        <p className="mt-2 text-center text-pixel-sm font-black" style={{ color: isMax ? C.gold : C.textPrimary }}>
           {isMax ? "최대 강화 달성 ✦" : `+${enh} → +${enh + 1}`}
         </p>
       </div>
@@ -409,11 +409,11 @@ function EnhancePanel({
       {/* 재료 선택 */}
       {!isMax && (
         <div>
-          <p className="mb-2 text-xs font-bold" style={{ color: C.textMuted }}>
+          <p className="mb-2 text-pixel-sm font-bold" style={{ color: C.textMuted }}>
             재료 선택 <span style={{ color: C.textFaint }}>— 같은 등급 장비 사용</span>
           </p>
           {candidates.length === 0 ? (
-            <p className="rounded-lg p-3 text-center text-xs" style={{ color: C.textFaint,
+            <p className="rounded-lg p-3 text-center text-pixel-sm" style={{ color: C.textFaint,
               background: C.card, border: `1px solid ${C.border}` }}>
               재료로 쓸 {QUALITY_LABEL[target.quality]} 등급 장비가 없습니다
             </p>
@@ -434,7 +434,7 @@ function EnhancePanel({
 
       {material && !isMax && (
         <div
-          className="rounded-lg p-2 text-xs text-center"
+          className="rounded-lg p-2 text-pixel-sm text-center"
           style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
             color: C.red }}
         >
@@ -446,7 +446,7 @@ function EnhancePanel({
         type="button"
         onClick={onEnhance}
         disabled={!canDo}
-        className="w-full rounded-lg py-3 text-sm font-black transition hover:brightness-125"
+        className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
         style={
           canDo
             ? { background: C.btnBg, border: `1px solid ${C.btnBorder}`, color: C.textPrimary,
@@ -461,7 +461,7 @@ function EnhancePanel({
           : "재료를 선택하세요"}
       </button>
       {!isMax && (
-        <p className="text-center text-[10px]" style={{ color: C.textFaint }}>
+        <p className="text-center text-pixel-sm" style={{ color: C.textFaint }}>
           실패해도 강화 수치는 내려가지 않습니다. 재료만 사라집니다.
         </p>
       )}
@@ -487,14 +487,14 @@ function DisassemblePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 분해 ✦
         </p>
-        <p className="mt-1 text-base font-black" style={{ color: C.textPrimary }}>
+        <p className="mt-1 text-title-sm font-black" style={{ color: C.textPrimary }}>
           {artifact.name}
         </p>
-        <span className="text-xs font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
-        <span className="ml-2 text-xs" style={{ color: C.textFaint }}>Lv.{lv} +{enh}</span>
+        <span className="text-pixel-sm font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
+        <span className="ml-2 text-pixel-sm" style={{ color: C.textFaint }}>Lv.{lv} +{enh}</span>
       </div>
 
       {/* 획득 강화석 */}
@@ -502,10 +502,10 @@ function DisassemblePanel({
         className="rounded-xl p-4 text-center"
         style={{ background: C.card, border: `1px solid ${C.border}` }}
       >
-        <p className="text-xs font-bold mb-2" style={{ color: C.textFaint }}>분해 시 획득</p>
-        <p className="text-3xl font-black" style={{ color: C.gold }}>🪨 ×{stones}</p>
-        <p className="mt-1 text-[10px]" style={{ color: C.textFaint }}>강화석</p>
-        <div className="mt-3 space-y-0.5 text-[10px]" style={{ color: C.textFaint }}>
+        <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>분해 시 획득</p>
+        <p className="text-title-md font-black" style={{ color: C.gold }}>🪨 ×{stones}</p>
+        <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>강화석</p>
+        <div className="mt-3 space-y-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
           <p>기본 ({QUALITY_LABEL[artifact.quality]}): +{({ normal: 3, rare: 8, elite: 18 })[artifact.quality]}</p>
           <p>레벨 보너스 (Lv.{lv}): +{Math.floor(lv / 5)}</p>
           <p>강화 보너스 (+{enh}): +{enh * 2}</p>
@@ -513,7 +513,7 @@ function DisassemblePanel({
       </div>
 
       <div
-        className="rounded-lg p-2.5 text-xs text-center"
+        className="rounded-lg p-2.5 text-pixel-sm text-center"
         style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
           color: C.red }}
       >
@@ -524,7 +524,7 @@ function DisassemblePanel({
         <button
           type="button"
           onClick={() => setConfirm(true)}
-          className="w-full rounded-lg py-3 text-sm font-black transition hover:brightness-125"
+          className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
           style={{ background: "rgba(168, 61, 31, .3)", border: "1px solid rgba(168, 61, 31, .801)",
             color: C.red }}
         >
@@ -535,7 +535,7 @@ function DisassemblePanel({
           <button
             type="button"
             onClick={() => setConfirm(false)}
-            className="flex-1 rounded-lg py-3 text-sm font-bold transition hover:brightness-125"
+            className="flex-1 rounded-lg py-3 text-pixel-sm font-bold transition hover:brightness-125"
             style={{ background: C.disabledBg, border: `1px solid ${C.disabledBorder}`,
               color: C.textMuted }}
           >
@@ -544,7 +544,7 @@ function DisassemblePanel({
           <button
             type="button"
             onClick={onDisassemble}
-            className="flex-1 rounded-lg py-3 text-sm font-black transition hover:brightness-125"
+            className="flex-1 rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
             style={{ background: "rgba(168, 61, 31, .601)", border: "1px solid rgba(168, 61, 31, 1)",
               color: PALETTE.ember500 }}
           >
@@ -600,10 +600,10 @@ function SynthesizePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 합성 ✦
         </p>
-        <p className="mt-0.5 text-[11px]" style={{ color: C.textFaint }}>
+        <p className="mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
           최대 레벨+최대 강화 달성 시 등급 상승
         </p>
       </div>
@@ -613,9 +613,9 @@ function SynthesizePanel({
         className="rounded-lg p-3 space-y-1"
         style={{ background: C.card, border: `1px solid ${C.border}` }}
       >
-        <p className="text-[10px] font-bold mb-1.5" style={{ color: C.textFaint }}>합성 조건</p>
+        <p className="text-pixel-sm font-bold mb-1.5" style={{ color: C.textFaint }}>합성 조건</p>
         {conds.map((c, i) => (
-          <div key={i} className="flex items-center gap-1.5 text-[10px]">
+          <div key={i} className="flex items-center gap-1.5 text-pixel-sm">
             <span style={{ color: c.ok ? C.green : C.red }}>{c.ok ? "✓" : "✗"}</span>
             <span style={{ color: c.ok ? C.textMuted : C.textFaint }}>{c.label}</span>
           </div>
@@ -624,14 +624,14 @@ function SynthesizePanel({
 
       {/* 두 번째 장비 선택 */}
       <div>
-        <p className="mb-2 text-xs font-bold" style={{ color: C.textMuted }}>
+        <p className="mb-2 text-pixel-sm font-bold" style={{ color: C.textMuted }}>
           두 번째 장비 선택
           <span className="ml-1.5 font-normal" style={{ color: C.textFaint }}>
             — 같은 등급 ({QUALITY_LABEL[primary.quality]})
           </span>
         </p>
         {candidates.length === 0 ? (
-          <p className="rounded-lg p-3 text-center text-xs" style={{ color: C.textFaint,
+          <p className="rounded-lg p-3 text-center text-pixel-sm" style={{ color: C.textFaint,
             background: C.card, border: `1px solid ${C.border}` }}>
             합성에 쓸 {QUALITY_LABEL[primary.quality]} 등급 장비가 없습니다
           </p>
@@ -660,9 +660,9 @@ function SynthesizePanel({
           className="rounded-lg p-3 text-center"
           style={{ background: `${nextColor}0e`, border: `1px solid ${nextColor}44` }}
         >
-          <p className="text-[10px] font-bold mb-1" style={{ color: C.textFaint }}>합성 결과</p>
-          <p className="text-sm font-black" style={{ color: C.textPrimary }}>{primary.name}</p>
-          <p className="text-sm font-black mt-0.5" style={{ color: nextColor }}>
+          <p className="text-pixel-sm font-bold mb-1" style={{ color: C.textFaint }}>합성 결과</p>
+          <p className="text-pixel-sm font-black" style={{ color: C.textPrimary }}>{primary.name}</p>
+          <p className="text-pixel-sm font-black mt-0.5" style={{ color: nextColor }}>
             {QUALITY_LABEL[nextQual]} · Lv.1 +0
           </p>
         </div>
@@ -670,7 +670,7 @@ function SynthesizePanel({
 
       {canSynth && (
         <div
-          className="rounded-lg p-2.5 text-xs text-center"
+          className="rounded-lg p-2.5 text-pixel-sm text-center"
           style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
             color: C.red }}
         >
@@ -682,7 +682,7 @@ function SynthesizePanel({
         type="button"
         onClick={onSynthesize}
         disabled={!canSynth}
-        className="w-full rounded-lg py-3 text-sm font-black transition hover:brightness-125"
+        className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
         style={
           canSynth
             ? { background: `${nextColor}22`, border: `1px solid ${nextColor}77`,
@@ -702,7 +702,7 @@ function SynthesizePanel({
 function Toast({ msg }: { msg: string }) {
   return (
     <div
-      className="pointer-events-none fixed bottom-8 left-1/2 z-[1000] -translate-x-1/2 rounded-xl px-5 py-2.5 text-sm font-black shadow-2xl"
+      className="pointer-events-none fixed bottom-8 left-1/2 z-[1000] -translate-x-1/2 rounded-xl px-5 py-2.5 text-pixel-sm font-black shadow-2xl"
       style={{
         background: "rgba(13, 18, 35, .97)",
         border:     "1px solid rgba(233, 148, 65, .706)",
@@ -886,18 +886,18 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
           className="flex shrink-0 items-center gap-4 px-5 py-4"
           style={{ borderBottom: `1px solid ${C.border}` }}
         >
-          <span className="text-2xl">⚒</span>
+          <span className="text-pixel-md">⚒</span>
           <div className="flex-1">
-            <h2 className="text-xl font-black tracking-wide" style={{ color: C.textPrimary }}>
+            <h2 className="text-pixel-md font-black tracking-wide" style={{ color: C.textPrimary }}>
               장비 모루
             </h2>
-            <p className="mt-0.5 text-xs" style={{ color: C.textFaint }}>
+            <p className="mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
               제작한 아티팩트를 레벨업·강화·분해·합성할 수 있습니다.
             </p>
           </div>
           {/* 보유 강화석 */}
           <div
-            className="rounded-lg px-3 py-1.5 text-xs font-bold"
+            className="rounded-lg px-3 py-1.5 text-pixel-sm font-bold"
             style={{ background: C.card, border: `1px solid ${C.border}`, color: C.textMuted }}
           >
             🪨 강화석 <span style={{ color: C.gold, fontVariantNumeric: "tabular-nums" }}>{enhancementStones}</span>
@@ -905,7 +905,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-2 text-sm font-bold transition hover:brightness-125"
+            className="rounded-lg px-3 py-2 text-pixel-sm font-bold transition hover:brightness-125"
             style={{ background: "rgba(13, 18, 35, .6)", border: `1px solid ${C.border}`, color: C.textMuted }}
           >
             닫기
@@ -924,7 +924,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
                 key={t.id}
                 type="button"
                 onClick={() => changeTab(t.id)}
-                className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition hover:brightness-110"
+                className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-pixel-sm font-bold transition hover:brightness-110"
                 style={{
                   background: active ? C.btnBg : "transparent",
                   border:     `1px solid ${active ? C.btnBorder : "transparent"}`,
@@ -947,7 +947,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
             className="min-h-0 overflow-y-auto p-5"
             style={{ background: C.panel }}
           >
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest"
+            <p className="mb-3 text-pixel-sm font-bold uppercase tracking-widest"
               style={{ color: C.goldDim }}>
               보유 아티팩트
               <span className="ml-2 font-mono normal-case" style={{ color: C.textFaint }}>
@@ -956,9 +956,9 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
             </p>
 
             {craftedArtifacts.length === 0 ? (
-              <p className="py-8 text-center text-sm" style={{ color: C.textFaint }}>
+              <p className="py-8 text-center text-pixel-sm" style={{ color: C.textFaint }}>
                 아티팩트가 없습니다.<br />
-                <span className="text-xs">제작 공방에서 먼저 제작해 보세요.</span>
+                <span className="text-pixel-sm">제작 공방에서 먼저 제작해 보세요.</span>
               </p>
             ) : (
               <div className="space-y-2">
@@ -984,8 +984,8 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
           >
             {!primary ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-12">
-                <p className="text-3xl opacity-20">⚒</p>
-                <p className="text-sm font-bold" style={{ color: C.textFaint }}>
+                <p className="text-title-md opacity-20">⚒</p>
+                <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
                   왼쪽 목록에서 장비를 선택하세요
                 </p>
               </div>

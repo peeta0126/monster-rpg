@@ -8,7 +8,7 @@ interface State {
   error: Error | null;
 }
 
-const pixelFont = { fontFamily: "var(--pixel-font, monospace)" };
+const pixelFont = { fontFamily: "var(--font-pixel)" };
 
 /**
  * 최상위 폴백 UI. Phaser 씬 예외도 AppErrorBridge를 통해 여기로 들어온다.
@@ -36,13 +36,13 @@ export default class ErrorBoundary extends Component<Props, State> {
         className="fixed inset-0 z-[3000] flex flex-col items-center justify-center gap-6 bg-black px-6 text-center"
         style={pixelFont}
       >
-        <p className="text-sm text-ember-500 sm:text-base">문제가 발생했습니다</p>
-        <p className="max-w-md text-[10px] leading-relaxed text-sand-300 sm:text-xs">
+        <p className="text-pixel-sm text-ember-500 sm:text-title-sm">문제가 발생했습니다</p>
+        <p className="max-w-md text-pixel-sm leading-relaxed text-sand-300 sm:text-pixel-sm">
           예상치 못한 오류로 화면을 계속 표시할 수 없습니다. 아래 버튼으로 복구해주세요.
         </p>
 
         {import.meta.env.DEV && (
-          <pre className="max-h-64 max-w-lg overflow-auto whitespace-pre-wrap rounded-md border border-ember-700/60 bg-ember-700/10 p-3 text-left text-[9px] leading-snug text-ember-500">
+          <pre className="max-h-64 max-w-lg overflow-auto whitespace-pre-wrap rounded-md border border-ember-700/60 bg-ember-700/10 p-3 text-left text-pixel-sm leading-snug text-ember-500">
             {error.message}
             {error.stack ? `\n\n${error.stack}` : ""}
           </pre>
@@ -52,14 +52,14 @@ export default class ErrorBoundary extends Component<Props, State> {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 px-4 py-2 text-[10px] font-bold text-cream-100 transition hover:brightness-110 sm:text-xs"
+            className="rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 px-4 py-2 text-pixel-sm font-bold text-cream-100 transition hover:brightness-110 sm:text-pixel-sm"
           >
             새로고침
           </button>
           <button
             type="button"
             onClick={() => window.location.assign("/")}
-            className="rounded-md border border-stone-600 px-4 py-2 text-[10px] text-sand-300 transition hover:border-sand-300 hover:bg-shadow-800 hover:text-sand-200 sm:text-xs"
+            className="rounded-md border border-stone-600 px-4 py-2 text-pixel-sm text-sand-300 transition hover:border-sand-300 hover:bg-shadow-800 hover:text-sand-200 sm:text-pixel-sm"
           >
             베이스캠프로
           </button>

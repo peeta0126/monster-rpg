@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { registerApi, ApiError } from "./api";
 import { useAuthStore } from "./authStore";
 
-const pixelFont = { fontFamily: "var(--pixel-font, monospace)" };
+const pixelFont = { fontFamily: "var(--font-pixel)" };
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 const USERNAME_HINT = "영문/숫자/밑줄 3~20자";
 const PASSWORD_HINT = "4자 이상";
@@ -46,8 +46,8 @@ export default function RegisterModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const fieldSize = { fontSize: "clamp(11px,1.1vw,14px)" };
-  const labelSize = { ...pixelFont, fontSize: "clamp(9px,0.9vw,11px)" };
+  const fieldSize = { fontSize: 16 };
+  const labelSize = { ...pixelFont, fontSize: 12 };
 
   return (
     <div
@@ -60,13 +60,13 @@ export default function RegisterModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-cream-100" style={{ ...pixelFont, fontSize: "clamp(11px,1.1vw,14px)" }}>
+          <h2 className="text-cream-100" style={{ ...pixelFont, fontSize: 16 }}>
             여행자 등록
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-lg leading-none text-sand-300 transition hover:text-sand-200"
+            className="text-title-sm leading-none text-sand-300 transition hover:text-sand-200"
             aria-label="닫기"
           >
             ×
@@ -86,7 +86,7 @@ export default function RegisterModal({ onClose }: { onClose: () => void }) {
               style={fieldSize}
               placeholder="voyager"
             />
-            <span className="text-[10px] text-earth-400">{USERNAME_HINT}</span>
+            <span className="text-pixel-sm text-earth-400">{USERNAME_HINT}</span>
           </label>
 
           <label className="flex flex-col gap-1">
@@ -100,7 +100,7 @@ export default function RegisterModal({ onClose }: { onClose: () => void }) {
               style={fieldSize}
               placeholder="••••••••"
             />
-            <span className="text-[10px] text-earth-400">{PASSWORD_HINT}</span>
+            <span className="text-pixel-sm text-earth-400">{PASSWORD_HINT}</span>
           </label>
 
           <label className="flex flex-col gap-1">
@@ -119,7 +119,7 @@ export default function RegisterModal({ onClose }: { onClose: () => void }) {
           {error && (
             <p
               className="rounded border border-ember-700/60 bg-ember-700/11 px-2 py-1 text-ember-500"
-              style={{ fontSize: "clamp(10px,0.95vw,13px)" }}
+              style={{ fontSize: 12 }}
             >
               {error}
             </p>
@@ -129,7 +129,7 @@ export default function RegisterModal({ onClose }: { onClose: () => void }) {
             type="submit"
             disabled={pending}
             className="mt-1 rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 py-2 font-bold text-cream-100 transition [text-shadow:0_1px_1px_rgba(13,18,35,0.6)] hover:brightness-110 active:translate-y-px active:shadow-none disabled:opacity-40"
-            style={{ ...pixelFont, fontSize: "clamp(10px,1.05vw,13px)", boxShadow: "0 2px 0 rgba(168,61,31,0.7), 0 0 12px rgba(233,148,65,0.25)" }}
+            style={{ ...pixelFont, fontSize: 12, boxShadow: "0 2px 0 rgba(168,61,31,0.7), 0 0 12px rgba(233,148,65,0.25)" }}
           >
             {pending ? "…" : "가입하기"}
           </button>

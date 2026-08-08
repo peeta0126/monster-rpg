@@ -2,7 +2,7 @@ import { useState } from "react";
 import { fetchAdminUsers, deleteAdminUser } from "./adminApi";
 import type { AdminUser } from "./adminApi";
 
-const pixelFont = { fontFamily: "var(--pixel-font, monospace)" };
+const pixelFont = { fontFamily: "var(--font-pixel)" };
 
 function formatDate(iso: string | null) {
   if (!iso) return "없음";
@@ -55,21 +55,21 @@ export default function AdminPage() {
           style={{ boxShadow: "0 0 26px rgba(180,140,60,0.2)" }}
           onSubmit={(e) => { e.preventDefault(); handleEnter(); }}
         >
-          <h1 className="mb-4 text-cream-100" style={{ ...pixelFont, fontSize: 14 }}>관리자 접속</h1>
+          <h1 className="mb-4 text-cream-100" style={{ ...pixelFont, fontSize: 12 }}>관리자 접속</h1>
           <input
             type="password"
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="관리자 비밀키"
             autoFocus
-            className="w-full rounded-md border border-stone-600 bg-shadow-900 px-3 py-2 text-sm text-cream-100 outline-none transition focus:border-ember-500"
+            className="w-full rounded-md border border-stone-600 bg-shadow-900 px-3 py-2 text-pixel-sm text-cream-100 outline-none transition focus:border-ember-500"
           />
-          {error && <p className="mt-2 text-xs text-ember-500">{error}</p>}
+          {error && <p className="mt-2 text-pixel-sm text-ember-500">{error}</p>}
           <button
             type="submit"
             disabled={pending}
             className="mt-3 w-full rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 py-2 font-bold text-cream-100 transition hover:brightness-110 disabled:opacity-40"
-            style={{ ...pixelFont, fontSize: 11 }}
+            style={{ ...pixelFont, fontSize: 12 }}
           >
             {pending ? "…" : "입장"}
           </button>
@@ -85,11 +85,11 @@ export default function AdminPage() {
       </h1>
 
       {error && (
-        <p className="mb-4 rounded border border-ember-700/60 bg-ember-700/11 px-3 py-2 text-sm text-ember-500">{error}</p>
+        <p className="mb-4 rounded border border-ember-700/60 bg-ember-700/11 px-3 py-2 text-pixel-sm text-ember-500">{error}</p>
       )}
 
       <div className="overflow-x-auto rounded-lg border border-shadow-700">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-pixel-sm">
           <thead className="bg-shadow-800 text-sand-300">
             <tr>
               <th className="px-4 py-2 font-medium">아이디</th>
@@ -110,13 +110,13 @@ export default function AdminPage() {
                       <button
                         onClick={() => handleDelete(u.id)}
                         disabled={pending}
-                        className="rounded border border-ember-700 px-2 py-1 text-xs text-ember-500 transition hover:bg-ember-700/11 disabled:opacity-40"
+                        className="rounded border border-ember-700 px-2 py-1 text-pixel-sm text-ember-500 transition hover:bg-ember-700/11 disabled:opacity-40"
                       >
                         확인
                       </button>
                       <button
                         onClick={() => setConfirmId(null)}
-                        className="rounded border border-stone-600 px-2 py-1 text-xs text-sand-300 transition hover:bg-shadow-700"
+                        className="rounded border border-stone-600 px-2 py-1 text-pixel-sm text-sand-300 transition hover:bg-shadow-700"
                       >
                         취소
                       </button>
@@ -124,7 +124,7 @@ export default function AdminPage() {
                   ) : (
                     <button
                       onClick={() => setConfirmId(u.id)}
-                      className="rounded border border-stone-600 px-2 py-1 text-xs text-sand-300 transition hover:border-ember-700 hover:text-ember-500"
+                      className="rounded border border-stone-600 px-2 py-1 text-pixel-sm text-sand-300 transition hover:border-ember-700 hover:text-ember-500"
                     >
                       삭제
                     </button>

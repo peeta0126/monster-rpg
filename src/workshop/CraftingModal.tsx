@@ -147,15 +147,15 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
           className="flex shrink-0 items-center gap-4 px-5 py-4"
           style={{ borderBottom: `1px solid ${C.border}` }}
         >
-          <span className="text-2xl">{STATION_ICON[stationType]}</span>
+          <span className="text-pixel-md">{STATION_ICON[stationType]}</span>
           <div className="flex-1">
             <h2
-              className="text-xl font-black tracking-wide"
+              className="text-pixel-md font-black tracking-wide"
               style={{ color: C.textPrimary }}
             >
               {STATION_LABEL[stationType]}
             </h2>
-            <p className="mt-0.5 text-xs" style={{ color: C.textFaint }}>
+            <p className="mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
               {stationType === "artifact"
                 ? "탐험에서 얻은 재료로 몬스터에게 장착할 수 있는 아티팩트를 제작합니다."
                 : "약초와 정수 재료를 사용해 전투에 사용할 수 있는 물약을 제작합니다."}
@@ -167,7 +167,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
             <button
               type="button"
               onClick={grantWorkshopTestMaterials}
-              className="rounded-lg px-3 py-2 text-xs font-bold transition hover:brightness-125"
+              className="rounded-lg px-3 py-2 text-pixel-sm font-bold transition hover:brightness-125"
               style={{
                 background: "rgba(122, 132, 85, .069)",
                 border: "1px solid rgba(122, 132, 85, .455)",
@@ -182,7 +182,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-2 text-sm font-bold transition hover:brightness-125"
+            className="rounded-lg px-3 py-2 text-pixel-sm font-bold transition hover:brightness-125"
             style={{
               background: "rgba(13, 18, 35, .6)",
               border: `1px solid ${C.border}`,
@@ -205,16 +205,16 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
             <div className="mb-4 flex items-end justify-between">
               <div>
                 <p
-                  className="text-[10px] font-bold uppercase tracking-widest"
+                  className="text-pixel-sm font-bold uppercase tracking-widest"
                   style={{ color: C.goldDim }}
                 >
                   Recipes
                 </p>
-                <h3 className="text-base font-black" style={{ color: C.textPrimary }}>
+                <h3 className="text-title-sm font-black" style={{ color: C.textPrimary }}>
                   제작 가능한 레시피
                 </h3>
               </div>
-              <span className="text-xs" style={{ color: C.textFaint }}>
+              <span className="text-pixel-sm" style={{ color: C.textFaint }}>
                 제작 가능 {affordableCount}/{recipes.length}
               </span>
             </div>
@@ -244,7 +244,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                     <div className="flex items-start gap-3">
                       {/* 아이콘 */}
                       <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-pixel-md"
                         style={{ background: "rgba(132, 75, 63, .282)", border: `1px solid ${C.border}` }}
                       >
                         {stationType === "artifact" ? "◆" : "✚"}
@@ -258,7 +258,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                           </h4>
                           {/* 난이도 뱃지 */}
                           <span
-                            className="rounded-full border px-2 py-0.5 text-[10px] font-black"
+                            className="rounded-full border px-2 py-0.5 text-pixel-sm font-black"
                             style={{
                               borderColor: `${diffColor}66`,
                               color: diffColor,
@@ -268,13 +268,13 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                             {DIFFICULTY_LABEL[recipe.difficulty]}
                           </span>
                           {affordable && (
-                            <span className="text-[10px] font-bold" style={{ color: PALETTE.moss500 }}>
+                            <span className="text-pixel-sm font-bold" style={{ color: PALETTE.moss500 }}>
                               ✓ 제작 가능
                             </span>
                           )}
                         </div>
 
-                        <p className="mt-1 text-sm" style={{ color: C.textFaint }}>
+                        <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>
                           {recipe.description}
                         </p>
 
@@ -286,7 +286,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                             return (
                               <span
                                 key={cost.itemId}
-                                className="rounded-full border px-2 py-0.5 text-[11px] font-bold"
+                                className="rounded-full border px-2 py-0.5 text-pixel-sm font-bold"
                                 style={{
                                   borderColor: ok
                                     ? "rgba(122, 132, 85, .793)"
@@ -365,18 +365,18 @@ function RecipeDetailPanel({
   return (
     <>
       <p
-        className="text-[10px] font-bold uppercase tracking-widest"
+        className="text-pixel-sm font-bold uppercase tracking-widest"
         style={{ color: C.goldDim }}
       >
         Selected
       </p>
       <h3
-        className="mt-1 text-lg font-black"
+        className="mt-1 text-title-sm font-black"
         style={{ color: C.textPrimary }}
       >
         {recipe.name}
       </h3>
-      <p className="mt-2 text-sm" style={{ color: C.textFaint }}>
+      <p className="mt-2 text-pixel-sm" style={{ color: C.textFaint }}>
         {recipe.description}
       </p>
 
@@ -385,13 +385,13 @@ function RecipeDetailPanel({
         className="mt-4 rounded-lg p-3"
         style={{ background: "rgba(66, 61, 70, .072)", border: `1px solid ${C.border}` }}
       >
-        <p className="text-xs font-bold" style={{ color: C.textFaint }}>
+        <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
           제작 결과
         </p>
-        <p className="mt-1 text-sm font-black" style={{ color: C.gold }}>
+        <p className="mt-1 text-pixel-sm font-black" style={{ color: C.gold }}>
           {recipe.resultItemName}
         </p>
-        <p className="mt-1 text-xs" style={{ color: C.textFaint }}>
+        <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>
           {recipe.stationType === "artifact"
             ? "방향키 QTE 시험으로 품질이 결정됩니다."
             : "가위바위보 시험으로 품질이 결정됩니다."}
@@ -400,7 +400,7 @@ function RecipeDetailPanel({
 
       {/* 품질 확률 */}
       <div
-        className="mt-3 rounded-lg p-3 text-xs"
+        className="mt-3 rounded-lg p-3 text-pixel-sm"
         style={{ background: "rgba(13, 18, 35, .7)", border: `1px solid ${C.border}` }}
       >
         <p className="mb-1.5 font-bold" style={{ color: C.textMuted }}>
@@ -451,7 +451,7 @@ function RecipeDetailPanel({
         type="button"
         onClick={onStart}
         disabled={!affordable}
-        className="mt-5 w-full rounded-lg py-3 text-sm font-black transition"
+        className="mt-5 w-full rounded-lg py-3 text-pixel-sm font-black transition"
         style={
           affordable
             ? {
@@ -491,7 +491,7 @@ function CraftResultPanel({
   return (
     <div className="flex flex-col items-center gap-5 py-6 text-center">
       <p
-        className="text-[10px] font-bold uppercase tracking-widest"
+        className="text-pixel-sm font-bold uppercase tracking-widest"
         style={{ color: C.goldDim }}
       >
         ✦ Crafted! ✦
@@ -505,10 +505,10 @@ function CraftResultPanel({
           boxShadow: `0 0 40px ${glow}`,
         }}
       >
-        <p className="text-2xl font-black" style={{ color: C.textPrimary }}>
+        <p className="text-pixel-md font-black" style={{ color: C.textPrimary }}>
           {result.name}
         </p>
-        <p className="mt-3 text-lg font-black" style={{ color }}>
+        <p className="mt-3 text-title-sm font-black" style={{ color }}>
           {label}
         </p>
 
@@ -516,10 +516,10 @@ function CraftResultPanel({
         {isArtifact && result.statBonuses && result.statBonuses.length > 0 && (
           <div className="mt-4 text-left space-y-1.5 rounded-lg p-3"
             style={{ background: "rgba(13, 18, 35, .35)", border: `1px solid ${C.border}` }}>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
+            <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2"
               style={{ color: C.textFaint }}>능력치</p>
             {result.statBonuses.map((b) => (
-              <p key={b.stat} className="text-sm font-bold" style={{ color: C.gold }}>
+              <p key={b.stat} className="text-pixel-sm font-bold" style={{ color: C.gold }}>
                 {ARTIFACT_STAT_LABEL[b.stat as keyof typeof ARTIFACT_STAT_LABEL] ?? b.stat}
                 {" "}+{b.value}{b.stat === "critRate" ? "%" : ""}
               </p>
@@ -528,7 +528,7 @@ function CraftResultPanel({
         )}
       </div>
 
-      <p className="text-xs" style={{ color: C.textFaint }}>
+      <p className="text-pixel-sm" style={{ color: C.textFaint }}>
         {isArtifact
           ? "아티팩트가 가방에 추가되었습니다!"
           : "물약이 가방에 추가되었습니다!"}
@@ -537,7 +537,7 @@ function CraftResultPanel({
       <button
         type="button"
         onClick={onContinue}
-        className="w-full rounded-lg py-2.5 text-sm font-bold transition hover:brightness-110"
+        className="w-full rounded-lg py-2.5 text-pixel-sm font-bold transition hover:brightness-110"
         style={{
           background: "rgba(66, 61, 70, .066)",
           border: `1px solid ${C.border}`,

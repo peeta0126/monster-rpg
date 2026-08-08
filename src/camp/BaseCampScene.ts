@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
 import { markSceneReady } from "../shared/phaser/sceneReady";
+import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
 import { PALETTE, withAlpha } from "../shared/palette";
 import { usePlayerStore } from "../shared/playerStore";
@@ -255,6 +256,7 @@ export default class BaseCampScene extends Phaser.Scene {
 
     //좌표 확인용
 
+    redrawTextOnFontLoad(this);
     markSceneReady(this);
   }
 
@@ -392,7 +394,9 @@ export default class BaseCampScene extends Phaser.Scene {
     if (nearestNpc && !towerWins && !nh) {
       this.add
         .text(px - 46, py - 80, `E: ${nearestNpc.name}`, {
-          fontSize: "26px",
+          fontSize: "24px",
+          fontFamily: PIXEL_FONT,
+          resolution: textResolution(),
           color: PALETTE.sand200,
           backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },
@@ -404,7 +408,9 @@ export default class BaseCampScene extends Phaser.Scene {
     if (towerWins && !ph) {
       this.add
         .text(px - 46, py - 80, "E: 탑 입장", {
-          fontSize: "26px",
+          fontSize: "24px",
+          fontFamily: PIXEL_FONT,
+          resolution: textResolution(),
           color: PALETTE.sand200,
           backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },
@@ -416,7 +422,9 @@ export default class BaseCampScene extends Phaser.Scene {
     if (dForest < 130 && !fh) {
       this.add
         .text(px - 46, py - 80, "E: 숲 입장", {
-          fontSize: "26px",
+          fontSize: "24px",
+          fontFamily: PIXEL_FONT,
+          resolution: textResolution(),
           color: PALETTE.sand200,
           backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },
@@ -428,7 +436,9 @@ export default class BaseCampScene extends Phaser.Scene {
     if (dHouse < 90 && !hh) {
       this.add
         .text(px - 46, py - 80, "E: 집 입장", {
-          fontSize: "26px",
+          fontSize: "24px",
+          fontFamily: PIXEL_FONT,
+          resolution: textResolution(),
           color: PALETTE.sand200,
           backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },

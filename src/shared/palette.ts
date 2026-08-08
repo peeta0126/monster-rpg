@@ -27,6 +27,7 @@ export const PALETTE = {
   mist300:   "#AEE2D5",
   mist500:   "#5C9396",
   moss500:   "#7A8455",
+  moss700:   "#39412A",
 } as const;
 
 export type PaletteName = keyof typeof PALETTE;

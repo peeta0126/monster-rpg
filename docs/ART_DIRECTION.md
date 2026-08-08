@@ -51,6 +51,7 @@
 | `mist-300`   | `#AEE2D5` | 드래곤 마법 기운 | 보조 강조색 (마나, 회복, 마법) |
 | `mist-500`   | `#5C9396` | 청록 중간 | 정보성 요소, 링크 |
 | `moss-500`   | `#7A8455` | 베이스캠프 초목 | 자연/식물 계열, 성공 상태 |
+| `moss-700`   | `#39412A` | moss-500 의 그늘 | 숲 원경·밤하늘 (2026-08-08 추가) |
 
 **규칙**
 
@@ -106,8 +107,19 @@ CDN 한 줄로 즉시 적용 가능:
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
 ```
 
-**픽셀 폰트 철칙**: 폰트 크기는 반드시 기준 크기의 **정수배만** (Galmuri11 → 12/24/36px).
-14px, 18px 같은 비정수배를 쓰면 글자가 뭉개집니다.
+**픽셀 폰트 철칙**: 폰트 크기는 반드시 기준 크기의 **정수배만** (Galmuri11 → 12/24/36px,
+Galmuri14 → 16/32px). 14px, 18px 같은 비정수배를 쓰면 글자가 뭉개집니다.
+
+`src/index.css` 의 `@theme` 에 전용 스케일이 있습니다. Tailwind 기본 `text-sm` / `text-lg` 대신
+이것만 씁니다.
+
+| 클래스 | 크기 | 폰트 |
+| --- | --- | --- |
+| `text-pixel-sm` | 12px | Galmuri11 |
+| `text-title-sm` | 16px | Galmuri14 |
+| `text-pixel-md` | 24px | Galmuri11 ×2 |
+| `text-title-md` | 32px | Galmuri14 ×2 |
+| `text-pixel-lg` | 36px | Galmuri11 ×3 |
 
 ### 1-5. 해상도 규격 (필수 준수)
 

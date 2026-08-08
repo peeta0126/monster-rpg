@@ -415,7 +415,7 @@ export default function WorkshopPage() {
           {nearStation && !activeStation && (
             <div className="absolute bottom-14 left-1/2 z-30 -translate-x-1/2">
               <div
-                className="flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-sm font-bold"
+                className="flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-pixel-sm font-bold"
                 style={{
                   background: "rgba(13, 18, 35, .94)",
                   border: "1px solid rgba(132, 75, 63, 1)",
@@ -424,7 +424,7 @@ export default function WorkshopPage() {
                 }}
               >
                 <span
-                  className="rounded px-2 py-0.5 text-xs font-black"
+                  className="rounded px-2 py-0.5 text-pixel-sm font-black"
                   style={{ background: PALETTE.earth500, color: PALETTE.shadow900, letterSpacing: "0.05em" }}
                 >
                   SPACE
@@ -460,7 +460,7 @@ export default function WorkshopPage() {
               />
               {/* 좌표 말풍선 — 커서 우하단에 표시 */}
               <div
-                className="pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold"
+                className="pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 font-mono text-pixel-sm font-bold"
                 style={{
                   left: `${Math.min(mousePos.x + 2, 72)}%`,
                   top:  `${Math.min(mousePos.y + 2, 88)}%`,
@@ -480,7 +480,7 @@ export default function WorkshopPage() {
           {SHOW_COLLISION_DEBUG && COLLISION_BOXES.map((box) => (
             <div
               key={box.id}
-              className="pointer-events-none absolute z-40 border border-ember-600 bg-ember-600/20 text-[9px] font-bold text-ember-500"
+              className="pointer-events-none absolute z-40 border border-ember-600 bg-ember-600/20 text-pixel-sm font-bold text-ember-500"
               style={{
                 left:   `${box.x}%`,
                 top:    `${box.y}%`,
@@ -506,7 +506,7 @@ export default function WorkshopPage() {
                 style={{ left: `${s.x}%`, top: `${s.y}%`, opacity: isNear ? 0.35 : 1 }}
               >
                 <div
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-sm"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-pixel-sm"
                   style={{
                     background: "rgba(13, 18, 35, .85)",
                     border: `2px solid ${isNear ? PALETTE.cream100 : "rgba(233, 148, 65, .907)"}`,
@@ -517,7 +517,7 @@ export default function WorkshopPage() {
                   {s.type === "anvil" ? "🔨" : s.type === "potion" ? "⚗️" : "✦"}
                 </div>
                 <span
-                  className="mt-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold"
+                  className="mt-1 whitespace-nowrap rounded px-1.5 py-0.5 text-pixel-sm font-bold"
                   style={{
                     background: "rgba(13, 18, 35, .85)",
                     color: PALETTE.cream100,
@@ -545,7 +545,7 @@ export default function WorkshopPage() {
               }}
             >
               <span
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-pixel-sm font-black"
                 style={{ color: PALETTE.ember500, textShadow: `0 1px 4px ${PALETTE.shadow900}` }}
               >
                 {s.label}
@@ -570,7 +570,7 @@ export default function WorkshopPage() {
             border: "1px solid rgba(132, 75, 63, 1)",
             color: PALETTE.cream100,
           }}
-          className="rounded-lg px-3 py-2 text-sm font-bold backdrop-blur transition hover:brightness-125"
+          className="rounded-lg px-3 py-2 text-pixel-sm font-bold backdrop-blur transition hover:brightness-125"
         >
           ← 바깥으로
         </button>
@@ -578,11 +578,11 @@ export default function WorkshopPage() {
 
       {/* 타이틀 */}
       <div className="pointer-events-none absolute left-1/2 top-4 z-40 -translate-x-1/2 text-center">
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
           Workshop
         </p>
         <h1
-          className="text-xl font-black drop-shadow-lg"
+          className="text-pixel-md font-black drop-shadow-lg"
           style={{ color: PALETTE.cream100, textShadow: "0 2px 8px rgba(13, 18, 35, .9)" }}
         >
           제작 공방
@@ -599,7 +599,7 @@ export default function WorkshopPage() {
             border: "1px solid rgba(132, 75, 63, 1)",
             color: PALETTE.cream100,
           }}
-          className="rounded-lg px-3 py-2 text-sm font-bold backdrop-blur transition hover:brightness-125"
+          className="rounded-lg px-3 py-2 text-pixel-sm font-bold backdrop-blur transition hover:brightness-125"
         >
           ☰ 메뉴 (Tab)
         </button>
@@ -626,11 +626,11 @@ export default function WorkshopPage() {
             border: "1px solid rgba(132, 75, 63, 1)",
           }}
         >
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
+          <p className="mb-3 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
             최근 제작 아이템
           </p>
           {craftedItems.length === 0 ? (
-            <p className="py-3 text-center text-xs" style={{ color: PALETTE.earth500 }}>
+            <p className="py-3 text-center text-pixel-sm" style={{ color: PALETTE.earth500 }}>
               아직 제작한 아이템이 없습니다.
             </p>
           ) : (
@@ -644,8 +644,8 @@ export default function WorkshopPage() {
                     border: `1px solid ${QUALITY_COLOR[item.quality]}44`,
                   }}
                 >
-                  <p className="text-xs font-black" style={{ color: PALETTE.cream100 }}>{item.name}</p>
-                  <p className="mt-0.5 text-[10px] font-bold" style={{ color: QUALITY_COLOR[item.quality] }}>
+                  <p className="text-pixel-sm font-black" style={{ color: PALETTE.cream100 }}>{item.name}</p>
+                  <p className="mt-0.5 text-pixel-sm font-bold" style={{ color: QUALITY_COLOR[item.quality] }}>
                     {QUALITY_LABEL[item.quality]}
                   </p>
                 </div>
@@ -657,7 +657,7 @@ export default function WorkshopPage() {
 
       {/* 조작 안내 (좌하단, 작게) */}
       <div
-        className="pointer-events-none absolute bottom-4 left-4 z-40 rounded-lg px-3 py-2 text-xs backdrop-blur"
+        className="pointer-events-none absolute bottom-4 left-4 z-40 rounded-lg px-3 py-2 text-pixel-sm backdrop-blur"
         style={{
           background: "rgba(13, 18, 35, .75)",
           border: "1px solid rgba(205, 178, 126, .08)",
@@ -720,8 +720,8 @@ function WorkshopMenuModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-black" style={{ color: PALETTE.cream100 }}>메뉴</h2>
-          <span className="text-[10px]" style={{ color: PALETTE.earth500 }}>ESC: 닫기</span>
+          <h2 className="text-title-sm font-black" style={{ color: PALETTE.cream100 }}>메뉴</h2>
+          <span className="text-pixel-sm" style={{ color: PALETTE.earth500 }}>ESC: 닫기</span>
         </div>
 
         <div className="grid grid-cols-3 gap-2.5">
@@ -730,14 +730,14 @@ function WorkshopMenuModal({
               key={it.label}
               type="button"
               onClick={it.onClick}
-              className="flex flex-col items-center gap-1.5 rounded-xl py-4 text-sm font-semibold transition active:scale-95 hover:brightness-125"
+              className="flex flex-col items-center gap-1.5 rounded-xl py-4 text-pixel-sm font-semibold transition active:scale-95 hover:brightness-125"
               style={{
                 background: "rgba(66, 61, 70, .088)",
                 border: "1px solid rgba(132, 75, 63, .936)",
                 color: PALETTE.cream100,
               }}
             >
-              <span className="text-2xl">{it.emoji}</span>
+              <span className="text-pixel-md">{it.emoji}</span>
               {it.label}
             </button>
           ))}

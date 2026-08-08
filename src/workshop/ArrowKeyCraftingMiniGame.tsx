@@ -272,18 +272,18 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
         style={{ background: C.bg, border: `1px solid ${C.border}` }}
       >
         <p
-          className="text-[10px] font-bold uppercase tracking-widest text-center"
+          className="text-pixel-sm font-bold uppercase tracking-widest text-center"
           style={{ color: C.goldDim }}
         >
           ✦ 제작 완료 ✦
         </p>
-        <p className="mt-2 text-center text-lg font-black" style={{ color: ratingColor }}>
+        <p className="mt-2 text-center text-title-sm font-black" style={{ color: ratingColor }}>
           {RATING_LABEL[rating]}
         </p>
-        <p className="mt-1 text-center text-xs" style={{ color: C.textFaint }}>
+        <p className="mt-1 text-center text-pixel-sm" style={{ color: C.textFaint }}>
           전체 {TOTAL_KEYS}키 중 틀린 키 {summary?.wrongInputCount ?? 0}개 &nbsp;·&nbsp; 스테이지 완전성공 {summary?.successCount ?? 0}/{TOTAL_STAGES}
         </p>
-        <p className="mt-3 text-center text-xs animate-pulse" style={{ color: C.textFaint }}>
+        <p className="mt-3 text-center text-pixel-sm animate-pulse" style={{ color: C.textFaint }}>
           품질을 결정하는 중...
         </p>
       </div>
@@ -328,12 +328,12 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
       {/* 헤더 */}
       <div className="mb-3">
         <p
-          className="text-[10px] font-bold uppercase tracking-widest"
+          className="text-pixel-sm font-bold uppercase tracking-widest"
           style={{ color: C.goldDim }}
         >
           ✦ 제작 시험 ✦
         </p>
-        <p className="mt-0.5 text-sm font-bold" style={{ color: C.textPrimary }}>
+        <p className="mt-0.5 text-pixel-sm font-bold" style={{ color: C.textPrimary }}>
           <span style={{ color: C.gold }}>{recipeName}</span> 품질 결정
         </p>
       </div>
@@ -347,7 +347,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
           return (
             <div
               key={i}
-              className="flex h-7 w-7 flex-col items-center justify-center rounded-full text-xs font-black"
+              className="flex h-7 w-7 flex-col items-center justify-center rounded-full text-pixel-sm font-black"
               style={{
                 background: done
                   ? res === "s" ? "rgba(122, 132, 85, .529)" : "rgba(233, 148, 65, .169)"
@@ -373,7 +373,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
       </div>
 
       {/* 스테이지 정보 */}
-      <p className="mb-2 text-center text-[11px]" style={{ color: C.textFaint }}>
+      <p className="mb-2 text-center text-pixel-sm" style={{ color: C.textFaint }}>
         스테이지 {stage + 1} &nbsp;·&nbsp;
         <span style={{ color: C.textMuted }}>방향키 {totalKeys}개</span>
       </p>
@@ -466,20 +466,20 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
       <div className="mt-2 h-5 text-center">
         {isFeedback ? (
           <p
-            className="text-sm font-black"
+            className="text-pixel-sm font-black"
             style={{ color: isSuccess ? C.green : C.red }}
           >
             {isSuccess ? "✦ 스테이지 성공!" : "✗ 스테이지 실패"}
           </p>
         ) : (
-          <p className="text-xs" style={{ color: C.textFaint }}>
+          <p className="text-pixel-sm" style={{ color: C.textFaint }}>
             {keyIndex} / {totalKeys} 입력 완료
           </p>
         )}
       </div>
 
       {/* 하단 안내 */}
-      <p className="mt-2 text-center text-[10px]" style={{ color: C.textFaint }}>
+      <p className="mt-2 text-center text-pixel-sm" style={{ color: C.textFaint }}>
         틀려도 끝까지 진행되며, 틀린 키 개수로 품질이 결정됩니다
       </p>
     </div>

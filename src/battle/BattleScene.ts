@@ -3,6 +3,7 @@ import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
 import { getBattleInitData } from "./battleInitStore";
 import { markSceneReady } from "../shared/phaser/sceneReady";
+import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
 import { PALETTE, HEX, hpToken } from "../shared/palette";
 import type { StatusEffect } from "../shared/game";
 import type { BattleResultPayload, BattlePlayerSwitchPayload } from "../shared/phaser/events";
@@ -158,7 +159,7 @@ export default class BattleScene extends Phaser.Scene {
       bossBg.fillStyle(HEX.mist500, 0.85);
       bossBg.fillRoundedRect(ENEMY_X - 36, PANEL_CY - PANEL_H / 2 - 22, 72, 18, 5);
       this.add.text(ENEMY_X, PANEL_CY - PANEL_H / 2 - 13, "★  BOSS  ★", {
-        fontSize: "11px", fontFamily: "monospace", color: PALETTE.mist300, fontStyle: "bold",
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300, fontStyle: "bold",
       }).setOrigin(0.5, 0.5).setDepth(21);
     }
 
@@ -178,6 +179,7 @@ export default class BattleScene extends Phaser.Scene {
 
     gameEvents.emit(GAME_EVENT.BATTLE_READY);
 
+    redrawTextOnFontLoad(this);
     markSceneReady(this);
   }
 
@@ -320,7 +322,7 @@ export default class BattleScene extends Phaser.Scene {
 
     // ── 층 번호 ──
     this.add.text(W - 30, 36, `${floor}F`, {
-      fontSize: "13px", fontFamily: "monospace", color: PALETTE.sand300,
+      fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand300,
     }).setOrigin(1, 0.5).setDepth(10).setAlpha(0.9);
 
     // ── 로그 패널 배경 ──
@@ -483,11 +485,11 @@ export default class BattleScene extends Phaser.Scene {
     // 이름 + 레벨 텍스트
     if (isEnemy) {
       this.enemyNameText = this.add.text(px + 10, py + 7, "적 몬스터 Lv.-", {
-        fontSize: "11px", fontFamily: "monospace", color: PALETTE.sand200,
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand200,
       }).setDepth(9);
 
       this.enemyStatusBadge = this.add.text(px + pw - 8, py + 7, "", {
-        fontSize: "10px", fontFamily: "monospace", color: PALETTE.ember500,
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
         backgroundColor: PALETTE.shadow900, padding: { x: 2, y: 1 },
       }).setOrigin(1, 0).setDepth(9);
 
@@ -495,33 +497,33 @@ export default class BattleScene extends Phaser.Scene {
       const barX = px + 10;
       const barY = py + ph - 22;
       const barW = pw - 20;
-      this.add.text(barX, barY - 13, "HP", { fontSize: "10px", fontFamily: "monospace", color: PALETTE.sand300 }).setDepth(9);
+      this.add.text(barX, barY - 13, "HP", { fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand300 }).setDepth(9);
       this.enemyHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.enemyHpBar, barX, barY, barW, BAR_H, 1, true);
       // HP 수치는 "몇 대 더 때려야 하나"를 판단하는 핵심 정보라 캔버스가 축소돼도 읽히도록
       // 크기와 대비를 올린다(9px/어두운 갈색 → 13px/밝은 색 + 검은 외곽선).
       this.enemyHpText = this.add.text(barX + barW, barY - 2, "", {
-        fontSize: "13px", fontFamily: "monospace", color: PALETTE.sand200,
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand200,
         stroke: PALETTE.shadow900, strokeThickness: 3,
       }).setOrigin(1, 1).setDepth(10);
     } else {
       this.playerNameText = this.add.text(px + 10, py + 7, "내 몬스터 Lv.-", {
-        fontSize: "11px", fontFamily: "monospace", color: PALETTE.mist300,
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300,
       }).setDepth(9);
 
       this.playerStatusBadge = this.add.text(px + pw - 8, py + 7, "", {
-        fontSize: "10px", fontFamily: "monospace", color: PALETTE.ember500,
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
         backgroundColor: PALETTE.shadow800, padding: { x: 2, y: 1 },
       }).setOrigin(1, 0).setDepth(9);
 
       const barX = px + 10;
       const barY = py + ph - 22;
       const barW = pw - 20;
-      this.add.text(barX, barY - 13, "HP", { fontSize: "10px", fontFamily: "monospace", color: PALETTE.mist300 }).setDepth(9);
+      this.add.text(barX, barY - 13, "HP", { fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300 }).setDepth(9);
       this.playerHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.playerHpBar, barX, barY, barW, BAR_H, 1, false);
       this.playerHpText = this.add.text(barX + barW, barY - 2, "", {
-        fontSize: "13px", fontFamily: "monospace", color: PALETTE.mist300,
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300,
         stroke: PALETTE.shadow900, strokeThickness: 3,
       }).setOrigin(1, 1).setDepth(10);
     }
@@ -541,17 +543,17 @@ export default class BattleScene extends Phaser.Scene {
     this.notifBox.setVisible(false);
 
     this.notifText = this.add.text(48, LOG_Y + 34, "", {
-      fontSize: "18px", fontFamily: "monospace", color: PALETTE.cream100,
+      fontSize: "16px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.cream100,
       wordWrap: { width: W - 110 },
     }).setDepth(21).setVisible(false);
 
     this.notifHint = this.add.text(W - 44, LOG_Y + 100, "Q ▶", {
-      fontSize: "11px", fontFamily: "monospace", color: PALETTE.sand300,
+      fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand300,
     }).setOrigin(1, 1).setDepth(21).setVisible(false);
 
     // 아이들 (기술 선택 안내)
     this.idleText = this.add.text(W / 2, LOG_Y + 60, "기술을 선택하세요", {
-      fontSize: "15px", fontFamily: "monospace", color: PALETTE.earth400,
+      fontSize: "16px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.earth400,
     }).setOrigin(0.5, 0.5).setDepth(11);
   }
 
@@ -566,7 +568,7 @@ export default class BattleScene extends Phaser.Scene {
     this.resultVeil.setVisible(false);
 
     this.resultTitle = this.add.text(W / 2, BATTLE_H / 2 - 10, "", {
-      fontSize: "72px", fontFamily: "monospace", fontStyle: "bold",
+      fontSize: "36px", fontFamily: PIXEL_FONT, resolution: textResolution(), fontStyle: "bold",
       stroke: PALETTE.shadow900, strokeThickness: 6,
     }).setOrigin(0.5, 0.5).setDepth(31).setVisible(false);
   }

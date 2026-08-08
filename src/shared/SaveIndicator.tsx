@@ -58,7 +58,7 @@ export default function SaveIndicator() {
 
   return (
     <div
-      className="pointer-events-none fixed bottom-3 right-3 z-[900] flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-semibold transition-opacity"
+      className="pointer-events-none fixed bottom-3 right-3 z-[900] flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-pixel-sm font-semibold transition-opacity"
       style={{
         background: "rgba(13,18,35,.88)",   // shadow-900
         border: `1px solid ${color.border}`,
