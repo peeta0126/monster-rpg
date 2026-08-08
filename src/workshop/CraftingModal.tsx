@@ -9,7 +9,8 @@ import {
 import { usePlayerStore } from "../shared/playerStore";
 import type { CraftingRecipe, CraftingStationType, CraftedItem } from "../shared/crafting";
 import type { RpsResult } from "../shared/craftingUtils";
-import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, ARTIFACT_STAT_LABEL, rollArtifactQualityFromArrowResult } from "../shared/craftingUtils";
+import type { ItemQuality } from "../shared/crafting";
+import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, ARTIFACT_STAT_LABEL, rollArtifactQualityFromArrowResult, maxCraftable } from "../shared/craftingUtils";
 import { RockPaperScissorsMiniGame } from "./RockPaperScissorsMiniGame";
 import { ArrowKeyCraftingMiniGame, TOTAL_KEYS, GREAT_MAX_WRONG, GOOD_MAX_WRONG } from "./ArrowKeyCraftingMiniGame";
 import type { ArrowMiniGameResult } from "./ArrowKeyCraftingMiniGame";
@@ -57,6 +58,9 @@ function canAfford(recipe: CraftingRecipe, materials: Record<string, number>) {
   return recipe.costs.every((c) => (materials[c.itemId] ?? 0) >= c.amount);
 }
 
+/** 한 번에 만들 수 있는 상한. 너무 크면 한 번의 미니게임 결과가 과하게 증폭된다. */
+const BATCH_LIMIT = 10;
+
 // ─── CraftingModal ────────────────────────────────────────────────────────────
 
 interface CraftingModalProps {
@@ -77,6 +81,9 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
   const [selectedRecipeId, setSelectedRecipeId] = useState(recipes[0]?.id ?? "");
   const [activeRecipe,     setActiveRecipe]     = useState<CraftingRecipe | null>(null);
   const [craftResult,      setCraftResult]      = useState<CraftedItem | null>(null);
+  /** 일괄 제작 결과 — 미니게임 한 번의 품질을 N개에 그대로 적용한다 */
+  const [batchResult,      setBatchResult]      = useState<{ item: CraftedItem; count: number } | null>(null);
+  const [quantity,         setQuantity]         = useState(1);
 
   const selectedRecipe = useMemo(
     () => recipes.find((r) => r.id === selectedRecipeId) ?? recipes[0],
@@ -99,30 +106,55 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
   const startCrafting = () => {
     if (!selectedRecipe || !canAfford(selectedRecipe, materials)) return;
     setCraftResult(null);
+    setBatchResult(null);
     setActiveRecipe(selectedRecipe);
+  };
+
+  /**
+   * 미니게임 한 번의 품질을 정해진 개수만큼 그대로 적용한다.
+   * 개수마다 미니게임을 시키면 한 판에 96번이라 손이 먼저 지친다(Handoff 6장 2번).
+   * 재료가 중간에 떨어지면 만들어진 만큼만 반환한다.
+   */
+  const craftBatch = (recipe: CraftingRecipe, make: () => CraftedItem | null) => {
+    const want = recipe.id === "ws_mothers_cure" ? 1 : Math.max(1, quantity);
+    let last: CraftedItem | null = null;
+    let made = 0;
+    for (let i = 0; i < want; i++) {
+      const item = make();
+      if (!item) break;
+      last = item;
+      made += 1;
+    }
+    setActiveRecipe(null);
+    if (!last) return null;
+    if (made > 1) setBatchResult({ item: last, count: made });
+    else setCraftResult(last);
+    return last;
   };
 
   // 물약(RPS) 완료
   const finishMiniGame = (rpsResult: RpsResult) => {
     if (!activeRecipe) return;
-    const item = craftWorkshopRecipe(activeRecipe, rpsResult);
-    if (!item) { setActiveRecipe(null); return; }
-    if (activeRecipe.id === "ws_mothers_cure") {
-      navigate("/ending");
-      return;
-    }
-    setCraftResult(item);
-    setActiveRecipe(null);
+    const recipe = activeRecipe;
+    // 품질은 첫 판정 한 번으로 정하고 나머지는 같은 품질로 찍어낸다
+    let quality: ItemQuality | null = null;
+    const item = craftBatch(recipe, () => {
+      if (quality === null) {
+        const first = craftWorkshopRecipe(recipe, rpsResult);
+        quality = first?.quality ?? null;
+        return first;
+      }
+      return craftWorkshopRecipeByQuality(recipe, quality);
+    });
+    if (item && recipe.id === "ws_mothers_cure") navigate("/ending");
   };
 
   // 아티팩트(방향키 QTE) 완료
   const finishArrowQte = (result: ArrowMiniGameResult) => {
     if (!activeRecipe) return;
+    const recipe = activeRecipe;
     const quality = rollArtifactQualityFromArrowResult(result.rating);
-    const item = craftWorkshopRecipeByQuality(activeRecipe, quality);
-    if (!item) { setActiveRecipe(null); return; }
-    setCraftResult(item);
-    setActiveRecipe(null);
+    craftBatch(recipe, () => craftWorkshopRecipeByQuality(recipe, quality));
   };
 
   const affordableCount = recipes.filter((r) => canAfford(r, materials)).length;
@@ -330,6 +362,12 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                   onFinish={finishMiniGame}
                 />
               )
+            ) : batchResult ? (
+              <BatchResultPanel
+                result={batchResult.item}
+                count={batchResult.count}
+                onContinue={() => setBatchResult(null)}
+              />
             ) : craftResult ? (
               <CraftResultPanel
                 result={craftResult}
@@ -339,6 +377,8 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
               <RecipeDetailPanel
                 recipe={selectedRecipe}
                 materials={materials}
+                quantity={quantity}
+                onQuantityChange={setQuantity}
                 onStart={startCrafting}
               />
             ) : null}
@@ -351,13 +391,77 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
 
 // ─── 레시피 상세 패널 ─────────────────────────────────────────────────────────
 
+function BatchResultPanel({
+  result, count, onContinue,
+}: { result: CraftedItem; count: number; onContinue: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+      <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        일괄 제작 완료
+      </p>
+      <p className="text-title-md font-black" style={{ color: C.textPrimary }}>×{count}</p>
+      <p className="text-title-sm font-black" style={{ color: C.textPrimary }}>{result.name}</p>
+      <p className="text-pixel-sm font-bold" style={{ color: QUALITY_COLOR[result.quality] }}>
+        {QUALITY_LABEL[result.quality]}
+      </p>
+      <p className="text-pixel-sm" style={{ color: C.textFaint }}>
+        미니게임 한 번의 판정을 {count}개에 그대로 적용했습니다
+      </p>
+      <button
+        type="button"
+        onClick={onContinue}
+        className="mt-2 rounded-lg px-6 py-2 text-pixel-sm font-black transition"
+        style={{ background: C.btnBg, border: `1px solid ${C.btnBorder}`, color: C.textPrimary }}
+      >
+        계속
+      </button>
+    </div>
+  );
+}
+
+/** 1 / 5 / 최대 중에서 고른다. 재료가 모자라면 그만큼만 고를 수 있다. */
+function QuantityPicker({
+  max, value, onChange,
+}: { max: number; value: number; onChange: (n: number) => void }) {
+  const options = [1, 5, max].filter((n, i, arr) => n >= 1 && n <= max && arr.indexOf(n) === i);
+  if (max <= 1) return null;
+
+  return (
+    <div className="mt-4">
+      <p className="mb-1.5 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        수량 (최대 {max})
+      </p>
+      <div className="flex gap-1.5">
+        {options.map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            data-testid={`craft-qty-${n === max && n !== 1 && n !== 5 ? "max" : n}`}
+            className="flex-1 rounded-lg py-2 text-pixel-sm font-black transition"
+            style={value === n
+              ? { background: C.btnBg, border: `1px solid ${C.btnBorder}`, color: C.textPrimary }
+              : { background: C.btnDisabledBg, border: `1px solid ${C.border}`, color: C.textMuted }}
+          >
+            {n === max && n !== 1 && n !== 5 ? `최대 ${n}` : `${n}개`}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RecipeDetailPanel({
   recipe,
   materials,
+  quantity,
+  onQuantityChange,
   onStart,
 }: {
   recipe:    CraftingRecipe;
   materials: Record<string, number>;
+  quantity:  number;
+  onQuantityChange: (n: number) => void;
   onStart:   () => void;
 }) {
   const affordable = canAfford(recipe, materials);
@@ -446,6 +550,12 @@ function RecipeDetailPanel({
         )}
       </div>
 
+      <QuantityPicker
+        max={Math.min(BATCH_LIMIT, maxCraftable(recipe.costs, materials))}
+        value={quantity}
+        onChange={onQuantityChange}
+      />
+
       {/* 제작 시작 버튼 */}
       <button
         type="button"
@@ -468,7 +578,7 @@ function RecipeDetailPanel({
               }
         }
       >
-        {affordable ? "⚒  제작 시작" : "재료 부족"}
+        {affordable ? (quantity > 1 ? `⚒  ${quantity}개 제작` : "⚒  제작 시작") : "재료 부족"}
       </button>
     </>
   );

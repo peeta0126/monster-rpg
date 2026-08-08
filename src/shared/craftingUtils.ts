@@ -349,3 +349,13 @@ export const ARTIFACT_SLOT_LABEL: Record<string, string> = {
 };
 
 export const ALL_ARTIFACT_SLOTS = ["necklace", "bracelet", "amulet"] as const;
+
+/** 재료로 이 레시피를 몇 개까지 만들 수 있는지. 비용이 0인 항목은 제한이 아니다. */
+export function maxCraftable(
+  costs: { itemId: string; amount: number }[],
+  materials: Record<string, number>,
+): number {
+  const limits = costs.filter((c) => c.amount > 0);
+  if (limits.length === 0) return 0;
+  return Math.max(0, Math.min(...limits.map((c) => Math.floor((materials[c.itemId] ?? 0) / c.amount))));
+}
