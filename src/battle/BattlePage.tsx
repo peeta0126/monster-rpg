@@ -66,7 +66,8 @@ import {
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { createBattleGame } from "../shared/phaser/phaserConfig";
 import { setBattleInitData } from "./battleInitStore";
-import { PALETTE, hpToken, ELEMENT_CHIP_CLASS } from "../shared/palette";
+import { ELEMENT_CHIP_CLASS } from "../shared/palette";
+import { StatBar, EmptyState } from "../shared/ui";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
 
@@ -720,19 +721,7 @@ export default function BattlePage() {
           <div className="flex items-center gap-2">
             <span className="font-bold text-cream-100">{player.name}</span>
             <span className="text-earth-400">Lv.{player.level}</span>
-            {(() => {
-              const pct = (player.currentHp / player.maxHp) * 100;
-              const critical = pct <= 20;
-              return (
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-48 overflow-hidden rounded-full border border-shadow-900 bg-shadow-700">
-                    <div className={`h-full rounded-full transition-all duration-300 ${critical ? "animate-pulse" : ""}`}
-                      style={{ width: `${pct}%`, backgroundColor: PALETTE[hpToken(pct)] }} />
-                  </div>
-                  <span className="font-mono text-pixel-sm font-bold text-sand-200">{player.currentHp}/{player.maxHp}</span>
-                </div>
-              );
-            })()}
+            <StatBar value={player.currentHp} max={player.maxHp} showNumbers className="w-64" />
             {player.status && (
               <span className="rounded bg-ember-700/18 px-1 py-0.5 text-ember-500 text-pixel-sm">
                 {STATUS_LABELS[player.status]}
@@ -808,7 +797,6 @@ export default function BattlePage() {
               {initialParty.map((m, idx) => {
                 const isActive = idx === activePartyIndex;
                 const hp       = isActive ? player.currentHp : (partyHp[m.uid] ?? m.currentHp);
-                const hpPct    = Math.max(0, (hp / m.maxHp) * 100);
                 const fainted  = hp <= 0;
                 const canSwap  = !fainted && !isActive && !isProcessing && !mustSwitch;
                 const mustPick = mustSwitch && !fainted && !isActive;
@@ -834,11 +822,8 @@ export default function BattlePage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-pixel-sm font-semibold text-sand-200 truncate leading-tight">{m.nickname ?? m.name}</p>
                       <p className="text-pixel-sm text-earth-400 leading-tight">Lv.{m.level}</p>
-                      <div className="mt-0.5 h-1 w-full rounded-full bg-shadow-700 overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-300"
-                          style={{ width: `${hpPct}%`, backgroundColor: PALETTE[hpToken(hpPct)] }} />
-                      </div>
-                      <p className="text-pixel-sm text-earth-400 font-mono">{hp}/{m.maxHp}</p>
+                      <StatBar value={hp} max={m.maxHp} height={6} className="mt-0.5" />
+                      <p className="font-mono text-pixel-sm text-earth-400">{hp}/{m.maxHp}</p>
                     </div>
                     {isActive  && <span className="text-pixel-sm text-ember-500 font-bold shrink-0">출전</span>}
                     {fainted   && <span className="text-pixel-sm text-earth-400 shrink-0">기절</span>}
@@ -900,10 +885,8 @@ export default function BattlePage() {
                       );
                     })}
                     {!hasPotions && (
-                      <p className="text-center text-pixel-sm text-earth-400 py-3">
-                        보유한 물약이 없습니다.<br />
-                        <span className="text-shadow-800">농장 → 제작소에서 만들 수 있어요.</span>
-                      </p>
+                      <EmptyState icon="🧪" title="보유한 물약이 없습니다"
+                        description="제작 공방의 연금술 제작대에서 만들 수 있어요." />
                     )}
                   </div>
                 </div>

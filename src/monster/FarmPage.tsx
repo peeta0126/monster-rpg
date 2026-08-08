@@ -23,6 +23,7 @@ import strongAttackImg   from "../assets/potions/strong_attack_buff.svg";
 import { PALETTE } from "../shared/palette";
 import { SlotGrid, EmptySlot } from "../shared/ui/SlotGrid";
 import { GameBackground } from "../shared/ui/GameBackground";
+import { EmptyState } from "../shared/ui";
 
 const MATERIAL_IMG: Record<string, string> = {
   herb: herbImg, berry: berryImg, root: rootImg, crystal: crystalImg,
@@ -174,9 +175,7 @@ function MaterialsSection({
       </SlotGrid>
 
       {total === 0 && (
-        <p className="mt-3 text-pixel-sm text-earth-400 text-center">
-          숲 탐험에서 재료를 획득할 수 있습니다.
-        </p>
+        <EmptyState title="보유 재료가 없습니다" description="숲 탐험에서 재료를 획득할 수 있습니다." />
       )}
     </div>
   );
@@ -260,9 +259,7 @@ function PotionsSection({
       </SlotGrid>
 
       {craftedPotions.length === 0 && (
-        <p className="mt-3 text-center text-pixel-sm text-earth-400">
-          제작 공방의 연금술 제작대에서 물약을 만들어 보세요.
-        </p>
+        <EmptyState title="보유 물약이 없습니다" description="제작 공방의 연금술 제작대에서 만들어 보세요." />
       )}
     </div>
   );
@@ -355,9 +352,8 @@ function ArtifactsSection({
       </SlotGrid>
 
       {craftedArtifacts.length === 0 && (
-        <p className="mt-3 text-center text-pixel-sm text-earth-400">
-          제작 공방의 아티팩트 제작대에서 만들고, 내 몬스터 메뉴에서 장착합니다.
-        </p>
+        <EmptyState title="보유 아티팩트가 없습니다"
+          description="제작 공방에서 만들고, 내 몬스터 메뉴에서 장착합니다." />
       )}
     </div>
   );

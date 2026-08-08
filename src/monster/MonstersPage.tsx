@@ -11,6 +11,7 @@ import {
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { GameBackground } from "../shared/ui/GameBackground";
+import { StatBar } from "../shared/ui";
 
 /** 파티 카드/상태창에 반영할 장비 능력치 (HP는 배틀 실수치와 어긋나지 않도록 제외) */
 export interface EquipStatBonus { attack: number; defense: number; speed: number }
@@ -46,13 +47,6 @@ const MOVE_CATEGORY_KO: Record<string, string> = {
 const STATUS_KO: Record<string, string> = {
   burn: "화상", paralysis: "마비", freeze: "빙결", poison: "독",
 };
-
-/** HP 색 3단계 — ART_DIRECTION 3-2. 전투 화면과 같은 경계값을 쓴다(50% / 20%). */
-function hpGradient(pct: number): string {
-  if (pct > 50) return `linear-gradient(90deg, ${PALETTE.moss500}, ${PALETTE.mist500})`;
-  if (pct > 20) return `linear-gradient(90deg, ${PALETTE.ember600}, ${PALETTE.ember500})`;
-  return `linear-gradient(90deg, ${PALETTE.ember700}, ${PALETTE.ember600})`;
-}
 
 const MON_STYLES = `
 @keyframes monIn {
@@ -494,15 +488,13 @@ function MonsterCard({
         </div>
       </div>
 
+      {/* HP 바는 카드에서 두 번째로 큰 요소여야 한다 (ART_DIRECTION 3-2) */}
       <div className="w-full px-0.5">
-        <div className="flex justify-between items-center mb-0.5">
-          <span className="text-pixel-sm text-earth-400 font-bold">HP</span>
-          <span className="text-pixel-sm text-sand-300">{monster.currentHp}/{monster.maxHp}</span>
+        <div className="mb-0.5 flex items-center justify-between">
+          <span className="text-pixel-sm font-bold text-earth-400">HP</span>
+          <span className="text-pixel-sm font-bold text-sand-200">{monster.currentHp}/{monster.maxHp}</span>
         </div>
-        <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: "rgba(13, 18, 35, .5)" }}>
-          <div className="h-full rounded-full transition-all"
-            style={{ width: `${hpPct}%`, background: hpGradient(hpPct), animation: "hpLoad .6s ease both" }} />
-        </div>
+        <StatBar value={monster.currentHp} max={monster.maxHp} height={10} />
       </div>
 
       {showStats && (
@@ -762,7 +754,7 @@ export default function MonstersPage() {
           relative 필수: GameBackground가 absolute라 static 형제 위에 그려진다 */}
       <div className="relative flex flex-1 overflow-hidden">
         {/* 파티 패널 */}
-        <div className="m-3 mr-0 flex w-56 flex-shrink-0 flex-col overflow-hidden rounded-xl
+        <div className="m-3 mr-0 flex w-56 flex-shrink-0 flex-col overflow-hidden rounded-lg
           border-2 border-earth-500 bg-shadow-900/85">
           <div className="px-4 py-3 flex items-center justify-between"
             style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)" }}>
