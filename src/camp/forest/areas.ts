@@ -16,7 +16,7 @@ export const FOREST_AREAS: ForestArea[] = [
   {
     id: "shallow", name: "얕은 숲", subtitle: "SHALLOW WOODS",
     description: "햇빛이 스며드는 고요한 숲. 초보 탐험가도 부담 없이 도전할 수 있습니다.",
-    monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow"],
+    monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow", "mossy"],
     levelRange: [1, 8], encounterRate: 0.55, materialRate: 0.40, materialBonus: 0,
     exploreTime: 1200, danger: 1,
     particleType: "leaf",

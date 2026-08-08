@@ -338,7 +338,8 @@ interface ForestArea {
 }
 
 export const FOREST_AREAS: ForestArea[] = [
-  { id: "shallow", monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow"],
+  // ⚠️ src/camp/forest/areas.ts 와 같은 값을 유지할 것. 시뮬은 구조를 따로 들고 있다.
+  { id: "shallow", monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow", "mossy"],
     levelRange: [1, 8], materialRate: 0.40, materialBonus: 0, unlockFloor: 0 },
   { id: "deep", monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb", "toxadon"],
     levelRange: [8, 18], materialRate: 0.55, materialBonus: 1, unlockFloor: 11 },
