@@ -22,6 +22,11 @@ server/prisma/*.db-journal
 /playwright-report
 /e2e/artifacts
 
+# 디자인 캡처 — 개별 스크린샷은 무겁고 매번 바뀌므로 커밋하지 않는다.
+# 단 컨택트시트(3열로 합친 리뷰용 한 장)는 예외로 커밋한다.
+/design/screenshots/
+!/design/contact-sheet-*.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

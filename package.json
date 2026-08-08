@@ -11,7 +11,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "e2e": "playwright test",
-    "e2e:headed": "playwright test --headed"
+    "e2e:headed": "playwright test --headed",
+    "design:shot": "playwright test --config design/playwright.config.ts",
+    "design:before": "cross-env SHOT_LABEL=before npm run design:shot",
+    "design:after": "cross-env SHOT_LABEL=after npm run design:shot",
+    "design:sheet": "node design/contact-sheet.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
@@ -31,10 +35,12 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.2.4",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "sharp": "^0.35.3",
     "tailwindcss": "^4.2.1",
     "tsx": "^4.23.10",
     "typescript": "~5.9.3",

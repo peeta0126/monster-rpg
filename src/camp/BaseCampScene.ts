@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
+import { markSceneReady } from "../shared/phaser/sceneReady";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
 import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
@@ -250,6 +251,8 @@ export default class BaseCampScene extends Phaser.Scene {
     seg(660, 2300, 660, 2900);
 
     //좌표 확인용
+
+    markSceneReady(this);
   }
 
   private createNpcs() {

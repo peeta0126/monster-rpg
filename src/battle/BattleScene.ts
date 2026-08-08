@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
 import { getBattleInitData } from "./battleInitStore";
+import { markSceneReady } from "../shared/phaser/sceneReady";
 import type { StatusEffect } from "../shared/game";
 import type { BattleResultPayload, BattlePlayerSwitchPayload } from "../shared/phaser/events";
 
@@ -175,6 +176,8 @@ export default class BattleScene extends Phaser.Scene {
     this.cameras.main.fadeIn(500, 0, 0, 0);
 
     gameEvents.emit(GAME_EVENT.BATTLE_READY);
+
+    markSceneReady(this);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'e2e/artifacts', 'test-results', 'playwright-report']),
+  globalIgnores(['dist', 'e2e/artifacts', 'test-results', 'playwright-report', 'design/screenshots']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -30,8 +30,8 @@ export default defineConfig([
     },
   },
   {
-    // Playwright 자동 플레이 스크립트는 브라우저가 아니라 Node에서 실행된다
-    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    // Playwright 자동 플레이 / 디자인 캡처 스크립트는 브라우저가 아니라 Node에서 실행된다
+    files: ['e2e/**/*.ts', 'design/**/*.{ts,mjs}', 'scripts/**/*.mjs', 'playwright.config.ts'],
     languageOptions: {
       globals: globals.node,
     },
