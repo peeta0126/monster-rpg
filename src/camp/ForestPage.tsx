@@ -182,7 +182,7 @@ const FOREST_AREAS: ForestArea[] = [
     exploreTime: 1200, danger: 1,
     particleType: "leaf",
     skyTop: PALETTE.shadow900, skyBottom: PALETTE.shadow700,
-    fogColor: rgba("moss500", 0.10), groundColor: PALETTE.stone600,
+    fogColor: rgba("moss500", 0.14), groundColor: PALETTE.moss500,
     accentColor: PALETTE.moss500, glowColor: rgba("moss500", 0.25),
     borderGlow: rgba("moss500", 0.5),
     recommendedText: "추천: 처음 방문 탐험가",

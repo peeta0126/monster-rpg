@@ -697,7 +697,7 @@ export default function MonstersPage() {
 
   return (
     <div className="h-screen flex flex-col text-cream-100 overflow-hidden"
-      style={{ background: `linear-gradient(160deg, ${PALETTE.shadow900} 0%, ${PALETTE.shadow800} 50%, ${PALETTE.shadow900} 100%)` }}>
+      style={{ background: `linear-gradient(160deg, ${PALETTE.shadow900} 0%, ${PALETTE.shadow700} 50%, ${PALETTE.shadow900} 100%)` }}>
       <style>{MON_STYLES}</style>
 
       {/* ── 헤더 ── */}
