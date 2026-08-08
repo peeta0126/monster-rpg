@@ -5,6 +5,7 @@ import { AnvilModal } from "./AnvilModal";
 import { usePlayerStore } from "../shared/playerStore";
 import type { CraftingStationType } from "../shared/crafting";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
+import { PALETTE } from "../shared/palette";
 
 const BG_URL = "/assets/housing/housing_bg.png";
 
@@ -354,7 +355,7 @@ export default function WorkshopPage() {
             width:  `min(100vw, calc(100vh * ${BG_RATIO}))`,
             height: `min(100vh, calc(100vw / ${BG_RATIO}))`,
             borderRadius: "12px",
-            boxShadow: "0 24px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(140,90,20,0.25)",
+            boxShadow: "0 24px 80px rgba(13, 18, 35, .75), 0 0 0 1px rgba(132, 75, 63, .318)",
             cursor: SHOW_COLLISION_DEBUG ? "crosshair" : "default",
           }}
         >
@@ -370,7 +371,7 @@ export default function WorkshopPage() {
           {/* 스테이지 내부 테두리 그라디언트 (깊이감) */}
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ boxShadow: "inset 0 0 70px rgba(0,0,0,0.3)" }}
+            style={{ boxShadow: "inset 0 0 70px rgba(13, 18, 35, .3)" }}
           />
 
           {/* ── 플레이어 스프라이트 ──────────────────────────────────────────── */}
@@ -392,7 +393,7 @@ export default function WorkshopPage() {
                 transform: "translateX(-50%)",
                 width: PLAYER_DISPLAY * 0.55,
                 height: 7,
-                background: "rgba(0,0,0,0.45)",
+                background: "rgba(13, 18, 35, .45)",
                 filter: "blur(5px)",
               }}
             />
@@ -404,7 +405,7 @@ export default function WorkshopPage() {
                 width:  PLAYER_DISPLAY,
                 height: PLAYER_DISPLAY,
                 imageRendering: "pixelated",
-                filter: "drop-shadow(0 5px 10px rgba(0,0,0,0.9))",
+                filter: "drop-shadow(0 5px 10px rgba(13, 18, 35, .9))",
                 display: "block",
               }}
             />
@@ -416,15 +417,15 @@ export default function WorkshopPage() {
               <div
                 className="flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-sm font-bold"
                 style={{
-                  background: "rgba(18,9,2,0.94)",
-                  border: "1px solid rgba(180,120,30,0.75)",
-                  color: "#f5e6c8",
-                  boxShadow: "0 0 28px rgba(180,120,30,0.35)",
+                  background: "rgba(13, 18, 35, .94)",
+                  border: "1px solid rgba(132, 75, 63, 1)",
+                  color: PALETTE.cream100,
+                  boxShadow: "0 0 28px rgba(132, 75, 63, .819)",
                 }}
               >
                 <span
                   className="rounded px-2 py-0.5 text-xs font-black"
-                  style={{ background: "#b47828", color: "#160c04", letterSpacing: "0.05em" }}
+                  style={{ background: PALETTE.earth500, color: PALETTE.shadow900, letterSpacing: "0.05em" }}
                 >
                   SPACE
                 </span>
@@ -439,12 +440,12 @@ export default function WorkshopPage() {
               {/* 가로선 */}
               <div
                 className="pointer-events-none absolute z-50 w-full"
-                style={{ top: `${mousePos.y}%`, height: 1, background: "rgba(0,255,180,0.55)" }}
+                style={{ top: `${mousePos.y}%`, height: 1, background: "rgba(174, 226, 213, .604)" }}
               />
               {/* 세로선 */}
               <div
                 className="pointer-events-none absolute z-50 h-full"
-                style={{ left: `${mousePos.x}%`, width: 1, background: "rgba(0,255,180,0.55)" }}
+                style={{ left: `${mousePos.x}%`, width: 1, background: "rgba(174, 226, 213, .604)" }}
               />
               {/* 중심 점 */}
               <div
@@ -453,8 +454,8 @@ export default function WorkshopPage() {
                   left: `${mousePos.x}%`,
                   top:  `${mousePos.y}%`,
                   width: 8, height: 8,
-                  background: "#00ffb4",
-                  boxShadow: "0 0 6px #00ffb4",
+                  background: PALETTE.mist300,
+                  boxShadow: `0 0 6px ${PALETTE.mist300}`,
                 }}
               />
               {/* 좌표 말풍선 — 커서 우하단에 표시 */}
@@ -463,11 +464,11 @@ export default function WorkshopPage() {
                 style={{
                   left: `${Math.min(mousePos.x + 2, 72)}%`,
                   top:  `${Math.min(mousePos.y + 2, 88)}%`,
-                  background: "rgba(0,20,12,0.92)",
-                  border: "1px solid rgba(0,255,180,0.5)",
-                  color: "#00ffb4",
+                  background: "rgba(13, 18, 35, .92)",
+                  border: "1px solid rgba(174, 226, 213, .549)",
+                  color: PALETTE.mist300,
                   whiteSpace: "nowrap",
-                  boxShadow: "0 0 12px rgba(0,255,180,0.2)",
+                  boxShadow: "0 0 12px rgba(174, 226, 213, .22)",
                 }}
               >
                 x: {mousePos.x.toFixed(1)} &nbsp;y: {mousePos.y.toFixed(1)}
@@ -479,7 +480,7 @@ export default function WorkshopPage() {
           {SHOW_COLLISION_DEBUG && COLLISION_BOXES.map((box) => (
             <div
               key={box.id}
-              className="pointer-events-none absolute z-40 border border-red-500 bg-red-500/20 text-[9px] font-bold text-red-200"
+              className="pointer-events-none absolute z-40 border border-ember-600 bg-ember-600/20 text-[9px] font-bold text-ember-500"
               style={{
                 left:   `${box.x}%`,
                 top:    `${box.y}%`,
@@ -487,7 +488,7 @@ export default function WorkshopPage() {
                 height: `${box.height}%`,
               }}
             >
-              <span className="px-0.5" style={{ textShadow: "0 1px 2px #000" }}>{box.id}</span>
+              <span className="px-0.5" style={{ textShadow: `0 1px 2px ${PALETTE.shadow900}` }}>{box.id}</span>
             </div>
           ))}
 
@@ -507,9 +508,9 @@ export default function WorkshopPage() {
                 <div
                   className="flex h-7 w-7 items-center justify-center rounded-full text-sm"
                   style={{
-                    background: "rgba(18,9,2,0.85)",
-                    border: `2px solid ${isNear ? "#f5e6c8" : "rgba(212,160,23,0.9)"}`,
-                    boxShadow: "0 0 12px rgba(180,120,30,0.55)",
+                    background: "rgba(13, 18, 35, .85)",
+                    border: `2px solid ${isNear ? PALETTE.cream100 : "rgba(233, 148, 65, .907)"}`,
+                    boxShadow: "0 0 12px rgba(132, 75, 63, 1)",
                     animation: isNear ? undefined : "workshopMarkerBob 1.8s ease-in-out infinite",
                   }}
                 >
@@ -518,9 +519,9 @@ export default function WorkshopPage() {
                 <span
                   className="mt-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold"
                   style={{
-                    background: "rgba(18,9,2,0.85)",
-                    color: "#f5e6c8",
-                    border: "1px solid rgba(180,120,30,0.5)",
+                    background: "rgba(13, 18, 35, .85)",
+                    color: PALETTE.cream100,
+                    border: "1px solid rgba(132, 75, 63, 1)",
                   }}
                 >
                   {s.label}
@@ -539,13 +540,13 @@ export default function WorkshopPage() {
                 top:  `${s.y}%`,
                 width:  `${s.radius * 2}%`,
                 height: `${s.radius * 2}%`,
-                background: "rgba(255,220,0,0.15)",
-                border: "2px solid rgba(255,220,0,0.7)",
+                background: "rgba(233, 148, 65, .282)",
+                border: "2px solid rgba(233, 148, 65, 1)",
               }}
             >
               <span
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black"
-                style={{ color: "#ffe04b", textShadow: "0 1px 4px #000" }}
+                style={{ color: PALETTE.ember500, textShadow: `0 1px 4px ${PALETTE.shadow900}` }}
               >
                 {s.label}
               </span>
@@ -565,9 +566,9 @@ export default function WorkshopPage() {
           type="button"
           onClick={() => navigate("/")}
           style={{
-            background: "rgba(22,12,4,0.88)",
-            border: "1px solid rgba(180,120,30,0.6)",
-            color: "#f5e6c8",
+            background: "rgba(13, 18, 35, .88)",
+            border: "1px solid rgba(132, 75, 63, 1)",
+            color: PALETTE.cream100,
           }}
           className="rounded-lg px-3 py-2 text-sm font-bold backdrop-blur transition hover:brightness-125"
         >
@@ -577,12 +578,12 @@ export default function WorkshopPage() {
 
       {/* 타이틀 */}
       <div className="pointer-events-none absolute left-1/2 top-4 z-40 -translate-x-1/2 text-center">
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#b47828" }}>
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
           Workshop
         </p>
         <h1
           className="text-xl font-black drop-shadow-lg"
-          style={{ color: "#f5e6c8", textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}
+          style={{ color: PALETTE.cream100, textShadow: "0 2px 8px rgba(13, 18, 35, .9)" }}
         >
           제작 공방
         </h1>
@@ -594,9 +595,9 @@ export default function WorkshopPage() {
           type="button"
           onClick={() => setMenuOpen(true)}
           style={{
-            background: "rgba(22,12,4,0.88)",
-            border: "1px solid rgba(180,120,30,0.6)",
-            color: "#f5e6c8",
+            background: "rgba(13, 18, 35, .88)",
+            border: "1px solid rgba(132, 75, 63, 1)",
+            color: PALETTE.cream100,
           }}
           className="rounded-lg px-3 py-2 text-sm font-bold backdrop-blur transition hover:brightness-125"
         >
@@ -621,15 +622,15 @@ export default function WorkshopPage() {
         <div
           className="absolute right-4 top-16 z-40 w-56 rounded-xl p-4 backdrop-blur shadow-2xl"
           style={{
-            background: "rgba(20,10,3,0.95)",
-            border: "1px solid rgba(180,120,30,0.5)",
+            background: "rgba(13, 18, 35, .95)",
+            border: "1px solid rgba(132, 75, 63, 1)",
           }}
         >
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest" style={{ color: "#8b6014" }}>
+          <p className="mb-3 text-xs font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
             최근 제작 아이템
           </p>
           {craftedItems.length === 0 ? (
-            <p className="py-3 text-center text-xs" style={{ color: "#6b4c18" }}>
+            <p className="py-3 text-center text-xs" style={{ color: PALETTE.earth500 }}>
               아직 제작한 아이템이 없습니다.
             </p>
           ) : (
@@ -639,11 +640,11 @@ export default function WorkshopPage() {
                   key={item.id}
                   className="rounded-lg px-3 py-2"
                   style={{
-                    background: "rgba(42,22,8,0.85)",
+                    background: "rgba(66, 61, 70, .088)",
                     border: `1px solid ${QUALITY_COLOR[item.quality]}44`,
                   }}
                 >
-                  <p className="text-xs font-black" style={{ color: "#f5e6c8" }}>{item.name}</p>
+                  <p className="text-xs font-black" style={{ color: PALETTE.cream100 }}>{item.name}</p>
                   <p className="mt-0.5 text-[10px] font-bold" style={{ color: QUALITY_COLOR[item.quality] }}>
                     {QUALITY_LABEL[item.quality]}
                   </p>
@@ -658,9 +659,9 @@ export default function WorkshopPage() {
       <div
         className="pointer-events-none absolute bottom-4 left-4 z-40 rounded-lg px-3 py-2 text-xs backdrop-blur"
         style={{
-          background: "rgba(22,12,4,0.75)",
-          border: "1px solid rgba(120,80,20,0.4)",
-          color: "#8b6014",
+          background: "rgba(13, 18, 35, .75)",
+          border: "1px solid rgba(205, 178, 126, .08)",
+          color: PALETTE.earth500,
         }}
       >
         WASD / 방향키 이동 &nbsp;·&nbsp; SPACE 상호작용 &nbsp;·&nbsp; TAB 메뉴
@@ -715,12 +716,12 @@ function WorkshopMenuModal({
     >
       <div
         className="relative w-full max-w-sm rounded-2xl p-6 shadow-2xl"
-        style={{ background: "rgba(20,10,3,0.97)", border: "1px solid rgba(180,120,30,0.5)" }}
+        style={{ background: "rgba(13, 18, 35, .97)", border: "1px solid rgba(132, 75, 63, 1)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-black" style={{ color: "#f5e6c8" }}>메뉴</h2>
-          <span className="text-[10px]" style={{ color: "#8b6014" }}>ESC: 닫기</span>
+          <h2 className="text-lg font-black" style={{ color: PALETTE.cream100 }}>메뉴</h2>
+          <span className="text-[10px]" style={{ color: PALETTE.earth500 }}>ESC: 닫기</span>
         </div>
 
         <div className="grid grid-cols-3 gap-2.5">
@@ -731,9 +732,9 @@ function WorkshopMenuModal({
               onClick={it.onClick}
               className="flex flex-col items-center gap-1.5 rounded-xl py-4 text-sm font-semibold transition active:scale-95 hover:brightness-125"
               style={{
-                background: "rgba(42,22,8,0.85)",
-                border: "1px solid rgba(180,120,30,0.4)",
-                color: "#f5e6c8",
+                background: "rgba(66, 61, 70, .088)",
+                border: "1px solid rgba(132, 75, 63, .936)",
+                color: PALETTE.cream100,
               }}
             >
               <span className="text-2xl">{it.emoji}</span>

@@ -2,19 +2,20 @@ import { useState } from "react";
 import { RpsIcon } from "./RpsIcon";
 import type { RpsChoice } from "./rps";
 import type { RpsResult } from "../shared/craftingUtils";
+import { PALETTE } from "../shared/palette";
 
 // ─── 중세 공방 팔레트 (CraftingModal과 통일) ──────────────────────────────────
 const C = {
-  bg:          "#160c04",
-  card:        "#2a1508",
-  cardHover:   "#3d2208",
-  border:      "rgba(180,120,30,0.45)",
-  borderGold:  "rgba(212,160,23,0.8)",
-  textPrimary: "#f5e6c8",
-  textMuted:   "#c4a46b",
-  textFaint:   "#8b6014",
-  gold:        "#d4a017",
-  goldDim:     "#b47828",
+  bg:          PALETTE.shadow900,
+  card:        PALETTE.stone600,
+  cardHover:   PALETTE.earth500,
+  border:      "rgba(132, 75, 63, 1)",
+  borderGold:  "rgba(233, 148, 65, .807)",
+  textPrimary: PALETTE.cream100,
+  textMuted:   PALETTE.sand300,
+  textFaint:   PALETTE.earth500,
+  gold:        PALETTE.ember500,
+  goldDim:     PALETTE.earth500,
 };
 
 // ─── RPS 로직 ─────────────────────────────────────────────────────────────────
@@ -51,15 +52,15 @@ const RESULT_LABEL: Record<RpsResult, string> = {
 };
 
 const RESULT_COLOR: Record<RpsResult, string> = {
-  win:  "#4ade80",
-  draw: "#facc15",
-  lose: "#f87171",
+  win:  PALETTE.moss500,
+  draw: PALETTE.ember500,
+  lose: PALETTE.ember500,
 };
 
 const RESULT_BG: Record<RpsResult, string> = {
-  win:  "rgba(20,83,45,0.2)",
-  draw: "rgba(113,63,18,0.25)",
-  lose: "rgba(127,29,29,0.2)",
+  win:  "rgba(122, 132, 85, .057)",
+  draw: "rgba(132, 75, 63, .167)",
+  lose: "rgba(168, 61, 31, .087)",
 };
 
 const QUALITY_HINT: Record<RpsResult, string> = {
@@ -203,10 +204,10 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
             onClick={() => onFinish(result)}
             className="w-full rounded-lg py-3 text-sm font-black transition hover:brightness-125"
             style={{
-              background: "rgba(180,120,30,0.22)",
-              border: `1px solid rgba(212,160,23,0.6)`,
+              background: "rgba(132, 75, 63, .515)",
+              border: `1px solid rgba(233, 148, 65, .605)`,
               color: C.textPrimary,
-              boxShadow: "0 0 16px rgba(180,120,30,0.18)",
+              boxShadow: "0 0 16px rgba(132, 75, 63, .421)",
             }}
           >
             ⚒  제작 완료

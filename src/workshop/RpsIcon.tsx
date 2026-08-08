@@ -1,11 +1,36 @@
 import type { RpsChoice } from "./rps";
+import { PALETTE } from "../shared/palette";
+
+/**
+ * 아이콘 3종의 명암 램프.
+ *
+ * 픽셀아트 아이콘이라 body/light/dark/line 4단계가 다 필요하다 — 단색 토큰 하나로
+ * 접으면 형태가 사라진다. 그래서 마스터 팔레트 안에서 명도가 서로 다른 4개를 골라
+ * 램프를 다시 짰다. 비활성(inactive)은 같은 램프를 한 단계씩 어둡게 민 것이다.
+ *
+ * 세 아이콘은 색상으로도 갈린다: 바위=중성(stone), 보=모래/크림(sand), 가위=화염(ember).
+ */
+const RPS_RAMP = {
+  rock: {
+    active:   { body: PALETTE.stone600,  light: PALETTE.sand300,  dark: PALETTE.shadow700, line: PALETTE.shadow900 },
+    inactive: { body: PALETTE.shadow700, light: PALETTE.stone600, dark: PALETTE.shadow900, line: PALETTE.shadow900 },
+  },
+  paper: {
+    active:   { body: PALETTE.sand300,  light: PALETTE.cream100, dark: PALETTE.earth500, line: PALETTE.stone600  },
+    inactive: { body: PALETTE.earth400, light: PALETTE.sand300,  dark: PALETTE.earth500, line: PALETTE.shadow700 },
+  },
+  scissors: {
+    active:   { body: PALETTE.ember600, light: PALETTE.ember500, dark: PALETTE.ember700,  line: PALETTE.shadow900 },
+    inactive: { body: PALETTE.ember700, light: PALETTE.ember600, dark: PALETTE.shadow900, line: PALETTE.shadow900 },
+  },
+} as const;
+
+const ramp = (kind: keyof typeof RPS_RAMP, active?: boolean) =>
+  RPS_RAMP[kind][active ? "active" : "inactive"];
 
 // ─── 바위 (Rock) ───────────────────────────────────────────────────────────────
 function RockSvg({ active }: { active?: boolean }) {
-  const body  = active ? "#8a8a7a" : "#5a5a50";
-  const light = active ? "#b8b8a8" : "#7a7a6a";
-  const dark  = active ? "#3a3a32" : "#2a2a24";
-  const crack = active ? "#2e2e28" : "#1e1e1a";
+  const { body, light, dark, line: crack } = ramp("rock", active);
   return (
     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges" className="w-full h-full">
       {/* 바위 몸통 - 픽셀 덩어리 */}
@@ -36,10 +61,7 @@ function RockSvg({ active }: { active?: boolean }) {
 
 // ─── 보 (Paper) ──────────────────────────────────────────────────────────────
 function PaperSvg({ active }: { active?: boolean }) {
-  const body  = active ? "#f5e6a8" : "#c8b060";
-  const light = active ? "#fff8d0" : "#e8cc80";
-  const dark  = active ? "#a88c30" : "#7a6020";
-  const line  = active ? "#8a7020" : "#5a4810";
+  const { body, light, dark, line } = ramp("paper", active);
   return (
     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges" className="w-full h-full">
       {/* 손바닥 */}
@@ -77,10 +99,7 @@ function PaperSvg({ active }: { active?: boolean }) {
 
 // ─── 가위 (Scissors) ─────────────────────────────────────────────────────────
 function ScissorsSvg({ active }: { active?: boolean }) {
-  const body  = active ? "#f08080" : "#c03040";
-  const light = active ? "#ffc0c0" : "#e05060";
-  const dark  = active ? "#802020" : "#601020";
-  const line  = active ? "#601818" : "#400810";
+  const { body, light, dark, line } = ramp("scissors", active);
   return (
     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges" className="w-full h-full">
       {/* 손바닥 */}

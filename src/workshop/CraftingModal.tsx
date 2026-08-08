@@ -13,30 +13,31 @@ import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, ARTIFACT_STAT_LABEL, rollAr
 import { RockPaperScissorsMiniGame } from "./RockPaperScissorsMiniGame";
 import { ArrowKeyCraftingMiniGame, TOTAL_KEYS, GREAT_MAX_WRONG, GOOD_MAX_WRONG } from "./ArrowKeyCraftingMiniGame";
 import type { ArrowMiniGameResult } from "./ArrowKeyCraftingMiniGame";
+import { PALETTE } from "../shared/palette";
 
 // ─── 중세 공방 팔레트 ──────────────────────────────────────────────────────────
 const C = {
-  bg:           "#160c04",      // 모달 전체 배경
-  panel:        "#1e1007",      // 레시피 목록 영역
-  aside:        "#130a03",      // 상세 패널 영역
-  card:         "#2a1508",      // 레시피 카드 기본
-  cardSelected: "#3d2008",      // 레시피 카드 선택됨
-  border:       "rgba(180,120,30,0.45)",
-  borderGold:   "rgba(212,160,23,0.85)",
-  textPrimary:  "#f5e6c8",
-  textMuted:    "#c4a46b",
-  textFaint:    "#8b6014",
-  gold:         "#d4a017",
-  goldDim:      "#b47828",
-  btnBg:        "rgba(180,120,30,0.22)",
-  btnBorder:    "rgba(212,160,23,0.6)",
-  btnHover:     "rgba(180,120,30,0.42)",
-  btnDisabledBg:     "rgba(30,16,7,0.7)",
-  btnDisabledBorder: "rgba(80,50,20,0.4)",
-  btnDisabledText:   "#5a3c18",
-  diffEasy:   "#4ade80",
-  diffNormal: "#f59e0b",
-  diffHard:   "#ef4444",
+  bg:           PALETTE.shadow900,      // 모달 전체 배경
+  panel:        PALETTE.shadow900,      // 레시피 목록 영역
+  aside:        PALETTE.shadow900,      // 상세 패널 영역
+  card:         PALETTE.stone600,      // 레시피 카드 기본
+  cardSelected: PALETTE.earth500,      // 레시피 카드 선택됨
+  border:       "rgba(132, 75, 63, 1)",
+  borderGold:   "rgba(233, 148, 65, .857)",
+  textPrimary:  PALETTE.cream100,
+  textMuted:    PALETTE.sand300,
+  textFaint:    PALETTE.earth500,
+  gold:         PALETTE.ember500,
+  goldDim:      PALETTE.earth500,
+  btnBg:        "rgba(132, 75, 63, .515)",
+  btnBorder:    "rgba(233, 148, 65, .605)",
+  btnHover:     "rgba(132, 75, 63, .982)",
+  btnDisabledBg:     "rgba(13, 18, 35, .7)",
+  btnDisabledBorder: "rgba(132, 75, 63, .141)",
+  btnDisabledText:   PALETTE.earth500,
+  diffEasy:   PALETTE.moss500,
+  diffNormal: PALETTE.ember500,
+  diffHard:   PALETTE.ember700,
 };
 
 const DIFFICULTY_COLOR_MW: Record<string, string> = {
@@ -129,7 +130,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
   return (
     <div
       className="fixed inset-0 z-[900] flex items-center justify-center px-4"
-      style={{ background: "rgba(6,3,1,0.82)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(13, 18, 35, .82)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
@@ -137,7 +138,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
         style={{
           background: C.bg,
           border: `1px solid ${C.borderGold}`,
-          boxShadow: `0 0 60px rgba(180,120,30,0.25), 0 8px 40px rgba(0,0,0,0.85)`,
+          boxShadow: `0 0 60px rgba(132, 75, 63, .585), 0 8px 40px rgba(13, 18, 35, .85)`,
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -168,9 +169,9 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
               onClick={grantWorkshopTestMaterials}
               className="rounded-lg px-3 py-2 text-xs font-bold transition hover:brightness-125"
               style={{
-                background: "rgba(20,60,30,0.5)",
-                border: "1px solid rgba(34,140,60,0.5)",
-                color: "#86efac",
+                background: "rgba(122, 132, 85, .069)",
+                border: "1px solid rgba(122, 132, 85, .455)",
+                color: PALETTE.moss500,
               }}
             >
               테스트 재료
@@ -183,7 +184,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
             onClick={onClose}
             className="rounded-lg px-3 py-2 text-sm font-bold transition hover:brightness-125"
             style={{
-              background: "rgba(60,20,5,0.6)",
+              background: "rgba(13, 18, 35, .6)",
               border: `1px solid ${C.border}`,
               color: C.textMuted,
             }}
@@ -237,14 +238,14 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                     style={{
                       background: selected ? C.cardSelected : C.card,
                       border: `1px solid ${selected ? C.borderGold : C.border}`,
-                      boxShadow: selected ? `0 0 18px rgba(180,120,30,0.3)` : "none",
+                      boxShadow: selected ? `0 0 18px rgba(132, 75, 63, .702)` : "none",
                     }}
                   >
                     <div className="flex items-start gap-3">
                       {/* 아이콘 */}
                       <div
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl"
-                        style={{ background: "rgba(120,70,15,0.35)", border: `1px solid ${C.border}` }}
+                        style={{ background: "rgba(132, 75, 63, .282)", border: `1px solid ${C.border}` }}
                       >
                         {stationType === "artifact" ? "◆" : "✚"}
                       </div>
@@ -267,7 +268,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                             {DIFFICULTY_LABEL[recipe.difficulty]}
                           </span>
                           {affordable && (
-                            <span className="text-[10px] font-bold" style={{ color: "#4ade80" }}>
+                            <span className="text-[10px] font-bold" style={{ color: PALETTE.moss500 }}>
                               ✓ 제작 가능
                             </span>
                           )}
@@ -288,12 +289,12 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                                 className="rounded-full border px-2 py-0.5 text-[11px] font-bold"
                                 style={{
                                   borderColor: ok
-                                    ? "rgba(74,222,128,0.3)"
-                                    : "rgba(248,113,113,0.3)",
-                                  color: ok ? "#86efac" : "#fca5a5",
+                                    ? "rgba(122, 132, 85, .793)"
+                                    : "rgba(233, 148, 65, .254)",
+                                  color: ok ? PALETTE.moss500 : PALETTE.ember500,
                                   background: ok
-                                    ? "rgba(20,83,45,0.2)"
-                                    : "rgba(127,29,29,0.15)",
+                                    ? "rgba(122, 132, 85, .057)"
+                                    : "rgba(168, 61, 31, .065)",
                                 }}
                               >
                                 {cost.name} {have}/{cost.amount}
@@ -382,7 +383,7 @@ function RecipeDetailPanel({
       {/* 결과 */}
       <div
         className="mt-4 rounded-lg p-3"
-        style={{ background: "rgba(42,22,8,0.7)", border: `1px solid ${C.border}` }}
+        style={{ background: "rgba(66, 61, 70, .072)", border: `1px solid ${C.border}` }}
       >
         <p className="text-xs font-bold" style={{ color: C.textFaint }}>
           제작 결과
@@ -400,7 +401,7 @@ function RecipeDetailPanel({
       {/* 품질 확률 */}
       <div
         className="mt-3 rounded-lg p-3 text-xs"
-        style={{ background: "rgba(30,15,5,0.7)", border: `1px solid ${C.border}` }}
+        style={{ background: "rgba(13, 18, 35, .7)", border: `1px solid ${C.border}` }}
       >
         <p className="mb-1.5 font-bold" style={{ color: C.textMuted }}>
           ✦ 품질 확률 ✦
@@ -411,34 +412,34 @@ function RecipeDetailPanel({
               틀려도 시험은 끝까지 진행되며, 전체 {TOTAL_KEYS}키 중 틀린 개수로 등급이 결정됩니다.
             </p>
             <p>
-              <span style={{ color: "#d4a017" }}>완벽 (틀린 키 0개)</span>
+              <span style={{ color: PALETTE.ember500 }}>완벽 (틀린 키 0개)</span>
               {" "}— Elite 40% / Rare 50% / Normal 10%
             </p>
             <p>
-              <span style={{ color: "#4ade80" }}>훌륭 (틀린 키 1~{GREAT_MAX_WRONG}개)</span>
+              <span style={{ color: PALETTE.moss500 }}>훌륭 (틀린 키 1~{GREAT_MAX_WRONG}개)</span>
               {" "}— Elite 20% / Rare 55% / Normal 25%
             </p>
             <p>
-              <span style={{ color: "#facc15" }}>무난 (틀린 키 {GREAT_MAX_WRONG + 1}~{GOOD_MAX_WRONG}개)</span>
+              <span style={{ color: PALETTE.ember500 }}>무난 (틀린 키 {GREAT_MAX_WRONG + 1}~{GOOD_MAX_WRONG}개)</span>
               {" "}— Elite 5% / Rare 40% / Normal 55%
             </p>
             <p>
-              <span style={{ color: "#f87171" }}>아쉬움 (틀린 키 {GOOD_MAX_WRONG + 1}개 이상)</span>
+              <span style={{ color: PALETTE.ember500 }}>아쉬움 (틀린 키 {GOOD_MAX_WRONG + 1}개 이상)</span>
               {" "}— Rare 15% / Normal 85%
             </p>
           </div>
         ) : (
           <div className="space-y-1" style={{ color: C.textFaint }}>
             <p>
-              <span style={{ color: "#4ade80" }}>승리</span>
+              <span style={{ color: PALETTE.moss500 }}>승리</span>
               {" "}— Elite 20% / Rare 55% / Normal 25%
             </p>
             <p>
-              <span style={{ color: "#facc15" }}>무승부</span>
+              <span style={{ color: PALETTE.ember500 }}>무승부</span>
               {" "}— Elite 5% / Rare 35% / Normal 60%
             </p>
             <p>
-              <span style={{ color: "#f87171" }}>패배</span>
+              <span style={{ color: PALETTE.ember500 }}>패배</span>
               {" "}— Rare 15% / Normal 85%
             </p>
           </div>
@@ -457,7 +458,7 @@ function RecipeDetailPanel({
                 background: C.btnBg,
                 border: `1px solid ${C.btnBorder}`,
                 color: C.textPrimary,
-                boxShadow: "0 0 16px rgba(180,120,30,0.2)",
+                boxShadow: "0 0 16px rgba(132, 75, 63, .468)",
               }
             : {
                 background: C.btnDisabledBg,
@@ -514,7 +515,7 @@ function CraftResultPanel({
         {/* 아티팩트 능력치 */}
         {isArtifact && result.statBonuses && result.statBonuses.length > 0 && (
           <div className="mt-4 text-left space-y-1.5 rounded-lg p-3"
-            style={{ background: "rgba(0,0,0,0.35)", border: `1px solid ${C.border}` }}>
+            style={{ background: "rgba(13, 18, 35, .35)", border: `1px solid ${C.border}` }}>
             <p className="text-[10px] font-bold uppercase tracking-widest mb-2"
               style={{ color: C.textFaint }}>능력치</p>
             {result.statBonuses.map((b) => (
@@ -538,7 +539,7 @@ function CraftResultPanel({
         onClick={onContinue}
         className="w-full rounded-lg py-2.5 text-sm font-bold transition hover:brightness-110"
         style={{
-          background: "rgba(40,22,8,0.7)",
+          background: "rgba(66, 61, 70, .066)",
           border: `1px solid ${C.border}`,
           color: C.textMuted,
         }}

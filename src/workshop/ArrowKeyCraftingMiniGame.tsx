@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PALETTE } from "../shared/palette";
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 
@@ -74,18 +75,18 @@ function calcRating(wrongCount: number): ArrowMiniGameResult["rating"] {
 // ─── 팔레트 ───────────────────────────────────────────────────────────────────
 
 const C = {
-  bg:          "#160c04",
-  card:        "#2a1508",
-  border:      "rgba(180,120,30,0.45)",
-  borderGold:  "rgba(212,160,23,0.8)",
-  textPrimary: "#f5e6c8",
-  textMuted:   "#c4a46b",
-  textFaint:   "#8b6014",
-  gold:        "#d4a017",
-  goldDim:     "#b47828",
-  green:       "#4ade80",
-  red:         "#f87171",
-  yellow:      "#facc15",
+  bg:          PALETTE.shadow900,
+  card:        PALETTE.stone600,
+  border:      "rgba(132, 75, 63, 1)",
+  borderGold:  "rgba(233, 148, 65, .807)",
+  textPrimary: PALETTE.cream100,
+  textMuted:   PALETTE.sand300,
+  textFaint:   PALETTE.earth500,
+  gold:        PALETTE.ember500,
+  goldDim:     PALETTE.earth500,
+  green:       PALETTE.moss500,
+  red:         PALETTE.ember500,
+  yellow:      PALETTE.ember500,
 };
 
 const RATING_LABEL: Record<ArrowMiniGameResult["rating"], string> = {
@@ -300,8 +301,8 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
 
   // 큰 화살표 색상
   const arrowBg = isFeedback
-    ? isSuccess ? "rgba(74,222,128,0.18)" : "rgba(248,113,113,0.18)"
-    : "rgba(180,120,30,0.12)";
+    ? isSuccess ? "rgba(122, 132, 85, .476)" : "rgba(233, 148, 65, .152)"
+    : "rgba(132, 75, 63, .281)";
   const arrowBorder = isFeedback
     ? isSuccess ? C.green : C.red
     : C.borderGold;
@@ -310,9 +311,9 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
     : C.textPrimary;
   const arrowShadow = isFeedback
     ? isSuccess
-      ? "0 0 36px rgba(74,222,128,0.4)"
-      : "0 0 36px rgba(248,113,113,0.4)"
-    : "0 0 24px rgba(212,160,23,0.18)";
+      ? "0 0 36px rgba(122, 132, 85, 1)"
+      : "0 0 36px rgba(233, 148, 65, .338)"
+    : "0 0 24px rgba(233, 148, 65, .181)";
 
   // 피드백 중 큰 심볼
   const bigSymbol = isFeedback
@@ -349,16 +350,16 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
               className="flex h-7 w-7 flex-col items-center justify-center rounded-full text-xs font-black"
               style={{
                 background: done
-                  ? res === "s" ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"
+                  ? res === "s" ? "rgba(122, 132, 85, .529)" : "rgba(233, 148, 65, .169)"
                   : active
-                    ? "rgba(212,160,23,0.25)"
-                    : "rgba(255,255,255,0.05)",
+                    ? "rgba(233, 148, 65, .252)"
+                    : "rgba(243, 229, 185, .064)",
                 border: `1px solid ${
                   done
-                    ? res === "s" ? "rgba(74,222,128,0.55)" : "rgba(248,113,113,0.55)"
+                    ? res === "s" ? "rgba(122, 132, 85, 1)" : "rgba(233, 148, 65, .465)"
                     : active
                       ? C.borderGold
-                      : "rgba(255,255,255,0.1)"
+                      : "rgba(243, 229, 185, .127)"
                 }`,
                 color: done
                   ? res === "s" ? C.green : C.red
@@ -380,14 +381,14 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
       {/* 타이머 바 */}
       <div
         className="mb-3 h-2 overflow-hidden rounded-full"
-        style={{ background: "rgba(255,255,255,0.07)" }}
+        style={{ background: "rgba(243, 229, 185, .089)" }}
       >
         <div
           className="h-full rounded-full"
           style={{
             width: `${timeProgress * 100}%`,
             background:
-              timeProgress > 0.5 ? C.gold : timeProgress > 0.25 ? "#f59e0b" : "#ef4444",
+              timeProgress > 0.5 ? C.gold : timeProgress > 0.25 ? PALETTE.ember500 : PALETTE.ember700,
             transition: "background 0.3s",
           }}
         />
@@ -412,16 +413,16 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
                 fontSize:   active ? 17 : 13,
                 flexShrink: 0,
                 background: done
-                  ? isMiss ? "rgba(248,113,113,0.15)" : "rgba(74,222,128,0.15)"
+                  ? isMiss ? "rgba(233, 148, 65, .127)" : "rgba(122, 132, 85, .397)"
                   : active
-                    ? "rgba(212,160,23,0.25)"
-                    : "rgba(255,255,255,0.04)",
+                    ? "rgba(233, 148, 65, .252)"
+                    : "rgba(243, 229, 185, .051)",
                 border: `1px solid ${
                   done
-                    ? isMiss ? "rgba(248,113,113,0.5)" : "rgba(74,222,128,0.5)"
+                    ? isMiss ? "rgba(233, 148, 65, .423)" : "rgba(122, 132, 85, 1)"
                     : active
                       ? C.borderGold
-                      : "rgba(255,255,255,0.08)"
+                      : "rgba(243, 229, 185, .102)"
                 }`,
                 color: done
                   ? isMiss ? C.red : C.green
@@ -431,7 +432,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
                       ? C.textFaint
                       : C.textMuted,
                 opacity: isFeedback ? (isSuccess ? 0.6 : 0.4) : 1,
-                boxShadow: active ? `0 0 10px rgba(212,160,23,0.3)` : "none",
+                boxShadow: active ? `0 0 10px rgba(233, 148, 65, .302)` : "none",
                 transition: "all 0.12s",
               }}
             >

@@ -1,4 +1,5 @@
 import type { ArtifactStatBonus, CraftingDifficulty, CraftingRecipe, CraftingStationType } from "../shared/crafting";
+import { PALETTE } from "../shared/palette";
 
 export const DIFFICULTY_LABEL: Record<CraftingDifficulty, string> = {
   easy:   "쉬움",
@@ -7,9 +8,9 @@ export const DIFFICULTY_LABEL: Record<CraftingDifficulty, string> = {
 };
 
 export const DIFFICULTY_COLOR: Record<CraftingDifficulty, string> = {
-  easy:   "#22c55e",
-  normal: "#f59e0b",
-  hard:   "#ef4444",
+  easy:   PALETTE.moss500,
+  normal: PALETTE.ember500,
+  hard:   PALETTE.ember700,
 };
 
 export const STATION_LABEL: Record<CraftingStationType, string> = {

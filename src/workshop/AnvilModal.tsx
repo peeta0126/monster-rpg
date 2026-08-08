@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "../shared/playerStore";
 import type { ArtifactInstance } from "../shared/crafting";
+import { PALETTE } from "../shared/palette";
 import {
   QUALITY_COLOR,
   QUALITY_LABEL,
@@ -20,26 +21,26 @@ import {
 // ─── 팔레트 (제작 공방 공통) ──────────────────────────────────────────────────
 
 const C = {
-  bg:           "#160c04",
-  panel:        "#1e1007",
-  aside:        "#130a03",
-  card:         "#2a1508",
-  cardSel:      "#3d2008",
-  border:       "rgba(180,120,30,0.45)",
-  borderGold:   "rgba(212,160,23,0.85)",
-  textPrimary:  "#f5e6c8",
-  textMuted:    "#c4a46b",
-  textFaint:    "#8b6014",
-  gold:         "#d4a017",
-  goldDim:      "#b47828",
-  btnBg:        "rgba(180,120,30,0.22)",
-  btnBorder:    "rgba(212,160,23,0.6)",
-  disabledBg:   "rgba(30,16,7,0.7)",
-  disabledBorder:"rgba(80,50,20,0.4)",
-  disabledText: "#5a3c18",
-  green:        "#4ade80",
-  red:          "#f87171",
-  yellow:       "#facc15",
+  bg:           PALETTE.shadow900,
+  panel:        PALETTE.shadow900,
+  aside:        PALETTE.shadow900,
+  card:         PALETTE.stone600,
+  cardSel:      PALETTE.earth500,
+  border:       "rgba(132, 75, 63, 1)",
+  borderGold:   "rgba(233, 148, 65, .857)",
+  textPrimary:  PALETTE.cream100,
+  textMuted:    PALETTE.sand300,
+  textFaint:    PALETTE.earth500,
+  gold:         PALETTE.ember500,
+  goldDim:      PALETTE.earth500,
+  btnBg:        "rgba(132, 75, 63, .515)",
+  btnBorder:    "rgba(233, 148, 65, .605)",
+  disabledBg:   "rgba(13, 18, 35, .7)",
+  disabledBorder:"rgba(132, 75, 63, .141)",
+  disabledText: PALETTE.earth500,
+  green:        PALETTE.moss500,
+  red:          PALETTE.ember500,
+  yellow:       PALETTE.ember500,
 };
 
 // ─── 탭 정의 ──────────────────────────────────────────────────────────────────
@@ -103,7 +104,7 @@ function ArtifactCard({
       style={{
         background:  selected ? C.cardSel : C.card,
         border:      `1px solid ${selected ? C.borderGold : C.border}`,
-        boxShadow:   selected ? `0 0 14px rgba(180,120,30,0.3)` : "none",
+        boxShadow:   selected ? `0 0 14px rgba(132, 75, 63, .702)` : "none",
         opacity:     dim ? 0.4 : 1,
         cursor:      onClick ? "pointer" : "default",
       }}
@@ -111,7 +112,7 @@ function ArtifactCard({
       <div className="flex items-center gap-2.5">
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg"
-          style={{ background: "rgba(120,70,15,0.35)", border: `1px solid ${color}44` }}
+          style={{ background: "rgba(132, 75, 63, .282)", border: `1px solid ${color}44` }}
         >
           {ARTIFACT_EMOJI[artifact.itemId] ?? "✨"}
         </div>
@@ -189,13 +190,13 @@ function LevelUpPanel({
             {lv} / {maxLv}
           </p>
         </div>
-        <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(243, 229, 185, .089)" }}>
           <div
             className="h-full rounded-full"
             style={{
               width: `${(lv / maxLv) * 100}%`,
               background: isMax
-                ? `linear-gradient(90deg,${C.gold},#f59e0b)`
+                ? `linear-gradient(90deg,${C.gold},${PALETTE.ember500})`
                 : `linear-gradient(90deg,${color}88,${color})`,
             }}
           />
@@ -203,7 +204,7 @@ function LevelUpPanel({
         {isMax
           ? <p className="mt-1.5 text-center text-[10px] font-black" style={{ color: C.gold }}>✦ 최대 레벨 달성 ✦</p>
           : willUnlockNext
-            ? <p className="mt-1.5 text-center text-[10px] font-bold" style={{ color: "#a78bfa" }}>✦ 다음 레벨업 시 부가 능력치 해제! ✦</p>
+            ? <p className="mt-1.5 text-center text-[10px] font-bold" style={{ color: PALETTE.mist300 }}>✦ 다음 레벨업 시 부가 능력치 해제! ✦</p>
             : <p className="mt-1.5 text-center text-[10px]" style={{ color: C.textFaint }}>
                 부가 능력치 해제까지 {levelsToUnlock}레벨 남음
               </p>
@@ -258,14 +259,14 @@ function LevelUpPanel({
                 key={i}
                 className="flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-bold"
                 style={{
-                  background: "rgba(167,139,250,0.1)",
-                  border:     "1px solid rgba(167,139,250,0.3)",
-                  color:      "#c4b5fd",
+                  background: "rgba(92, 147, 150, .133)",
+                  border:     "1px solid rgba(92, 147, 150, .4)",
+                  color:      PALETTE.mist300,
                 }}
               >
                 <span>✦</span>
                 <span>{b.label}</span>
-                <span className="ml-auto text-[9px] font-normal" style={{ color: "rgba(167,139,250,0.6)" }}>
+                <span className="ml-auto text-[9px] font-normal" style={{ color: "rgba(92, 147, 150, .8)" }}>
                   Lv.{(i + 1) * 10} 해제
                 </span>
               </div>
@@ -278,8 +279,8 @@ function LevelUpPanel({
                   key={`locked-${i}`}
                   className="flex items-center gap-1.5 rounded px-2 py-1 text-[11px]"
                   style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border:     "1px solid rgba(255,255,255,0.07)",
+                    background: "rgba(243, 229, 185, .038)",
+                    border:     "1px solid rgba(243, 229, 185, .089)",
                     color:      C.textFaint,
                   }}
                 >
@@ -323,10 +324,10 @@ function LevelUpPanel({
         className="w-full rounded-lg py-3 text-sm font-black transition hover:brightness-125"
         style={
           canDo
-            ? { background: willUnlockNext ? "rgba(139,92,246,0.25)" : C.btnBg,
-                border:     `1px solid ${willUnlockNext ? "rgba(139,92,246,0.7)" : C.btnBorder}`,
+            ? { background: willUnlockNext ? "rgba(92, 147, 150, .194)" : C.btnBg,
+                border:     `1px solid ${willUnlockNext ? "rgba(92, 147, 150, .543)" : C.btnBorder}`,
                 color:      C.textPrimary,
-                boxShadow:  willUnlockNext ? "0 0 16px rgba(139,92,246,0.3)" : "0 0 16px rgba(180,120,30,0.2)" }
+                boxShadow:  willUnlockNext ? "0 0 16px rgba(92, 147, 150, .233)" : "0 0 16px rgba(132, 75, 63, .468)" }
             : { background: C.disabledBg, border: `1px solid ${C.disabledBorder}`, color: C.disabledText,
                 cursor: "not-allowed" }
         }
@@ -390,8 +391,8 @@ function EnhancePanel({
                 key={i}
                 className="flex h-8 w-8 items-center justify-center rounded font-black text-sm"
                 style={{
-                  background: filled ? "rgba(212,160,23,0.25)" : next ? "rgba(212,160,23,0.1)" : "rgba(255,255,255,0.05)",
-                  border: `1px solid ${filled ? C.borderGold : next ? "rgba(212,160,23,0.3)" : "rgba(255,255,255,0.08)"}`,
+                  background: filled ? "rgba(233, 148, 65, .252)" : next ? "rgba(233, 148, 65, .101)" : "rgba(243, 229, 185, .064)",
+                  border: `1px solid ${filled ? C.borderGold : next ? "rgba(233, 148, 65, .302)" : "rgba(243, 229, 185, .102)"}`,
                   color: filled ? C.gold : next ? C.goldDim : C.textFaint,
                 }}
               >
@@ -434,7 +435,7 @@ function EnhancePanel({
       {material && !isMax && (
         <div
           className="rounded-lg p-2 text-xs text-center"
-          style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)",
+          style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
             color: C.red }}
         >
           ⚠ 재료 장비는 강화 후 사라집니다
@@ -449,7 +450,7 @@ function EnhancePanel({
         style={
           canDo
             ? { background: C.btnBg, border: `1px solid ${C.btnBorder}`, color: C.textPrimary,
-                boxShadow: "0 0 16px rgba(180,120,30,0.2)" }
+                boxShadow: "0 0 16px rgba(132, 75, 63, .468)" }
             : { background: C.disabledBg, border: `1px solid ${C.disabledBorder}`, color: C.disabledText,
                 cursor: "not-allowed" }
         }
@@ -513,7 +514,7 @@ function DisassemblePanel({
 
       <div
         className="rounded-lg p-2.5 text-xs text-center"
-        style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)",
+        style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
           color: C.red }}
       >
         ⚠ 분해하면 이 장비는 영구히 사라집니다
@@ -524,7 +525,7 @@ function DisassemblePanel({
           type="button"
           onClick={() => setConfirm(true)}
           className="w-full rounded-lg py-3 text-sm font-black transition hover:brightness-125"
-          style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)",
+          style={{ background: "rgba(168, 61, 31, .3)", border: "1px solid rgba(168, 61, 31, .801)",
             color: C.red }}
         >
           🔨  분해하기
@@ -544,8 +545,8 @@ function DisassemblePanel({
             type="button"
             onClick={onDisassemble}
             className="flex-1 rounded-lg py-3 text-sm font-black transition hover:brightness-125"
-            style={{ background: "rgba(239,68,68,0.3)", border: "1px solid rgba(239,68,68,0.7)",
-              color: "#fca5a5" }}
+            style={{ background: "rgba(168, 61, 31, .601)", border: "1px solid rgba(168, 61, 31, 1)",
+              color: PALETTE.ember500 }}
           >
             확인 · 분해
           </button>
@@ -670,7 +671,7 @@ function SynthesizePanel({
       {canSynth && (
         <div
           className="rounded-lg p-2.5 text-xs text-center"
-          style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)",
+          style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
             color: C.red }}
         >
           ⚠ 두 장비 모두 사라지고 새 등급 장비가 생성됩니다
@@ -703,10 +704,10 @@ function Toast({ msg }: { msg: string }) {
     <div
       className="pointer-events-none fixed bottom-8 left-1/2 z-[1000] -translate-x-1/2 rounded-xl px-5 py-2.5 text-sm font-black shadow-2xl"
       style={{
-        background: "rgba(18,9,2,0.97)",
-        border:     "1px solid rgba(212,160,23,0.7)",
+        background: "rgba(13, 18, 35, .97)",
+        border:     "1px solid rgba(233, 148, 65, .706)",
         color:      C.textPrimary,
-        boxShadow:  "0 0 24px rgba(180,120,30,0.35)",
+        boxShadow:  "0 0 24px rgba(132, 75, 63, .819)",
       }}
     >
       {msg}
@@ -868,7 +869,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
   return (
     <div
       className="fixed inset-0 z-[900] flex items-center justify-center px-4"
-      style={{ background: "rgba(6,3,1,0.82)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(13, 18, 35, .82)", backdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
@@ -876,7 +877,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
         style={{
           background:  C.bg,
           border:      `1px solid ${C.borderGold}`,
-          boxShadow:   "0 0 60px rgba(180,120,30,0.25), 0 8px 40px rgba(0,0,0,0.85)",
+          boxShadow:   "0 0 60px rgba(132, 75, 63, .585), 0 8px 40px rgba(13, 18, 35, .85)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -905,7 +906,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
             type="button"
             onClick={onClose}
             className="rounded-lg px-3 py-2 text-sm font-bold transition hover:brightness-125"
-            style={{ background: "rgba(60,20,5,0.6)", border: `1px solid ${C.border}`, color: C.textMuted }}
+            style={{ background: "rgba(13, 18, 35, .6)", border: `1px solid ${C.border}`, color: C.textMuted }}
           >
             닫기
           </button>
@@ -928,7 +929,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
                   background: active ? C.btnBg : "transparent",
                   border:     `1px solid ${active ? C.btnBorder : "transparent"}`,
                   color:      active ? C.textPrimary : C.textFaint,
-                  boxShadow:  active ? "0 0 10px rgba(180,120,30,0.15)" : "none",
+                  boxShadow:  active ? "0 0 10px rgba(132, 75, 63, .351)" : "none",
                 }}
               >
                 <span>{t.icon}</span>
