@@ -20,8 +20,9 @@ import maxPotionImg      from "../assets/potions/max_potion.svg";
 import antidoteImg       from "../assets/potions/antidote.svg";
 import attackBuffImg     from "../assets/potions/attack_buff.svg";
 import strongAttackImg   from "../assets/potions/strong_attack_buff.svg";
-import tabBagImg         from "../assets/icons/tab_bag.svg";
 import { PALETTE } from "../shared/palette";
+import { SlotGrid, EmptySlot } from "../shared/ui/SlotGrid";
+import { GameBackground } from "../shared/ui/GameBackground";
 
 const MATERIAL_IMG: Record<string, string> = {
   herb: herbImg, berry: berryImg, root: rootImg, crystal: crystalImg,
@@ -126,13 +127,8 @@ function MaterialsSection({
         </p>
       </div>
 
-      {total === 0 ? (
-        <p className="text-pixel-sm text-earth-400 py-4 text-center">
-          숲 탐험에서 재료를 획득할 수 있습니다.
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {MATERIALS.map((mat, i) => {
+      <SlotGrid cols={5} rows={3}>
+        {MATERIALS.map((mat, i) => {
             const cnt    = materials[mat.id] ?? 0;
             const hasImg = mat.id in MATERIAL_IMG;
             if (cnt === 0) return null;
@@ -175,7 +171,12 @@ function MaterialsSection({
               </div>
             );
           })}
-        </div>
+      </SlotGrid>
+
+      {total === 0 && (
+        <p className="mt-3 text-pixel-sm text-earth-400 text-center">
+          숲 탐험에서 재료를 획득할 수 있습니다.
+        </p>
       )}
     </div>
   );
@@ -189,16 +190,6 @@ function PotionsSection({
   craftedPotions: CraftedPotionStack[];
   discardPotion: (stackId: string, amount: number) => void;
 }) {
-  if (craftedPotions.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-3 py-8 text-center">
-<img src={tabBagImg} alt="" className="w-12 h-12 pixel-img opacity-15" />
-        <p className="text-pixel-sm font-bold text-sand-300">보유 물약이 없습니다</p>
-        <p className="text-pixel-sm text-earth-400">제작 공방의 연금술 제작대에서 물약을 만들어 보세요.</p>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="mb-3">
@@ -206,13 +197,13 @@ function PotionsSection({
           style={{ color: "rgba(132, 75, 63, 1)" }}>POTIONS</p>
         <p className="text-pixel-sm font-black text-sand-200">
           보유 물약{" "}
-          <span className="text-ember-500 font-mono">
+          <span className="font-mono text-ember-500">
             ×{craftedPotions.reduce((s, p) => s + p.quantity, 0)}
           </span>
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <SlotGrid cols={2} rows={2} emptySlot={() => <EmptySlot className="min-h-20" />}>
         {craftedPotions.map((stack, i) => {
           const color = QUALITY_COLOR[stack.quality];
           return (
@@ -266,7 +257,13 @@ function PotionsSection({
             </div>
           );
         })}
-      </div>
+      </SlotGrid>
+
+      {craftedPotions.length === 0 && (
+        <p className="mt-3 text-center text-pixel-sm text-earth-400">
+          제작 공방의 연금술 제작대에서 물약을 만들어 보세요.
+        </p>
+      )}
     </div>
   );
 }
@@ -279,17 +276,6 @@ function ArtifactsSection({
   craftedArtifacts: ArtifactInstance[];
   discardArtifact: (instanceId: string) => void;
 }) {
-  if (craftedArtifacts.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <div className="text-pixel-lg opacity-20">🔮</div>
-        <p className="text-pixel-sm font-bold text-sand-300">보유 아티팩트가 없습니다</p>
-        <p className="text-pixel-sm text-earth-400">제작 공방의 아티팩트 제작대에서 만들어 보세요.</p>
-        <p className="text-pixel-sm text-earth-400">제작 후 내 몬스터 메뉴에서 장착할 수 있습니다.</p>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="mb-3">
@@ -298,7 +284,7 @@ function ArtifactsSection({
         <p className="text-pixel-sm font-black text-sand-200">보유 아티팩트 <span className="text-ember-500 font-mono">{craftedArtifacts.length}개</span></p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <SlotGrid cols={3} rows={1} emptySlot={() => <EmptySlot className="min-h-24" />}>
         {craftedArtifacts.map((item, i) => {
           const color = QUALITY_COLOR[item.quality];
           return (
@@ -366,7 +352,13 @@ function ArtifactsSection({
             </div>
           );
         })}
-      </div>
+      </SlotGrid>
+
+      {craftedArtifacts.length === 0 && (
+        <p className="mt-3 text-center text-pixel-sm text-earth-400">
+          제작 공방의 아티팩트 제작대에서 만들고, 내 몬스터 메뉴에서 장착합니다.
+        </p>
+      )}
     </div>
   );
 }
@@ -406,50 +398,46 @@ export default function FarmPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col text-cream-100 overflow-hidden"
-      style={{ background: `linear-gradient(160deg, ${PALETTE.shadow900} 0%, ${PALETTE.shadow700} 50%, ${PALETTE.shadow900} 100%)` }}>
+    <div className="relative h-screen flex flex-col text-cream-100 overflow-hidden">
+      <GameBackground />
       <style>{BAG_STYLES}</style>
 
       {/* ── 헤더 ── */}
-      <header style={{
+      <header className="relative" style={{
         background: "rgba(13, 18, 35, .92)",
         borderBottom: "1px solid rgba(132, 75, 63, .229)",
         boxShadow: "0 1px 0 rgba(233, 148, 65, .068)",
       }}>
         <div style={{ height: 2, background: "linear-gradient(90deg,transparent,rgba(233, 148, 65, .357),transparent)" }} />
 
-        <div className="flex items-center justify-between px-6 py-3">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate(backPath)}
               className="rounded-xl px-3 py-1.5 text-pixel-sm font-semibold transition"
               style={{ background: "rgba(13, 18, 35, .8)", border: "1px solid rgba(132, 75, 63, .382)", color: "rgba(205, 178, 126, .59)" }}>
               {backLabel}
             </button>
-            <div>
-              <p className="text-pixel-sm uppercase tracking-widest font-bold"
-                style={{ color: "rgba(132, 75, 63, 1)" }}>BAG</p>
-              <p className="text-title-sm font-black text-cream-100">가방</p>
-            </div>
+            <p className="text-title-sm font-black text-cream-100">가방</p>
           </div>
 
-          {/* 요약 */}
-          <div className="hidden sm:flex items-center gap-3">
+          {/* 총량 요약. 탭과 크기가 비슷하면 뭐가 조작이고 뭐가 정보인지 안 보여서
+              라벨은 작게 죽이고 숫자만 남긴다 */}
+          <div className="hidden items-center gap-4 sm:flex">
             {[
               { icon: "🌿", label: "재료",     value: totalMats },
               { icon: "🧪", label: "물약",     value: totalPotions },
               { icon: "🔮", label: "아티팩트", value: totalArtifacts },
             ].map((s) => (
-              <div key={s.label} className="text-center px-3 py-1.5 rounded-xl"
-                style={{ background: "rgba(13, 18, 35, .6)", border: "1px solid rgba(132, 75, 63, .07)" }}>
-                <p className="text-pixel-sm text-earth-400 uppercase tracking-wider">{s.label}</p>
-                <p className="text-pixel-sm font-black text-sand-200">{s.icon} {s.value}</p>
+              <div key={s.label} className="flex items-baseline gap-1.5">
+                <span className="text-pixel-sm text-earth-400">{s.icon}</span>
+                <span className="text-pixel-sm font-black text-sand-200">{s.value}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* ── 탭 바 ── */}
-        <div className="flex">
+        <div className="mx-auto flex w-full max-w-5xl px-2">
           {TAB_DATA.map((tab) => {
             const isActive = activeTab === tab.id;
             const b = badge[tab.id];
@@ -458,7 +446,7 @@ export default function FarmPage() {
                 className="relative flex items-center gap-2 px-5 py-3 text-pixel-sm font-bold transition-all"
                 style={{
                   color: isActive ? PALETTE.ember500 : "rgba(205, 178, 126, .12)",
-                  borderBottom: isActive ? `2px solid ` : "2px solid transparent",
+                  borderBottom: isActive ? `2px solid ${PALETTE.ember500}` : "2px solid transparent",
                   background: isActive ? "rgba(233, 148, 65, .068)" : "transparent",
                 }}>
                 <span>{tab.label}</span>
@@ -483,33 +471,22 @@ export default function FarmPage() {
       </header>
 
       {/* ── 탭 콘텐츠 ── */}
-      <div className="flex-1 overflow-y-auto p-5">
+      <div className="relative mx-auto w-full max-w-5xl flex-1 overflow-y-auto p-5">
         {(activeTab === "all" || activeTab === "materials") && (
           <div style={{ animation: "bagIn .3s ease both" }}>
             <MaterialsSection materials={materials} discardMaterial={discardMaterial} />
           </div>
         )}
 
-        {activeTab === "all" && (totalPotions > 0 || totalArtifacts > 0) && (
+        {activeTab === "all" && (
           <div className="mt-8" style={{ animation: "bagIn .35s ease .05s both" }}>
             <PotionsSection craftedPotions={craftedPotions} discardPotion={discardPotion} />
           </div>
         )}
 
-        {activeTab === "all" && totalArtifacts > 0 && (
+        {activeTab === "all" && (
           <div className="mt-8" style={{ animation: "bagIn .4s ease .1s both" }}>
             <ArtifactsSection craftedArtifacts={craftedArtifacts} discardArtifact={discardArtifact} />
-          </div>
-        )}
-
-        {activeTab === "all" && totalMats === 0 && totalPotions === 0 && totalArtifacts === 0 && (
-          <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-            <div className="text-pixel-lg opacity-20">🎒</div>
-            <p className="font-bold text-sand-300">가방이 비어 있습니다</p>
-            <p className="text-pixel-sm text-earth-400">
-              숲 탐험에서 재료를 얻고,<br />
-              제작 공방에서 아이템을 만들어 보세요.
-            </p>
           </div>
         )}
 
