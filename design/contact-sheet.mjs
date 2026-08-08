@@ -89,7 +89,8 @@ async function main() {
     });
   }
 
-  const outPath = path.join(DESIGN_DIR, `contact-sheet-${label}.png`);
+  // label 에 하위 경로("responsive/390x844")가 올 수 있어 파일명으로는 평평하게 만든다
+  const outPath = path.join(DESIGN_DIR, `contact-sheet-${label.replace(/[\/]/g, "-")}.png`);
   await sharp({
     create: { width: sheetW, height: sheetH, channels: 4, background: BG },
   })
