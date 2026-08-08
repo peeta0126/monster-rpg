@@ -1,6 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { openWorkshop, readPos, walkTo } from "./workshopNav";
 import {
-  INITIAL_POS, PLAYER_BOUNDS, CRAFTING_STATIONS, EXIT_ZONE, COLLISION_BOXES, isBlocked,
+  INITIAL_POS, PLAYER_BOUNDS, CRAFTING_STATIONS, EXIT_ZONE, COLLISION_BOXES,
 } from "../src/workshop/workshopLayout";
 
 /**
@@ -11,95 +12,6 @@ import {
  *
  * 로그인 우회는 capture.spec.ts 와 같은 방식(zustand persist 키에 게스트 세션 주입)이다.
  */
-
-const AUTH_STORAGE_KEY = "monster-rpg-auth";
-const GUEST_AUTH_STATE = JSON.stringify({
-  state: { token: null, username: null, isGuest: true, isDev: false },
-  version: 0,
-});
-
-/** 플레이어 스프라이트의 stage 기준 % 좌표를 읽는다 */
-async function readPos(page: Page): Promise<{ x: number; y: number }> {
-  return page.evaluate(() => {
-    const el = document.querySelector<HTMLElement>('img[alt="player"]')?.parentElement;
-    if (!el) throw new Error("플레이어 스프라이트를 찾을 수 없다");
-    return { x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
-  });
-}
-
-/**
- * 목표까지의 경로를 BFS 로 미리 구한다.
- *
- * 처음엔 "목표 방향으로 두 축을 같이 민다" 로 했는데 아티팩트 제작대에서 걸렸다.
- * 그 제작대는 중심이 자기 충돌 박스(x 14~36 / y 76~93) 안이라 위에서 돌아 들어가야
- * 하는데, 두 축을 같이 밀면 박스 모서리에 붙어 그대로 멈춘다. 사람은 돌아가지만
- * 단순 추적은 못 돈다 — 게임이 아니라 헬퍼의 문제였다.
- */
-function findPath(from: { x: number; y: number }, target: { x: number; y: number }, radius: number) {
-  const STEP = 1;
-  const key = (p: { x: number; y: number }) => `${p.x},${p.y}`;
-  const walkable = (p: { x: number; y: number }) =>
-    p.x >= PLAYER_BOUNDS.minX && p.x <= PLAYER_BOUNDS.maxX &&
-    p.y >= PLAYER_BOUNDS.minY && p.y <= PLAYER_BOUNDS.maxY &&
-    !isBlocked(p);
-
-  const start = { x: Math.round(from.x), y: Math.round(from.y) };
-  const prev = new Map<string, { x: number; y: number } | null>([[key(start), null]]);
-  const queue = [start];
-  let goal: { x: number; y: number } | null = null;
-
-  while (queue.length) {
-    const cur = queue.shift()!;
-    if (Math.hypot(cur.x - target.x, cur.y - target.y) <= radius) { goal = cur; break; }
-    for (const [dx, dy] of [[STEP, 0], [-STEP, 0], [0, STEP], [0, -STEP]]) {
-      const next = { x: cur.x + dx, y: cur.y + dy };
-      if (prev.has(key(next)) || !walkable(next)) continue;
-      prev.set(key(next), cur);
-      queue.push(next);
-    }
-  }
-  if (!goal) return null;
-
-  const path: { x: number; y: number }[] = [];
-  for (let n: { x: number; y: number } | null = goal; n; n = prev.get(key(n)) ?? null) path.unshift(n);
-  return path;
-}
-
-/** BFS 경로의 웨이포인트를 따라 방향키로 이동한다 */
-async function walkTo(page: Page, target: { x: number; y: number }, tolerance = 3) {
-  const path = findPath(await readPos(page), target, tolerance);
-  if (!path) return false;
-
-  const deadline = Date.now() + 30_000;
-  // 매 칸을 정확히 밟을 필요는 없다. 4칸마다 하나씩만 노려도 경로 모양은 유지된다.
-  for (const wp of path.filter((_, i) => i % 4 === 0 || i === path.length - 1)) {
-    while (Date.now() < deadline) {
-      const p = await readPos(page);
-      const dx = wp.x - p.x;
-      const dy = wp.y - p.y;
-      if (Math.hypot(dx, dy) <= 1.5) break;
-      const keys: string[] = [];
-      if (Math.abs(dx) > 0.8) keys.push(dx > 0 ? "ArrowRight" : "ArrowLeft");
-      if (Math.abs(dy) > 0.8) keys.push(dy > 0 ? "ArrowDown" : "ArrowUp");
-      if (!keys.length) break;
-      for (const k of keys) await page.keyboard.down(k);
-      await page.waitForTimeout(80);
-      for (const k of keys) await page.keyboard.up(k);
-    }
-  }
-  const end = await readPos(page);
-  return Math.hypot(end.x - target.x, end.y - target.y) <= tolerance + 1.5;
-}
-
-async function openWorkshop(page: Page) {
-  await page.addInitScript(
-    ([k, v]) => window.localStorage.setItem(k as string, v as string),
-    [AUTH_STORAGE_KEY, GUEST_AUTH_STATE],
-  );
-  await page.goto("/workshop");
-  await expect(page.locator('img[alt="player"]')).toBeVisible();
-  await page.waitForTimeout(300);
-}
 
 test.describe("workshop:", () => {
   test("스폰 위치가 INITIAL_POS 다", async ({ page }) => {

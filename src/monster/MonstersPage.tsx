@@ -337,13 +337,18 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
           </p>
           <div className="grid grid-cols-2 gap-2">
             {stats.map(([label, base, bonus]) => (
-              <div key={label} className="flex flex-col items-center rounded-lg py-2"
+              <div key={label} data-testid={`stat-${label}`}
+                className="flex flex-col items-center rounded-lg py-2"
                 style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(132, 75, 63, .105)" }}>
                 <span className="text-pixel-sm font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>{label}</span>
-                <span className="text-pixel-sm font-black text-sand-200 mt-0.5">
+                <span data-testid={`stat-${label}-value`} className="text-pixel-sm font-black text-sand-200 mt-0.5">
                   {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : base + bonus}
                 </span>
-                {bonus > 0 && <span className="text-pixel-sm font-bold text-moss-500">+{bonus}</span>}
+                {bonus > 0 && (
+                  <span data-testid={`stat-${label}-bonus`} className="text-pixel-sm font-bold text-moss-500">
+                    +{bonus}
+                  </span>
+                )}
               </div>
             ))}
           </div>
