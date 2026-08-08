@@ -49,26 +49,26 @@ export default function AdminPage() {
 
   if (!authedSecret) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
+      <div className="flex min-h-screen items-center justify-center bg-shadow-900 px-4">
         <form
-          className="w-full max-w-xs rounded-xl border-2 border-amber-700/50 bg-zinc-900 p-6"
+          className="w-full max-w-xs rounded-xl border-2 border-ember-700/50 bg-shadow-800 p-6"
           style={{ boxShadow: "0 0 26px rgba(180,140,60,0.2)" }}
           onSubmit={(e) => { e.preventDefault(); handleEnter(); }}
         >
-          <h1 className="mb-4 text-zinc-100" style={{ ...pixelFont, fontSize: 14 }}>관리자 접속</h1>
+          <h1 className="mb-4 text-cream-100" style={{ ...pixelFont, fontSize: 14 }}>관리자 접속</h1>
           <input
             type="password"
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="관리자 비밀키"
             autoFocus
-            className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-amber-500"
+            className="w-full rounded-md border border-stone-600 bg-shadow-900 px-3 py-2 text-sm text-cream-100 outline-none transition focus:border-ember-500"
           />
-          {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+          {error && <p className="mt-2 text-xs text-ember-500">{error}</p>}
           <button
             type="submit"
             disabled={pending}
-            className="mt-3 w-full rounded-md border-2 border-amber-400/90 bg-gradient-to-b from-amber-500 to-amber-800 py-2 font-bold text-amber-50 transition hover:brightness-110 disabled:opacity-40"
+            className="mt-3 w-full rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 py-2 font-bold text-cream-100 transition hover:brightness-110 disabled:opacity-40"
             style={{ ...pixelFont, fontSize: 11 }}
           >
             {pending ? "…" : "입장"}
@@ -79,18 +79,18 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-6 py-8 text-zinc-200">
-      <h1 className="mb-6 text-zinc-100" style={{ ...pixelFont, fontSize: 16 }}>
+    <div className="min-h-screen bg-shadow-900 px-6 py-8 text-sand-200">
+      <h1 className="mb-6 text-cream-100" style={{ ...pixelFont, fontSize: 16 }}>
         유저 관리 ({users.length}명)
       </h1>
 
       {error && (
-        <p className="mb-4 rounded border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-400">{error}</p>
+        <p className="mb-4 rounded border border-ember-700/60 bg-ember-700/11 px-3 py-2 text-sm text-ember-500">{error}</p>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+      <div className="overflow-x-auto rounded-lg border border-shadow-700">
         <table className="w-full text-left text-sm">
-          <thead className="bg-zinc-900 text-zinc-400">
+          <thead className="bg-shadow-800 text-sand-300">
             <tr>
               <th className="px-4 py-2 font-medium">아이디</th>
               <th className="px-4 py-2 font-medium">가입일</th>
@@ -100,23 +100,23 @@ export default function AdminPage() {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id} className="border-t border-zinc-800">
+              <tr key={u.id} className="border-t border-shadow-700">
                 <td className="px-4 py-2">{u.username}</td>
-                <td className="px-4 py-2 text-zinc-500">{formatDate(u.createdAt)}</td>
-                <td className="px-4 py-2 text-zinc-500">{formatDate(u.saveUpdatedAt)}</td>
+                <td className="px-4 py-2 text-sand-300">{formatDate(u.createdAt)}</td>
+                <td className="px-4 py-2 text-sand-300">{formatDate(u.saveUpdatedAt)}</td>
                 <td className="px-4 py-2 text-right">
                   {confirmId === u.id ? (
                     <span className="inline-flex gap-2">
                       <button
                         onClick={() => handleDelete(u.id)}
                         disabled={pending}
-                        className="rounded border border-red-700 px-2 py-1 text-xs text-red-400 transition hover:bg-red-950/40 disabled:opacity-40"
+                        className="rounded border border-ember-700 px-2 py-1 text-xs text-ember-500 transition hover:bg-ember-700/11 disabled:opacity-40"
                       >
                         확인
                       </button>
                       <button
                         onClick={() => setConfirmId(null)}
-                        className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400 transition hover:bg-zinc-800"
+                        className="rounded border border-stone-600 px-2 py-1 text-xs text-sand-300 transition hover:bg-shadow-700"
                       >
                         취소
                       </button>
@@ -124,7 +124,7 @@ export default function AdminPage() {
                   ) : (
                     <button
                       onClick={() => setConfirmId(u.id)}
-                      className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400 transition hover:border-red-700 hover:text-red-400"
+                      className="rounded border border-stone-600 px-2 py-1 text-xs text-sand-300 transition hover:border-ember-700 hover:text-ember-500"
                     >
                       삭제
                     </button>
@@ -136,7 +136,7 @@ export default function AdminPage() {
         </table>
       </div>
 
-      {users.length === 0 && <p className="mt-4 text-zinc-500">가입된 유저가 없습니다.</p>}
+      {users.length === 0 && <p className="mt-4 text-sand-300">가입된 유저가 없습니다.</p>}
     </div>
   );
 }

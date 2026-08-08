@@ -72,6 +72,17 @@ export const ELEMENT_CHIP_CLASS: Record<keyof typeof ELEMENT_COLOR, string> = {
   normal:   "bg-shadow-700/80 text-sand-300 border-stone-600",
 };
 
+/**
+ * HP 잔량(%) → 색 토큰. ART_DIRECTION 3-2 규칙: 100~50% moss / 50~20% ember-500 /
+ * 20% 이하 ember-700. 전투 캔버스·전투 UI·몬스터 화면이 전부 이 함수를 쓴다 —
+ * 세 곳이 각자 경계값을 들고 있으면 같은 HP 인데 화면마다 색이 달라진다.
+ */
+export function hpToken(pct: number): PaletteName {
+  if (pct > 50) return "moss500";
+  if (pct > 20) return "ember500";
+  return "ember700";
+}
+
 /** `rgba(r, g, b, a)` 문자열. 그림자·오버레이는 검정 대신 shadow-800/900 을 쓴다. */
 export function rgba(name: PaletteName, alpha: number): string {
   const n = HEX[name];

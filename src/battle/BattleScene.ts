@@ -3,6 +3,7 @@ import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
 import { getBattleInitData } from "./battleInitStore";
 import { markSceneReady } from "../shared/phaser/sceneReady";
+import { PALETTE, HEX, hpToken } from "../shared/palette";
 import type { StatusEffect } from "../shared/game";
 import type { BattleResultPayload, BattlePlayerSwitchPayload } from "../shared/phaser/events";
 
@@ -51,10 +52,10 @@ const P_BAR_Y = E_BAR_Y;
 // ─── 층별 횃불 색 ──────────────────────────────────────────────────────────────
 
 function torchPalette(floor: number, isBoss: boolean) {
-  if (isBoss) return { base: 0x8800cc, mid: 0xcc33ff, tip: 0xee99ff, glow: 0x660099 };
-  if (floor <= 10)  return { base: 0xff3300, mid: 0xff8820, tip: 0xffdd44, glow: 0xff6610 };
-  if (floor <= 20)  return { base: 0xcc2200, mid: 0xff5500, tip: 0xffaa22, glow: 0xaa3300 };
-  return { base: 0x991100, mid: 0xdd3300, tip: 0xff7711, glow: 0x770011 };
+  if (isBoss) return { base: HEX.mist500, mid: HEX.mist300, tip: HEX.cream100, glow: HEX.mist500 };
+  if (floor <= 10)  return { base: HEX.ember600, mid: HEX.ember500, tip: HEX.cream100, glow: HEX.ember500 };
+  if (floor <= 20)  return { base: HEX.ember700, mid: HEX.ember600, tip: HEX.ember500, glow: HEX.ember600 };
+  return { base: HEX.ember700, mid: HEX.ember700, tip: HEX.ember600, glow: HEX.ember700 };
 }
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
@@ -154,10 +155,10 @@ export default class BattleScene extends Phaser.Scene {
     // 보스층 뱃지
     if (isBoss) {
       const bossBg = this.add.graphics().setDepth(20);
-      bossBg.fillStyle(0x660099, 0.85);
+      bossBg.fillStyle(HEX.mist500, 0.85);
       bossBg.fillRoundedRect(ENEMY_X - 36, PANEL_CY - PANEL_H / 2 - 22, 72, 18, 5);
       this.add.text(ENEMY_X, PANEL_CY - PANEL_H / 2 - 13, "★  BOSS  ★", {
-        fontSize: "11px", fontFamily: "monospace", color: "#ee99ff", fontStyle: "bold",
+        fontSize: "11px", fontFamily: "monospace", color: PALETTE.mist300, fontStyle: "bold",
       }).setOrigin(0.5, 0.5).setDepth(21);
     }
 
@@ -189,7 +190,7 @@ export default class BattleScene extends Phaser.Scene {
 
     // ── 벽 기반색 (보스층: 어두운 보라, 일반: 따뜻한 갈색) ──
     const wall = this.add.graphics().setDepth(0);
-    wall.fillStyle(isBoss ? 0x1e1030 : 0x3e2e1a, 1);
+    wall.fillStyle(isBoss ? HEX.shadow800 : HEX.stone600, 1);
     wall.fillRect(0, 0, W, BATTLE_H);
 
     // ── 돌 블록 그리드 ──
@@ -203,13 +204,13 @@ export default class BattleScene extends Phaser.Scene {
       // 블록 내부 (약간 다른 명도 — 홀수 행 살짝 밝게)
       if (row % 3 === 1) {
         const hi = this.add.graphics().setDepth(0);
-        hi.fillStyle(0x4a3820, 0.4);
+        hi.fillStyle(HEX.earth500, 0.4);
         hi.fillRect(0, y0, W, y1 - y0);
       }
 
       // 세로 조인트
       const joints = this.add.graphics().setDepth(1);
-      joints.lineStyle(1, 0x261a0c, 1);
+      joints.lineStyle(1, HEX.shadow900, 1);
       for (let x = offset; x <= W; x += bw) {
         joints.beginPath();
         joints.moveTo(x, y0);
@@ -225,26 +226,26 @@ export default class BattleScene extends Phaser.Scene {
 
     // ── 천장 (어두운 석조 아치 암시) ──
     const ceiling = this.add.graphics().setDepth(2);
-    ceiling.fillStyle(0x1e1308, 1);
+    ceiling.fillStyle(HEX.shadow900, 1);
     ceiling.fillRect(0, 0, W, 28);
-    ceiling.fillStyle(0x281a0c, 1);
+    ceiling.fillStyle(HEX.shadow800, 1);
     ceiling.fillRect(0, 28, W, 12);
 
     // ── 배경 중앙 아치/통로 (픽셀아트: 계단형 아치) ──
     const arch = this.add.graphics().setDepth(1);
-    arch.fillStyle(0x0d0906, 1);
+    arch.fillStyle(HEX.shadow900, 1);
     // 픽셀아트 계단형 아치 - 각 단계가 4px 블록 단위
     arch.fillRect(W / 2 - 56, 40, 112, 260);  // 내부 통로
     arch.fillRect(W / 2 - 72, 56, 144, 244);
     arch.fillRect(W / 2 - 88, 72, 176, 228);
     arch.fillRect(W / 2 - 76, 44, 152, 12);   // 아치 상단 가로
     // 아치 내부 원근감 (더 밝은 원거리)
-    arch.fillStyle(0x180f05, 1);
+    arch.fillStyle(HEX.shadow900, 1);
     arch.fillRect(W / 2 - 80, 76, 160, 224);
     // 아치 테두리 픽셀 강조
-    arch.lineStyle(3, 0x6a4828, 1);
+    arch.lineStyle(3, HEX.earth400, 1);
     arch.strokeRect(W / 2 - 56, 40, 112, 260);
-    arch.lineStyle(2, 0x4a3018, 0.7);
+    arch.lineStyle(2, HEX.earth500, 0.7);
     arch.strokeRect(W / 2 - 72, 56, 144, 244);
 
     // ── 횃불 앰비언트 빛 (벽에 퍼지는 따뜻한 빛) ──
@@ -266,10 +267,10 @@ export default class BattleScene extends Phaser.Scene {
 
     // ── 바닥 ──
     const floorBg = this.add.graphics().setDepth(2);
-    floorBg.fillStyle(0x2a1e0c, 1);
+    floorBg.fillStyle(HEX.stone600, 1);
     floorBg.fillRect(0, FLOOR_Y, W, BATTLE_H - FLOOR_Y);
     // 바닥 타일 라인
-    floorBg.lineStyle(1, 0x1c1408, 1);
+    floorBg.lineStyle(1, HEX.shadow900, 1);
     for (let y = FLOOR_Y + 16; y < BATTLE_H; y += 16) {
       floorBg.beginPath(); floorBg.moveTo(0, y); floorBg.lineTo(W, y); floorBg.strokePath();
     }
@@ -277,31 +278,31 @@ export default class BattleScene extends Phaser.Scene {
       floorBg.beginPath(); floorBg.moveTo(x, FLOOR_Y); floorBg.lineTo(x, BATTLE_H); floorBg.strokePath();
     }
     // 바닥 경계선 강조
-    floorBg.lineStyle(2, 0x7a5a30, 0.5);
+    floorBg.lineStyle(2, HEX.earth400, 0.5);
     floorBg.beginPath(); floorBg.moveTo(0, FLOOR_Y); floorBg.lineTo(W, FLOOR_Y); floorBg.strokePath();
 
     // ── 양쪽 기둥 (픽셀아트 블록) ──
     const pillar = this.add.graphics().setDepth(2);
     // 좌기둥
-    pillar.fillStyle(0x1e1408, 1);
+    pillar.fillStyle(HEX.shadow900, 1);
     pillar.fillRect(0, 0, 24, BATTLE_H);
-    pillar.fillStyle(0x2e2010, 1);
+    pillar.fillStyle(HEX.stone600, 1);
     pillar.fillRect(0, 0, 8, BATTLE_H);
-    pillar.fillStyle(0x140e04, 1);
+    pillar.fillStyle(HEX.shadow900, 1);
     pillar.fillRect(16, 0, 8, BATTLE_H);
     // 우기둥
-    pillar.fillStyle(0x1e1408, 1);
+    pillar.fillStyle(HEX.shadow900, 1);
     pillar.fillRect(W - 24, 0, 24, BATTLE_H);
-    pillar.fillStyle(0x2e2010, 1);
+    pillar.fillStyle(HEX.stone600, 1);
     pillar.fillRect(W - 8, 0, 8, BATTLE_H);
-    pillar.fillStyle(0x140e04, 1);
+    pillar.fillStyle(HEX.shadow900, 1);
     pillar.fillRect(W - 24, 0, 8, BATTLE_H);
     // 기둥 경계선
-    pillar.lineStyle(2, 0x5a4028, 0.8);
+    pillar.lineStyle(2, HEX.earth500, 0.8);
     pillar.strokeRect(0, 0, 24, BATTLE_H);
     pillar.strokeRect(W - 24, 0, 24, BATTLE_H);
     // 픽셀 블록 구분선 (수평)
-    pillar.lineStyle(1, 0x2e1e0a, 0.5);
+    pillar.lineStyle(1, HEX.shadow800, 0.5);
     for (let y = 28; y < BATTLE_H; y += 28) {
       pillar.beginPath(); pillar.moveTo(0, y); pillar.lineTo(24, y); pillar.strokePath();
       pillar.beginPath(); pillar.moveTo(W - 24, y); pillar.lineTo(W, y); pillar.strokePath();
@@ -309,7 +310,7 @@ export default class BattleScene extends Phaser.Scene {
 
     // ── 발판 그림자 (픽셀아트: 사각형) ──
     const shadow = this.add.graphics().setDepth(3);
-    shadow.fillStyle(0x0a0804, 0.55);
+    shadow.fillStyle(HEX.shadow900, 0.55);
     shadow.fillRect(ENEMY_X - 65, FLOOR_Y + 2, 130, 14);
     shadow.fillRect(PLAYER_X - 65, FLOOR_Y + 2, 130, 14);
 
@@ -319,14 +320,14 @@ export default class BattleScene extends Phaser.Scene {
 
     // ── 층 번호 ──
     this.add.text(W - 30, 36, `${floor}F`, {
-      fontSize: "13px", fontFamily: "monospace", color: "#c8943a",
+      fontSize: "13px", fontFamily: "monospace", color: PALETTE.sand300,
     }).setOrigin(1, 0.5).setDepth(10).setAlpha(0.9);
 
     // ── 로그 패널 배경 ──
     const logPanel = this.add.graphics().setDepth(10);
-    logPanel.fillStyle(0x100c06, 1);
+    logPanel.fillStyle(HEX.shadow900, 1);
     logPanel.fillRect(0, LOG_Y, W, H - LOG_Y);
-    logPanel.lineStyle(1, 0x4a3418, 0.6);
+    logPanel.lineStyle(1, HEX.earth500, 0.6);
     logPanel.beginPath(); logPanel.moveTo(0, LOG_Y); logPanel.lineTo(W, LOG_Y); logPanel.strokePath();
   }
 
@@ -340,10 +341,10 @@ export default class BattleScene extends Phaser.Scene {
   ) {
     // 받침대
     const holder = this.add.graphics().setDepth(4);
-    holder.fillStyle(0x4a3012, 1);
+    holder.fillStyle(HEX.earth500, 1);
     holder.fillRect(x - 3, y + 12, 6, 20);
     holder.fillRect(x - 9, y + 6, 18, 8);
-    holder.fillStyle(0x2e1c08, 1);
+    holder.fillStyle(HEX.shadow800, 1);
     holder.fillRect(x - 5, y - 2, 10, 14);
 
     // 글로우 (배경 빛 — 크게)
@@ -394,7 +395,7 @@ export default class BattleScene extends Phaser.Scene {
     tip.setPosition(x, y - 4);
     tip.fillStyle(palette.tip, 1);
     tip.fillTriangle(-2, -18, 2, -18, 0, -28);
-    tip.fillStyle(0xffffff, 0.65);
+    tip.fillStyle(HEX.cream100, 0.65);
     tip.fillRect(-1, -28, 2, 5);
     this.tweens.add({
       targets: tip,
@@ -417,7 +418,7 @@ export default class BattleScene extends Phaser.Scene {
       this.enemySprite = this.add.image(ENEMY_X, MONSTER_Y, "enemy-mon")
         .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setFlipX(true).setDepth(6);
     } else {
-      this.enemySprite = this.makeFallback(ENEMY_X, MONSTER_Y, 0xcc3333, MONSTER_SIZE);
+      this.enemySprite = this.makeFallback(ENEMY_X, MONSTER_Y, HEX.ember700, MONSTER_SIZE);
     }
 
     // 플레이어 — 파티 0번 슬롯 이미지 사용 (party-mon-0)
@@ -425,7 +426,7 @@ export default class BattleScene extends Phaser.Scene {
       this.playerSprite = this.add.image(PLAYER_X, MONSTER_Y, "party-mon-0")
         .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setDepth(6);
     } else {
-      this.playerSprite = this.makeFallback(PLAYER_X, MONSTER_Y, 0x3366cc, MONSTER_SIZE);
+      this.playerSprite = this.makeFallback(PLAYER_X, MONSTER_Y, HEX.mist500, MONSTER_SIZE);
     }
 
     // 등장 애니메이션
@@ -474,54 +475,54 @@ export default class BattleScene extends Phaser.Scene {
 
     // 패널 배경 (픽셀아트: sharp corner)
     const bg = this.add.graphics().setDepth(8);
-    bg.fillStyle(0x0a0804, 0.88);
+    bg.fillStyle(HEX.shadow900, 0.88);
     bg.fillRect(px, py, pw, ph);
-    bg.lineStyle(2, isEnemy ? 0x7a3020 : 0x2a5a7a, 1);
+    bg.lineStyle(2, isEnemy ? HEX.ember700 : HEX.mist500, 1);
     bg.strokeRect(px, py, pw, ph);
 
     // 이름 + 레벨 텍스트
     if (isEnemy) {
       this.enemyNameText = this.add.text(px + 10, py + 7, "적 몬스터 Lv.-", {
-        fontSize: "11px", fontFamily: "monospace", color: "#e8c89a",
+        fontSize: "11px", fontFamily: "monospace", color: PALETTE.sand200,
       }).setDepth(9);
 
       this.enemyStatusBadge = this.add.text(px + pw - 8, py + 7, "", {
-        fontSize: "10px", fontFamily: "monospace", color: "#ffee44",
-        backgroundColor: "#1a0808", padding: { x: 2, y: 1 },
+        fontSize: "10px", fontFamily: "monospace", color: PALETTE.ember500,
+        backgroundColor: PALETTE.shadow900, padding: { x: 2, y: 1 },
       }).setOrigin(1, 0).setDepth(9);
 
       // HP 바 레이아웃
       const barX = px + 10;
       const barY = py + ph - 22;
       const barW = pw - 20;
-      this.add.text(barX, barY - 13, "HP", { fontSize: "10px", fontFamily: "monospace", color: "#b08850" }).setDepth(9);
+      this.add.text(barX, barY - 13, "HP", { fontSize: "10px", fontFamily: "monospace", color: PALETTE.sand300 }).setDepth(9);
       this.enemyHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.enemyHpBar, barX, barY, barW, BAR_H, 1, true);
       // HP 수치는 "몇 대 더 때려야 하나"를 판단하는 핵심 정보라 캔버스가 축소돼도 읽히도록
       // 크기와 대비를 올린다(9px/어두운 갈색 → 13px/밝은 색 + 검은 외곽선).
       this.enemyHpText = this.add.text(barX + barW, barY - 2, "", {
-        fontSize: "13px", fontFamily: "monospace", color: "#ffe0b0",
-        stroke: "#000000", strokeThickness: 3,
+        fontSize: "13px", fontFamily: "monospace", color: PALETTE.sand200,
+        stroke: PALETTE.shadow900, strokeThickness: 3,
       }).setOrigin(1, 1).setDepth(10);
     } else {
       this.playerNameText = this.add.text(px + 10, py + 7, "내 몬스터 Lv.-", {
-        fontSize: "11px", fontFamily: "monospace", color: "#9ac8e8",
+        fontSize: "11px", fontFamily: "monospace", color: PALETTE.mist300,
       }).setDepth(9);
 
       this.playerStatusBadge = this.add.text(px + pw - 8, py + 7, "", {
-        fontSize: "10px", fontFamily: "monospace", color: "#ffee44",
-        backgroundColor: "#08181a", padding: { x: 2, y: 1 },
+        fontSize: "10px", fontFamily: "monospace", color: PALETTE.ember500,
+        backgroundColor: PALETTE.shadow800, padding: { x: 2, y: 1 },
       }).setOrigin(1, 0).setDepth(9);
 
       const barX = px + 10;
       const barY = py + ph - 22;
       const barW = pw - 20;
-      this.add.text(barX, barY - 13, "HP", { fontSize: "10px", fontFamily: "monospace", color: "#6ea0c8" }).setDepth(9);
+      this.add.text(barX, barY - 13, "HP", { fontSize: "10px", fontFamily: "monospace", color: PALETTE.mist300 }).setDepth(9);
       this.playerHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.playerHpBar, barX, barY, barW, BAR_H, 1, false);
       this.playerHpText = this.add.text(barX + barW, barY - 2, "", {
-        fontSize: "13px", fontFamily: "monospace", color: "#b8e0ff",
-        stroke: "#000000", strokeThickness: 3,
+        fontSize: "13px", fontFamily: "monospace", color: PALETTE.mist300,
+        stroke: PALETTE.shadow900, strokeThickness: 3,
       }).setOrigin(1, 1).setDepth(10);
     }
   }
@@ -533,24 +534,24 @@ export default class BattleScene extends Phaser.Scene {
   private buildLogArea() {
     // 알림 박스 (기본 숨김)
     this.notifBox = this.add.graphics().setDepth(20);
-    this.notifBox.fillStyle(0x1e1610, 0.96);
+    this.notifBox.fillStyle(HEX.shadow800, 0.96);
     this.notifBox.fillRect(20, LOG_Y + 14, W - 40, 104);
-    this.notifBox.lineStyle(2, 0x6a4e28, 0.9);
+    this.notifBox.lineStyle(2, HEX.earth500, 0.9);
     this.notifBox.strokeRect(20, LOG_Y + 14, W - 40, 104);
     this.notifBox.setVisible(false);
 
     this.notifText = this.add.text(48, LOG_Y + 34, "", {
-      fontSize: "18px", fontFamily: "monospace", color: "#f0e0c8",
+      fontSize: "18px", fontFamily: "monospace", color: PALETTE.cream100,
       wordWrap: { width: W - 110 },
     }).setDepth(21).setVisible(false);
 
     this.notifHint = this.add.text(W - 44, LOG_Y + 100, "Q ▶", {
-      fontSize: "11px", fontFamily: "monospace", color: "#7a5a38",
+      fontSize: "11px", fontFamily: "monospace", color: PALETTE.sand300,
     }).setOrigin(1, 1).setDepth(21).setVisible(false);
 
     // 아이들 (기술 선택 안내)
     this.idleText = this.add.text(W / 2, LOG_Y + 60, "기술을 선택하세요", {
-      fontSize: "15px", fontFamily: "monospace", color: "#4a3820",
+      fontSize: "15px", fontFamily: "monospace", color: PALETTE.earth400,
     }).setOrigin(0.5, 0.5).setDepth(11);
   }
 
@@ -560,13 +561,13 @@ export default class BattleScene extends Phaser.Scene {
 
   private buildResultOverlay() {
     this.resultVeil = this.add.graphics().setDepth(30);
-    this.resultVeil.fillStyle(0x000000, 0.62);
+    this.resultVeil.fillStyle(HEX.shadow900, 0.62);
     this.resultVeil.fillRect(0, 0, W, BATTLE_H);
     this.resultVeil.setVisible(false);
 
     this.resultTitle = this.add.text(W / 2, BATTLE_H / 2 - 10, "", {
       fontSize: "72px", fontFamily: "monospace", fontStyle: "bold",
-      stroke: "#000000", strokeThickness: 6,
+      stroke: PALETTE.shadow900, strokeThickness: 6,
     }).setOrigin(0.5, 0.5).setDepth(31).setVisible(false);
   }
 
@@ -616,9 +617,9 @@ export default class BattleScene extends Phaser.Scene {
 
     this.resultVeil.setVisible(true);
     if (payload.outcome === "win") {
-      this.resultTitle.setText("승리!").setColor("#66ffaa").setVisible(true);
+      this.resultTitle.setText("승리!").setColor(PALETTE.moss500).setVisible(true);
     } else {
-      this.resultTitle.setText("패배...").setColor("#ff6666").setVisible(true);
+      this.resultTitle.setText("패배...").setColor(PALETTE.ember600).setVisible(true);
     }
     this.resultTitle.setScale(0);
     this.tweens.add({ targets: this.resultTitle, scale: 1, duration: 400, ease: "Back.Out" });
@@ -747,15 +748,15 @@ export default class BattleScene extends Phaser.Scene {
   private drawBar(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, ratio: number, _isEnemy: boolean) {
     g.clear();
     const r = Math.max(0, Math.min(1, ratio));
-    const col = r > 0.5 ? 0x44ee66 : r > 0.2 ? 0xeecc22 : 0xff4444;
+    const col = HEX[hpToken(r * 100)];
     // 픽셀아트: sharp rect
-    g.fillStyle(0x1a1408, 1);
+    g.fillStyle(HEX.shadow900, 1);
     g.fillRect(x, y, w, h);
     if (r > 0) {
       g.fillStyle(col, 1);
       g.fillRect(x, y, Math.floor(w * r), h);
     }
-    g.lineStyle(1, 0x3a2818, 0.8);
+    g.lineStyle(1, HEX.earth500, 0.8);
     g.strokeRect(x, y, w, h);
   }
 
@@ -765,7 +766,7 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   private statusColor(s: NonNullable<StatusEffect>): string {
-    return { paralysis: "#ffee00", poison: "#cc66ff", freeze: "#88ccff", burn: "#ff8844" }[s] ?? "#ffffff";
+    return { paralysis: PALETTE.ember500, poison: PALETTE.earth500, freeze: PALETTE.mist300, burn: PALETTE.ember600 }[s] ?? PALETTE.cream100;
   }
 
   private shake(sprite: Phaser.GameObjects.Image) {

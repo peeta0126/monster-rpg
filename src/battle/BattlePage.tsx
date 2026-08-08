@@ -66,6 +66,7 @@ import {
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { createBattleGame } from "../shared/phaser/phaserConfig";
 import { setBattleInitData } from "./battleInitStore";
+import { PALETTE, hpToken, ELEMENT_CHIP_CLASS } from "../shared/palette";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
 
@@ -80,16 +81,11 @@ const STATUS_LABELS: Record<string, string> = {
   paralysis: "⚡마비", poison: "☠독", freeze: "❄빙결", burn: "🔥화상",
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  fire:     "border-red-800    bg-red-950/60    hover:bg-red-900/60    text-red-200",
-  water:    "border-blue-800   bg-blue-950/60   hover:bg-blue-900/60   text-blue-200",
-  grass:    "border-green-800  bg-green-950/60  hover:bg-green-900/60  text-green-200",
-  electric: "border-yellow-700 bg-yellow-950/60 hover:bg-yellow-900/60 text-yellow-200",
-  ice:      "border-cyan-700   bg-cyan-950/60   hover:bg-cyan-900/60   text-cyan-200",
-  normal:   "border-zinc-700   bg-zinc-900/60   hover:bg-zinc-800/60   text-zinc-200",
-  poison:   "border-purple-800 bg-purple-950/60 hover:bg-purple-900/60 text-purple-200",
-};
-function typeClass(t: string) { return TYPE_COLORS[t] ?? TYPE_COLORS.normal; }
+// 기술 버튼 색은 shared/palette.ts 의 ELEMENT_CHIP_CLASS 가 단일 출처다.
+// 여기서 따로 정하면 숲·몬스터 화면과 속성 색이 어긋난다.
+function typeClass(t: string) {
+  return ELEMENT_CHIP_CLASS[t as keyof typeof ELEMENT_CHIP_CLASS] ?? ELEMENT_CHIP_CLASS.normal;
+}
 
 /** 출전하지 않은 파티원이 받는 경험치 비율 (출전 몬스터 대비) */
 const BENCH_EXP_SHARE = 0.5;
@@ -711,69 +707,69 @@ export default function BattlePage() {
 
   // ─── 렌더 ────────────────────────────────────────────────────────────────────────
   return (
-    <div className="relative flex h-screen flex-col bg-zinc-950 text-white overflow-hidden">
+    <div className="relative flex h-screen flex-col bg-shadow-900 text-white overflow-hidden">
 
       {/* Phaser 캔버스 */}
       <div ref={gameRef} className="relative flex-1 min-h-0" />
 
       {/* ══════════ 하단 배틀 패널 ══════════ */}
-      <div className="shrink-0 border-t border-zinc-800 bg-[#0e0b06]">
+      <div className="shrink-0 border-t border-shadow-700 bg-[#0e0b06]">
 
         {/* 상태 바 */}
-        <div className="flex items-center justify-between border-b border-zinc-800/60 px-3 py-1.5 text-xs">
+        <div className="flex items-center justify-between border-b border-shadow-700/60 px-3 py-1.5 text-xs">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-zinc-200">{player.name}</span>
-            <span className="text-zinc-600">Lv.{player.level}</span>
+            <span className="font-bold text-sand-200">{player.name}</span>
+            <span className="text-earth-400">Lv.{player.level}</span>
             {(() => {
               const pct = (player.currentHp / player.maxHp) * 100;
               return (
                 <div className="flex items-center gap-1">
-                  <div className="h-1.5 w-20 rounded-full bg-zinc-800 overflow-hidden">
+                  <div className="h-1.5 w-20 rounded-full bg-shadow-700 overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-300"
-                      style={{ width: `${pct}%`, backgroundColor: pct > 50 ? "#44ee66" : pct > 20 ? "#eecc22" : "#ff4444" }} />
+                      style={{ width: `${pct}%`, backgroundColor: PALETTE[hpToken(pct)] }} />
                   </div>
-                  <span className="text-zinc-500 font-mono text-[10px]">{player.currentHp}/{player.maxHp}</span>
+                  <span className="text-sand-300 font-mono text-[10px]">{player.currentHp}/{player.maxHp}</span>
                 </div>
               );
             })()}
             {player.status && (
-              <span className="rounded bg-yellow-900/40 px-1 py-0.5 text-yellow-300 text-[10px]">
+              <span className="rounded bg-ember-700/18 px-1 py-0.5 text-ember-500 text-[10px]">
                 {STATUS_LABELS[player.status]}
               </span>
             )}
             {player.attackBuffTurns > 0 && (
-              <span className="rounded bg-orange-900/40 px-1 py-0.5 text-orange-300 text-[10px]">
+              <span className="rounded bg-ember-700/18 px-1 py-0.5 text-ember-500 text-[10px]">
                 ⚔️ ×{player.attackBuffMult} ({player.attackBuffTurns}턴)
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
             {!mustSwitch && battleOutcome === null && (
-              <span className={`text-[10px] ${speedFirst ? "text-emerald-600" : "text-red-700"}`}>
+              <span className={`text-[10px] ${speedFirst ? "text-moss-500" : "text-ember-700"}`}>
                 {speedFirst ? "▲ 선공" : "▼ 후공"}
               </span>
             )}
             {isProcessing && !mustSwitch && (
-              <span className="text-amber-600 animate-pulse text-[10px]">▶ Q / 클릭</span>
+              <span className="text-ember-500 animate-pulse text-[10px]">▶ Q / 클릭</span>
             )}
-            <span className="rounded bg-amber-950/60 px-1.5 py-0.5 text-amber-500 font-mono text-[10px] font-bold">
+            <span className="rounded bg-ember-700/15 px-1.5 py-0.5 text-ember-500 font-mono text-[10px] font-bold">
               {floor}F
             </span>
             <button onClick={() => setShowLog((v) => !v)}
               className={`text-[10px] border rounded px-1.5 py-0.5 transition ${
-                showLog ? "border-zinc-600 text-zinc-300" : "border-zinc-800 text-zinc-600 hover:text-zinc-400"}`}>
+                showLog ? "border-stone-600 text-sand-200" : "border-shadow-700 text-earth-400 hover:text-sand-300"}`}>
               기록
             </button>
             {/* 도망: 보스층에서는 불가 (보스는 정면으로 넘어야 하는 관문) */}
             {battleOutcome === null && (
               <button onClick={handleFlee} disabled={isProcessing || isBossFloor(floor)}
                 title={isBossFloor(floor) ? "보스에게서는 도망칠 수 없다" : "이 전투를 포기하고 베이스캠프로"}
-                className="text-[10px] text-zinc-600 hover:text-zinc-400 border border-zinc-800 rounded px-1.5 py-0.5 disabled:opacity-30">
+                className="text-[10px] text-earth-400 hover:text-sand-300 border border-shadow-700 rounded px-1.5 py-0.5 disabled:opacity-30">
                 도망
               </button>
             )}
             <button onClick={() => navigate("/")}
-              className="text-[10px] text-zinc-600 hover:text-zinc-400 border border-zinc-800 rounded px-1.5 py-0.5">
+              className="text-[10px] text-earth-400 hover:text-sand-300 border border-shadow-700 rounded px-1.5 py-0.5">
               나가기
             </button>
           </div>
@@ -781,12 +777,12 @@ export default function BattlePage() {
 
         {/* 전투 기록 — 캔버스 로그는 한 줄씩 지나가므로 놓친 줄을 여기서 다시 본다 */}
         {showLog && (
-          <div className="border-b border-zinc-800 bg-black/50 px-3 py-2">
+          <div className="border-b border-shadow-700 bg-black/50 px-3 py-2">
             <div className="max-h-24 overflow-y-auto flex flex-col-reverse gap-0.5">
               {logHistory.length === 0
-                ? <p className="text-[10px] text-zinc-700">아직 기록이 없습니다.</p>
+                ? <p className="text-[10px] text-earth-400">아직 기록이 없습니다.</p>
                 : [...logHistory].reverse().map((line, i) => (
-                    <p key={logHistory.length - i} className={`text-[10px] ${i === 0 ? "text-zinc-300" : "text-zinc-600"}`}>
+                    <p key={logHistory.length - i} className={`text-[10px] ${i === 0 ? "text-sand-200" : "text-earth-400"}`}>
                       {line}
                     </p>
                   ))}
@@ -799,8 +795,8 @@ export default function BattlePage() {
           <div className="flex" style={{ minHeight: "148px" }}>
 
             {/* ─── 파티 벤치 ─────────────────────────────── */}
-            <div className="w-44 shrink-0 border-r border-zinc-800 p-2 flex flex-col gap-1.5">
-              <p className="text-[9px] text-zinc-600 font-semibold uppercase tracking-wider">파티</p>
+            <div className="w-44 shrink-0 border-r border-shadow-700 p-2 flex flex-col gap-1.5">
+              <p className="text-[9px] text-earth-400 font-semibold uppercase tracking-wider">파티</p>
               {initialParty.map((m, idx) => {
                 const isActive = idx === activePartyIndex;
                 const hp       = isActive ? player.currentHp : (partyHp[m.uid] ?? m.currentHp);
@@ -815,30 +811,30 @@ export default function BattlePage() {
                     disabled={fainted || (isActive && !mustSwitch)}
                     className={[
                       "relative flex items-center gap-1.5 rounded-lg border px-1.5 py-1 text-left transition-all",
-                      isActive  && "border-yellow-500/70 bg-yellow-950/25",
-                      fainted   && "border-zinc-800 bg-zinc-900/10 opacity-40 cursor-not-allowed",
-                      mustPick  && "border-blue-500 bg-blue-950/30 hover:bg-blue-900/30 shadow-[0_0_8px_rgba(59,130,246,0.4)] cursor-pointer",
-                      canSwap   && "border-zinc-700 bg-zinc-900/40 hover:border-zinc-500 hover:bg-zinc-800/40 cursor-pointer",
-                      !isActive && !fainted && !mustPick && !canSwap && "border-zinc-800 bg-zinc-900/20 cursor-not-allowed",
+                      isActive  && "border-ember-500/70 bg-ember-700/9",
+                      fainted   && "border-shadow-700 bg-shadow-800/10 opacity-40 cursor-not-allowed",
+                      mustPick  && "border-mist-500 bg-mist-500/10 hover:bg-mist-500/16 shadow-[0_0_8px_rgba(59,130,246,0.4)] cursor-pointer",
+                      canSwap   && "border-stone-600 bg-shadow-800/40 hover:border-sand-300 hover:bg-shadow-700/40 cursor-pointer",
+                      !isActive && !fainted && !mustPick && !canSwap && "border-shadow-700 bg-shadow-800/20 cursor-not-allowed",
                     ].filter(Boolean).join(" ")}
                   >
                     <div className="relative shrink-0">
                       <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.nickname ?? m.name} className="h-9 w-9 object-contain"
                         style={fainted ? { filter: "grayscale(100%) brightness(0.4)" } : undefined} />
-                      {isActive && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-yellow-400 shadow-[0_0_4px_rgba(250,204,21,0.8)]" />}
+                      {isActive && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-ember-500 shadow-[0_0_4px_rgba(250,204,21,0.8)]" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-semibold text-zinc-300 truncate leading-tight">{m.nickname ?? m.name}</p>
-                      <p className="text-[9px] text-zinc-600 leading-tight">Lv.{m.level}</p>
-                      <div className="mt-0.5 h-1 w-full rounded-full bg-zinc-800 overflow-hidden">
+                      <p className="text-[10px] font-semibold text-sand-200 truncate leading-tight">{m.nickname ?? m.name}</p>
+                      <p className="text-[9px] text-earth-400 leading-tight">Lv.{m.level}</p>
+                      <div className="mt-0.5 h-1 w-full rounded-full bg-shadow-700 overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-300"
-                          style={{ width: `${hpPct}%`, backgroundColor: hpPct > 50 ? "#44ee66" : hpPct > 20 ? "#eecc22" : "#ff4444" }} />
+                          style={{ width: `${hpPct}%`, backgroundColor: PALETTE[hpToken(hpPct)] }} />
                       </div>
-                      <p className="text-[9px] text-zinc-700 font-mono">{hp}/{m.maxHp}</p>
+                      <p className="text-[9px] text-earth-400 font-mono">{hp}/{m.maxHp}</p>
                     </div>
-                    {isActive  && <span className="text-[8px] text-yellow-400 font-bold shrink-0">출전</span>}
-                    {fainted   && <span className="text-[8px] text-zinc-600 shrink-0">기절</span>}
-                    {mustPick  && <span className="text-[8px] text-blue-400 animate-pulse shrink-0">선택</span>}
+                    {isActive  && <span className="text-[8px] text-ember-500 font-bold shrink-0">출전</span>}
+                    {fainted   && <span className="text-[8px] text-earth-400 shrink-0">기절</span>}
+                    {mustPick  && <span className="text-[8px] text-mist-300 animate-pulse shrink-0">선택</span>}
                   </button>
                 );
               })}
@@ -850,16 +846,16 @@ export default function BattlePage() {
               {/* 강제 교체 */}
               {mustSwitch ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center">
-                  <p className="text-red-400 font-bold text-sm">{player.name}이(가) 기절했다!</p>
-                  <p className="text-zinc-500 text-xs">← 왼쪽에서 다음 몬스터를 선택하세요</p>
+                  <p className="text-ember-500 font-bold text-sm">{player.name}이(가) 기절했다!</p>
+                  <p className="text-sand-300 text-xs">← 왼쪽에서 다음 몬스터를 선택하세요</p>
                 </div>
               ) : showBag ? (
                 /* ──── 가방 패널 ──── */
                 <div className="flex-1 flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] text-zinc-400 font-semibold">🎒 가방 — 물약</p>
+                    <p className="text-[10px] text-sand-300 font-semibold">🎒 가방 — 물약</p>
                     <button onClick={() => setShowBag(false)}
-                      className="text-[10px] text-zinc-600 hover:text-zinc-400 border border-zinc-800 rounded px-1.5 py-0.5">
+                      className="text-[10px] text-earth-400 hover:text-sand-300 border border-shadow-700 rounded px-1.5 py-0.5">
                       닫기
                     </button>
                   </div>
@@ -880,8 +876,8 @@ export default function BattlePage() {
                           disabled={cnt <= 0 || isProcessing}
                           className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition
                             ${cnt > 0
-                              ? "border-amber-800/50 bg-amber-950/30 hover:bg-amber-900/30 text-amber-100"
-                              : "border-zinc-800 bg-zinc-900/20 text-zinc-600 cursor-not-allowed opacity-50"
+                              ? "border-ember-700/50 bg-ember-700/10 hover:bg-ember-700/16 text-cream-100"
+                              : "border-shadow-700 bg-shadow-800/20 text-earth-400 cursor-not-allowed opacity-50"
                             }`}
                         >
                           <span className="text-base shrink-0">{p.emoji}</span>
@@ -889,16 +885,16 @@ export default function BattlePage() {
                             <p className="text-[10px] font-semibold leading-tight truncate">{p.name}</p>
                             <p className="text-[9px] opacity-70 leading-tight">{effectLabel}</p>
                           </div>
-                          <span className={`text-[10px] font-mono font-bold shrink-0 ${cnt > 0 ? "text-amber-400" : "text-zinc-600"}`}>
+                          <span className={`text-[10px] font-mono font-bold shrink-0 ${cnt > 0 ? "text-ember-500" : "text-earth-400"}`}>
                             ×{cnt}
                           </span>
                         </button>
                       );
                     })}
                     {!hasPotions && (
-                      <p className="text-center text-[10px] text-zinc-700 py-3">
+                      <p className="text-center text-[10px] text-earth-400 py-3">
                         보유한 물약이 없습니다.<br />
-                        <span className="text-zinc-800">농장 → 제작소에서 만들 수 있어요.</span>
+                        <span className="text-shadow-800">농장 → 제작소에서 만들 수 있어요.</span>
                       </p>
                     )}
                   </div>
@@ -913,11 +909,11 @@ export default function BattlePage() {
                       disabled={isProcessing}
                       className={`flex items-center gap-1 text-[10px] rounded border px-1.5 py-0.5 transition
                         ${hasPotions
-                          ? "border-amber-700/60 text-amber-500 hover:bg-amber-950/40"
-                          : "border-zinc-800 text-zinc-600"
+                          ? "border-ember-700/60 text-ember-500 hover:bg-ember-700/11"
+                          : "border-shadow-700 text-earth-400"
                         } disabled:opacity-30`}
                     >
-                      🎒 가방 {hasPotions && <span className="text-amber-400 font-bold">●</span>}
+                      🎒 가방 {hasPotions && <span className="text-ember-500 font-bold">●</span>}
                     </button>
                   </div>
 
@@ -928,9 +924,9 @@ export default function BattlePage() {
                       if (!move) {
                         return (
                           <div key={`empty-${i}`}
-                            className="border border-zinc-800/40 bg-zinc-900/10 flex items-center justify-center min-h-[52px]"
+                            className="border border-shadow-700/40 bg-shadow-800/10 flex items-center justify-center min-h-[52px]"
                             style={{ borderRadius: 0 }}>
-                            <span className="text-zinc-800 text-xs">—</span>
+                            <span className="text-shadow-800 text-xs">—</span>
                           </div>
                         );
                       }
@@ -947,9 +943,9 @@ export default function BattlePage() {
                             <span className="text-[9px] opacity-50 uppercase shrink-0">{move.type}</span>
                           </div>
                           <div className="text-[9px] opacity-45 mt-0.5">위력 {move.power} · 명중 {move.accuracy}</div>
-                          {mult >= 2   && <div className="text-[9px] text-emerald-400 font-semibold mt-0.5">▲ 효과 굉장!</div>}
-                          {mult === 0  && <div className="text-[9px] text-zinc-600 mt-0.5">✕ 효과 없음</div>}
-                          {mult > 0 && mult < 1 && <div className="text-[9px] text-yellow-600 mt-0.5">▼ 효과 미미</div>}
+                          {mult >= 2   && <div className="text-[9px] text-moss-500 font-semibold mt-0.5">▲ 효과 굉장!</div>}
+                          {mult === 0  && <div className="text-[9px] text-earth-400 mt-0.5">✕ 효과 없음</div>}
+                          {mult > 0 && mult < 1 && <div className="text-[9px] text-ember-500 mt-0.5">▼ 효과 미미</div>}
                         </button>
                       );
                     })}
@@ -958,7 +954,7 @@ export default function BattlePage() {
                   {/* 포획 버튼 */}
                   {canShowCatch && (
                     <button onClick={handleCatch} disabled={isProcessing}
-                      className="w-full rounded-lg border border-sky-700 bg-sky-950/50 py-1.5 text-xs font-semibold text-sky-300 hover:bg-sky-900/50 disabled:opacity-30 transition">
+                      className="w-full rounded-lg border border-mist-500 bg-mist-500/15 py-1.5 text-xs font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-30 transition">
                       포획 시도 {enemyState.status ? "(상태이상 보너스)" : ""}
                     </button>
                   )}
@@ -969,28 +965,28 @@ export default function BattlePage() {
         )}
 
         {battleOutcome !== null && (
-          <p className="py-2 text-center text-xs text-zinc-700">잠시 후 선택 화면이 표시됩니다...</p>
+          <p className="py-2 text-center text-xs text-earth-400">잠시 후 선택 화면이 표시됩니다...</p>
         )}
       </div>
 
       {/* 기술 교체 선택 — 4칸이 찼을 때만 뜬다 */}
       {forgetPrompt && (
         <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/75">
-          <div className="w-full max-w-md mx-4 border-2 border-amber-700 bg-zinc-950/95 p-5">
-            <p className="text-center text-sm font-bold text-amber-300 mb-1">
+          <div className="w-full max-w-md mx-4 border-2 border-ember-700 bg-shadow-900/95 p-5">
+            <p className="text-center text-sm font-bold text-ember-500 mb-1">
               {player.name}이(가) {forgetPrompt.incoming.name}을(를) 배우려 한다!
             </p>
-            <p className="text-center text-[10px] text-zinc-500 mb-4">
+            <p className="text-center text-[10px] text-sand-300 mb-4">
               기술은 4개까지만 익힐 수 있다. 무엇을 잊을까?
             </p>
 
-            <div className="mb-3 rounded border border-amber-700/60 bg-amber-950/30 px-3 py-2">
-              <p className="text-[9px] text-amber-600 mb-0.5">새 기술</p>
+            <div className="mb-3 rounded border border-ember-700/60 bg-ember-700/10 px-3 py-2">
+              <p className="text-[9px] text-ember-500 mb-0.5">새 기술</p>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-amber-200">{forgetPrompt.incoming.name}</span>
-                <span className="text-[9px] text-amber-500/70 uppercase">{forgetPrompt.incoming.type}</span>
+                <span className="text-xs font-semibold text-ember-500">{forgetPrompt.incoming.name}</span>
+                <span className="text-[9px] text-ember-500/70 uppercase">{forgetPrompt.incoming.type}</span>
               </div>
-              <p className="text-[9px] text-amber-500/70">
+              <p className="text-[9px] text-ember-500/70">
                 위력 {forgetPrompt.incoming.power} · 명중 {forgetPrompt.incoming.accuracy}
               </p>
             </div>
@@ -1010,7 +1006,7 @@ export default function BattlePage() {
             </div>
 
             <button onClick={() => answerForget(null)}
-              className="w-full border border-zinc-700 py-2 text-[11px] text-zinc-400 hover:bg-zinc-900 transition">
+              className="w-full border border-stone-600 py-2 text-[11px] text-sand-300 hover:bg-shadow-800 transition">
               배우지 않는다
             </button>
           </div>
@@ -1020,22 +1016,22 @@ export default function BattlePage() {
       {/* 승리 오버레이 */}
       {showResultUI && battleOutcome === "win" && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65">
-          <div className="text-center px-8 py-8 border-2 border-green-600 bg-zinc-950/95 shadow-2xl max-w-sm w-full mx-4"
+          <div className="text-center px-8 py-8 border-2 border-moss-500 bg-shadow-900/95 shadow-2xl max-w-sm w-full mx-4"
             style={{ fontFamily: "'Press Start 2P', monospace" }}>
-            <p className="text-3xl font-bold text-green-400 mb-3">WIN!</p>
-            <p className="text-xs text-zinc-400 mb-3 leading-relaxed">
+            <p className="text-3xl font-bold text-moss-500 mb-3">WIN!</p>
+            <p className="text-xs text-sand-300 mb-3 leading-relaxed">
               {floor === MAX_TOWER_FLOOR ? "탑의 정상을 정복했다…" : "다음 스테이지로?"}
             </p>
 
             {/* 드랍 재료 표시 */}
             {battleDrops.length > 0 && (
-              <div className="mb-4 rounded-lg border border-amber-800/50 bg-amber-950/30 p-3">
-                <p className="text-[9px] text-amber-600 mb-2">── 재료 획득 ──</p>
+              <div className="mb-4 rounded-lg border border-ember-700/50 bg-ember-700/10 p-3">
+                <p className="text-[9px] text-ember-500 mb-2">── 재료 획득 ──</p>
                 <div className="flex flex-col gap-1">
                   {battleDrops.map((d, i) => {
                     const mat = getMaterial(d.id);
                     return (
-                      <p key={i} className="text-[9px] text-amber-300">
+                      <p key={i} className="text-[9px] text-ember-500">
                         {mat?.emoji ?? "?"} {mat?.name ?? d.id} ×{d.count}
                       </p>
                     );
@@ -1048,22 +1044,22 @@ export default function BattlePage() {
               {/* 회복 — 예전에는 이걸 하려고 탑에서 나가 /monsters까지 갔다가
                   베이스캠프에서 탑까지 다시 걸어와야 했다. 결과 화면에서 바로 처리한다. */}
               <button onClick={() => { restorePartyHp(); setHealed(true); }} disabled={healed}
-                className="w-full border-2 border-sky-700 bg-sky-950/60 py-2.5 text-[11px] font-semibold text-sky-300 hover:bg-sky-900/60 disabled:opacity-40 transition active:scale-95">
+                className="w-full border-2 border-mist-500 bg-mist-500/15 py-2.5 text-[11px] font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-40 transition active:scale-95">
                 {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
               </button>
               {floor === MAX_TOWER_FLOOR ? (
                 <button onClick={() => navigate("/ending")}
-                  className="w-full border-2 border-amber-500 bg-amber-900/70 py-3 text-xs font-bold text-amber-200 hover:bg-amber-800/70 transition active:scale-95">
+                  className="w-full border-2 border-ember-500 bg-ember-700/25 py-3 text-xs font-bold text-ember-500 hover:bg-ember-700/40 transition active:scale-95">
                   &gt; 정수를 들고 마을로
                 </button>
               ) : (
                 <button onClick={() => navigate("/battle", { state: { floor: floor + 1, isCatchZone: false } })}
-                  className="w-full border-2 border-green-600 bg-green-900/70 py-3 text-xs font-bold text-green-200 hover:bg-green-800/70 transition active:scale-95">
+                  className="w-full border-2 border-moss-500 bg-moss-500/25 py-3 text-xs font-bold text-moss-500 hover:bg-moss-500/40 transition active:scale-95">
                   &gt; 다음층 ({floor + 1}F)
                 </button>
               )}
               <button onClick={() => navigate("/")}
-                className="w-full border-2 border-zinc-600 bg-zinc-800/80 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95">
+                className="w-full border-2 border-stone-600 bg-shadow-700/80 py-3 text-xs font-semibold text-sand-200 hover:bg-stone-600/80 transition active:scale-95">
                 &gt; 베이스캠프
               </button>
             </div>
@@ -1074,23 +1070,23 @@ export default function BattlePage() {
       {/* 패배 오버레이 */}
       {showResultUI && battleOutcome === "lose" && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65">
-          <div className="text-center px-8 py-10 border-2 border-red-700 bg-zinc-950/95 shadow-2xl max-w-sm w-full mx-4"
+          <div className="text-center px-8 py-10 border-2 border-ember-700 bg-shadow-900/95 shadow-2xl max-w-sm w-full mx-4"
             style={{ fontFamily: "'Press Start 2P', monospace" }}>
-            <p className="text-3xl font-bold text-red-400 mb-4">LOSE...</p>
-            <p className="text-xs text-zinc-400 mb-6 leading-relaxed">{floor}층 재도전?</p>
+            <p className="text-3xl font-bold text-ember-500 mb-4">LOSE...</p>
+            <p className="text-xs text-sand-300 mb-6 leading-relaxed">{floor}층 재도전?</p>
             <div className="flex flex-col gap-2">
               {/* 회복 — 예전에는 이걸 하려고 탑에서 나가 /monsters까지 갔다가
                   베이스캠프에서 탑까지 다시 걸어와야 했다. 결과 화면에서 바로 처리한다. */}
               <button onClick={() => { restorePartyHp(); setHealed(true); }} disabled={healed}
-                className="w-full border-2 border-sky-700 bg-sky-950/60 py-2.5 text-[11px] font-semibold text-sky-300 hover:bg-sky-900/60 disabled:opacity-40 transition active:scale-95">
+                className="w-full border-2 border-mist-500 bg-mist-500/15 py-2.5 text-[11px] font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-40 transition active:scale-95">
                 {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
               </button>
               <button onClick={() => navigate("/battle", { state: { floor, isCatchZone } })}
-                className="w-full border-2 border-red-700 bg-red-900/70 py-3 text-xs font-bold text-red-200 hover:bg-red-800/70 transition active:scale-95">
+                className="w-full border-2 border-ember-700 bg-ember-700/25 py-3 text-xs font-bold text-ember-500 hover:bg-ember-700/40 transition active:scale-95">
                 &gt; 재도전 ({floor}F)
               </button>
               <button onClick={() => navigate("/")}
-                className="w-full border-2 border-zinc-600 bg-zinc-800/80 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-700/80 transition active:scale-95">
+                className="w-full border-2 border-stone-600 bg-shadow-700/80 py-3 text-xs font-semibold text-sand-200 hover:bg-stone-600/80 transition active:scale-95">
                 &gt; 베이스캠프
               </button>
             </div>
