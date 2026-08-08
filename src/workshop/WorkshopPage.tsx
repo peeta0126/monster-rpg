@@ -1,177 +1,45 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CraftingModal } from "./CraftingModal";
 import { AnvilModal } from "./AnvilModal";
 import { usePlayerStore } from "../shared/playerStore";
-import type { CraftingStationType } from "../shared/crafting";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
-import { PALETTE } from "../shared/palette";
+import { PALETTE, withAlpha } from "../shared/palette";
 import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { getPlayerFrame, type Dir8 } from "../shared/playerSprite";
+import {
+  WORKSHOP_BACKGROUND_IMAGE, WORKSHOP_BACKGROUND_IMAGE_WEBP,
+} from "../shared/assetPaths";
+import {
+  BG_RATIO, INITIAL_POS, PLAYER_BOUNDS, PLAYER_DISPLAY,
+  COLLISION_BOXES, CRAFTING_STATIONS, EXIT_ZONE,
+  SHOW_COLLISION_DEBUG, SHOW_INTERACTION_DEBUG,
+  clamp, isBlocked, findInteractable,
+  type Point, type StationDef, type WorkshopStationType,
+} from "./workshopLayout";
 
-const BG_URL = "/assets/housing/housing_bg.webp";
-
-// 이미지 원본 크기 (835 × 714) — 비율 고정용
-const BG_W = 835;
-const BG_H = 714;
-const BG_RATIO = BG_W / BG_H; // ≈ 1.169
-
-// ─── 워크샵 스테이션 타입 (CraftingStationType + "anvil") ──────────────────────
-type WorkshopStationType = CraftingStationType | "anvil";
-
-// ─── 타입 ─────────────────────────────────────────────────────────────────────
+// --- 타입 -------------------------------------------------------------
 
 type Direction = "up" | "down" | "left" | "right";
 
-interface PlayerPos {
-  x: number; // stage 기준 % (0~100)
-  y: number;
-}
+/** stage 기준 % 좌표 (0~100). workshopLayout 의 Point 와 같다. */
+type PlayerPos = Point;
 
-// ─── 제작대 위치 상수 ─────────────────────────────────────────────────────────
-// x, y : stage 이미지 기준 % 좌표
-// radius : 근접 판정 반경 (% 단위)
-// SHOW_INTERACTION_DEBUG = true 로 바꾸면 판정 원이 보임
-const SHOW_INTERACTION_DEBUG = false;
+// --- 이동 -------------------------------------------------------------
 
-const CRAFTING_STATIONS: Array<{
-  id: string;
-  label: string;
-  type: WorkshopStationType;
-  x: number;
-  y: number;
-  radius: number;
-}> = [
-  {
-    id: "artifact-workbench",
-    label: "아티팩트 제작대",
-    type: "artifact",
-    x: 22,   // 좌측 제작대 — 필요시 조정
-    y: 85,
-    radius: 10,
-  },
-  {
-    id: "anvil",
-    label: "장비 모루",
-    type: "anvil",
-    x: 34,   // 아티팩트 제작대 우측 — 필요시 x/y 조정
-    y: 80,
-    radius: 8,
-  },
-  {
-    id: "alchemy-workbench",
-    label: "연금술 제작대",
-    type: "potion",
-    x: 80,   // 우측 제작대 — 필요시 조정
-    y: 35,
-    radius: 10,
-  },
-];
+/** %/frame (16ms 기준) — deltaTime 으로 보정한다 */
+const SPEED = 0.4;
 
-// ─── 플레이어 설정 ────────────────────────────────────────────────────────────
-
-const INITIAL_POS: PlayerPos = { x: 65, y: 97 };
-const SPEED = 0.4;          // %/frame (16ms 기준) — deltaTime 보정됨
-const PLAYER_DISPLAY = 128; // 64×64 스프라이트의 정확히 2배. 비정수 배율은 픽셀을 깨뜨린다
-
-// ─── 카메라 ───────────────────────────────────────────────────────────────────
-// 예전에는 배경을 화면에 통째로 맞춰(min(100vw, 100vh*ratio)) 방 전체가 늘 보였다.
-// 베이스캠프는 Phaser 카메라가 플레이어를 따라다니므로 두 화면의 체감이 달랐다.
-// 이제 배경을 "화면에 맞춘 크기 × CAMERA_ZOOM" 으로 키우고 카메라가 따라간다.
+// --- 카메라 -----------------------------------------------------------
+// 배경을 "화면에 맞춘 크기 × CAMERA_ZOOM" 으로 키우고 카메라가 플레이어를 따라간다.
+// 예전에는 방 전체가 늘 보여서, 카메라가 따라다니는 베이스캠프와 체감이 달랐다.
 //
-// ⚠️ 스테이지 내부 좌표계는 그대로 % 다. CRAFTING_STATIONS / COLLISION_BOXES 는
-//    손대지 않았고, 확대·이동은 스테이지 컨테이너에서만 일어난다.
+// ⚠ 스테이지 내부 좌표계는 그대로 % 다. 확대·이동은 스테이지 컨테이너에서만 일어난다.
 const CAMERA_ZOOM = 1.5;
-
-// stage 기준 외곽 이동 제한 (벽 밖 이탈 방지)
-const PLAYER_BOUNDS = { minX: 5, maxX: 95, minY: 28, maxY: 97 };
-
-
-// ─── 충돌 박스 ────────────────────────────────────────────────────────────────
-// 모두 stage 기준 퍼센트 좌표 (0~100)
-// x, y : 박스 좌상단 / width, height : 크기
-// SHOW_COLLISION_DEBUG = true 로 바꾸면 빨간 박스가 보임
-const SHOW_COLLISION_DEBUG = false;
-
-interface CollisionBox {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-const COLLISION_BOXES: CollisionBox[] = [
-  // ── 상단 벽 ───────────────────────────────────────────────────────────────
-  { id: "top-wall",    x: 0, y: 0,  width: 100, height: 32 },
-
-  // ── 좌측 벽 ───────────────────────────────────────────────────────────────
-  { id: "left-wall",   x: 0, y: 0,  width: 15,   height: 100 },
-
-  // ── 우측 벽 ───────────────────────────────────────────────────────────────
-  { id: "right-wall",  x: 90, y: 0, width: 5,   height: 100 },
-  //--책상
-  { id: "desk",  x: 37, y: 37, width: 15,   height: 15 },
-  //--작업대
-  { id: "작업대",  x: 63, y: 24, width: 35,   height: 15 },
-  
-  //--책장
-  { id: "책장",  x: 61, y: 45, width: 17,   height: 22 },
-
-  
-  //--침대
-  { id: "침대",  x: 77.8, y: 60, width: 15,   height: 15 },
-  
-  //--작업대
-  { id: "작업대",  x: 80, y: 50, width: 15,   height: 15 },
-
-  //--아티-작업대
-  { id: "아티-작업대",  x: 17, y: 86, width: 44,   height: 15 },
-
-  //--작업대
-  { id: "작업대",  x: 37, y: 70, width: 30,   height: 16 },
-  
-  //--문 옆 보물상자
-  { id: "보물상자",  x: 73, y: 88, width: 20,   height: 10 },
-  
-  //--아티작업대
-  { id: "아티작업대",  x: 8, y: 60, width: 20,   height: 23 },
-  
-  //--작업대
-  { id: "작업대",  x: 10, y: 40, width: 12,   height: 25 },
-
-  
-  //--장식품
-  { id: "장식품",  x: 10, y: 23, width: 24,   height: 15 },
-];
-
-
-// ─── 충돌 헬퍼 ───────────────────────────────────────────────────────────────
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-function isInsideBox(pt: PlayerPos, box: CollisionBox): boolean {
-  return (
-    pt.x >= box.x &&
-    pt.x <= box.x + box.width &&
-    pt.y >= box.y &&
-    pt.y <= box.y + box.height
-  );
-}
-
-function isColliding(pt: PlayerPos): boolean {
-  return COLLISION_BOXES.some((box) => isInsideBox(pt, box));
-}
 
 /** 방향키 입력 → 8방향. 지금은 4방향 에셋으로 폴백되지만 호출부는 이미 8방향 기준이다. */
 function directionToDir8(dir: Direction): Dir8 {
   return dir === "up" ? "N" : dir === "down" ? "S" : dir === "left" ? "W" : "E";
-}
-
-function getDistance(a: PlayerPos, b: { x: number; y: number }): number {
-  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
 // ─── WorkshopPage ─────────────────────────────────────────────────────────────
@@ -201,10 +69,15 @@ export default function WorkshopPage() {
   const activeStationRef = useRef<WorkshopStationType | null>(null);
   useEffect(() => { activeStationRef.current = activeStation; }, [activeStation]);
 
+  // ── 공방 밖으로 ──────────────────────────────────────────────────────────────
+  // 좌상단 버튼과 출입구가 같은 함수를 쓴다. 나가는 길이 두 벌이면 한쪽만 고쳐서 어긋난다.
+  const goToBaseCamp = useCallback(() => navigate("/"), [navigate]);
+  const goToBaseCampRef = useRef(goToBaseCamp);
+  useEffect(() => { goToBaseCampRef.current = goToBaseCamp; }, [goToBaseCamp]);
+
   // ── 근접 판정 (렌더용) ────────────────────────────────────────────────────────
-  const nearStation = CRAFTING_STATIONS.find(
-    (s) => getDistance(pos, s) <= s.radius
-  ) ?? null;
+  // 제작대 우선, 없으면 출입구. 우선순위는 findInteractable 한 곳에만 있다.
+  const near = findInteractable(pos);
 
   // ── 패널 토글 ────────────────────────────────────────────────────────────────
   const [showCraftedPanel, setShowCraftedPanel] = useState(false);
@@ -239,7 +112,7 @@ export default function WorkshopPage() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
   const handleStageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!SHOW_COLLISION_DEBUG) return;
+    if (!SHOW_INTERACTION_DEBUG) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setMousePos({
       x: Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 10,
@@ -267,10 +140,11 @@ export default function WorkshopPage() {
       if (menuOpenRef.current) return;
       if (e.code === "Space") {
         e.preventDefault();
-        const ns = CRAFTING_STATIONS.find(
-          (s) => getDistance(posRef.current, s) <= s.radius
-        );
-        if (ns && !activeStationRef.current) setActiveStation(ns.type);
+        if (activeStationRef.current) return;   // 모달이 열려 있으면 상호작용 차단
+        const hit = findInteractable(posRef.current);
+        if (!hit) return;
+        if (hit.kind === "exit") goToBaseCampRef.current();
+        else setActiveStation((hit.def as StationDef).type);
       }
     };
     const onUp = (e: KeyboardEvent) => keysRef.current.delete(e.key);
@@ -317,14 +191,14 @@ export default function WorkshopPage() {
 
           // X축 단독 검사 / Y축 단독 검사 — 항상 원래 prev 기준으로 검사해야
           // 대각선 이동 시 박스 모서리를 파고들어 갇히는 현상을 막을 수 있음
-          const collideX = isColliding({ x: nx, y: prev.y });
-          const collideY = isColliding({ x: prev.x, y: ny });
+          const collideX = isBlocked({ x: nx, y: prev.y });
+          const collideY = isBlocked({ x: prev.x, y: ny });
           if (!collideX) rx = nx;
           if (!collideY) ry = ny;
 
           // 대각선 이동: 각 축은 개별적으로 안전해 보여도 합쳐진 목적지가
           // 박스 내부라면(모서리 통과) 이동 자체를 취소 — 박스 안에 끼는 버그 방지
-          if (!collideX && !collideY && isColliding({ x: nx, y: ny })) {
+          if (!collideX && !collideY && isBlocked({ x: nx, y: ny })) {
             rx = prev.x;
             ry = prev.y;
           }
@@ -363,7 +237,7 @@ export default function WorkshopPage() {
           레이어 1 — 흐림 배경 (여백을 자연스럽게 채움, 이미지 깨짐 방지)
           ══════════════════════════════════════════════════════════════════════ */}
       <img
-        src={BG_URL}
+        src={WORKSHOP_BACKGROUND_IMAGE_WEBP}
         aria-hidden="true"
         draggable={false}
         className="pointer-events-none absolute inset-0 h-full w-full object-cover"
@@ -380,7 +254,7 @@ export default function WorkshopPage() {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-shadow-900/35 via-transparent to-shadow-900/45" />
 
       {/* ══════════════════════════════════════════════════════════════════════
-          레이어 3 — 게임 스테이지 (원본 이미지 비율 835:714 고정)
+          레이어 3 — 게임 스테이지 (원본 이미지 비율 2400:1792 고정)
           ══════════════════════════════════════════════════════════════════════ */}
       <div className="absolute inset-0 overflow-hidden">
         <div
@@ -392,17 +266,21 @@ export default function WorkshopPage() {
             height: stageH,
             // translate3d로 GPU 합성에 태운다 (left/top 애니메이션은 매 프레임 레이아웃을 다시 계산한다)
             transform: `translate3d(${offsetX}px, ${offsetY}px, 0)`,
-            cursor: SHOW_COLLISION_DEBUG ? "crosshair" : "default",
+            cursor: SHOW_INTERACTION_DEBUG ? "crosshair" : "default",
           }}
         >
-          {/* 배경 이미지 — 스테이지가 이미 BG_RATIO와 같은 비율이라 contain으로도 꽉 찬다 */}
-          <img
-            src={BG_URL}
-            alt="제작 공방"
-            draggable={false}
-            className="pointer-events-none absolute inset-0 h-full w-full"
-            style={{ objectFit: "contain" }}
-          />
+          {/* 배경 이미지 — 스테이지가 이미 BG_RATIO와 같은 비율이라 contain으로도 꽉 찬다.
+              contain 이어야 한다. fill 은 비율을 무시해 늘리므로 좌표계가 어긋난다. */}
+          <picture>
+            <source srcSet={WORKSHOP_BACKGROUND_IMAGE_WEBP} type="image/webp" />
+            <img
+              src={WORKSHOP_BACKGROUND_IMAGE}
+              alt="제작 공방"
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              style={{ objectFit: "contain" }}
+            />
+          </picture>
 
           {/* 스테이지 내부 테두리 그라디언트 (깊이감) */}
           <div
@@ -449,7 +327,7 @@ export default function WorkshopPage() {
           </div>
 
           {/* ── 디버그: 마우스 커서 십자선 + 좌표 말풍선 ────────────────────── */}
-          {SHOW_COLLISION_DEBUG && mousePos && (
+          {SHOW_INTERACTION_DEBUG && mousePos && (
             <>
               {/* 가로선 */}
               <div
@@ -512,7 +390,7 @@ export default function WorkshopPage() {
               멀리서도 보이는 표식을 두되, 가까이 가면(nearStation) 하단 안내에
               자리를 넘기고 흐려진다. */}
           {!activeStation && CRAFTING_STATIONS.map((s) => {
-            const isNear = nearStation?.id === s.id;
+            const isNear = near?.def.id === s.id;
             return (
               <div
                 key={`marker-${s.id}`}
@@ -544,35 +422,43 @@ export default function WorkshopPage() {
             );
           })}
 
-          {/* ── 디버그: 제작대 판정 원 표시 ─────────────────────────────────── */}
-          {SHOW_INTERACTION_DEBUG && CRAFTING_STATIONS.map((s) => (
+          {/* ── 디버그: 판정 원 ──────────────────────────────────────────────
+              제작대는 초록, 출입구는 모래색. 충돌 박스와 같은 플래그로 켜야
+              박스와 원의 어긋남을 한 장에서 볼 수 있다. */}
+          {SHOW_COLLISION_DEBUG && [
+            ...CRAFTING_STATIONS.map((s) => ({ ...s, tint: "moss500" as const })),
+            { ...EXIT_ZONE, tint: "sand300" as const },
+          ].map((z) => (
             <div
-              key={s.id}
+              key={`zone-${z.id}`}
               className="pointer-events-none absolute z-40 -translate-x-1/2 -translate-y-1/2 rounded-full"
               style={{
-                left: `${s.x}%`,
-                top:  `${s.y}%`,
-                width:  `${s.radius * 2}%`,
-                height: `${s.radius * 2}%`,
-                background: "rgba(233, 148, 65, .282)",
-                border: "2px solid rgba(233, 148, 65, 1)",
+                left: `${z.x}%`,
+                top:  `${z.y}%`,
+                width:  `${z.radius * 2}%`,
+                height: `${z.radius * 2}%`,
+                background: withAlpha(z.tint, 0.28),
+                border: `2px solid ${PALETTE[z.tint]}`,
               }}
             >
               <span
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-pixel-sm font-black"
-                style={{ color: PALETTE.ember500, textShadow: `0 1px 4px ${PALETTE.shadow900}` }}
+                style={{ color: PALETTE[z.tint], textShadow: `0 1px 4px ${PALETTE.shadow900}` }}
               >
-                {s.label}
+                {z.label}
               </span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* 상호작용 안내 — 카메라가 움직여도 화면 하단에 고정돼야 하므로 스테이지 밖에 둔다 */}
-      {nearStation && !activeStation && (
+      {/* 상호작용 안내 — 카메라가 움직여도 화면 하단에 고정돼야 하므로 스테이지 밖에 둔다.
+          제작대든 출입구든 같은 컴포넌트를 쓴다. 문구만 다르다. */}
+      {near && !activeStation && (
         <div className="pointer-events-none absolute bottom-14 left-1/2 z-30 -translate-x-1/2">
-          <InteractionPrompt>{nearStation.label} 사용하기</InteractionPrompt>
+          <InteractionPrompt>
+            {near.kind === "exit" ? near.def.label : `${near.def.label} 사용하기`}
+          </InteractionPrompt>
         </div>
       )}
 
@@ -585,7 +471,7 @@ export default function WorkshopPage() {
       <div className="absolute left-4 top-4 z-40">
         <button
           type="button"
-          onClick={() => navigate("/")}
+          onClick={goToBaseCamp}
           style={{
             background: "rgba(13, 18, 35, .88)",
             border: "1px solid rgba(132, 75, 63, 1)",
