@@ -9,6 +9,7 @@ import {
   ARTIFACT_SLOT_MAP, ARTIFACT_SLOT_LABEL, ALL_ARTIFACT_SLOTS,
   QUALITY_COLOR, QUALITY_LABEL, ARTIFACT_STAT_LABEL, sumEquippedStatBonuses,
 } from "../shared/craftingUtils";
+import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 
 /** 파티 카드/상태창에 반영할 장비 능력치 (HP는 배틀 실수치와 어긋나지 않도록 제외) */
 export interface EquipStatBonus { attack: number; defense: number; speed: number }
@@ -21,16 +22,21 @@ const TYPE_KO: Record<string, string> = {
   none:"무속성",
 };
 
-const TYPE_ACCENT: Record<string, { glow: string; border: string; bg: string; label: string }> = {
-  fire:     { glow:"rgba(239,68,68,.45)",   border:"#ef4444", bg:"rgba(239,68,68,.1)",   label:"bg-red-900/80 text-red-200 border-red-700" },
-  water:    { glow:"rgba(59,130,246,.45)",  border:"#3b82f6", bg:"rgba(59,130,246,.1)",  label:"bg-blue-900/80 text-blue-200 border-blue-700" },
-  grass:    { glow:"rgba(34,197,94,.45)",   border:"#22c55e", bg:"rgba(34,197,94,.1)",   label:"bg-green-900/80 text-green-200 border-green-700" },
-  electric: { glow:"rgba(234,179,8,.5)",    border:"#eab308", bg:"rgba(234,179,8,.1)",   label:"bg-yellow-900/80 text-yellow-200 border-yellow-700" },
-  ice:      { glow:"rgba(103,232,249,.45)", border:"#67e8f9", bg:"rgba(103,232,249,.1)", label:"bg-cyan-900/80 text-cyan-200 border-cyan-700" },
-  normal:   { glow:"rgba(161,161,170,.35)", border:"#a1a1aa", bg:"rgba(161,161,170,.08)",label:"bg-zinc-800/80 text-zinc-200 border-zinc-600" },
-  poison:   { glow:"rgba(168,85,247,.45)",  border:"#a855f7", bg:"rgba(168,85,247,.1)",  label:"bg-purple-900/80 text-purple-200 border-purple-700" },
-  none:     { glow:"rgba(217,70,239,.4)",   border:"#d946ef", bg:"rgba(217,70,239,.1)",  label:"bg-fuchsia-900/80 text-fuchsia-200 border-fuchsia-700" },
-};
+// 속성 색은 shared/palette.ts 의 ELEMENT_COLOR 가 단일 출처다 (숲·전투와 동일).
+// 무속성(none)만 이 화면에서 쓰는 값이라 여기서 노말과 같게 둔다.
+const TYPE_ACCENT: Record<string, { glow: string; border: string; bg: string; label: string }> =
+  Object.fromEntries(
+    (Object.keys({ ...ELEMENT_COLOR, none: "normal" }) as string[]).map((type) => {
+      const token = ELEMENT_COLOR[type as keyof typeof ELEMENT_COLOR] ?? ELEMENT_COLOR.normal;
+      const chip  = ELEMENT_CHIP_CLASS[type as keyof typeof ELEMENT_CHIP_CLASS] ?? ELEMENT_CHIP_CLASS.normal;
+      return [type, {
+        glow:   rgba(token, 0.45),
+        border: PALETTE[token],
+        bg:     rgba(token, 0.12),
+        label:  chip,
+      }];
+    }),
+  );
 
 const MOVE_CATEGORY_KO: Record<string, string> = {
   physical: "물리", special: "특수", status: "상태",
@@ -40,11 +46,11 @@ const STATUS_KO: Record<string, string> = {
   burn: "화상", paralysis: "마비", freeze: "빙결", poison: "독",
 };
 
+/** HP 색 3단계 — ART_DIRECTION 3-2. 전투 화면과 같은 경계값을 쓴다(50% / 20%). */
 function hpGradient(pct: number): string {
-  if (pct > 65) return "linear-gradient(90deg, #15803d, #22c55e)";
-  if (pct > 35) return "linear-gradient(90deg, #a16207, #eab308)";
-  if (pct > 15) return "linear-gradient(90deg, #c2410c, #f97316)";
-  return "linear-gradient(90deg, #991b1b, #ef4444)";
+  if (pct > 50) return `linear-gradient(90deg, ${PALETTE.moss500}, ${PALETTE.mist500})`;
+  if (pct > 20) return `linear-gradient(90deg, ${PALETTE.ember600}, ${PALETTE.ember500})`;
+  return `linear-gradient(90deg, ${PALETTE.ember700}, ${PALETTE.ember600})`;
 }
 
 const MON_STYLES = `
@@ -58,8 +64,8 @@ const MON_STYLES = `
 }
 @keyframes hpLoad { from { width: 0; } }
 @keyframes selectRing {
-  0%,100%{ box-shadow: 0 0 0 2px var(--sel-color,#f59e0b), 0 0 16px var(--sel-glow,rgba(245,158,11,.4)); }
-  50%    { box-shadow: 0 0 0 2px var(--sel-color,#f59e0b), 0 0 28px var(--sel-glow,rgba(245,158,11,.55)); }
+  0%,100%{ box-shadow: 0 0 0 2px var(--sel-color, var(--color-ember-500)), 0 0 16px var(--sel-glow, rgba(233, 148, 65, .452)); }
+  50%    { box-shadow: 0 0 0 2px var(--sel-color, var(--color-ember-500)), 0 0 28px var(--sel-glow, rgba(233, 148, 65, .622)); }
 }
 @keyframes bubblePop {
   0%  { transform: scale(0); opacity: 1; }
@@ -74,7 +80,7 @@ function ReleaseBtn({ disabled, onRelease }: { disabled: boolean; onRelease: () 
   if (disabled) {
     return (
       <button disabled className="text-[10px] font-bold px-2 py-0.5 rounded"
-        style={{ background: "rgba(40,20,20,.2)", border: "1px solid rgba(80,30,30,.2)", color: "rgba(120,60,60,.3)" }}>
+        style={{ background: "rgba(13, 18, 35, .2)", border: "1px solid rgba(132, 75, 63, .043)", color: "rgba(132, 75, 63, .215)" }}>
         놓아주기
       </button>
     );
@@ -95,9 +101,9 @@ function ReleaseBtn({ disabled, onRelease }: { disabled: boolean; onRelease: () 
     <button onClick={handleClick}
       className="text-[10px] font-bold px-2 py-0.5 rounded transition"
       style={{
-        background: pending ? "rgba(180,30,30,.35)" : "rgba(80,20,20,.25)",
-        border: pending ? "1px solid rgba(220,60,60,.55)" : "1px solid rgba(140,40,40,.35)",
-        color: pending ? "#fca5a5" : "rgba(200,90,90,.65)",
+        background: pending ? "rgba(168, 61, 31, .317)" : "rgba(13, 18, 35, .25)",
+        border: pending ? "1px solid rgba(168, 61, 31, .897)" : "1px solid rgba(132, 75, 63, .239)",
+        color: pending ? PALETTE.ember500 : "rgba(233, 148, 65, .335)",
       }}>
       {pending ? "확인?" : "놓아주기"}
     </button>
@@ -129,28 +135,28 @@ function EquipModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,.78)" }}
+      style={{ background: "rgba(13, 18, 35, .78)" }}
       onClick={onClose}
     >
       <div
         className="relative rounded-2xl w-[500px] max-h-[90vh] overflow-y-auto"
         style={{
-          background: "rgba(12,7,2,.98)",
-          border: "1px solid rgba(180,120,30,.4)",
-          boxShadow: "0 0 48px rgba(0,0,0,.8)",
+          background: "rgba(13, 18, 35, .98)",
+          border: "1px solid rgba(132, 75, 63, .936)",
+          boxShadow: "0 0 48px rgba(13, 18, 35, .8)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
         <div className="sticky top-0 px-5 py-4 flex items-center justify-between"
-          style={{ background: "rgba(12,7,2,.98)", borderBottom: "1px solid rgba(140,90,20,.2)" }}>
+          style={{ background: "rgba(13, 18, 35, .98)", borderBottom: "1px solid rgba(132, 75, 63, .255)" }}>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#b47828" }}>장비 관리</p>
-            <p className="text-base font-black text-zinc-100">{monster.nickname ?? monster.name}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: PALETTE.sand300 }}>장비 관리</p>
+            <p className="text-base font-black text-cream-100">{monster.nickname ?? monster.name}</p>
           </div>
           <button onClick={onClose}
             className="text-base font-black transition hover:brightness-125 rounded-lg px-2 py-1"
-            style={{ color: "#8b6014", background: "rgba(40,20,4,.6)" }}>
+            style={{ color: PALETTE.sand300, background: "rgba(13, 18, 35, .8)" }}>
             ✕
           </button>
         </div>
@@ -158,7 +164,7 @@ function EquipModal({
         <div className="px-5 py-4 flex flex-col gap-5">
           {/* 현재 장착 슬롯 */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
               장착 중인 장비 (슬롯 클릭 → 가방 필터)
             </p>
             <div className="flex flex-col gap-2">
@@ -170,18 +176,18 @@ function EquipModal({
                     key={slot}
                     className="flex items-center gap-3 rounded-xl px-3 py-2 cursor-pointer transition"
                     style={{
-                      background: isActive ? "rgba(180,120,30,.12)" : "rgba(0,0,0,.35)",
-                      border: `1px solid ${isActive ? "rgba(180,120,30,.5)" : "rgba(80,50,10,.3)"}`,
+                      background: isActive ? "rgba(132, 75, 63, .281)" : "rgba(13, 18, 35, .35)",
+                      border: `1px solid ${isActive ? "rgba(132, 75, 63, 1)" : "rgba(132, 75, 63, .105)"}`,
                     }}
                     onClick={() => setSelectedSlot(isActive ? null : slot)}
                   >
-                    <span className="w-16 text-[11px] font-bold shrink-0" style={{ color: "#a07818" }}>
+                    <span className="w-16 text-[11px] font-bold shrink-0" style={{ color: PALETTE.sand300 }}>
                       {ARTIFACT_SLOT_LABEL[slot]}
                     </span>
                     {item ? (
                       <>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black truncate" style={{ color: "#f5e6c8" }}>{item.name}</p>
+                          <p className="text-xs font-black truncate" style={{ color: PALETTE.cream100 }}>{item.name}</p>
                           <p className="text-[9px] font-bold mt-0.5" style={{ color: QUALITY_COLOR[item.quality] }}>
                             {QUALITY_LABEL[item.quality]}
                           </p>
@@ -189,7 +195,7 @@ function EquipModal({
                             <div className="flex flex-wrap gap-0.5 mt-1">
                               {item.statBonuses.map((sb, i) => (
                                 <span key={i} className="text-[8px] px-1 py-0.5 rounded"
-                                  style={{ background: "rgba(60,40,10,.8)", color: "#d4a030" }}>
+                                  style={{ background: "rgba(132, 75, 63, .154)", color: PALETTE.ember500 }}>
                                   {ARTIFACT_STAT_LABEL[sb.stat]} +{sb.value}
                                 </span>
                               ))}
@@ -200,16 +206,16 @@ function EquipModal({
                           onClick={(e) => { e.stopPropagation(); onUnequip(item.instanceId); }}
                           className="text-[9px] font-bold px-2 py-0.5 rounded shrink-0 transition hover:brightness-125"
                           style={{
-                            background: "rgba(120,30,30,.6)",
-                            border: "1px solid rgba(200,60,60,.4)",
-                            color: "#fca5a5",
+                            background: "rgba(168, 61, 31, .236)",
+                            border: "1px solid rgba(168, 61, 31, .547)",
+                            color: PALETTE.ember500,
                           }}
                         >
                           해제
                         </button>
                       </>
                     ) : (
-                      <p className="text-[10px]" style={{ color: "rgba(120,80,20,.4)" }}>— 비어있음 —</p>
+                      <p className="text-[10px]" style={{ color: "rgba(205, 178, 126, .08)" }}>— 비어있음 —</p>
                     )}
                   </div>
                 );
@@ -219,11 +225,11 @@ function EquipModal({
 
           {/* 가방의 아티팩트 */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
               가방의 아티팩트{selectedSlot ? ` — ${ARTIFACT_SLOT_LABEL[selectedSlot]} 필터` : ""}
             </p>
             {visibleArtifacts.length === 0 ? (
-              <p className="text-center py-5 text-xs" style={{ color: "rgba(120,80,20,.5)" }}>
+              <p className="text-center py-5 text-xs" style={{ color: "rgba(205, 178, 126, .1)" }}>
                 {selectedSlot
                   ? `장착 가능한 ${ARTIFACT_SLOT_LABEL[selectedSlot]}이 없습니다.`
                   : "가방에 아티팩트가 없습니다."}
@@ -236,29 +242,29 @@ function EquipModal({
                     onClick={() => onEquip(a)}
                     className="rounded-xl px-3 py-2 text-left transition hover:brightness-110 w-full"
                     style={{
-                      background: "rgba(28,14,4,.88)",
+                      background: "rgba(13, 18, 35, .88)",
                       border: `1px solid ${QUALITY_COLOR[a.quality]}44`,
                     }}
                   >
-                    <p className="text-[11px] font-black leading-tight" style={{ color: "#f5e6c8" }}>{a.name}</p>
+                    <p className="text-[11px] font-black leading-tight" style={{ color: PALETTE.cream100 }}>{a.name}</p>
                     <p className="text-[9px] font-bold mt-0.5" style={{ color: QUALITY_COLOR[a.quality] }}>
                       {QUALITY_LABEL[a.quality]}
                     </p>
-                    <p className="text-[9px] mt-0.5" style={{ color: "rgba(140,90,20,.7)" }}>
+                    <p className="text-[9px] mt-0.5" style={{ color: "rgba(132, 75, 63, .891)" }}>
                       {ARTIFACT_SLOT_LABEL[ARTIFACT_SLOT_MAP[a.itemId]] ?? "알 수 없음"}
                     </p>
                     {a.statBonuses && a.statBonuses.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-0.5">
                         {a.statBonuses.map((sb, i) => (
                           <span key={i} className="text-[8px] px-1 py-0.5 rounded"
-                            style={{ background: "rgba(60,40,10,.8)", color: "#d4a030" }}>
+                            style={{ background: "rgba(132, 75, 63, .154)", color: PALETTE.ember500 }}>
                             {ARTIFACT_STAT_LABEL[sb.stat]} +{sb.value}
                           </span>
                         ))}
                       </div>
                     )}
                     <div className="mt-1.5 text-center text-[9px] font-black rounded py-0.5"
-                      style={{ background: "rgba(180,120,30,.15)", color: "#b47828" }}>
+                      style={{ background: "rgba(132, 75, 63, .351)", color: PALETTE.sand300 }}>
                       장착하기
                     </div>
                   </button>
@@ -280,13 +286,13 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
   if (!monster) {
     return (
       <div className="w-72 flex-shrink-0 flex flex-col"
-        style={{ background: "rgba(10,6,2,.5)", borderRight: "1px solid rgba(140,90,20,.15)" }}>
-        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(140,90,20,.1)" }}>
-          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(180,120,30,.6)" }}>STATUS</p>
-          <p className="text-sm font-black text-zinc-200">상태창</p>
+        style={{ background: "rgba(13, 18, 35, .5)", borderRight: "1px solid rgba(132, 75, 63, .191)" }}>
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STATUS</p>
+          <p className="text-sm font-black text-sand-200">상태창</p>
         </div>
         <div className="flex-1 flex items-center justify-center px-6 text-center">
-          <p className="text-xs" style={{ color: "rgba(120,80,20,.5)" }}>
+          <p className="text-xs" style={{ color: "rgba(205, 178, 126, .1)" }}>
             몬스터를 클릭하면<br />상세 정보가 표시됩니다
           </p>
         </div>
@@ -304,10 +310,10 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
 
   return (
     <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
-      style={{ background: "rgba(10,6,2,.5)", borderRight: "1px solid rgba(140,90,20,.15)" }}>
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(140,90,20,.1)" }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(180,120,30,.6)" }}>STATUS</p>
-        <p className="text-sm font-black text-zinc-200">상태창</p>
+      style={{ background: "rgba(13, 18, 35, .5)", borderRight: "1px solid rgba(132, 75, 63, .191)" }}>
+      <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STATUS</p>
+        <p className="text-sm font-black text-sand-200">상태창</p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
@@ -319,9 +325,9 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
               className="w-11 h-11 object-contain pixel-img" style={monsterImgStyle(monster.id)} />
           </div>
           <div className="min-w-0">
-            <p className="text-base font-black text-zinc-100 truncate">{monster.nickname ?? monster.name}</p>
+            <p className="text-base font-black text-cream-100 truncate">{monster.nickname ?? monster.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[10px] font-bold text-zinc-500">Lv.{monster.level}</span>
+              <span className="text-[10px] font-bold text-sand-300">Lv.{monster.level}</span>
               <span className={`rounded-full border px-1.5 text-[9px] font-bold ${acc.label}`}>
                 {TYPE_KO[monster.type ?? "none"] ?? ""}
               </span>
@@ -331,18 +337,18 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
 
         {/* 종합 능력치 */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
             종합 능력치
           </p>
           <div className="grid grid-cols-2 gap-2">
             {stats.map(([label, base, bonus]) => (
               <div key={label} className="flex flex-col items-center rounded-lg py-2"
-                style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
-                <span className="text-[9px] font-bold" style={{ color: "rgba(180,120,30,.6)" }}>{label}</span>
-                <span className="text-sm font-black text-zinc-200 mt-0.5">
+                style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(132, 75, 63, .105)" }}>
+                <span className="text-[9px] font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>{label}</span>
+                <span className="text-sm font-black text-sand-200 mt-0.5">
                   {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : base + bonus}
                 </span>
-                {bonus > 0 && <span className="text-[9px] font-bold text-emerald-400">+{bonus}</span>}
+                {bonus > 0 && <span className="text-[9px] font-bold text-moss-500">+{bonus}</span>}
               </div>
             ))}
           </div>
@@ -357,33 +363,33 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
             ? monsters.find((m) => m.id === monster.evolvesTo) : undefined;
           return (
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
                 성장
               </p>
               <div className="rounded-xl px-3 py-2.5"
-                style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
+                style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(132, 75, 63, .105)" }}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] font-bold" style={{ color: "rgba(180,120,30,.6)" }}>다음 레벨까지</span>
-                  <span className="text-[10px] font-mono text-zinc-300">
+                  <span className="text-[9px] font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>다음 레벨까지</span>
+                  <span className="text-[10px] font-mono text-sand-200">
                     {monster.exp} / {monster.expToNextLevel}
                   </span>
                 </div>
-                <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,.07)" }}>
-                  <div className="h-full rounded-full" style={{ width: `${expPct}%`, background: "#d4a017" }} />
+                <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(243, 229, 185, .089)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${expPct}%`, background: PALETTE.ember500 }} />
                 </div>
 
                 {nextLearn && (
-                  <p className="mt-2 text-[10px]" style={{ color: "rgba(200,160,90,.85)" }}>
-                    Lv.{nextLearn.level} — <span className="font-bold text-zinc-200">{nextLearn.move.name}</span> 습득
+                  <p className="mt-2 text-[10px]" style={{ color: "rgba(205, 178, 126, .698)" }}>
+                    Lv.{nextLearn.level} — <span className="font-bold text-sand-200">{nextLearn.move.name}</span> 습득
                   </p>
                 )}
                 {evoTo && monster.evolvesAtLevel !== undefined && (
-                  <p className="mt-1 text-[10px]" style={{ color: "rgba(200,160,90,.85)" }}>
-                    Lv.{monster.evolvesAtLevel} — <span className="font-bold text-zinc-200">{evoTo.name}</span>(으)로 진화
+                  <p className="mt-1 text-[10px]" style={{ color: "rgba(205, 178, 126, .698)" }}>
+                    Lv.{monster.evolvesAtLevel} — <span className="font-bold text-sand-200">{evoTo.name}</span>(으)로 진화
                   </p>
                 )}
                 {!nextLearn && !evoTo && (
-                  <p className="mt-2 text-[10px]" style={{ color: "rgba(140,90,20,.7)" }}>
+                  <p className="mt-2 text-[10px]" style={{ color: "rgba(132, 75, 63, .891)" }}>
                     더 배울 기술도, 남은 진화도 없습니다.
                   </p>
                 )}
@@ -394,7 +400,7 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
 
         {/* 보유 스킬 */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(180,120,30,.65)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
             보유 스킬 ({monster.moves.length})
           </p>
           <div className="flex flex-col gap-1.5">
@@ -402,20 +408,20 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
               const mvAcc = TYPE_ACCENT[mv.type] ?? TYPE_ACCENT.normal;
               return (
                 <div key={mv.id} className="flex items-center gap-2 rounded-xl px-3 py-2"
-                  style={{ background: "rgba(0,0,0,.35)", border: "1px solid rgba(80,50,10,.3)" }}>
+                  style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(132, 75, 63, .105)" }}>
                   <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${mvAcc.label}`}>
                     {TYPE_KO[mv.type] ?? mv.type}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black truncate" style={{ color: "#f5e6c8" }}>{mv.name}</p>
-                    <p className="text-[9px] mt-0.5" style={{ color: "rgba(140,90,20,.7)" }}>
+                    <p className="text-xs font-black truncate" style={{ color: PALETTE.cream100 }}>{mv.name}</p>
+                    <p className="text-[9px] mt-0.5" style={{ color: "rgba(132, 75, 63, .891)" }}>
                       {MOVE_CATEGORY_KO[mv.category] ?? mv.category}
                       {mv.statusEffect && ` · ${STATUS_KO[mv.statusEffect] ?? mv.statusEffect} ${mv.statusChance ?? 0}%`}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-[10px] font-mono text-zinc-300">위력 {mv.power === 0 ? "—" : mv.power}</p>
-                    <p className="text-[9px] font-mono" style={{ color: "rgba(140,90,20,.6)" }}>명중 {mv.accuracy}%</p>
+                    <p className="text-[10px] font-mono text-sand-200">위력 {mv.power === 0 ? "—" : mv.power}</p>
+                    <p className="text-[9px] font-mono" style={{ color: "rgba(132, 75, 63, .764)" }}>명중 {mv.accuracy}%</p>
                   </div>
                 </div>
               );
@@ -448,18 +454,18 @@ function MonsterCard({
       style={{
         padding: size === "lg" ? "14px 10px" : "10px 8px",
         background: selected
-          ? `linear-gradient(145deg, ${acc.bg}, rgba(10,6,2,.9))`
-          : dimmed ? "rgba(10,7,3,.5)" : "rgba(14,9,3,.85)",
-        border: selected ? `1.5px solid ${acc.border}` : `1px solid rgba(140,90,20,.2)`,
-        boxShadow: selected ? `0 0 20px ${acc.glow}, inset 0 0 12px rgba(0,0,0,.4)` : "inset 0 0 8px rgba(0,0,0,.3)",
+          ? `linear-gradient(145deg, ${acc.bg}, rgba(13, 18, 35, .9))`
+          : dimmed ? "rgba(13, 18, 35, .5)" : "rgba(13, 18, 35, .85)",
+        border: selected ? `1.5px solid ${acc.border}` : `1px solid rgba(132, 75, 63, .255)`,
+        boxShadow: selected ? `0 0 20px ${acc.glow}, inset 0 0 12px rgba(13, 18, 35, .4)` : "inset 0 0 8px rgba(13, 18, 35, .3)",
         opacity: dimmed ? .45 : 1,
         animation: selected ? "selectRing 2.2s ease-in-out infinite" : "none",
       } as React.CSSProperties}
     >
       {isFainted && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl"
-          style={{ background: "rgba(0,0,0,.55)", backdropFilter: "blur(1px)" }}>
-          <span className="text-xs font-black text-red-400 tracking-widest rotate-[-15deg] opacity-90">기절</span>
+          style={{ background: "rgba(13, 18, 35, .55)", backdropFilter: "blur(1px)" }}>
+          <span className="text-xs font-black text-ember-500 tracking-widest rotate-[-15deg] opacity-90">기절</span>
         </div>
       )}
 
@@ -477,11 +483,11 @@ function MonsterCard({
       </div>
 
       <div className="text-center w-full px-0.5">
-        <p className="font-bold text-zinc-100 truncate leading-tight" style={{ fontSize: size === "sm" ? 10 : 11 }}>
+        <p className="font-bold text-cream-100 truncate leading-tight" style={{ fontSize: size === "sm" ? 10 : 11 }}>
           {monster.nickname ?? monster.name}
         </p>
         <div className="flex items-center justify-center gap-1 mt-0.5">
-          <span className="text-[9px] font-bold text-zinc-500">Lv.{monster.level}</span>
+          <span className="text-[9px] font-bold text-sand-300">Lv.{monster.level}</span>
           <span className={`rounded-full border px-1 text-[8px] font-bold ${acc.label}`} style={{ paddingTop: 0, paddingBottom: 0 }}>
             {TYPE_KO[monster.type ?? "none"] ?? ""}
           </span>
@@ -490,10 +496,10 @@ function MonsterCard({
 
       <div className="w-full px-0.5">
         <div className="flex justify-between items-center mb-0.5">
-          <span className="text-[8px] text-zinc-600 font-bold">HP</span>
-          <span className="text-[8px] text-zinc-500">{monster.currentHp}/{monster.maxHp}</span>
+          <span className="text-[8px] text-earth-400 font-bold">HP</span>
+          <span className="text-[8px] text-sand-300">{monster.currentHp}/{monster.maxHp}</span>
         </div>
-        <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: "rgba(0,0,0,.5)" }}>
+        <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: "rgba(13, 18, 35, .5)" }}>
           <div className="h-full rounded-full transition-all"
             style={{ width: `${hpPct}%`, background: hpGradient(hpPct), animation: "hpLoad .6s ease both" }} />
         </div>
@@ -506,10 +512,10 @@ function MonsterCard({
             ["방", monster.defense, equipBonus.defense],
             ["속", monster.speed, equipBonus.speed],
           ] as [string, number, number][]).map(([l, base, bonus]) => (
-            <div key={l} className="flex flex-col items-center rounded py-0.5" style={{ background: "rgba(0,0,0,.3)" }}>
-              <span className="text-[8px] text-zinc-600">{l}</span>
-              <span className="text-[10px] font-bold text-zinc-300">{base + bonus}</span>
-              {bonus > 0 && <span className="text-[7px] font-bold text-emerald-400 leading-none">+{bonus}</span>}
+            <div key={l} className="flex flex-col items-center rounded py-0.5" style={{ background: "rgba(13, 18, 35, .3)" }}>
+              <span className="text-[8px] text-earth-400">{l}</span>
+              <span className="text-[10px] font-bold text-sand-200">{base + bonus}</span>
+              {bonus > 0 && <span className="text-[7px] font-bold text-moss-500 leading-none">+{bonus}</span>}
             </div>
           ))}
         </div>
@@ -519,7 +525,7 @@ function MonsterCard({
         <div className="w-full flex items-center gap-0.5 justify-center flex-wrap mt-0.5">
           {equippedSlots.map((slot) => (
             <span key={slot} className="text-[7px] px-1 rounded font-bold"
-              style={{ background: "rgba(180,120,30,.2)", color: "#b47828", border: "1px solid rgba(180,120,30,.3)" }}>
+              style={{ background: "rgba(132, 75, 63, .468)", color: PALETTE.sand300, border: "1px solid rgba(132, 75, 63, .702)" }}>
               {ARTIFACT_SLOT_LABEL[slot]}
             </span>
           ))}
@@ -534,15 +540,15 @@ function EmptyPartySlot({ index, selected, onClick }: { index: number; selected?
     <button onClick={onClick}
       className="rounded-xl w-full h-32 flex flex-col items-center justify-center gap-2 transition-all"
       style={{
-        background: selected ? "rgba(245,158,11,.08)" : "rgba(10,7,3,.5)",
-        border: selected ? "1.5px solid #f59e0b" : "1px dashed rgba(140,90,20,.25)",
-        boxShadow: selected ? "0 0 16px rgba(245,158,11,.25)" : "none",
+        background: selected ? "rgba(233, 148, 65, .09)" : "rgba(13, 18, 35, .5)",
+        border: selected ? "1.5px solid #e99441" : "1px dashed rgba(132, 75, 63, .318)",
+        boxShadow: selected ? "0 0 16px rgba(233, 148, 65, .283)" : "none",
       }}>
       <div className="w-10 h-10 rounded-full flex items-center justify-center"
-        style={{ background: selected ? "rgba(245,158,11,.15)" : "rgba(80,50,10,.15)", border: "1px dashed rgba(140,90,20,.3)" }}>
-        <span className="text-xl" style={{ color: selected ? "#f59e0b" : "rgba(120,80,20,.5)" }}>+</span>
+        style={{ background: selected ? "rgba(233, 148, 65, .17)" : "rgba(132, 75, 63, .052)", border: "1px dashed rgba(132, 75, 63, .382)" }}>
+        <span className="text-xl" style={{ color: selected ? PALETTE.ember500 : "rgba(205, 178, 126, .1)" }}>+</span>
       </div>
-      <span className="text-[10px] font-semibold" style={{ color: selected ? "#f59e0b" : "rgba(120,80,20,.5)" }}>슬롯 {index + 1}</span>
+      <span className="text-[10px] font-semibold" style={{ color: selected ? PALETTE.ember500 : "rgba(205, 178, 126, .1)" }}>슬롯 {index + 1}</span>
     </button>
   );
 }
@@ -690,28 +696,28 @@ export default function MonstersPage() {
       : "슬롯 또는 보관함 몬스터를 클릭해 선택";
 
   return (
-    <div className="h-screen flex flex-col text-zinc-100 overflow-hidden"
-      style={{ background: "linear-gradient(160deg,#0d0906 0%,#0b0705 50%,#0d0906 100%)" }}>
+    <div className="h-screen flex flex-col text-cream-100 overflow-hidden"
+      style={{ background: `linear-gradient(160deg, ${PALETTE.shadow900} 0%, ${PALETTE.shadow800} 50%, ${PALETTE.shadow900} 100%)` }}>
       <style>{MON_STYLES}</style>
 
       {/* ── 헤더 ── */}
       <header style={{
-        background: "rgba(10,6,2,.92)",
-        borderBottom: "1px solid rgba(140,90,20,.18)",
-        boxShadow: "0 1px 0 rgba(245,158,11,.06)",
+        background: "rgba(13, 18, 35, .92)",
+        borderBottom: "1px solid rgba(132, 75, 63, .229)",
+        boxShadow: "0 1px 0 rgba(233, 148, 65, .068)",
         flexShrink: 0,
       }}>
-        <div style={{ height: 2, background: "linear-gradient(90deg,transparent,rgba(217,119,6,.5),transparent)" }} />
+        <div style={{ height: 2, background: "linear-gradient(90deg,transparent,rgba(233, 148, 65, .357),transparent)" }} />
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate("/")}
               className="rounded-xl px-3 py-1.5 text-sm font-semibold transition"
-              style={{ background: "rgba(20,12,4,.8)", border: "1px solid rgba(140,90,20,.3)", color: "rgba(200,150,50,.8)" }}>
+              style={{ background: "rgba(13, 18, 35, .8)", border: "1px solid rgba(132, 75, 63, .382)", color: "rgba(205, 178, 126, .59)" }}>
               ← 베이스캠프
             </button>
             <div>
-              <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: "rgba(180,120,30,.5)" }}>MONSTERS</p>
-              <p className="text-base font-black text-zinc-100">내 몬스터</p>
+              <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>MONSTERS</p>
+              <p className="text-base font-black text-cream-100">내 몬스터</p>
             </div>
           </div>
 
@@ -722,16 +728,16 @@ export default function MonstersPage() {
                 { label: "보관함", value: `${storage.length}/30` },
               ].map((s) => (
                 <div key={s.label} className="text-center px-3 py-1.5 rounded-xl"
-                  style={{ background: "rgba(20,12,4,.6)", border: "1px solid rgba(80,50,10,.2)" }}>
-                  <p className="text-[9px] text-zinc-600 uppercase tracking-wider">{s.label}</p>
-                  <p className="text-sm font-black text-zinc-200">{s.value}</p>
+                  style={{ background: "rgba(13, 18, 35, .6)", border: "1px solid rgba(132, 75, 63, .07)" }}>
+                  <p className="text-[9px] text-earth-400 uppercase tracking-wider">{s.label}</p>
+                  <p className="text-sm font-black text-sand-200">{s.value}</p>
                 </div>
               ))}
               {bestFloor > 0 && (
                 <div className="text-center px-3 py-1.5 rounded-xl"
-                  style={{ background: "rgba(30,15,2,.6)", border: "1px solid rgba(180,100,10,.25)" }}>
-                  <p className="text-[9px] uppercase tracking-wider" style={{ color: "rgba(180,120,30,.6)" }}>최고층</p>
-                  <p className="text-sm font-black" style={{ color: "#f59e0b" }}>{bestFloor}F</p>
+                  style={{ background: "rgba(13, 18, 35, .6)", border: "1px solid rgba(132, 75, 63, .471)" }}>
+                  <p className="text-[9px] uppercase tracking-wider" style={{ color: "rgba(132, 75, 63, 1)" }}>최고층</p>
+                  <p className="text-sm font-black" style={{ color: PALETTE.ember500 }}>{bestFloor}F</p>
                 </div>
               )}
             </div>
@@ -739,14 +745,14 @@ export default function MonstersPage() {
             <button onClick={handleRestore}
               className="relative rounded-xl px-4 py-2 text-sm font-black transition overflow-hidden"
               style={{
-                background: faintedCount > 0 ? "linear-gradient(135deg,rgba(20,60,20,.8),rgba(10,30,10,.9))" : "rgba(10,20,10,.6)",
-                border: faintedCount > 0 ? "1px solid rgba(34,197,94,.5)" : "1px solid rgba(30,60,20,.3)",
-                color: faintedCount > 0 ? "#4ade80" : "#3f6030",
-                boxShadow: faintedCount > 0 && restoreAnim ? "0 0 20px rgba(52,211,153,.5)" : "none",
+                background: faintedCount > 0 ? "linear-gradient(135deg,rgba(13, 18, 35, .8),rgba(13, 18, 35, .9))" : "rgba(13, 18, 35, .6)",
+                border: faintedCount > 0 ? "1px solid rgba(122, 132, 85, .979)" : "1px solid rgba(132, 75, 63, .091)",
+                color: faintedCount > 0 ? PALETTE.moss500 : PALETTE.stone600,
+                boxShadow: faintedCount > 0 && restoreAnim ? "0 0 20px rgba(122, 132, 85, 1)" : "none",
               }}>
               {restoreAnim && (
                 <div className="absolute inset-0 rounded-xl"
-                  style={{ background: "rgba(52,211,153,.15)", animation: "bubblePop .6s ease" }} />
+                  style={{ background: "rgba(122, 132, 85, .356)", animation: "bubblePop .6s ease" }} />
               )}
               <span className="relative">
                 {restoreAnim ? "✓ 회복 완료!" : faintedCount > 0 ? `⚡ HP 전회복 (${faintedCount}마리 기절)` : "파티 HP 전회복"}
@@ -760,12 +766,12 @@ export default function MonstersPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* 파티 패널 */}
         <div className="w-56 flex-shrink-0 flex flex-col"
-          style={{ background: "rgba(10,6,2,.5)", borderRight: "1px solid rgba(140,90,20,.15)" }}>
+          style={{ background: "rgba(13, 18, 35, .5)", borderRight: "1px solid rgba(132, 75, 63, .191)" }}>
           <div className="px-4 py-3 flex items-center justify-between"
-            style={{ borderBottom: "1px solid rgba(140,90,20,.1)" }}>
+            style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(180,120,30,.6)" }}>PARTY</p>
-              <p className="text-sm font-black text-zinc-200">전투 파티 <span className="text-zinc-500 font-normal">({party.length}/3)</span></p>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>PARTY</p>
+              <p className="text-sm font-black text-sand-200">전투 파티 <span className="text-sand-300 font-normal">({party.length}/3)</span></p>
             </div>
           </div>
 
@@ -787,9 +793,9 @@ export default function MonstersPage() {
                       onClick={(e) => { e.stopPropagation(); handleRemove(idx); }}
                       disabled={party.length <= 1}
                       className="text-[10px] font-semibold transition"
-                      style={{ color: party.length <= 1 ? "rgba(120,80,20,.2)" : "rgba(120,80,20,.55)" }}
-                      onMouseEnter={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = "#a1a1aa"; }}
-                      onMouseLeave={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = "rgba(120,80,20,.55)"; }}>
+                      style={{ color: party.length <= 1 ? "rgba(205, 178, 126, .04)" : "rgba(205, 178, 126, .11)" }}
+                      onMouseEnter={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = PALETTE.sand300; }}
+                      onMouseLeave={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = "rgba(205, 178, 126, .11)"; }}>
                       보관함↓
                     </button>
                     <div className="flex items-center gap-1">
@@ -797,9 +803,9 @@ export default function MonstersPage() {
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
                         className="text-[10px] font-bold px-2 py-0.5 rounded transition hover:brightness-125"
                         style={{
-                          background: "rgba(30,60,80,.5)",
-                          border: "1px solid rgba(60,130,200,.35)",
-                          color: "rgba(130,190,255,.8)",
+                          background: "rgba(24, 59, 79, .531)",
+                          border: "1px solid rgba(92, 147, 150, .29)",
+                          color: "rgba(174, 226, 213, .57)",
                         }}>
                         장착
                       </button>
@@ -818,8 +824,8 @@ export default function MonstersPage() {
             })}
           </div>
 
-          <div className="px-4 py-3" style={{ borderTop: "1px solid rgba(140,90,20,.1)" }}>
-            <p className="text-[10px] text-center" style={{ color: "rgba(140,90,20,.6)" }}>{hint}</p>
+          <div className="px-4 py-3" style={{ borderTop: "1px solid rgba(132, 75, 63, .127)" }}>
+            <p className="text-[10px] text-center" style={{ color: "rgba(132, 75, 63, .764)" }}>{hint}</p>
           </div>
         </div>
 
@@ -832,10 +838,10 @@ export default function MonstersPage() {
         {/* 보관함 */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="px-4 py-3 flex flex-wrap items-center gap-2"
-            style={{ borderBottom: "1px solid rgba(140,90,20,.1)", background: "rgba(8,5,2,.3)" }}>
+            style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)", background: "rgba(13, 18, 35, .3)" }}>
             <div className="mr-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(180,120,30,.6)" }}>STORAGE</p>
-              <p className="text-sm font-black text-zinc-200">보관함 <span className="text-zinc-500 font-normal">({storage.length}/30)</span></p>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STORAGE</p>
+              <p className="text-sm font-black text-sand-200">보관함 <span className="text-sand-300 font-normal">({storage.length}/30)</span></p>
             </div>
 
             <div className="flex gap-1 flex-wrap">
@@ -845,9 +851,9 @@ export default function MonstersPage() {
                   <button key={t} onClick={() => setTypeFilter(t)}
                     className="rounded-full px-2.5 py-0.5 text-[10px] font-bold transition"
                     style={{
-                      background: typeFilter === t ? (acc ? acc.bg : "rgba(245,158,11,.15)") : "rgba(20,12,4,.6)",
-                      border: typeFilter === t ? `1px solid ${acc?.border ?? "#f59e0b"}` : "1px solid rgba(140,90,20,.2)",
-                      color: typeFilter === t ? (acc?.border ?? "#f59e0b") : "rgba(120,80,20,.7)",
+                      background: typeFilter === t ? (acc ? acc.bg : "rgba(233, 148, 65, .17)") : "rgba(13, 18, 35, .6)",
+                      border: typeFilter === t ? `1px solid ${acc?.border ?? PALETTE.ember500}` : "1px solid rgba(132, 75, 63, .255)",
+                      color: typeFilter === t ? (acc?.border ?? PALETTE.ember500) : "rgba(205, 178, 126, .14)",
                     }}>
                     {t === "all" ? "전체" : TYPE_KO[t] ?? t}
                   </button>
@@ -860,9 +866,9 @@ export default function MonstersPage() {
                 <button key={k} onClick={() => setSortBy(k)}
                   className="rounded-lg px-2 py-0.5 text-[10px] font-bold transition"
                   style={{
-                    background: sortBy === k ? "rgba(245,158,11,.12)" : "rgba(20,12,4,.6)",
-                    border: `1px solid ${sortBy === k ? "rgba(245,158,11,.45)" : "rgba(140,90,20,.2)"}`,
-                    color: sortBy === k ? "#f59e0b" : "rgba(120,80,20,.6)",
+                    background: sortBy === k ? "rgba(233, 148, 65, .136)" : "rgba(13, 18, 35, .6)",
+                    border: `1px solid ${sortBy === k ? "rgba(233, 148, 65, .509)" : "rgba(132, 75, 63, .255)"}`,
+                    color: sortBy === k ? PALETTE.ember500 : "rgba(205, 178, 126, .12)",
                   }}>
                   {l}
                 </button>
@@ -875,13 +881,13 @@ export default function MonstersPage() {
               <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
                 <div className="text-5xl opacity-20">📦</div>
                 <div>
-                  <p className="font-bold text-zinc-500 mb-1">보관함이 비어 있습니다</p>
-                  <p className="text-xs text-zinc-700">숲 탐험에서 몬스터를 포획하면<br />이곳에 자동으로 저장됩니다.</p>
+                  <p className="font-bold text-sand-300 mb-1">보관함이 비어 있습니다</p>
+                  <p className="text-xs text-earth-400">숲 탐험에서 몬스터를 포획하면<br />이곳에 자동으로 저장됩니다.</p>
                 </div>
               </div>
             ) : filteredStorage.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 gap-2 text-center">
-                <p className="text-sm text-zinc-600">{TYPE_KO[typeFilter]} 속성 몬스터가 없습니다.</p>
+                <p className="text-sm text-earth-400">{TYPE_KO[typeFilter]} 속성 몬스터가 없습니다.</p>
               </div>
             ) : (
               <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}>
@@ -896,9 +902,9 @@ export default function MonstersPage() {
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
                         className="text-[9px] font-bold px-1.5 py-0.5 rounded transition hover:brightness-125"
                         style={{
-                          background: "rgba(30,60,80,.5)",
-                          border: "1px solid rgba(60,130,200,.35)",
-                          color: "rgba(130,190,255,.8)",
+                          background: "rgba(24, 59, 79, .531)",
+                          border: "1px solid rgba(92, 147, 150, .29)",
+                          color: "rgba(174, 226, 213, .57)",
                         }}>
                         장착
                       </button>
