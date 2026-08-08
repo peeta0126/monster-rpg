@@ -11,7 +11,7 @@ import {
 } from "../../src/shared/floorTable";
 import {
   applyDamage, applyStatusEffect, calculateDamage, checkStatusEffects,
-  createBattleMonster, gainExp, getAIAction, getTypeMultiplier, isFainted,
+  benchExpShare, createBattleMonster, gainExp, getAIAction, getTypeMultiplier, isFainted,
   type BattleMonster,
 } from "../../src/battle/battleUtils";
 import { monsters } from "../../src/monster/monsters";
@@ -29,8 +29,6 @@ import { POTIONS } from "../../src/shared/items";
 
 export { MAX_TOWER_FLOOR };
 
-/** BattlePage의 BENCH_EXP_SHARE와 같은 값 */
-const BENCH_EXP_SHARE = 0.5;
 
 // ─── 시드 RNG ────────────────────────────────────────────────────────────────
 // 게임 코드는 내부에서 Math.random()을 부르므로, 전역을 갈아끼워야 재현 가능한 실행이 된다.
@@ -278,13 +276,13 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       owned.rewardExp = grown.rewardExp;
       owned.evolvesTo = grown.evolvesTo;
       owned.evolvesAtLevel = grown.evolvesAtLevel;
-      // 기절하지 않은 나머지 파티원: HP 반영 + 경험치 분배(BENCH_EXP_SHARE)
+      // 기절하지 않은 나머지 파티원: HP 반영 + 경험치 분배(benchExpShare)
       for (let i = 0; i < s.party.length; i++) {
         if (i === activeIdx) continue;
         const mate = s.party[i];
         mate.currentHp = Math.max(0, battlers[i].currentHp - bonuses[i].hp);
         if (mate.currentHp <= 0) continue;
-        const share = Math.max(1, Math.floor(earned * BENCH_EXP_SHARE));
+        const share = Math.max(1, Math.floor(earned * benchExpShare(mate.level, grown.level)));
         const bm = createBattleMonster(mate);
         const prevLv = bm.level;
         const res = gainExp(bm, share);

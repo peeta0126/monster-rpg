@@ -57,6 +57,7 @@ import {
   createBattleMonster,
   createBattleMonsterFromOwned,
   gainExp,
+  benchExpShare,
   getAIAction,
   isFainted,
   type BattleMonster,
@@ -82,9 +83,6 @@ type BattleRouteState = {
 const STATUS_LABELS: Record<string, string> = {
   paralysis: "⚡마비", poison: "☠독", freeze: "❄빙결", burn: "🔥화상",
 };
-
-/** 출전하지 않은 파티원이 받는 경험치 비율 (출전 몬스터 대비) */
-const BENCH_EXP_SHARE = 0.5;
 
 // ─── 컴포넌트 ────────────────────────────────────────────────────────────────────
 
@@ -512,7 +510,7 @@ export default function BattlePage() {
         const mate = initialParty[i];
         const hp = partyHp[mate.uid] ?? mate.currentHp;
         if (hp <= 0) continue;   // 기절한 몬스터는 분배 대상에서 제외
-        const share = Math.max(1, Math.floor(earnedExp * BENCH_EXP_SHARE));
+        const share = Math.max(1, Math.floor(earnedExp * benchExpShare(mate.level, np.level)));
         const bm = createBattleMonsterFromOwned({ ...mate, currentHp: hp });
         const prev = bm.level;
         const res = gainExp(bm, share);

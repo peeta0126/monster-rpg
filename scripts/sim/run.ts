@@ -15,6 +15,7 @@ import {
   type SimState, type OwnedMon,
 } from "./gameModel";
 import { monsters } from "../../src/monster/monsters";
+import { getFloorEnemy } from "../../src/shared/floorTable";
 import {
   ARTIFACT_SLOT_MAP, MAX_EQUIPMENT_ENHANCEMENT, canSynthesizeArtifacts,
 } from "../../src/shared/craftingUtils";
@@ -55,6 +56,10 @@ interface RunStats {
   /** 각 층을 처음 시도할 때의 선봉 레벨 */
   leadLevelAtFloor: Record<number, number>;
   battlesByFloor: Record<number, number>;
+  /** 보스층을 처음 시도할 때의 파티 — 벽의 원인을 보려면 레벨만으로는 부족하다 */
+  bossParty: Record<number, { name: string; level: number; atk: number; hp: number; pow: number }[]>;
+  /** 보스층을 깨기까지 실제로 몇 번 죽었나 (그 층에서 소모한 재도전 사이클) */
+  bossRetries: Record<number, number>;
 }
 
 /**
@@ -84,6 +89,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
     artifactEnhances: 0, artifactSynths: 0, artifactDisassembles: 0,
     finalLevels: [], finalParty: [], materialsLeft: {}, blockedRecipes: {},
     lossByFloor: {}, battlesByFloor: {}, leadLevelAtFloor: {},
+    bossParty: {}, bossRetries: {},
   };
 
   let uid = 1;
@@ -191,6 +197,12 @@ async function simulateRun(seed: number): Promise<RunStats> {
     restorePartyHp(s);
     if (st.leadLevelAtFloor[floor] === undefined) {
       st.leadLevelAtFloor[floor] = Math.max(...s.party.map((m) => m.level));
+      if (floor % 10 === 0) {
+        st.bossParty[floor] = s.party.map((m) => ({
+          name: m.name, level: m.level, atk: m.attack, hp: m.maxHp,
+          pow: Math.max(...m.moves.map((mv) => mv.power), 0),
+        }));
+      }
     }
     const r = await fightFloor(s, floor);
     st.towerBattles++;
@@ -210,6 +222,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
 
     // 패배 → 한 사이클 갈고닦기: 숲 1회 + 이미 깬 최고 층 3회 파밍
     st.towerLosses++;
+    if (floor % 10 === 0) st.bossRetries[floor] = (st.bossRetries[floor] ?? 0) + 1;
     stuck++;
     if (stuck > STUCK_LIMIT || st.towerBattles > BATTLE_BUDGET) { st.wallFloor = floor; break; }
 
@@ -239,8 +252,10 @@ async function simulateRun(seed: number): Promise<RunStats> {
 // ─── 실행 ────────────────────────────────────────────────────────────────────
 
 const RUNS = Number(process.argv[2] ?? 10);
+/** 시드 기준점. 밸런스 후보를 독립 표본으로 다시 재고 싶을 때 옮긴다. */
+const SEED_BASE = Number(process.env.SIM_SEED ?? 1000);
 const results: RunStats[] = [];
-for (let i = 0; i < RUNS; i++) results.push(await simulateRun(1000 + i));
+for (let i = 0; i < RUNS; i++) results.push(await simulateRun(SEED_BASE + i));
 
 const avg = (f: (r: RunStats) => number) =>
   results.reduce((a, r) => a + f(r), 0) / results.length;
@@ -250,7 +265,7 @@ console.log("판 | 클리어 | 막힌층 | 탑전투 | 패배 | 숲 | 총턴수 
 console.log("---|--------|--------|--------|------|-----|--------|----------");
 for (const r of results) {
   console.log(
-    `${String(r.seed - 999).padStart(2)} | ${r.cleared ? "  O   " : "  X   "} | ` +
+    `${String(r.seed - SEED_BASE + 1).padStart(2)} | ${r.cleared ? "  O   " : "  X   "} | ` +
     `${String(r.wallFloor ?? "-").padStart(6)} | ${String(r.towerBattles).padStart(6)} | ` +
     `${String(r.towerLosses).padStart(4)} | ${String(r.forestRuns).padStart(3)} | ` +
     `${String(r.totalTurns).padStart(6)} | ${r.finalLevels.join("/")}`,
@@ -304,6 +319,23 @@ console.log(`\n── 층 도달 시점의 파티 레벨 (${RUNS}판 평균) ─
     const m = vals.reduce((a, b) => a + b, 0) / vals.length;
     const enemyLv = f === 10 ? 11 : f === 20 ? 20 : f === 30 ? 31 : f === 40 ? 40 : f === 50 ? 51 : f;
     console.log(`${String(f).padStart(3)} | ${m.toFixed(1).padStart(19)} | ${String(enemyLv).padStart(7)} | ${(m - enemyLv).toFixed(1).padStart(5)}`);
+  }
+}
+
+console.log(`\n── 보스 벽 (${RUNS}판) ──`);
+{
+  console.log("층  | 재도전 | 보스: HP/공/방 | 첫 도전 파티 (1판 기준)");
+  for (const f of [10, 20, 30, 40, 50]) {
+    const retries = results.map((r) => r.bossRetries[f] ?? 0);
+    if (!results.some((r) => r.bossParty[f])) continue;
+    const mean = retries.reduce((a, b) => a + b, 0) / RUNS;
+    const e = getFloorEnemy(f, "none");
+    const party = (results.find((r) => r.bossParty[f])!.bossParty[f])
+      .map((m) => `${m.name} Lv${m.level}(공${m.atk}/HP${m.hp}/위력${m.pow})`).join(" ");
+    console.log(
+      `${String(f).padStart(3)} | ${mean.toFixed(1).padStart(6)} | ` +
+      `${String(e.maxHp).padStart(4)}/${String(e.attack).padStart(3)}/${String(e.defense).padStart(3)} | ${party}`,
+    );
   }
 }
 

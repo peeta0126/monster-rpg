@@ -309,6 +309,32 @@ export function getAIAction(
  */
 export const EXP_GROWTH_RATE = 1.04;
 
+/**
+ * 출전하지 않은 파티원이 받는 경험치 비율.
+ *
+ * 예전엔 0.5 고정이었는데, 그러면 뒤처진 몬스터가 영원히 못 따라잡는다. 시뮬레이션에서
+ * 50층 도달 시 파티가 "Lv57 · Lv34 · Lv40" 이었다 — 선봉 하나로 보스를 상대하다 쓰러지면
+ * 남은 둘은 20레벨 아래라 그대로 끝났다. 보스층 패배율이 69~87% 였던 주된 이유다.
+ *
+ * 그래서 뒤처진 만큼 더 준다. 선봉과 같은 레벨이면 절반, 10레벨 이상 벌어지면 동등까지.
+ * 앞서 있는 몬스터는 더 받지 않으므로, 이 보정이 격차를 벌리는 쪽으로 작동할 일은 없다.
+ *
+ * 후보 비교는 scripts/sim/benchSweep.mjs (40판 · 독립 시드):
+ *
+ *            방식 | 보스 재도전 | 최종 레벨 격차
+ *         고정 0.5 |        16.3 |          23.7   ← 이전
+ *         고정 0.7 |        11.7 |          22.0
+ *     0.5 + .05/lv |        11.9 |          17.1   ← 채택
+ *     0.7 + .10/lv |        12.8 |          16.5
+ *
+ * 재도전은 0.5만 아니면 다 비슷하게 떨어진다(11.7~12.8, 노이즈 범위). 갈리는 건 격차 쪽이고,
+ * 거기서 따라잡기가 이긴다. 단순히 다 같이 빨리 크는 게 아니라 뒤처진 쪽만 당기기 때문이다.
+ */
+export function benchExpShare(benchLevel: number, leadLevel: number): number {
+  const gap = Math.max(0, leadLevel - benchLevel);
+  return Math.min(1, 0.5 + gap * 0.05);
+}
+
 export function gainExp(monster: BattleMonster, gainedExp: number) {
   let nextMonster: BattleMonster = {
     ...monster,
