@@ -10,6 +10,7 @@ import {
   QUALITY_COLOR, QUALITY_LABEL, ARTIFACT_STAT_LABEL, sumEquippedStatBonuses,
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
+import { GameBackground } from "../shared/ui/GameBackground";
 
 /** 파티 카드/상태창에 반영할 장비 능력치 (HP는 배틀 실수치와 어긋나지 않도록 제외) */
 export interface EquipStatBonus { attack: number; defense: number; speed: number }
@@ -80,7 +81,7 @@ function ReleaseBtn({ disabled, onRelease }: { disabled: boolean; onRelease: () 
   if (disabled) {
     return (
       <button disabled className="text-pixel-sm font-bold px-2 py-0.5 rounded"
-        style={{ background: "rgba(13, 18, 35, .2)", border: "1px solid rgba(132, 75, 63, .043)", color: "rgba(132, 75, 63, .215)" }}>
+        style={{ background: "rgba(13, 18, 35, .2)", border: "1px solid rgba(132, 75, 63, .35)", color: "rgba(172, 123, 98, .4)" }}>
         놓아주기
       </button>
     );
@@ -103,7 +104,7 @@ function ReleaseBtn({ disabled, onRelease }: { disabled: boolean; onRelease: () 
       style={{
         background: pending ? "rgba(168, 61, 31, .317)" : "rgba(13, 18, 35, .25)",
         border: pending ? "1px solid rgba(168, 61, 31, .897)" : "1px solid rgba(132, 75, 63, .239)",
-        color: pending ? PALETTE.ember500 : "rgba(233, 148, 65, .335)",
+        color: pending ? PALETTE.ember500 : PALETTE.earth400,
       }}>
       {pending ? "확인?" : "놓아주기"}
     </button>
@@ -285,10 +286,10 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
 }) {
   if (!monster) {
     return (
-      <div className="w-72 flex-shrink-0 flex flex-col"
-        style={{ background: "rgba(13, 18, 35, .5)", borderRight: "1px solid rgba(132, 75, 63, .191)" }}>
-        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
-          <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STATUS</p>
+      <div className="m-3 mr-0 flex w-72 flex-shrink-0 flex-col overflow-hidden rounded-xl
+        border-2 border-earth-500 bg-shadow-900/85">
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)" }}>
+          <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">STATUS</p>
           <p className="text-pixel-sm font-black text-sand-200">상태창</p>
         </div>
         <div className="flex-1 flex items-center justify-center px-6 text-center">
@@ -309,10 +310,10 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
   ];
 
   return (
-    <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
-      style={{ background: "rgba(13, 18, 35, .5)", borderRight: "1px solid rgba(132, 75, 63, .191)" }}>
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
-        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STATUS</p>
+    <div className="m-3 mr-0 flex w-72 flex-shrink-0 flex-col overflow-hidden rounded-xl
+      border-2 border-earth-500 bg-shadow-900/85">
+      <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)" }}>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">STATUS</p>
         <p className="text-pixel-sm font-black text-sand-200">상태창</p>
       </div>
 
@@ -482,7 +483,7 @@ function MonsterCard({
       </div>
 
       <div className="text-center w-full px-0.5">
-        <p className="font-bold text-cream-100 truncate leading-tight" style={{ fontSize: size === "sm" ? 10 : 11 }}>
+        <p className={`truncate font-black leading-tight text-cream-100 ${size === "sm" ? "text-pixel-sm" : "text-title-sm"}`}>
           {monster.nickname ?? monster.name}
         </p>
         <div className="flex items-center justify-center gap-1 mt-0.5">
@@ -537,17 +538,13 @@ function MonsterCard({
 function EmptyPartySlot({ index, selected, onClick }: { index: number; selected?: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="rounded-xl w-full h-32 flex flex-col items-center justify-center gap-2 transition-all"
-      style={{
-        background: selected ? "rgba(233, 148, 65, .09)" : "rgba(13, 18, 35, .5)",
-        border: selected ? "1.5px solid #e99441" : "1px dashed rgba(132, 75, 63, .318)",
-        boxShadow: selected ? "0 0 16px rgba(233, 148, 65, .283)" : "none",
-      }}>
-      <div className="w-10 h-10 rounded-full flex items-center justify-center"
-        style={{ background: selected ? "rgba(233, 148, 65, .17)" : "rgba(132, 75, 63, .052)", border: "1px dashed rgba(132, 75, 63, .382)" }}>
-        <span className="text-pixel-md" style={{ color: selected ? PALETTE.ember500 : "rgba(205, 178, 126, .1)" }}>+</span>
+      className={`flex h-32 w-full flex-col items-center justify-center gap-2 rounded-xl border-dashed transition-all
+        ${selected ? "border-2 border-ember-500 bg-ember-500/10" : "border border-earth-500/70 bg-shadow-700/40"}`}>
+      <div className={`flex h-10 w-10 items-center justify-center rounded-full border border-dashed
+        ${selected ? "border-ember-500 bg-ember-500/15" : "border-earth-500/70"}`}>
+        <span className={`text-pixel-md ${selected ? "text-ember-500" : "text-earth-400"}`}>+</span>
       </div>
-      <span className="text-pixel-sm font-semibold" style={{ color: selected ? PALETTE.ember500 : "rgba(205, 178, 126, .1)" }}>슬롯 {index + 1}</span>
+      <span className={`text-pixel-sm font-semibold ${selected ? "text-ember-500" : "text-earth-400"}`}>슬롯 {index + 1}</span>
     </button>
   );
 }
@@ -558,10 +555,14 @@ type SortKey = "level" | "hp" | "type";
 export default function MonstersPage() {
   const navigate = useNavigate();
   const {
-    party, storage, bestFloor,
+    party, storage, bestFloor, dexCaught,
     moveToStorage, swapWithStorage, moveToParty, swapPartySlots, restorePartyHp,
     equippedArtifacts, craftedArtifacts, equipArtifact, unequipArtifact, releaseMonster,
   } = usePlayerStore();
+
+  // 오름(최종 보스)은 포획 대상이 아니라 도감 분모에서 뺀다
+  const catchableTotal = monsters.filter((m) => m.id !== "ormr").length;
+  const caughtCount    = dexCaught.filter((id) => id !== "ormr").length;
 
   const [selParty,   setSelParty]   = useState<number | null>(null);
   const [selStorage, setSelStorage] = useState<string | null>(null);
@@ -695,12 +696,12 @@ export default function MonstersPage() {
       : "슬롯 또는 보관함 몬스터를 클릭해 선택";
 
   return (
-    <div className="h-screen flex flex-col text-cream-100 overflow-hidden"
-      style={{ background: `linear-gradient(160deg, ${PALETTE.shadow900} 0%, ${PALETTE.shadow700} 50%, ${PALETTE.shadow900} 100%)` }}>
+    <div className="relative h-screen flex flex-col text-cream-100 overflow-hidden">
+      <GameBackground />
       <style>{MON_STYLES}</style>
 
       {/* ── 헤더 ── */}
-      <header style={{
+      <header className="relative" style={{
         background: "rgba(13, 18, 35, .92)",
         borderBottom: "1px solid rgba(132, 75, 63, .229)",
         boxShadow: "0 1px 0 rgba(233, 148, 65, .068)",
@@ -714,9 +715,12 @@ export default function MonstersPage() {
               style={{ background: "rgba(13, 18, 35, .8)", border: "1px solid rgba(132, 75, 63, .382)", color: "rgba(205, 178, 126, .59)" }}>
               ← 베이스캠프
             </button>
-            <div>
-              <p className="text-pixel-sm uppercase tracking-widest font-bold" style={{ color: "rgba(132, 75, 63, 1)" }}>MONSTERS</p>
-              <p className="text-title-sm font-black text-cream-100">내 몬스터</p>
+            <p className="text-title-sm font-black text-cream-100">내 몬스터</p>
+
+            <div className="flex items-baseline gap-1.5 rounded-xl border border-earth-500/50 bg-shadow-900/70 px-3 py-1">
+              <span className="text-pixel-sm text-earth-400">도감</span>
+              <span className="text-title-sm font-black text-ember-500">{caughtCount}</span>
+              <span className="text-pixel-sm text-sand-300">/ {catchableTotal}</span>
             </div>
           </div>
 
@@ -725,20 +729,13 @@ export default function MonstersPage() {
               {[
                 { label: "파티",   value: `${party.length}/3` },
                 { label: "보관함", value: `${storage.length}/30` },
+                ...(bestFloor > 0 ? [{ label: "최고층", value: `${bestFloor}F` }] : []),
               ].map((s) => (
-                <div key={s.label} className="text-center px-3 py-1.5 rounded-xl"
-                  style={{ background: "rgba(13, 18, 35, .6)", border: "1px solid rgba(132, 75, 63, .07)" }}>
-                  <p className="text-pixel-sm text-earth-400 uppercase tracking-wider">{s.label}</p>
-                  <p className="text-pixel-sm font-black text-sand-200">{s.value}</p>
+                <div key={s.label} className="flex items-baseline gap-1.5">
+                  <span className="text-pixel-sm text-earth-400">{s.label}</span>
+                  <span className="text-pixel-sm font-black text-sand-200">{s.value}</span>
                 </div>
               ))}
-              {bestFloor > 0 && (
-                <div className="text-center px-3 py-1.5 rounded-xl"
-                  style={{ background: "rgba(13, 18, 35, .6)", border: "1px solid rgba(132, 75, 63, .471)" }}>
-                  <p className="text-pixel-sm uppercase tracking-wider" style={{ color: "rgba(132, 75, 63, 1)" }}>최고층</p>
-                  <p className="text-pixel-sm font-black" style={{ color: PALETTE.ember500 }}>{bestFloor}F</p>
-                </div>
-              )}
             </div>
 
             <button onClick={handleRestore}
@@ -761,15 +758,16 @@ export default function MonstersPage() {
         </div>
       </header>
 
-      {/* ── 콘텐츠 ── */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* ── 콘텐츠 ──
+          relative 필수: GameBackground가 absolute라 static 형제 위에 그려진다 */}
+      <div className="relative flex flex-1 overflow-hidden">
         {/* 파티 패널 */}
-        <div className="w-56 flex-shrink-0 flex flex-col"
-          style={{ background: "rgba(13, 18, 35, .5)", borderRight: "1px solid rgba(132, 75, 63, .191)" }}>
+        <div className="m-3 mr-0 flex w-56 flex-shrink-0 flex-col overflow-hidden rounded-xl
+          border-2 border-earth-500 bg-shadow-900/85">
           <div className="px-4 py-3 flex items-center justify-between"
-            style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)" }}>
+            style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)" }}>
             <div>
-              <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>PARTY</p>
+              <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">PARTY</p>
               <p className="text-pixel-sm font-black text-sand-200">전투 파티 <span className="text-sand-300 font-normal">({party.length}/3)</span></p>
             </div>
           </div>
@@ -792,9 +790,9 @@ export default function MonstersPage() {
                       onClick={(e) => { e.stopPropagation(); handleRemove(idx); }}
                       disabled={party.length <= 1}
                       className="text-pixel-sm font-semibold transition"
-                      style={{ color: party.length <= 1 ? "rgba(205, 178, 126, .04)" : "rgba(205, 178, 126, .11)" }}
+                      style={{ color: party.length <= 1 ? "rgba(172, 123, 98, .35)" : PALETTE.earth400 }}
                       onMouseEnter={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = PALETTE.sand300; }}
-                      onMouseLeave={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = "rgba(205, 178, 126, .11)"; }}>
+                      onMouseLeave={(e) => { if (party.length > 1) (e.target as HTMLElement).style.color = PALETTE.earth400; }}>
                       보관함↓
                     </button>
                     <div className="flex items-center gap-1">
@@ -823,7 +821,7 @@ export default function MonstersPage() {
             })}
           </div>
 
-          <div className="px-4 py-3" style={{ borderTop: "1px solid rgba(132, 75, 63, .127)" }}>
+          <div className="px-4 py-3" style={{ borderTop: "1px solid rgba(132, 75, 63, .32)" }}>
             <p className="text-pixel-sm text-center" style={{ color: "rgba(132, 75, 63, .764)" }}>{hint}</p>
           </div>
         </div>
@@ -835,11 +833,12 @@ export default function MonstersPage() {
         />
 
         {/* 보관함 */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="m-3 flex flex-1 flex-col overflow-hidden rounded-xl
+          border-2 border-earth-500 bg-shadow-900/85">
           <div className="px-4 py-3 flex flex-wrap items-center gap-2"
-            style={{ borderBottom: "1px solid rgba(132, 75, 63, .127)", background: "rgba(13, 18, 35, .3)" }}>
+            style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)", background: "rgba(13, 18, 35, .35)" }}>
             <div className="mr-2">
-              <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: "rgba(132, 75, 63, 1)" }}>STORAGE</p>
+              <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">STORAGE</p>
               <p className="text-pixel-sm font-black text-sand-200">보관함 <span className="text-sand-300 font-normal">({storage.length}/30)</span></p>
             </div>
 
