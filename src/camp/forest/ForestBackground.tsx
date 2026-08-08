@@ -156,8 +156,8 @@ export function ForestBackground({ area }: { area: ForestArea | null }) {
         className="absolute inset-x-0 top-0 h-3/5 w-full object-cover opacity-20"
         style={{
           filter: "blur(14px) brightness(0.4) saturate(0.6)",
-          maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%)", // palette-ok: 마스크는 알파만 쓰인다
+          WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%)", // palette-ok: 마스크 알파
         }}
       />
 

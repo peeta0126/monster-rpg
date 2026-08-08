@@ -198,7 +198,7 @@ export default class BaseCampScene extends Phaser.Scene {
 
     const addStaticRect = (x: number, y: number, w: number, h: number) => {
       // alpha 0 — 화면에 그려지지 않는 충돌 판정용 사각형이라 색은 의미가 없다(팔레트 대상 아님)
-      const r = this.add.rectangle(x, y, w, h, 0x000000, 0);
+      const r = this.add.rectangle(x, y, w, h, 0x000000, 0); // palette-ok: alpha 0, 화면에 안 그려지는 판정용
       this.physics.add.existing(r, true);
       wallBodies.push(r);
 
@@ -206,7 +206,7 @@ export default class BaseCampScene extends Phaser.Scene {
       if (debug) {
         const g = this.add.graphics().setDepth(9999);
         // 개발용 판정 박스. 일부러 팔레트에 없는 형광색을 써서 실수로 켠 채 두면 바로 보이게 한다
-        g.lineStyle(2, 0x00ff88, 1);
+        g.lineStyle(2, 0x00ff88, 1); // palette-ok: 개발용 판정 박스. 켠 채 두면 바로 보이도록 일부러 형광색
         g.strokeRect(x - w / 2, y - h / 2, w, h);
       }
 

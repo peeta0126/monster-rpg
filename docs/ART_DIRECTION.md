@@ -508,6 +508,26 @@ Phaser 씬에는 준비 플래그가 필요합니다 (캔버스는 접근성 트
 (`design/contact-sheet-<label>.png`)으로 합칩니다. 화면을 한 장씩 열어보면 "화면끼리 톤이 안
 맞는다"가 안 보이므로 **항상 나란히 놓고 봅니다.**
 
+### 5-1b. 비주얼 리그레션
+
+`design/visual.spec.ts` 가 7개 화면을 기준 이미지와 비교합니다
+(`maxDiffPixelRatio` 0.02 — 폰트 힌팅 차이로는 안 깨지고 레이아웃이 밀리면 깨지는 값).
+
+```
+npm run design:visual          검사
+npm run design:visual:update   의도한 변경이면 기준 이미지 갱신
+```
+
+기준 이미지는 `design/visual.spec.ts-snapshots/` 에 커밋합니다. 개별 캡처
+(`design/screenshots/`)와 달리 이건 저장소에 남겨야 비교가 성립합니다.
+
+### 5-1c. 색 검사
+
+`scripts/check-hardcoded-colors.mjs` 가 `npm run lint` 에 물려 있습니다. 금지하는 건
+"hex 를 쓰는 것"이 아니라 **1-2 표에 없는 색을 쓰는 것**입니다. 알파가 필요하면
+`rgba(토큰값, .4)` 는 통과합니다 — CSS 에서 토큰에 알파를 먹이는 깔끔한 방법이
+없어서입니다. 예외는 그 줄 끝에 `// palette-ok: 이유`.
+
 ### 5-2. Claude Code에게 시키는 프롬프트 (그대로 복붙)
 
 ```

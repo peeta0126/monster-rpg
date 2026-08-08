@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import BaseCampScene from "../../camp/BaseCampScene";
 import BattleScene from "../../battle/BattleScene";
+import { PALETTE } from "../palette";
 
 export const createBaseCampGame = (parent: string | HTMLElement) => {
   return new Phaser.Game({
@@ -9,7 +10,7 @@ export const createBaseCampGame = (parent: string | HTMLElement) => {
     parent,
     width: 960,
     height: 540,
-    backgroundColor: "#1d1d1d",
+    backgroundColor: PALETTE.shadow900,
     pixelArt: true,
     // pixelArt만으론 스프라이트가 서브픽셀 좌표에 놓여 이동 중 미세하게 떤다
     antialias: false,
@@ -32,7 +33,7 @@ export const createBattleGame = (parent: HTMLElement) => {
     parent,
     width: 960,
     height: 540,
-    backgroundColor: "#0a0a14",
+    backgroundColor: PALETTE.shadow900,
     pixelArt: true,
     // pixelArt만으론 스프라이트가 서브픽셀 좌표에 놓여 이동 중 미세하게 떤다
     antialias: false,

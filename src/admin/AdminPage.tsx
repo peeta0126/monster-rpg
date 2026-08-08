@@ -52,7 +52,7 @@ export default function AdminPage() {
       <div className="flex min-h-screen items-center justify-center bg-shadow-900 px-4">
         <form
           className="w-full max-w-xs rounded-xl border-2 border-ember-700/50 bg-shadow-800 p-6"
-          style={{ boxShadow: "0 0 26px rgba(180,140,60,0.2)" }}
+          style={{ boxShadow: "0 0 26px rgba(233,148,65,0.2)" }}
           onSubmit={(e) => { e.preventDefault(); handleEnter(); }}
         >
           <h1 className="mb-4 text-cream-100" style={{ ...pixelFont, fontSize: 12 }}>관리자 접속</h1>
