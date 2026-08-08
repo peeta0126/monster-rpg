@@ -15,7 +15,8 @@
     "design:shot": "playwright test --config design/playwright.config.ts",
     "design:before": "cross-env SHOT_LABEL=before npm run design:shot",
     "design:after": "cross-env SHOT_LABEL=after npm run design:shot",
-    "design:sheet": "node design/contact-sheet.mjs"
+    "design:sheet": "node design/contact-sheet.mjs",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",

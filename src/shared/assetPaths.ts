@@ -1,3 +1,8 @@
+/**
+ * ⚠️ 배포 전 반드시 교체 — public/assets/player/player-*.png 는 포켓몬 리핑 에셋이다.
+ * 닌텐도는 팬게임에 예외를 두지 않는다. 이 상태로 공개 배포하면 안 된다.
+ * 교체 절차: docs/ASSET_HANDOFF.md
+ */
 /** public/ 밑의 정적 에셋 경로를 한 곳에서 관리한다. 파일명이 바뀌면 여기만 고치면 된다. */
 export const LOGIN_BACKGROUND_IMAGE = "/start-loading.png";
 export const LOGIN_BACKGROUND_IMAGE_WEBP = "/start-loading.webp";

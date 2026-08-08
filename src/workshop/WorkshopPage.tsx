@@ -7,6 +7,7 @@ import type { CraftingStationType } from "../shared/crafting";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
 import { PALETTE } from "../shared/palette";
 import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
+import { getPlayerFrame, type Dir8 } from "../shared/playerSprite";
 
 const BG_URL = "/assets/housing/housing_bg.png";
 
@@ -164,9 +165,9 @@ function isColliding(pt: PlayerPos): boolean {
   return COLLISION_BOXES.some((box) => isInsideBox(pt, box));
 }
 
-function getPlayerImage(dir: Direction, frame: 0 | 1 | 2): string {
-  if (frame === 0) return `/assets/player/player-${dir}.png`;
-  return `/assets/player/player-${dir}-${frame}.png`;
+/** 방향키 입력 → 8방향. 지금은 4방향 에셋으로 폴백되지만 호출부는 이미 8방향 기준이다. */
+function directionToDir8(dir: Direction): Dir8 {
+  return dir === "up" ? "N" : dir === "down" ? "S" : dir === "left" ? "W" : "E";
 }
 
 function getDistance(a: PlayerPos, b: { x: number; y: number }): number {
@@ -207,6 +208,8 @@ export default function WorkshopPage() {
 
   // ── 패널 토글 ────────────────────────────────────────────────────────────────
   const [showCraftedPanel, setShowCraftedPanel] = useState(false);
+
+  const playerFrame = getPlayerFrame(directionToDir8(direction), walkFrame);
 
   // ── 뷰포트 크기 (카메라 계산용) ──────────────────────────────────────────────
   const [viewport, setViewport] = useState(() => ({
@@ -431,11 +434,12 @@ export default function WorkshopPage() {
               }}
             />
             <img
-              src={getPlayerImage(direction, walkFrame)}
+              src={playerFrame.source}
               alt="player"
               draggable={false}
               className="pixel-img"
               style={{
+                transform: playerFrame.flipX ? "scaleX(-1)" : undefined,
                 width:  PLAYER_DISPLAY,
                 height: PLAYER_DISPLAY,
                 filter: "drop-shadow(0 5px 10px rgba(13, 18, 35, .9))",

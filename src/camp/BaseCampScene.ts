@@ -5,6 +5,9 @@ import { markSceneReady } from "../shared/phaser/sceneReady";
 import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
 import { PALETTE, withAlpha } from "../shared/palette";
+import {
+  dirFromVector, getPlayerTextureKey, DIRS_8, PLAYER_ATLAS_KEY, type Dir8,
+} from "../shared/playerSprite";
 import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
 import type { DialogueEntry } from "./campDialogues";
@@ -67,7 +70,7 @@ export default class BaseCampScene extends Phaser.Scene {
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
   };
-  private facing: "up" | "down" | "left" | "right" = "down";
+  private facing: Dir8 = "S";
   private walkFrame: 1 | 2 = 1;
   private walkTimer = 0;
 
@@ -76,6 +79,9 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   preload() {
+    // 8방향 아틀라스가 들어오면 아래 player-* 개별 PNG 목록을 지우고 이 줄을 켠다.
+    // playerSprite.ts 의 ASSET_MODE 를 "atlas" 로 바꾸는 것과 한 세트다.
+    // this.load.aseprite(PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON);
     this.load.image("basecamp-bg", "/assets/basecamp/basecamp-bg.png");
     this.load.image("basecamp-bg-1", "/assets/basecamp/basecamp-bg-1.png");
     this.load.image("player-up", "/assets/player/player-up.png");
@@ -256,8 +262,34 @@ export default class BaseCampScene extends Phaser.Scene {
 
     //좌표 확인용
 
+    this.registerPlayerAnimations();
     redrawTextOnFontLoad(this);
     markSceneReady(this);
+  }
+
+  /**
+   * 8방향 걷기 애니메이션 등록.
+   *
+   * 아틀라스가 아직 없어서 지금은 아무 것도 하지 않는다. 에셋이 들어오면 preload 의
+   * load.aseprite 주석을 풀고, update() 에서 setTexture 대신 play(`walk_${dir}`) 를
+   * 쓰도록 한 줄만 바꾸면 된다. 절차는 docs/ASSET_HANDOFF.md 참고.
+   */
+  private registerPlayerAnimations() {
+    if (!this.textures.exists(PLAYER_ATLAS_KEY)) return;
+
+    this.anims.createFromAseprite(PLAYER_ATLAS_KEY);
+    for (const dir of DIRS_8) {
+      const key = `walk_${dir}`;
+      if (this.anims.exists(key)) continue;
+      this.anims.create({
+        key,
+        frames: this.anims.generateFrameNames(PLAYER_ATLAS_KEY, {
+          prefix: `walk_${dir}_`, start: 0, end: 3, zeroPad: 2,
+        }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
   }
 
   private createNpcs() {
@@ -341,33 +373,26 @@ export default class BaseCampScene extends Phaser.Scene {
     const down = this.cursors.down.isDown || this.wasd.S.isDown;
     const isMoving = left || right || up || down;
 
-    if (left) {
-      body.setVelocityX(-speed);
-      this.facing = "left";
-    } else if (right) {
-      body.setVelocityX(speed);
-      this.facing = "right";
-    }
-    if (up) {
-      body.setVelocityY(-speed);
-      this.facing = "up";
-    } else if (down) {
-      body.setVelocityY(speed);
-      this.facing = "down";
-    }
+    if (left)       body.setVelocityX(-speed);
+    else if (right) body.setVelocityX(speed);
+    if (up)         body.setVelocityY(-speed);
+    else if (down)  body.setVelocityY(speed);
     body.velocity.normalize().scale(speed);
 
+    // 방향은 실제 이동 벡터에서 뽑는다. 대각선 입력도 8방향 중 하나로 떨어지고,
+    // 에셋이 4방향뿐인 지금은 getPlayerTextureKey가 가장 가까운 4방향으로 접어준다.
     if (isMoving) {
+      this.facing = dirFromVector(body.velocity.x, body.velocity.y);
       this.walkTimer += delta;
       if (this.walkTimer >= 160) {
         this.walkTimer = 0;
         this.walkFrame = this.walkFrame === 1 ? 2 : 1;
       }
-      this.player.setTexture(`player-${this.facing}-${this.walkFrame}`);
+      this.player.setTexture(getPlayerTextureKey(this.facing, this.walkFrame));
     } else {
       this.walkTimer = 0;
       this.walkFrame = 1;
-      this.player.setTexture(`player-${this.facing}`);
+      this.player.setTexture(getPlayerTextureKey(this.facing, 0));
     }
 
     // ── depth: 플레이어 y = depth → 건물 뒤/앞 자동 처리 ──────────────────────
