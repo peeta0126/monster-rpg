@@ -6,6 +6,14 @@ import { installSeededRandom } from "./gameModel";
 import { getFloorEnemy, scaleToLevel } from "../../src/shared/floorTable";
 import { monsters } from "../../src/monster/monsters";
 import { getTypeMultiplier } from "../../src/battle/battleUtils";
+import { AREA_MATERIAL_POOL, battleDropPool } from "../../src/shared/dropTables";
+import { FOREST_AREAS } from "../../src/camp/forest/areas";
+import { CRAFTING_RECIPES } from "../../src/workshop/craftingRecipes";
+import { MATERIALS } from "../../src/shared/items";
+
+/** 드랍 테이블 밖에서 나오는 재료 (BattlePage / gameModel 의 특수 처리) */
+const SPECIAL_DROP: Record<string, string> = { ormr_essence: "50층 오름 확정" };
+const SPECIAL_DROP_FLOOR: Record<string, number> = { ormr_essence: 50 };
 
 const restore = installSeededRandom(42);
 
@@ -90,38 +98,68 @@ console.log("(직전 층을 반복해서 파밍한다고 가정)\n");
   console.log(rows.join("\n"));
 }
 
-console.log("\n═══ 4. 9층 이하에서 얻을 수 있는 재료 ═══\n");
-console.log("  숲(얕은 숲)   : herb, berry, root, crystal, wood_plank, leather");
-console.log("  전투(1~10층) : wood_plank, leather, herb");
-console.log("  → iron_fragment는 11층부터, crystal 전투드랍은 21층부터");
-console.log("  → monster_essence / magic_dust / slime_extract 는 어느 드랍 테이블에도 없음\n");
-
-console.log("═══ 5. 제작 가능 여부 ═══\n");
-const need: Record<string, string[]> = {
-  "힘의 목걸이":   ["iron_fragment×2", "monster_essence×1", "crystal×1"],
-  "수호의 팔찌":   ["wood_plank×2", "iron_fragment×1", "magic_dust×1"],
-  "정령의 부적":   ["crystal×2", "monster_essence×2", "magic_dust×2"],
-  "작은 회복 물약": ["herb×2", "root×1"],
-  "집중의 물약":   ["herb×1", "slime_extract×1", "magic_dust×1"],
-  "강력 회복 물약": ["herb×3", "root×2", "monster_essence×1"],
-};
-const sources: Record<string, string> = {
-  herb: "숲/전투", berry: "숲", root: "숲", crystal: "숲/전투(21층+)",
-  wood_plank: "숲/전투", leather: "숲/전투", iron_fragment: "전투(11층+)",
-  monster_essence: "오리온 퀘스트 1회뿐", magic_dust: "바로스 퀘스트 1회뿐",
-  slime_extract: "★ 획득처 없음",
-};
-for (const [name, costs] of Object.entries(need)) {
-  const blockers = costs.filter((c) => {
-    const id = c.split("×")[0];
-    return sources[id] === "★ 획득처 없음" || sources[id].includes("퀘스트");
-  });
-  console.log(`  ${name.padEnd(12)} ${blockers.length === 0 ? "○ 반복 제작 가능" : "△ " + blockers.map((b) => `${b}(${sources[b.split("×")[0]]})`).join(", ")}`);
+console.log("\n=== 4. 재료 획득처 ===\n".replace(/=/g, "\u2550"));
+{
+  console.log("  " + "재료".padEnd(16) + "숲".padEnd(24) + "전투");
+  for (const item of MATERIALS) {
+    const areas = FOREST_AREAS
+      .filter((a) => (AREA_MATERIAL_POOL[a.id] ?? []).includes(item.id))
+      .map((a) => `${a.name}(${a.unlockFloor}층~)`);
+    const floors = [1, 11, 21, 31].filter((f) => battleDropPool(f).includes(item.id));
+    const battle = SPECIAL_DROP[item.id] ?? (floors.length ? `${floors[0]}층~` : "-");
+    console.log("  " + item.name.padEnd(16) + (areas.join(" ") || "-").padEnd(24) + battle);
+  }
+  const orphans = MATERIALS.filter((i) =>
+    !SPECIAL_DROP[i.id] &&
+    !FOREST_AREAS.some((a) => (AREA_MATERIAL_POOL[a.id] ?? []).includes(i.id)) &&
+    ![1, 11, 21, 31].some((f) => battleDropPool(f).includes(i.id)));
+  console.log(orphans.length
+    ? `\n  ★ 어느 드랍 테이블에도 없음: ${orphans.map((i) => i.name).join(", ")}`
+    : "\n  모든 재료에 반복 획득처가 있다.");
 }
 
-console.log("\n═══ 6. 순환 잠김 ═══\n");
-console.log("  11층 돌파 → iron_fragment / 깊은 숲(더 센 몬스터) 해금");
-console.log("  그런데 10층 보스를 넘으려면 그 둘이 필요하다");
-console.log("  → 10층이 닫힌 문이 된다\n");
+console.log("\n=== 5. 레시피별 최초 제작 가능 시점 ===\n".replace(/=/g, "\u2550"));
+{
+  /** 그 재료를 반복해서 얻으려면 몇 층을 넘어야 하나 (숲 구역 해금층 / 전투 드랍 하한) */
+  const unlockFloor = (id: string): number | null => {
+    const cands: number[] = [];
+    for (const a of FOREST_AREAS) {
+      if ((AREA_MATERIAL_POOL[a.id] ?? []).includes(id)) cands.push(a.unlockFloor);
+    }
+    for (const f of [1, 11, 21, 31]) if (battleDropPool(f).includes(id)) cands.push(f);
+    if (SPECIAL_DROP_FLOOR[id] !== undefined) cands.push(SPECIAL_DROP_FLOOR[id]);
+    return cands.length ? Math.min(...cands) : null;
+  };
+  for (const r of CRAFTING_RECIPES) {
+    const gates = r.costs.map((c) => ({ c, f: unlockFloor(c.itemId) }));
+    const blocked = gates.filter((g) => g.f === null);
+    if (blocked.length) {
+      console.log(`  ${r.name.padEnd(14)} ✗ 영구 봉인 — ${blocked.map((g) => g.c.name).join(", ")} 획득처 없음`);
+    } else {
+      const at = Math.max(...gates.map((g) => g.f!));
+      const why = gates.filter((g) => g.f === at).map((g) => g.c.name).join(", ");
+      console.log(`  ${r.name.padEnd(14)} ${String(at).padStart(2)}층~  (${why})`);
+    }
+  }
+}
+
+console.log("\n═══ 6. 보스층 앞에서 쓸 게 있는가 ═══\n");
+{
+  // 예전엔 여기가 손으로 적은 결론이었다("10층이 닫힌 문이 된다"). 얕은 숲 드랍이
+  // 구역별로 갈린 뒤로는 사실이 아닌데도 그대로 출력됐다. 이제 표에서 직접 센다.
+  const reachable = (id: string) => {
+    for (const a of FOREST_AREAS) {
+      if (a.unlockFloor >= 10) continue;                       // 10층 전에 못 여는 구역
+      if ((AREA_MATERIAL_POOL[a.id] ?? []).includes(id)) return true;
+    }
+    return battleDropPool(1).includes(id);
+  };
+  const ready = CRAFTING_RECIPES.filter((r) => r.costs.every((c) => reachable(c.itemId)));
+  console.log("  10층 보스 이전에 반복 제작 가능한 것:");
+  console.log(ready.length
+    ? ready.map((r) => `    ${r.name}`).join("\n")
+    : "    없음 — 아무 준비 없이 첫 보스와 붙게 된다");
+}
+
 
 restore();

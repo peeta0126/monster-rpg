@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { getFloorEnemy, getFloorEnemySkill, isBossFloor, MAX_TOWER_FLOOR, getTowerSecretReveal } from "../shared/floorTable";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
+import { rollBattleDrop } from "../shared/dropTables";
 import type { Move, ElementType } from "../shared/game";
 import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
 import { isAnomalyMove } from "../monster/learnset";
@@ -17,35 +18,6 @@ function withOwnedHpBonus(m: OwnedMonster): OwnedMonster {
   const hpBonus = sumEquippedStatBonuses(equipped).hp;
   if (!hpBonus) return m;
   return { ...m, maxHp: m.maxHp + hpBonus, currentHp: m.currentHp + hpBonus };
-}
-
-// ─── 전투 승리 시 재료 드랍 ───────────────────────────────────────────────────────
-
-function rollBattleDrop(floor: number): { id: string; count: number }[] {
-  const drops: { id: string; count: number }[] = [];
-  const rollChance = isBossFloor(floor) ? 0.95 : 0.45;
-  if (Math.random() > rollChance) return drops;
-
-  // 층수별 드랍 테이블.
-  // monster_essence(몬스터 정수)와 enhancement_stone(강화석)은 원래 어느 전투 드랍에도 없어
-  // 상위 아티팩트 제작과 장비 레벨업이 통째로 막혀 있었다 — 상위 층 보상에 포함한다.
-  const pool: string[] =
-    floor >= 31 ? ["iron_fragment", "crystal", "monster_essence", "enhancement_stone"] :
-    floor >= 21 ? ["iron_fragment", "crystal", "wood_plank", "monster_essence", "enhancement_stone"] :
-    floor >= 11 ? ["iron_fragment", "wood_plank", "leather", "enhancement_stone"] :
-                  ["wood_plank", "leather", "herb"];
-
-  const count = isBossFloor(floor) ? 2 + (Math.random() < 0.5 ? 1 : 0) : 1;
-  const picked = pool[Math.floor(Math.random() * pool.length)];
-  drops.push({ id: picked, count });
-
-  // 보스 층은 추가 드랍
-  if (isBossFloor(floor) && Math.random() < 0.6) {
-    const extra = pool.filter((p) => p !== picked)[Math.floor(Math.random() * (pool.length - 1))];
-    drops.push({ id: extra, count: 1 });
-  }
-
-  return drops;
 }
 
 import {

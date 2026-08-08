@@ -7,8 +7,10 @@
  * 원본과 1:1로 옮겨 적는다. 옮겨 적은 곳에는 출처를 주석으로 남긴다.
  */
 import {
-  getFloorEnemy, getFloorEnemySkill, isBossFloor, MAX_TOWER_FLOOR, scaleToLevel,
+  getFloorEnemy, getFloorEnemySkill, MAX_TOWER_FLOOR, scaleToLevel,
 } from "../../src/shared/floorTable";
+import { AREA_MATERIAL_POOL, rollBattleDrop } from "../../src/shared/dropTables";
+import { FOREST_AREAS, type ForestArea } from "../../src/camp/forest/areas";
 import {
   applyDamage, applyStatusEffect, calculateDamage, checkStatusEffects,
   benchExpShare, createBattleMonster, gainExp, getAIAction, getTypeMultiplier, isFainted,
@@ -27,7 +29,7 @@ import {
 import { ARTIFACT_RECIPES, POTION_RECIPES } from "../../src/workshop/craftingRecipes";
 import { POTIONS } from "../../src/shared/items";
 
-export { MAX_TOWER_FLOOR };
+export { MAX_TOWER_FLOOR, FOREST_AREAS };
 
 
 // ─── 시드 RNG ────────────────────────────────────────────────────────────────
@@ -102,29 +104,6 @@ export function equipBonus(s: SimState, uid: string) {
   };
 }
 
-// ─── 전투 드랍 (BattlePage.rollBattleDrop 원본 이식) ──────────────────────────
-
-export function rollBattleDrop(floor: number): { id: string; count: number }[] {
-  const drops: { id: string; count: number }[] = [];
-  const rollChance = isBossFloor(floor) ? 0.95 : 0.45;
-  if (Math.random() > rollChance) return drops;
-
-  const pool: string[] =
-    floor >= 31 ? ["iron_fragment", "crystal", "monster_essence", "enhancement_stone"] :
-    floor >= 21 ? ["iron_fragment", "crystal", "wood_plank", "monster_essence", "enhancement_stone"] :
-    floor >= 11 ? ["iron_fragment", "wood_plank", "leather", "enhancement_stone"] :
-                  ["wood_plank", "leather", "herb"];
-
-  const count = isBossFloor(floor) ? 2 + (Math.random() < 0.5 ? 1 : 0) : 1;
-  const picked = pool[Math.floor(Math.random() * pool.length)];
-  drops.push({ id: picked, count });
-
-  if (isBossFloor(floor) && Math.random() < 0.6) {
-    const extra = pool.filter((p) => p !== picked)[Math.floor(Math.random() * (pool.length - 1))];
-    drops.push({ id: extra, count: 1 });
-  }
-  return drops;
-}
 
 // ─── 전투 (BattlePage의 턴 흐름 이식) ─────────────────────────────────────────
 
@@ -326,32 +305,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
 
 // ─── 숲 (ForestPage 이식) ────────────────────────────────────────────────────
 
-interface ForestArea {
-  id: string;
-  monsterPool: string[];
-  levelRange: [number, number];
-  materialRate: number;
-  materialBonus: number;
-  unlockFloor: number;
-}
 
-export const FOREST_AREAS: ForestArea[] = [
-  // ⚠️ src/camp/forest/areas.ts 와 같은 값을 유지할 것. 시뮬은 구조를 따로 들고 있다.
-  { id: "shallow", monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow", "mossy"],
-    levelRange: [1, 8], materialRate: 0.40, materialBonus: 0, unlockFloor: 0 },
-  { id: "deep", monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb", "toxadon"],
-    levelRange: [8, 18], materialRate: 0.55, materialBonus: 1, unlockFloor: 11 },
-  { id: "ancient", monsterPool: ["mossevo", "mossyfinal", "aquavern", "crystafox", "frostorb"],
-    levelRange: [18, 32], materialRate: 0.65, materialBonus: 2, unlockFloor: 21 },
-];
-
-const AREA_MATERIAL_POOL: Record<string, string[]> = {
-  shallow: ["herb", "herb", "berry", "root", "wood_plank", "leather", "slime_extract"],
-  deep:    ["herb", "berry", "root", "crystal", "wood_plank", "leather",
-            "slime_extract", "iron_fragment", "magic_dust"],
-  ancient: ["herb", "root", "crystal", "crystal", "iron_fragment",
-            "magic_dust", "monster_essence", "monster_essence", "enhancement_stone"],
-};
 const CATCH_RATE = { win: 0.72, draw: 0.42, lose: 0.18 };
 
 function rollDrop(area: ForestArea): { id: string; count: number } | null {

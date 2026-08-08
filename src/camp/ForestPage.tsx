@@ -7,6 +7,7 @@ import { RpsIcon } from "../workshop/RpsIcon";
 import { RPS_KO, type RpsChoice } from "../workshop/rps";
 import { scaleToLevel } from "../shared/floorTable";
 import { getMaterial } from "../shared/items";
+import { AREA_MATERIAL_POOL } from "../shared/dropTables";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { FOREST_AREAS, type ForestArea } from "./forest/areas";
 import { ForestBackground, Particles } from "./forest/ForestBackground";
@@ -218,13 +219,6 @@ const RPS_RESULT_DATA: Record<RpsResult,{text:string; color:string; desc:string;
  * 아티팩트와 상급 물약을 아예 만들 수 없었다(퀘스트 1회 보상이 평생 전부였다).
  * 깊이 들어갈수록 상위 재료가 나오도록 구역별로 나눠, 제작·모루가 실제로 돌아가게 한다.
  */
-const AREA_MATERIAL_POOL: Record<string, string[]> = {
-  shallow: ["herb", "herb", "berry", "root", "wood_plank", "leather", "slime_extract"],
-  deep:    ["herb", "berry", "root", "crystal", "wood_plank", "leather",
-            "slime_extract", "iron_fragment", "magic_dust"],
-  ancient: ["herb", "root", "crystal", "crystal", "iron_fragment",
-            "magic_dust", "monster_essence", "monster_essence", "enhancement_stone"],
-};
 
 function pickMonster(area: ForestArea, elite = false) {
   const pool = elite
@@ -1447,9 +1441,7 @@ export default function ForestPage() {
               <p className="text-pixel-sm text-sand-300 mt-1">탐험할 구역을 선택하세요</p>
             </div>
             {FOREST_AREAS.map((a,i)=>{
-              const locked =
-                (a.id === "deep"    && bestFloor < 11) ||
-                (a.id === "ancient" && bestFloor < 21);
+              const locked = bestFloor < a.unlockFloor;
               return (
                 <div key={a.id} className="relative w-full">
                   <AreaCard area={a} index={i} locked={locked} onClick={()=>{ if(!locked) handleEnterArea(a); }}/>
