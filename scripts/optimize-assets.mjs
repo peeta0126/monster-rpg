@@ -28,9 +28,6 @@ const KEEP = process.argv.includes("--keep");
 const ART = [
   "assets/basecamp/basecamp-bg.png",
   "assets/basecamp/basecamp-bg-1.png",
-  "assets/housing/housing_bg.png",
-  "assets/housing/housing_bg-afternoon.png",
-  "assets/housing/restore_upscaled.png",
   "assets/player/Orion_portrait.png",
   "assets/player/Baros_portrait.png",
 ];
@@ -44,8 +41,17 @@ const BLURRED_COPIES = [
   { src: "assets/basecamp/basecamp-bg.png", out: "assets/basecamp/basecamp-bg-blur.webp", width: 640 },
 ];
 
-/** 로그인 키아트 — WebP 를 만들되 PNG 폴백을 남긴다(단, 절반 해상도로 줄여서) */
-const KEY_ART = { src: "start-loading.png", fallbackWidth: 1312 };
+/**
+ * 키아트 — WebP 를 만들되 PNG 폴백을 남긴다(단, 절반 해상도로 줄여서).
+ * ART 에 넣으면 안 된다. 그쪽은 변환 후 원본 PNG 를 지우므로 폴백이 사라진다.
+ *
+ * pixel: true 면 축소에 kernel "nearest" 를 쓴다. 기본 lanczos 는 픽셀을 뭉갠다.
+ * quality 를 적으면 WebP 품질을 개별 지정한다(기본 82).
+ */
+const KEY_ART = [
+  { src: "start-loading.png", fallbackWidth: 1312 },
+  { src: "assets/housing/housing_bg.png", fallbackWidth: 1200, pixel: true, quality: 85 },
+];
 
 const MONSTER_DIR = "assets/monsters";
 const MONSTER_MAX = 512;
@@ -72,6 +78,9 @@ async function toWebp(rel, { width } = {}) {
   const src = path.join(PUBLIC, rel);
   const out = src.replace(/\.png$/i, ".webp");
   if (DRY) { console.log(`webp  ${rel}`); return; }
+  // 이 함수는 변환 후 원본 PNG 를 지운다. 그래서 두 번째 실행부터는 입력이 없는 게
+  // 정상인데, 예전엔 그대로 예외를 던져 첫 항목에서 스크립트 전체가 죽었다.
+  if (!(await sizeOf(src))) { console.log(`[optimize] ${rel} 없음 (변환 완료) — 건너뜁니다`); return; }
   let img = sharp(src);
   if (width) img = img.resize({ width, withoutEnlargement: true });
   await img.webp({ quality: 82, effort: 6 }).toFile(out);
@@ -121,22 +130,32 @@ async function main() {
   for (const rel of ART) await toWebp(rel);
 
   // 키아트만 PNG 폴백을 남긴다 (WebP 미지원 브라우저용). 원본 해상도는 과하니 절반으로.
-  {
-    const src = path.join(PUBLIC, KEY_ART.src);
+  //
+  // ⚠️ 이 단계는 원본 PNG 를 폴백으로 덮어쓴다. 그래서 두 번째 실행부터는 입력이 이미
+  //    절반 크기다 — 그대로 두면 WebP 까지 절반 해상도로 다시 구워 원본이 소리 없이
+  //    깎인다. 폭이 폴백 크기 이하면 이미 처리된 것으로 보고 건너뛴다.
+  for (const art of KEY_ART) {
+    const src = path.join(PUBLIC, art.src);
     const out = src.replace(/\.png$/i, ".webp");
     if (DRY) {
-      console.log(`webp  ${KEY_ART.src} (+ ${KEY_ART.fallbackWidth}px PNG 폴백)`);
-    } else {
-      const b = await sizeOf(src);
-      await sharp(src).webp({ quality: 82, effort: 6 }).toFile(out);
-      const fallback = await sharp(src)
-        .resize({ width: KEY_ART.fallbackWidth })
-        .png({ compressionLevel: 9 }).toBuffer();
-      await fs.writeFile(src, fallback);
-      const a = (await sizeOf(out)) + (await sizeOf(src));
-      before += b; after += a;
-      rows.push([`${KEY_ART.src} (webp + png 폴백)`, b, a]);
+      console.log(`webp  ${art.src} (+ ${art.fallbackWidth}px PNG 폴백${art.pixel ? ", nearest" : ""})`);
+      continue;
     }
+    const b = await sizeOf(src);
+    if (!b) { console.warn(`[optimize] ${art.src} 없음 — 건너뜁니다`); continue; }
+    const { width } = await sharp(src).metadata();
+    if (width <= art.fallbackWidth) {
+      console.log(`[optimize] ${art.src} 는 이미 폴백(${width}px) — 건너뜁니다`);
+      continue;
+    }
+    await sharp(src).webp({ quality: art.quality ?? 82, effort: 6 }).toFile(out);
+    const fallback = await sharp(src)
+      .resize({ width: art.fallbackWidth, withoutEnlargement: true, ...(art.pixel ? { kernel: "nearest" } : {}) })
+      .png({ compressionLevel: 9 }).toBuffer();
+    await fs.writeFile(src, fallback);
+    const a = (await sizeOf(out)) + (await sizeOf(src));
+    before += b; after += a;
+    rows.push([`${art.src} (webp + png 폴백)`, b, a]);
   }
 
   // 흐린 배경용 축소본. 원본(webp)이 이미 만들어진 뒤라 그걸 입력으로 쓴다.

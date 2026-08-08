@@ -14,3 +14,9 @@ export const BASECAMP_BACKGROUND_IMAGE = "/assets/basecamp/basecamp-bg.webp";
 /** 위 배경의 640px 축소본. 흐리게 깔아 쓰는 곳은 이걸 쓴다 — 517KB → 140KB.
  *  blur(10~14px) + brightness(0.3) 을 먹이면 원본과 구분되지 않는다. */
 export const BASECAMP_BACKGROUND_BLURRED = "/assets/basecamp/basecamp-bg-blur.webp";
+
+/** 공방 실내 배경. WebP 가 원본 해상도(2400x1792)고 PNG 는 절반 크기 폴백이다.
+ *  좌표계는 이 이미지 기준 백분율 — src/workshop/workshopLayout.ts 참고. */
+export const WORKSHOP_BACKGROUND_IMAGE = "/assets/housing/housing_bg.png";
+export const WORKSHOP_BACKGROUND_IMAGE_WEBP = "/assets/housing/housing_bg.webp";
+export const WORKSHOP_BACKGROUND_ASPECT_RATIO = 2400 / 1792;
