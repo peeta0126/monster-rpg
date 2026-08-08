@@ -69,6 +69,14 @@ export default function WorkshopPage() {
   const activeStationRef = useRef<WorkshopStationType | null>(null);
   useEffect(() => { activeStationRef.current = activeStation; }, [activeStation]);
 
+  // ── 입력 잠금 ────────────────────────────────────────────────────────────────
+  // Tab 메뉴든 제작 모달이든, 무언가 위에 떠 있으면 플레이어는 멈춘다.
+  // 예전엔 RAF 루프가 menuOpenRef 만 봐서 제작 모달 뒤에서는 계속 걸어다녔다.
+  // 두 경로를 하나로 합쳐 뒀다 — 나중에 뜨는 창이 또 생겨도 여기만 보면 된다.
+  const inputLocked = menuOpen || activeStation !== null;
+  const inputLockedRef = useRef(inputLocked);
+  useEffect(() => { inputLockedRef.current = inputLocked; }, [inputLocked]);
+
   // ── 공방 밖으로 ──────────────────────────────────────────────────────────────
   // 좌상단 버튼과 출입구가 같은 함수를 쓴다. 나가는 길이 두 벌이면 한쪽만 고쳐서 어긋난다.
   const goToBaseCamp = useCallback(() => navigate("/"), [navigate]);
@@ -82,7 +90,9 @@ export default function WorkshopPage() {
   // ── 패널 토글 ────────────────────────────────────────────────────────────────
   const [showCraftedPanel, setShowCraftedPanel] = useState(false);
 
-  const playerFrame = getPlayerFrame(directionToDir8(direction), walkFrame);
+  // 잠긴 동안에는 서 있는 자세로 그린다. walkFrame 상태를 effect 로 되돌리지 않고
+  // 그릴 때 정하는 이유는, 모달을 닫는 순간 한 프레임 걷는 자세가 스치는 걸 막기 위해서다.
+  const playerFrame = getPlayerFrame(directionToDir8(direction), inputLocked ? 0 : walkFrame);
 
   // ── 뷰포트 크기 (카메라 계산용) ──────────────────────────────────────────────
   const [viewport, setViewport] = useState(() => ({
@@ -165,7 +175,11 @@ export default function WorkshopPage() {
         : 16;
       lastTimeRef.current = now;
 
-      if (menuOpenRef.current) {
+      if (inputLockedRef.current) {
+        // 눌려 있던 키를 비운다. 방향키를 누른 채 모달을 열면 그 사이의 keyup 을
+        // 놓칠 수 있고, 그러면 닫는 순간 유령 입력으로 플레이어가 미끄러진다.
+        keysRef.current.clear();
+        walkTimerRef.current = 0;
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
