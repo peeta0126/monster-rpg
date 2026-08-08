@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { monsters } from "../monster/monsters";
-import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../monster/monsterImages";
+import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { usePlayerStore } from "../shared/playerStore";
 import { RpsIcon } from "../workshop/RpsIcon";
 import { RPS_KO, type RpsChoice } from "../workshop/rps";
@@ -612,7 +612,6 @@ function AreaCard({ area, index, onClick }: { area: ForestArea; index: number; o
         borderRadius: 0,
         boxShadow: `4px 4px 0px ${area.glowColor}, inset 0 0 40px ${area.glowColor}`,
         background: `linear-gradient(135deg, ${area.skyTop}f0 0%, ${area.skyBottom}e0 100%)`,
-        imageRendering: "pixelated",
         animationDelay: `${index*0.1}s`,
         animation: "slideInUp .5s ease both",
       }}
@@ -1251,7 +1250,6 @@ function EncounterScreen({ monster, area, drops, isElite, onCapture, onFlee }: {
             alt={monster.name}
             className="relative w-36 h-36 object-contain drop-shadow-2xl"
             style={{
-              ...monsterImgStyle(monster.id),
               animation:"monsterFloat 2.5s ease-in-out infinite",
               filter:`drop-shadow(0 0 20px ${glow})`,
             }}
@@ -1332,7 +1330,7 @@ function RpsSelectScreen({ monster, area, onSelect }: {
       <div className="flex items-center gap-3 rounded-xl px-4 py-2.5"
         style={{ background:"rgba(13, 18, 35, .8)", border:`1px solid ${area.borderGlow}`, backdropFilter:"blur(10px)" }}>
         <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.name}
-          className="w-10 h-10 object-contain" style={monsterImgStyle(monster.id)}/>
+          className="w-10 h-10 object-contain"/>
         <div>
           <p className="text-pixel-sm font-bold text-cream-100">{monster.name}</p>
           <p className="text-pixel-sm text-sand-300">Lv.{monster.level} · {TYPE_KO[monster.type ?? "normal"]??monster.type}</p>
@@ -1443,7 +1441,7 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
                   {wildMonster && (
                     <img src={MONSTER_IMAGE_MAP[wildMonster.id]} alt={wildMonster.name}
                       className="relative w-20 h-20 object-contain"
-                      style={{ ...monsterImgStyle(wildMonster?.id??""), animation:"catchBounce .6s ease 2", filter:"drop-shadow(0 0 12px rgba(122, 132, 85, .5))" }}/>
+                      style={{ animation:"catchBounce .6s ease 2", filter:"drop-shadow(0 0 12px rgba(122, 132, 85, .5))" }}/>
                   )}
                   {Array.from({length:6}).map((_,i)=>(
                     <div key={i} className="absolute text-title-sm"

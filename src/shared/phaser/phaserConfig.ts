@@ -11,6 +11,9 @@ export const createBaseCampGame = (parent: string | HTMLElement) => {
     height: 540,
     backgroundColor: "#1d1d1d",
     pixelArt: true,
+    // pixelArt만으론 스프라이트가 서브픽셀 좌표에 놓여 이동 중 미세하게 떤다
+    antialias: false,
+    roundPixels: true,
     physics: {
       default: "arcade",
       arcade: { debug: false },
@@ -31,6 +34,9 @@ export const createBattleGame = (parent: HTMLElement) => {
     height: 540,
     backgroundColor: "#0a0a14",
     pixelArt: true,
+    // pixelArt만으론 스프라이트가 서브픽셀 좌표에 놓여 이동 중 미세하게 떤다
+    antialias: false,
+    roundPixels: true,
     scene: [BattleScene],
     scale: {
       mode: Phaser.Scale.FIT,

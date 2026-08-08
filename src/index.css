@@ -52,15 +52,16 @@ body {
   font-smooth: never;
 }
 
-/* 게임 내 몬스터/아이템 이미지 → 픽셀아트 렌더링 */
-.pixel-img,
-img[class*="monster"],
-img[class*="pixel"] {
+/* 아트 계층 분리 — ART_DIRECTION 3-4.
+   픽셀아트(스프라이트·타일·아이템 아이콘)에만 붙인다. 몬스터 일러스트는 픽셀아트가
+   아니라 매끄러운 애니풍이라 nearest-neighbor를 먹이면 계단이 생긴다.
+   클래스 이름 패턴으로 자동 적용하던 셀렉터가 그 사고를 냈으므로 명시적으로만 건다. */
+.pixel-img {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-/* Phaser 캔버스 픽셀아트 */
+/* Phaser 캔버스는 전부 픽셀아트 */
 canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;

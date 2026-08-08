@@ -144,7 +144,7 @@ interface RpsIconProps {
 
 export function RpsIcon({ choice, active, className = "w-16 h-16" }: RpsIconProps) {
   return (
-    <div className={className} style={{ imageRendering: "pixelated" }}>
+    <div className={`${className} pixel-img`}>
       {choice === "rock"     && <RockSvg     active={active} />}
       {choice === "paper"    && <PaperSvg    active={active} />}
       {choice === "scissors" && <ScissorsSvg active={active} />}

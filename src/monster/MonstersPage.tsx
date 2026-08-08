@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
-import { MONSTER_IMAGE_MAP, monsterImgStyle } from "./monsterImages";
+import { MONSTER_IMAGE_MAP } from "./monsterImages";
 import { getFullLearnset } from "./learnset";
 import { monsters } from "./monsters";
 import type { ArtifactInstance } from "../shared/crafting";
@@ -322,7 +322,7 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
           <div className="relative h-14 w-14 flex items-center justify-center rounded-xl shrink-0"
             style={{ background: acc.bg, border: `1px solid ${acc.border}` }}>
             <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.nickname ?? monster.name}
-              className="w-11 h-11 object-contain pixel-img" style={monsterImgStyle(monster.id)} />
+              className="w-11 h-11 object-contain" />
           </div>
           <div className="min-w-0">
             <p className="text-title-sm font-black text-cream-100 truncate">{monster.nickname ?? monster.name}</p>
@@ -475,9 +475,8 @@ function MonsterCard({
             style={{ background: `radial-gradient(circle, ${acc.glow}, transparent 65%)`, animation: "glowBreathe 2s ease-in-out infinite" }} />
         )}
         <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.nickname ?? monster.name}
-          className={`${imgSize} object-contain relative pixel-img`}
+          className={`${imgSize} object-contain relative`}
           style={{
-            ...monsterImgStyle(monster.id),
             filter: isFainted ? "grayscale(.8) brightness(.6)" : selected ? `drop-shadow(0 0 8px ${acc.glow})` : "none",
           }} />
       </div>

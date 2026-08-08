@@ -401,10 +401,10 @@ export default function WorkshopPage() {
               src={getPlayerImage(direction, walkFrame)}
               alt="player"
               draggable={false}
+              className="pixel-img"
               style={{
                 width:  PLAYER_DISPLAY,
                 height: PLAYER_DISPLAY,
-                imageRendering: "pixelated",
                 filter: "drop-shadow(0 5px 10px rgba(13, 18, 35, .9))",
                 display: "block",
               }}

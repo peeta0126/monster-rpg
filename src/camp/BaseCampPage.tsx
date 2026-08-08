@@ -4,7 +4,7 @@ import { createBaseCampGame } from "../shared/phaser/phaserConfig";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import type { NpcDialoguePayload } from "../shared/phaser/events";
 import { monsters } from "../monster/monsters";
-import { MONSTER_IMAGE_MAP, monsterImgStyle } from "../monster/monsterImages";
+import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { usePlayerStore } from "../shared/playerStore";
 import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
@@ -133,7 +133,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
           <div className="w-28 h-28 flex items-center justify-center bg-white rounded-xl border border-sand-200 shrink-0 overflow-hidden">
             <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.name}
               className="w-24 h-24 object-contain"
-              style={seen ? { ...monsterImgStyle(m.id), mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.4 }}/>
+              style={seen ? { mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.4 }}/>
           </div>
           {caught && (
             <div className="flex-1 grid grid-cols-2 gap-2">
@@ -179,7 +179,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                           src={MONSTER_IMAGE_MAP[cm.id]}
                           alt={cm.name}
                           className="w-12 h-12 object-contain"
-                          style={isSeen ? { ...monsterImgStyle(cm.id), mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.5 }}
+                          style={isSeen ? { mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.5 }}
                         />
                       </div>
                       <span className={`text-pixel-sm font-semibold ${isCurrent ? "text-ember-500" : isSeen ? "text-sand-200" : "text-sand-300"}`}>
@@ -364,7 +364,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                             src={MONSTER_IMAGE_MAP[m.id]}
                             alt={m.name}
                             className="h-20 w-20 object-contain"
-                            style={{ ...monsterImgStyle(m.id), mixBlendMode: "multiply" }}
+                            style={{ mixBlendMode: "multiply" }}
                           />
                         ) : (
                           <img

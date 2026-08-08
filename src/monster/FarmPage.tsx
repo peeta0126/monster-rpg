@@ -147,7 +147,7 @@ function MaterialsSection({
                 {hasImg ? (
                   <img src={MATERIAL_IMG[mat.id]} alt={mat.name}
                     className="w-10 h-10 pixel-img"
-                    style={{ imageRendering: "pixelated", filter: "drop-shadow(0 0 6px rgba(122, 132, 85, .783))" }} />
+                    style={{ filter: "drop-shadow(0 0 6px rgba(122, 132, 85, .783))" }} />
                 ) : (
                   <div className="w-10 h-10 flex items-center justify-center text-pixel-md">{mat.emoji}</div>
                 )}
@@ -192,8 +192,7 @@ function PotionsSection({
   if (craftedPotions.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <img src={tabBagImg} alt="" className="w-12 h-12 pixel-img opacity-15"
-          style={{ imageRendering: "pixelated" }} />
+<img src={tabBagImg} alt="" className="w-12 h-12 pixel-img opacity-15" />
         <p className="text-pixel-sm font-bold text-sand-300">보유 물약이 없습니다</p>
         <p className="text-pixel-sm text-earth-400">제작 공방의 연금술 제작대에서 물약을 만들어 보세요.</p>
       </div>
@@ -229,7 +228,7 @@ function PotionsSection({
               <div className="w-10 h-10 flex-shrink-0 relative">
                 {POTION_IMG[stack.itemId] ? (
                   <img src={POTION_IMG[stack.itemId]} alt={stack.name}
-                    className="w-10 h-10 pixel-img" style={{ imageRendering: "pixelated" }} />
+                    className="w-10 h-10 pixel-img" />
                 ) : (
                   <div className="w-10 h-10 flex items-center justify-center text-pixel-md">🧪</div>
                 )}

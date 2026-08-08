@@ -16,7 +16,3 @@ export const MONSTER_IMAGE_MAP: Record<string, string> = {
   venomcrow:  "/assets/monsters/venomcrow.png",
 };
 
-/** img 태그에 적용할 style 반환 헬퍼 */
-export function monsterImgStyle(_id: string): { imageRendering: "pixelated" } {
-  return { imageRendering: "pixelated" };
-}

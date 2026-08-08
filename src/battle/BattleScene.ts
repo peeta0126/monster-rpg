@@ -415,6 +415,11 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private buildMonsterSprites() {
+    // 몬스터 PNG는 픽셀아트가 아니라 매끄러운 일러스트다. 게임 전역 pixelArt:true가
+    // NEAREST를 걸어 축소 시 계단이 생기므로 이 텍스처들만 LINEAR로 되돌린다 (ART_DIRECTION 3-4).
+    this.smoothTexture("enemy-mon");
+    for (let i = 0; i < 6; i++) this.smoothTexture(`party-mon-${i}`);
+
     // 적 (우, flipX)
     if (this.textures.exists("enemy-mon")) {
       this.enemySprite = this.add.image(ENEMY_X, MONSTER_Y, "enemy-mon")
@@ -440,6 +445,10 @@ export default class BattleScene extends Phaser.Scene {
       this.addFloat(this.enemySprite, MONSTER_Y, 6, 1750);
       this.addFloat(this.playerSprite, MONSTER_Y, 5, 1950);
     });
+  }
+
+  private smoothTexture(key: string) {
+    if (this.textures.exists(key)) this.textures.get(key).setFilter(Phaser.Textures.LINEAR);
   }
 
   private makeFallback(x: number, y: number, color: number, size: number): Phaser.GameObjects.Image {
