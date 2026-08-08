@@ -6,6 +6,7 @@ import { usePlayerStore } from "../shared/playerStore";
 import type { CraftingStationType } from "../shared/crafting";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
 import { PALETTE } from "../shared/palette";
+import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 
 const BG_URL = "/assets/housing/housing_bg.png";
 
@@ -70,7 +71,16 @@ const CRAFTING_STATIONS: Array<{
 
 const INITIAL_POS: PlayerPos = { x: 65, y: 97 };
 const SPEED = 0.4;          // %/frame (16ms 기준) — deltaTime 보정됨
-const PLAYER_DISPLAY = 110; // px — 기존 72px에서 확대
+const PLAYER_DISPLAY = 128; // 64×64 스프라이트의 정확히 2배. 비정수 배율은 픽셀을 깨뜨린다
+
+// ─── 카메라 ───────────────────────────────────────────────────────────────────
+// 예전에는 배경을 화면에 통째로 맞춰(min(100vw, 100vh*ratio)) 방 전체가 늘 보였다.
+// 베이스캠프는 Phaser 카메라가 플레이어를 따라다니므로 두 화면의 체감이 달랐다.
+// 이제 배경을 "화면에 맞춘 크기 × CAMERA_ZOOM" 으로 키우고 카메라가 따라간다.
+//
+// ⚠️ 스테이지 내부 좌표계는 그대로 % 다. CRAFTING_STATIONS / COLLISION_BOXES 는
+//    손대지 않았고, 확대·이동은 스테이지 컨테이너에서만 일어난다.
+const CAMERA_ZOOM = 1.5;
 
 // stage 기준 외곽 이동 제한 (벽 밖 이탈 방지)
 const PLAYER_BOUNDS = { minX: 5, maxX: 95, minY: 28, maxY: 97 };
@@ -197,6 +207,30 @@ export default function WorkshopPage() {
 
   // ── 패널 토글 ────────────────────────────────────────────────────────────────
   const [showCraftedPanel, setShowCraftedPanel] = useState(false);
+
+  // ── 뷰포트 크기 (카메라 계산용) ──────────────────────────────────────────────
+  const [viewport, setViewport] = useState(() => ({
+    w: typeof window === "undefined" ? 1440 : window.innerWidth,
+    h: typeof window === "undefined" ? 900  : window.innerHeight,
+  }));
+  useEffect(() => {
+    const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // 화면에 꽉 채웠을 때의 크기(= 예전 동작)에 배율을 곱한 것이 실제 스테이지 크기다
+  const fitW   = Math.min(viewport.w, viewport.h * BG_RATIO);
+  const fitH   = Math.min(viewport.h, viewport.w / BG_RATIO);
+  const stageW = fitW * CAMERA_ZOOM;
+  const stageH = fitH * CAMERA_ZOOM;
+
+  // 플레이어를 화면 중앙에 두되, 스테이지 가장자리를 넘어가지 않게 클램프
+  const camX = clamp((pos.x / 100) * stageW - viewport.w / 2, 0, Math.max(0, stageW - viewport.w));
+  const camY = clamp((pos.y / 100) * stageH - viewport.h / 2, 0, Math.max(0, stageH - viewport.h));
+  // 스테이지가 화면보다 작으면(배율 1 등) 가운데 정렬
+  const offsetX = stageW < viewport.w ? (viewport.w - stageW) / 2 : -camX;
+  const offsetY = stageH < viewport.h ? (viewport.h - stageH) / 2 : -camY;
 
   // ── 마우스 좌표 (디버그용, stage 기준 %) ─────────────────────────────────────
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -345,27 +379,26 @@ export default function WorkshopPage() {
       {/* ══════════════════════════════════════════════════════════════════════
           레이어 3 — 게임 스테이지 (원본 이미지 비율 835:714 고정)
           ══════════════════════════════════════════════════════════════════════ */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 overflow-hidden">
         <div
-          className="relative overflow-hidden"
+          className="absolute left-0 top-0 overflow-hidden will-change-transform"
           onMouseMove={handleStageMouseMove}
           onMouseLeave={handleStageMouseLeave}
           style={{
-            // 화면에서 최대한 크게, 단 이미지 비율은 절대 유지
-            width:  `min(100vw, calc(100vh * ${BG_RATIO}))`,
-            height: `min(100vh, calc(100vw / ${BG_RATIO}))`,
-            borderRadius: "12px",
-            boxShadow: "0 24px 80px rgba(13, 18, 35, .75), 0 0 0 1px rgba(132, 75, 63, .318)",
+            width:  stageW,
+            height: stageH,
+            // translate3d로 GPU 합성에 태운다 (left/top 애니메이션은 매 프레임 레이아웃을 다시 계산한다)
+            transform: `translate3d(${offsetX}px, ${offsetY}px, 0)`,
             cursor: SHOW_COLLISION_DEBUG ? "crosshair" : "default",
           }}
         >
-          {/* 배경 이미지 — 스테이지가 이미 정확한 비율이므로 fill로 꽉 채움 */}
+          {/* 배경 이미지 — 스테이지가 이미 BG_RATIO와 같은 비율이라 contain으로도 꽉 찬다 */}
           <img
             src={BG_URL}
             alt="제작 공방"
             draggable={false}
             className="pointer-events-none absolute inset-0 h-full w-full"
-            style={{ objectFit: "fill" }}
+            style={{ objectFit: "contain" }}
           />
 
           {/* 스테이지 내부 테두리 그라디언트 (깊이감) */}
@@ -410,29 +443,6 @@ export default function WorkshopPage() {
               }}
             />
           </div>
-
-          {/* ── 근처 제작대 상호작용 안내 (스테이지 하단 중앙) ─────────────── */}
-          {nearStation && !activeStation && (
-            <div className="absolute bottom-14 left-1/2 z-30 -translate-x-1/2">
-              <div
-                className="flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-pixel-sm font-bold"
-                style={{
-                  background: "rgba(13, 18, 35, .94)",
-                  border: "1px solid rgba(132, 75, 63, 1)",
-                  color: PALETTE.cream100,
-                  boxShadow: "0 0 28px rgba(132, 75, 63, .819)",
-                }}
-              >
-                <span
-                  className="rounded px-2 py-0.5 text-pixel-sm font-black"
-                  style={{ background: PALETTE.earth500, color: PALETTE.shadow900, letterSpacing: "0.05em" }}
-                >
-                  SPACE
-                </span>
-                <span>{nearStation.label} 사용하기</span>
-              </div>
-            </div>
-          )}
 
           {/* ── 디버그: 마우스 커서 십자선 + 좌표 말풍선 ────────────────────── */}
           {SHOW_COLLISION_DEBUG && mousePos && (
@@ -554,6 +564,13 @@ export default function WorkshopPage() {
           ))}
         </div>
       </div>
+
+      {/* 상호작용 안내 — 카메라가 움직여도 화면 하단에 고정돼야 하므로 스테이지 밖에 둔다 */}
+      {nearStation && !activeStation && (
+        <div className="pointer-events-none absolute bottom-14 left-1/2 z-30 -translate-x-1/2">
+          <InteractionPrompt>{nearStation.label} 사용하기</InteractionPrompt>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════════════
           HUD — 화면 전체 기준 overlay (z-40)
