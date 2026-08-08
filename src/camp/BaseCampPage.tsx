@@ -8,6 +8,7 @@ import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { usePlayerStore } from "../shared/playerStore";
 import { getNextObjective } from "../shared/nextObjective";
 import { ObjectiveBanner } from "../shared/ui/ObjectiveBanner";
+import { AudioSettings } from "../shared/ui/AudioSettings";
 import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
 import { ALL_QUESTS } from "./campDialogues";
@@ -632,6 +633,7 @@ function MenuModal({
 }) {
   const logout = useAuthStore((s) => s.logout);
   const isGuest = useAuthStore((s) => s.isGuest);
+  const [showAudio, setShowAudio] = useState(false);
 
   const items = [
     // 탑 재도전 때마다 캐릭터를 탑까지 걸어가게 하지 않기 위해 메뉴에서도 층 선택을 연다
@@ -640,6 +642,7 @@ function MenuModal({
     { label: "내 몬스터", emoji: "👾", color: "border-mist-500/60 text-mist-300 hover:bg-mist-500/11", onClick: onGoToMonsters },
     { label: "가방",      emoji: "🎒", color: "border-ember-700/60 text-ember-500 hover:bg-ember-700/11",   onClick: onGoToFarm },
     { label: "도감",      emoji: "📖", color: "border-stone-600 text-sand-200 hover:bg-shadow-700/60",         onClick: onOpenDex },
+    { label: "소리",      emoji: "🔊", color: "border-stone-600 text-sand-200 hover:bg-shadow-700/60",         onClick: () => setShowAudio((v) => !v) },
     { label: isGuest ? "로그인" : "로그아웃", emoji: "🚪", color: "border-ember-700/60 text-ember-500 hover:bg-ember-700/11", onClick: logout },
   ];
 
@@ -669,6 +672,12 @@ function MenuModal({
             </button>
           ))}
         </div>
+
+        {showAudio && (
+          <div className="mt-3">
+            <AudioSettings />
+          </div>
+        )}
       </div>
     </div>
   );
