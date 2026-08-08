@@ -8,7 +8,7 @@ import { PALETTE, withAlpha } from "../shared/palette";
 import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { getPlayerFrame, type Dir8 } from "../shared/playerSprite";
 import {
-  WORKSHOP_BACKGROUND_IMAGE, WORKSHOP_BACKGROUND_IMAGE_WEBP,
+  WORKSHOP_BACKGROUND_IMAGE,
 } from "../shared/assetPaths";
 import {
   BG_RATIO, INITIAL_POS, PLAYER_BOUNDS, PLAYER_DISPLAY,
@@ -237,7 +237,7 @@ export default function WorkshopPage() {
           레이어 1 — 흐림 배경 (여백을 자연스럽게 채움, 이미지 깨짐 방지)
           ══════════════════════════════════════════════════════════════════════ */}
       <img
-        src={WORKSHOP_BACKGROUND_IMAGE_WEBP}
+        src={WORKSHOP_BACKGROUND_IMAGE}
         aria-hidden="true"
         draggable={false}
         className="pointer-events-none absolute inset-0 h-full w-full object-cover"
@@ -271,16 +271,13 @@ export default function WorkshopPage() {
         >
           {/* 배경 이미지 — 스테이지가 이미 BG_RATIO와 같은 비율이라 contain으로도 꽉 찬다.
               contain 이어야 한다. fill 은 비율을 무시해 늘리므로 좌표계가 어긋난다. */}
-          <picture>
-            <source srcSet={WORKSHOP_BACKGROUND_IMAGE_WEBP} type="image/webp" />
-            <img
-              src={WORKSHOP_BACKGROUND_IMAGE}
-              alt="제작 공방"
-              draggable={false}
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              style={{ objectFit: "contain" }}
-            />
-          </picture>
+          <img
+            src={WORKSHOP_BACKGROUND_IMAGE}
+            alt="제작 공방"
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            style={{ objectFit: "contain" }}
+          />
 
           {/* 스테이지 내부 테두리 그라디언트 (깊이감) */}
           <div

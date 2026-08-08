@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from "react";
 import "./LoginPage.css";
 import {
   LOGIN_BACKGROUND_IMAGE,
-  LOGIN_BACKGROUND_IMAGE_WEBP,
   LOGIN_BACKGROUND_ASPECT_RATIO,
 } from "../shared/assetPaths";
 import { generateParticles } from "./particles";
@@ -41,20 +40,17 @@ export default function LoginPage() {
         }}
       >
         <div className="login-kenburns">
-          <picture>
-            <source srcSet={LOGIN_BACKGROUND_IMAGE_WEBP} type="image/webp" />
-            <img
-              ref={bgImgRef}
-              src={LOGIN_BACKGROUND_IMAGE}
-              alt=""
-              className="login-bg-img"
-              draggable={false}
-              onError={(e) => {
-                // 이미지 로드 실패 시에도 화면이 깨지지 않도록 폴백 배경색만 남긴다
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-          </picture>
+          <img
+            ref={bgImgRef}
+            src={LOGIN_BACKGROUND_IMAGE}
+            alt=""
+            className="login-bg-img"
+            draggable={false}
+            onError={(e) => {
+              // 이미지 로드 실패 시에도 화면이 깨지지 않도록 폴백 배경색만 남긴다
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
         </div>
 
         <div className="login-particle-field">
