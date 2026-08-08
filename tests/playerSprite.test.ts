@@ -68,3 +68,45 @@ test("DIR8_TO_DIR4: 8방향이 빠짐없이 매핑돼 있다", () => {
     assert.ok(DIR8_TO_DIR4[dir], `${dir} 매핑 없음`);
   }
 });
+
+// ── 문서(ART_DIRECTION 3-3)와 구현이 어긋나지 않게 잡아두는 테스트 ──────────────
+
+/** 문서에 적힌 공식. 구현과 같은 결과가 나와야 한다. */
+function dirFromVectorAsDocumented(dx: number, dy: number) {
+  const DIRS = ["S", "SE", "E", "NE", "N", "NW", "W", "SW"] as const;
+  const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const idx = Math.round(((90 - deg + 360) % 360) / 45) % 8;
+  return DIRS[idx];
+}
+
+/** 예전에 문서에 적혀 있던 틀린 공식. 무엇이 왜 틀리는지 남겨둔다. */
+function dirFromVectorBuggy(dx: number, dy: number) {
+  const DIRS = ["S", "SE", "E", "NE", "N", "NW", "W", "SW"] as const;
+  const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const idx = Math.round(((deg + 90 + 360) % 360) / 45) % 8;
+  return DIRS[idx];
+}
+
+const CASES: [number, number, string][] = [
+  [0, 1, "S"], [1, 1, "SE"], [1, 0, "E"], [1, -1, "NE"],
+  [0, -1, "N"], [-1, -1, "NW"], [-1, 0, "W"], [-1, 1, "SW"],
+];
+
+test("8방향 전부 명시적으로 검증", () => {
+  for (const [dx, dy, expected] of CASES) {
+    assert.equal(dirFromVector(dx, dy), expected, `(${dx},${dy})`);
+  }
+});
+
+test("문서 코드와 구현이 같은 결과를 낸다", () => {
+  for (let deg = 0; deg < 360; deg += 3) {
+    const r = (deg * Math.PI) / 180;
+    const [dx, dy] = [Math.cos(r), Math.sin(r)];
+    assert.equal(dirFromVector(dx, dy), dirFromVectorAsDocumented(dx, dy), `${deg}도`);
+  }
+});
+
+test("부호를 뒤집은 공식은 E/W 만 맞고 6방향이 틀린다", () => {
+  const wrong = CASES.filter(([dx, dy, exp]) => dirFromVectorBuggy(dx, dy) !== exp);
+  assert.deepEqual(wrong.map(([, , exp]) => exp), ["S", "SE", "NE", "N", "NW", "SW"]);
+});

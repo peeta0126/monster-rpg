@@ -83,15 +83,27 @@
   --color-mist-300:   #AEE2D5;
   --color-mist-500:   #5C9396;
   --color-moss-500:   #7A8455;
+  --color-moss-700:   #39412A;
 
-  --font-pixel: "Galmuri11", "NeoDunggeunmo", monospace;
-  --font-title: "Galmuri14", "NeoDunggeunmo", monospace;
+  --font-pixel: "Galmuri11", "Neo둥근모", monospace;
+  --font-title: "Galmuri14", "Galmuri11", monospace;
+
+  /* 픽셀 폰트 전용 크기 스케일 — 1-4 표 참고 */
+  --text-pixel-sm: 12px;
+  --text-pixel-md: 24px;
+  --text-pixel-lg: 36px;
+  --text-title-sm: 16px;
+  --text-title-md: 32px;
 }
 ```
 
-현재 코드에는 하드코딩 HEX가 100종 이상 흩어져 있습니다 (`#f59e0b`, `#f5e6c8`, `#b47828`,
-`#4ade80` …). 이건 "디자인이 어렵다"의 절반쯤 되는 원인입니다. 색을 매번 새로 고르니 화면마다
-톤이 다릅니다. **토큰을 등록하고 하드코딩을 전부 치환하는 것이 1순위 작업입니다.**
+실물은 `src/index.css` 입니다. 값이 어긋나면 그쪽이 정답이고, `npm run lint` 에 물린
+색 검사가 표 밖의 색을 잡아냅니다.
+
+> **완료 (2026-08-08)** — 하드코딩 HEX 100종 이상과 Tailwind 기본 팔레트 클래스 674곳을
+> 전부 토큰으로 치환했습니다. Phaser 는 CSS 변수를 못 읽어서 씬 코드는 같은 값을 담은
+> `src/shared/palette.ts` 를 씁니다. 색을 바꿀 때는 **1-2 표 → index.css → palette.ts**
+> 셋 다 고쳐야 합니다.
 
 ### 1-4. 폰트
 
@@ -138,7 +150,12 @@ Galmuri14 → 16/32px). 14px, 18px 같은 비정수배를 쓰면 글자가 뭉�
 
 ---
 
-## 2. 현재 코드 진단 — "화질이 깨진다"의 정확한 원인
+## 2. 코드 진단 — "화질이 깨진다"의 정확한 원인
+
+> **이 장은 2026-08-07 시점의 진단 기록입니다.** 여기 적힌 파일·줄 번호는 이미 낡았고,
+> 지적된 문제는 전부 처리됐습니다(토큰화, Galmuri 교체, pixelated 계층 분리, 공방 카메라,
+> 에셋 34MB→3.9MB). 지금 코드를 고칠 때 이 장의 줄 번호를 믿지 마세요.
+> 남아 있는 유일한 항목은 **공방 배경 재생성**(2-2 사실 ③)입니다.
 
 ### 2-1. `image-rendering: pixelated`는 로그인 창 전용이 아닙니다 ⚠️
 
@@ -413,12 +430,19 @@ Game UI Database(https://www.gameuidatabase.com/)에서 Genre: RPG + UI Element:
 
 **8방향 애니메이션 코드 골격**
 
+> 실제 구현은 `src/shared/playerSprite.ts` 에 있습니다. 아래는 그 요약이고,
+> 값이 어긋나면 구현 쪽이 정답입니다(단위 테스트가 8방향을 전부 검증합니다).
+
 ```ts
 const DIRS = ["S","SE","E","NE","N","NW","W","SW"] as const;
 
 function dirFromVector(dx: number, dy: number) {
   const deg = (Math.atan2(dy, dx) * 180) / Math.PI;       // -180..180
-  const idx = Math.round(((deg + 90 + 360) % 360) / 45) % 8;
+  // ⚠️ (deg + 90) 이 아니라 (90 - deg) 다. 화면 좌표계는 y가 아래로 증가해서
+  //    atan2 는 시계 방향으로 커지는데 DIRS 는 반시계 방향 나열이라 부호를 뒤집어야 한다.
+  //    부호를 틀리면 E/W 만 좌우 대칭이라 우연히 맞고 나머지 6방향이 어긋난다 —
+  //    걸어보면 대각선에서만 이상해서 알아채기 어렵다.
+  const idx = Math.round(((90 - deg + 360) % 360) / 45) % 8;
   return DIRS[idx];
 }
 
@@ -426,7 +450,7 @@ DIRS.forEach((d) => {
   this.anims.create({
     key: `walk_${d}`,
     frames: this.anims.generateFrameNames("player", {
-      prefix: `walk_${d}_`, start: 0, end: 3, zeroPad: 2, suffix: ".png",
+      prefix: `walk_${d}_`, start: 0, end: 3, zeroPad: 2,
     }),
     frameRate: 8,
     repeat: -1,
