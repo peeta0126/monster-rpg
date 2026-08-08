@@ -12,6 +12,7 @@ import ErrorBoundary from "./shared/ErrorBoundary";
 import AppErrorBridge from "./shared/AppErrorBridge";
 import SaveIndicator from "./shared/SaveIndicator";
 import { SmallScreenNotice } from "./shared/ui/SmallScreenNotice";
+import { SceneTransition } from "./shared/ui/SceneTransition";
 
 function BattlePageWrapper() {
   const location = useLocation();
@@ -27,6 +28,7 @@ export default function App() {
         <SmallScreenNotice />
         <AppErrorBridge />
         <AuthGate>
+          <SceneTransition />
           <SaveIndicator />
           <Routes>
             <Route path="/" element={<BaseCampPage />} />

@@ -30,6 +30,12 @@ const SCREENS = [
 ];
 
 async function settle(page: Page, phaser: boolean) {
+  // 전환 커버가 걷힐 때까지 기다린다. 안 그러면 중간 프레임이 찍혀
+  // 비주얼 리그레션이 무작위로 깨진다.
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="scene-transition"]') === null,
+    undefined, { timeout: 10_000 },
+  );
   await page.waitForLoadState("networkidle");
   await page.waitForFunction(() => document.fonts.status === "loaded");
   await page.waitForFunction(() => Array.from(document.images).every((i) => i.complete));
