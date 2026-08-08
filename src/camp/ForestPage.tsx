@@ -545,6 +545,8 @@ function DungeonMapScreen({
 
                 return (
                   <g key={node.id}
+                    data-testid={`forest-node-${node.id}`}
+                    data-reachable={isReachable ? "1" : "0"}
                     style={{ cursor: isReachable ? "pointer" : "default" }}
                     onClick={() => isReachable && onSelectNode(node.id)}
                   >
@@ -1390,6 +1392,8 @@ export default function ForestPage() {
     }, 2600);
   };
 
+  // 구역 선택 화면으로 되돌린다. 베이스캠프까지 나가는 건 호출부가 정한다 —
+  // 상단 '탈출'은 여기까지고, 완주 화면의 '베이스캠프로 귀환'은 여기에 navigate 를 더한다.
   const exitDungeon = () => {
     if (rpsTimerRef.current) { clearTimeout(rpsTimerRef.current); rpsTimerRef.current = null; }
     setPhase("enter"); setArea(null); setDungeonNodes([]); setCurrentNodeId("n0");
@@ -1526,7 +1530,7 @@ export default function ForestPage() {
 
         {/* ── BOSS CLEARED ── */}
         {phase==="boss_cleared" && area && (
-          <BossClearedScreen area={area} onExit={exitDungeon}/>
+          <BossClearedScreen area={area} onExit={() => { exitDungeon(); navigate("/"); }}/>
         )}
       </div>
     </div>
