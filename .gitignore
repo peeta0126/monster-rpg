@@ -41,6 +41,3 @@ server/prisma/*.db-journal
 # 폰트 서브셋 산출물 — 빌드 때 생성된다 (scripts/subset-fonts.mjs)
 /public/assets/fonts/
 
-# 원본 아트 — 몇 MB짜리라 저장소에 넣지 않는다. 보관은 사람 책임 (art-src/README.md)
-/art-src/*
-!/art-src/README.md

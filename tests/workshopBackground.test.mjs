@@ -19,11 +19,12 @@ import sharp from "sharp";
  * 나오고, 두 그림이 그 범위에서는 비슷해서 maxDiffPixelRatio 0.02 를 넘지 않았다.
  * 그래서 여기서 원본 해상도의 특정 지점을 직접 찍는다.
  *
+ * 마스터는 art-src/ 에 커밋돼 있다(public/ 밖이라 dist/ 에 실리지 않는다).
  * 해시가 바뀔 일이 생기면(배경을 정말로 교체하면) 이 값을 의도적으로 갱신하면 된다.
  */
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const MASTER = path.join(ROOT, "public", "assets", "housing", "housing_bg.png");
+const MASTER = path.join(ROOT, "art-src", "housing_bg.png");
 const WEBP = path.join(ROOT, "public", "assets", "housing", "housing_bg.webp");
 
 /** 정본 마스터의 SHA256. 2400x1792. */

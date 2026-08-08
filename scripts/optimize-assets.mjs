@@ -21,8 +21,8 @@
  * 그래서 입력과 출력을 물리적으로 갈랐다. 원본은 art-src/ 에 두고 public/ 에는 산출물만
  * 나간다. 몇 번을 돌려도 결과가 같다 — tests/optimizeAssets.test.mjs 가 그걸 지킨다.
  *
- * ⚠️ art-src/ 는 .gitignore 대상이다. 마스터 보관은 사람 책임이다. art-src/README.md 참고.
- *    마스터가 없으면 그 레시피는 건너뛴다(이미 만들어진 산출물은 그대로 둔다).
+ * art-src/ 는 저장소에 함께 들어간다(배포되지 않는다 — public/ 밖이라 dist/ 에 안 실린다).
+ * 마스터가 없는 레시피는 건너뛴다(이미 만들어진 산출물은 그대로 둔다).
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -37,19 +37,14 @@ const PNG8 = process.argv.includes("--png8");
 
 /**
  * 레시피 — { src, out, ... }.
- * out 은 public/ 기준. src 는 art-src/ 기준이되, "public/" 으로 시작하면 저장소 루트 기준이다.
- *
- * 공방 배경만 마스터를 public/ 안에 둔다. art-src/ 는 .gitignore 대상이라 새로 클론하면
- * 비어 있는데, 그 상태에서 배경 마스터를 잃는 사고가 실제로 났다. 커밋되는 자리에 두고
- * tests/workshopBackground.test.mjs 가 SHA256 으로 지킨다. 출력은 .webp 라 아래 불변식
- * (출력이 입력을 덮지 않는다)에도 걸리지 않는다.
+ * src 는 art-src/ 기준, out 은 public/ 기준 상대 경로.
  *
  * 대부분의 마스터는 이 구조를 만들기 전에 이미 사라졌다(변환 후 원본을 지우던 시절에
  * 없어졌고, 지금 저장소에는 WebP 만 남아 있다). 그것들은 여기 적어만 두고 마스터가
  * 생기면 그때 다시 구우면 된다. 없으면 조용히 건너뛴다.
  */
 const RECIPES = [
-  { src: "public/assets/housing/housing_bg.png", out: "assets/housing/housing_bg.webp", quality: 85 },
+  { src: "housing_bg.png",     out: "assets/housing/housing_bg.webp",   quality: 85 },
   { src: "start-loading.png",  out: "start-loading.webp",               quality: 82 },
   { src: "basecamp-bg.png",    out: "assets/basecamp/basecamp-bg.webp", quality: 82 },
   { src: "basecamp-bg-1.png",  out: "assets/basecamp/basecamp-bg-1.webp", quality: 82 },
@@ -95,13 +90,8 @@ async function sizeOf(p) {
  * 출력이 입력을 덮지 않는지 확인한다. 이 스크립트가 존재하는 이유의 절반이다.
  * 어기면 아무것도 하지 않고 죽는다 — 반쯤 처리된 상태가 제일 나쁘다.
  */
-/** src 를 실제 경로로. "public/" 으로 시작하면 저장소 루트 기준, 아니면 art-src/ 기준. */
-function resolveSrc(src) {
-  return src.startsWith("public/") ? path.resolve(ROOT, src) : path.resolve(ART_SRC, src);
-}
-
 function assertNoInputIsOverwritten(recipes) {
-  const inputs = new Set(recipes.map((r) => resolveSrc(r.src)));
+  const inputs = new Set(recipes.map((r) => path.resolve(ART_SRC, r.src)));
   const clashes = [];
   for (const r of recipes) {
     const out = path.resolve(PUBLIC, r.out);
@@ -116,10 +106,9 @@ function assertNoInputIsOverwritten(recipes) {
 }
 
 async function runRecipe(r) {
-  const input = resolveSrc(r.src);
+  const input = path.join(ART_SRC, r.src);
   if (!(await sizeOf(input))) {
-    const shown = r.src.startsWith("public/") ? r.src : `art-src/${r.src}`;
-    console.log(`[optimize] ${shown} 없음 — ${r.out} 건너뜀`);
+    console.log(`[optimize] art-src/${r.src} 없음 — ${r.out} 건너뜀`);
     return;
   }
 
