@@ -128,7 +128,7 @@ function MaterialsSection({
         </p>
       </div>
 
-      <SlotGrid cols={5} rows={3}>
+      <SlotGrid minItemWidth={168} minSlots={15}>
         {MATERIALS.map((mat, i) => {
             const cnt    = materials[mat.id] ?? 0;
             const hasImg = mat.id in MATERIAL_IMG;
@@ -202,7 +202,7 @@ function PotionsSection({
         </p>
       </div>
 
-      <SlotGrid cols={2} rows={2} emptySlot={() => <EmptySlot className="min-h-20" />}>
+      <SlotGrid minItemWidth={300} minSlots={4} emptySlot={() => <EmptySlot className="min-h-20" />}>
         {craftedPotions.map((stack, i) => {
           const color = QUALITY_COLOR[stack.quality];
           return (
@@ -281,7 +281,7 @@ function ArtifactsSection({
         <p className="text-pixel-sm font-black text-sand-200">보유 아티팩트 <span className="text-ember-500 font-mono">{craftedArtifacts.length}개</span></p>
       </div>
 
-      <SlotGrid cols={3} rows={1} emptySlot={() => <EmptySlot className="min-h-24" />}>
+      <SlotGrid minItemWidth={280} minSlots={3} emptySlot={() => <EmptySlot className="min-h-24" />}>
         {craftedArtifacts.map((item, i) => {
           const color = QUALITY_COLOR[item.quality];
           return (

@@ -11,6 +11,7 @@ import AdminPage from "./admin/AdminPage";
 import ErrorBoundary from "./shared/ErrorBoundary";
 import AppErrorBridge from "./shared/AppErrorBridge";
 import SaveIndicator from "./shared/SaveIndicator";
+import { SmallScreenNotice } from "./shared/ui/SmallScreenNotice";
 
 function BattlePageWrapper() {
   const location = useLocation();
@@ -23,6 +24,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
+        <SmallScreenNotice />
         <AppErrorBridge />
         <AuthGate>
           <SaveIndicator />

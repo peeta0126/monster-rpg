@@ -5,3 +5,4 @@ export { PixelButton } from "./PixelButton";
 export { SlotGrid, EmptySlot } from "./SlotGrid";
 export { InteractionPrompt } from "./InteractionPrompt";
 export { GameBackground } from "./GameBackground";
+export { SmallScreenNotice } from "./SmallScreenNotice";

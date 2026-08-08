@@ -280,8 +280,8 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
 }) {
   if (!monster) {
     return (
-      <div className="m-3 mr-0 flex w-72 flex-shrink-0 flex-col overflow-hidden rounded-xl
-        border-2 border-earth-500 bg-shadow-900/85">
+      <div className="m-3 flex min-h-40 flex-col overflow-hidden rounded-lg border-2 border-earth-500
+        bg-shadow-900/85 lg:mr-0 lg:w-72 lg:flex-shrink-0">
         <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)" }}>
           <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">STATUS</p>
           <p className="text-pixel-sm font-black text-sand-200">상태창</p>
@@ -304,14 +304,14 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
   ];
 
   return (
-    <div className="m-3 mr-0 flex w-72 flex-shrink-0 flex-col overflow-hidden rounded-xl
-      border-2 border-earth-500 bg-shadow-900/85">
+    <div className="m-3 flex min-h-40 flex-col overflow-hidden rounded-lg border-2 border-earth-500
+      bg-shadow-900/85 lg:mr-0 lg:w-72 lg:flex-shrink-0">
       <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)" }}>
         <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">STATUS</p>
         <p className="text-pixel-sm font-black text-sand-200">상태창</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-5">
+      <div className="flex flex-col gap-5 px-4 py-4 lg:flex-1 lg:overflow-y-auto">
         {/* 헤더 */}
         <div className="flex items-center gap-3">
           <div className="relative h-14 w-14 flex items-center justify-center rounded-xl shrink-0"
@@ -752,10 +752,12 @@ export default function MonstersPage() {
 
       {/* ── 콘텐츠 ──
           relative 필수: GameBackground가 absolute라 static 형제 위에 그려진다 */}
-      <div className="relative flex flex-1 overflow-hidden">
+      {/* 1024 미만에서는 세로로 쌓는다. 768에서 열 폭이 200px까지 눌려
+          "보관함이 비어 있 습니다" 처럼 단어 중간에서 줄이 끊겼다. */}
+      <div className="relative flex flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
         {/* 파티 패널 */}
-        <div className="m-3 mr-0 flex w-56 flex-shrink-0 flex-col overflow-hidden rounded-lg
-          border-2 border-earth-500 bg-shadow-900/85">
+        <div className="m-3 flex flex-col overflow-hidden rounded-lg border-2 border-earth-500
+          bg-shadow-900/85 lg:mr-0 lg:w-56 lg:flex-shrink-0">
           <div className="px-4 py-3 flex items-center justify-between"
             style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)" }}>
             <div>
@@ -764,7 +766,7 @@ export default function MonstersPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2">
+          <div className="flex flex-col gap-2 px-3 py-3 lg:flex-1 lg:overflow-y-auto">
             {[0, 1, 2].map((idx) => {
               const m = party[idx];
               return m ? (
@@ -825,7 +827,7 @@ export default function MonstersPage() {
         />
 
         {/* 보관함 */}
-        <div className="m-3 flex flex-1 flex-col overflow-hidden rounded-xl
+        <div className="m-3 flex min-h-64 flex-1 flex-col overflow-hidden rounded-lg
           border-2 border-earth-500 bg-shadow-900/85">
           <div className="px-4 py-3 flex flex-wrap items-center gap-2"
             style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)", background: "rgba(13, 18, 35, .35)" }}>
@@ -866,7 +868,7 @@ export default function MonstersPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="p-3 lg:flex-1 lg:overflow-y-auto">
             {storage.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
                 <div className="text-pixel-lg opacity-20">📦</div>
