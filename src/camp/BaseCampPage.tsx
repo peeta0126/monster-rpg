@@ -6,6 +6,8 @@ import type { NpcDialoguePayload } from "../shared/phaser/events";
 import { monsters } from "../monster/monsters";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { usePlayerStore } from "../shared/playerStore";
+import { getNextObjective } from "../shared/nextObjective";
+import { ObjectiveBanner } from "../shared/ui/ObjectiveBanner";
 import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
 import { ALL_QUESTS } from "./campDialogues";
@@ -691,6 +693,15 @@ export default function BaseCampPage() {
   const towerCleared = usePlayerStore((s) => s.storyFlags.tower_cleared);
   const restorePartyHp = usePlayerStore((s) => s.restorePartyHp);
   const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
+  const storyFlags = usePlayerStore((s) => s.storyFlags);
+  const craftedPotions = usePlayerStore((s) => s.craftedPotions);
+
+  // 이 화면은 캔버스뿐이라 "다음에 뭘 하지"가 어디에도 안 적혀 있었다
+  const objective = getNextObjective({
+    storyFlags,
+    bestFloor,
+    potionCount: craftedPotions.reduce((a, p) => a + p.quantity, 0),
+  });
   const acceptQuest = usePlayerStore((s) => s.acceptQuest);
   const completeQuest = usePlayerStore((s) => s.completeQuest);
 
@@ -789,6 +800,15 @@ export default function BaseCampPage() {
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "var(--color-shadow-900)" }}>
       <div ref={gameRef} style={{ width: "100%", height: "100%" }} />
+
+      <ObjectiveBanner objective={objective} />
+
+      {/* 조작 안내 — 이 화면은 캔버스뿐이라 안내가 없으면 이동법조차 알 수 없다.
+          공방 하단 안내와 같은 문구를 쓴다. */}
+      <div className="pointer-events-none fixed bottom-4 left-4 z-40 rounded-xl border border-stone-600
+        bg-shadow-900/80 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
+        WASD / 방향키 이동 · E 상호작용 · TAB 메뉴
+      </div>
 
       {/* 메뉴 버튼 */}
       <button

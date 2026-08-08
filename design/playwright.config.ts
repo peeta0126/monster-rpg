@@ -10,7 +10,7 @@ import { defineConfig } from "@playwright/test";
  */
 export default defineConfig({
   testDir: ".",
-  testMatch: /(capture|visual|fx|responsive|measure|menu)\.spec\.ts$/,
+  testMatch: /(capture|visual|fx|responsive|measure|menu|onboarding)\.spec\.ts$/,
   timeout: 90 * 1000,
   expect: { timeout: 20 * 1000 },
   fullyParallel: false,

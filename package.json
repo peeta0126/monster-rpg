@@ -18,6 +18,7 @@
     "design:sheet": "node design/contact-sheet.mjs",
     "design:fx": "playwright test --config design/playwright.config.ts -g \"fx:\"",
     "design:menu": "playwright test --config design/playwright.config.ts -g \"커맨드 메뉴\"",
+    "design:onboarding": "playwright test --config design/playwright.config.ts -g \"첫 실행\"",
     "design:responsive": "playwright test --config design/playwright.config.ts -g \"responsive:\"",
     "design:measure": "playwright test --config design/playwright.config.ts -g \"measure:\"",
     "design:visual": "playwright test --config design/playwright.config.ts -g visual",
