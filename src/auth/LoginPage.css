@@ -28,8 +28,10 @@
   width: calc(100% + 32px);
   height: calc(100% + 32px);
   object-fit: cover;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  /* image-rendering 을 걸지 않는다. 2624x1632 원본을 화면 크기로 줄여 쓰는데,
+     픽셀 그리드가 없는 안티에일리어싱 일러스트라 nearest 로 축소하면 픽셀이
+     규칙적으로 버려져 지저분해진다. 부드러운 축소가 맞다.
+     진짜 픽셀아트(스프라이트·아이콘)에는 .pixel-img 를 명시적으로 건다. */
   transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
   will-change: transform;
 }
