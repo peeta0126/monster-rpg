@@ -26,7 +26,7 @@
     "design:visual": "playwright test --config design/playwright.config.ts -g visual",
     "design:visual:update": "playwright test --config design/playwright.config.ts -g visual --update-snapshots",
     "optimize:assets": "node scripts/optimize-assets.mjs",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "node --import tsx --test tests/*.test.ts tests/*.test.mjs",
     "fonts:subset": "node scripts/subset-fonts.mjs"
   },
   "dependencies": {
