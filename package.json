@@ -19,6 +19,7 @@
     "design:fx": "playwright test --config design/playwright.config.ts -g \"fx:\"",
     "design:menu": "playwright test --config design/playwright.config.ts -g \"커맨드 메뉴\"",
     "design:onboarding": "playwright test --config design/playwright.config.ts -g \"첫 실행\"",
+    "design:autolog": "playwright test --config design/playwright.config.ts -g \"자동 진행\"",
     "perf": "playwright test --config design/perf.config.ts",
     "design:responsive": "playwright test --config design/playwright.config.ts -g \"responsive:\"",
     "design:measure": "playwright test --config design/playwright.config.ts -g \"measure:\"",

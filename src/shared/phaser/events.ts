@@ -19,6 +19,8 @@ export const GAME_EVENT = {
   BATTLE_LOG: "battle:log",
   /** BattleScene → BattlePage: 로그 확인 완료 (Q 눌림) */
   BATTLE_LOG_ACK: "battle:log-ack",
+  /** BattlePage → BattleScene: 자동 진행 타이머 만료. Q 를 누른 것과 같게 처리한다 */
+  BATTLE_LOG_ADVANCE: "battle:log-advance",
   /** BattlePage → BattleScene: 전투 결과 (승패/층) */
   BATTLE_RESULT: "battle:result",
   /** BattlePage → BattleScene: 전투 종료 (언마운트) */

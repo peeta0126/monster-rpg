@@ -68,6 +68,7 @@ import { setBattleInitData } from "./battleInitStore";
 import { StatBar } from "../shared/ui";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { BattleCommandMenu } from "./BattleCommandMenu";
+import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,7 @@ export default function BattlePage() {
   const floor       = routeState?.floor ?? 1;
 
   const gameRef = useRef<HTMLDivElement | null>(null);
+  const { autoAdvance, logSpeed, toggleAuto, cycleSpeed } = useBattleSettings();
 
   const { updateBestFloor, updatePartyMember, addCapturedMonster,
           addToDexSeen, addToDexCaught, usePotion: consumePotion,
@@ -189,18 +191,27 @@ export default function BattlePage() {
     if (cancelledRef.current) return Promise.resolve();
     return new Promise((resolve) => {
       let settled = false;
+      let autoTimer: ReturnType<typeof setTimeout> | undefined;
       const done = () => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        clearTimeout(autoTimer);
         gameEvents.off(GAME_EVENT.BATTLE_LOG_ACK, done);
         resolve();
       };
       // 방어책: ACK가 끝내 오지 않아도 전투가 영구히 멈추지 않도록 타임아웃 처리
-      const timer = setTimeout(done, 5000);
+      const timer = setTimeout(done, 6000);
       gameEvents.once(GAME_EVENT.BATTLE_LOG_ACK, done);
       gameEvents.emit(GAME_EVENT.BATTLE_LOG, text);
       setLogHistory((prev) => [...prev.slice(-49), text]);
+
+      // 자동 진행. 설정을 매번 읽으므로 전투 도중에 켜고 꺼도 다음 줄부터 반영된다.
+      // Q 를 누르면 그전에 ACK 가 와서 타이머는 done() 에서 정리된다.
+      const { autoAdvance, logSpeed } = useBattleSettings.getState();
+      if (autoAdvance) {
+        autoTimer = setTimeout(() => gameEvents.emit(GAME_EVENT.BATTLE_LOG_ADVANCE), logSpeedMs(logSpeed));
+      }
     });
   }, []);
 
@@ -754,6 +765,22 @@ export default function BattlePage() {
             <span className="rounded bg-ember-700/15 px-1.5 py-0.5 text-ember-500 font-mono text-pixel-sm font-bold">
               {floor}F
             </span>
+            {/* 자동 진행 — 로그 한 줄마다 Q 를 누르는 게 엔딩까지 8천 번이다 */}
+            <button onClick={toggleAuto}
+              data-testid="log-auto"
+              title="로그 자동 진행"
+              className={`rounded border px-1.5 py-0.5 text-pixel-sm transition ${
+                autoAdvance ? "border-ember-500 text-ember-500" : "border-earth-500/60 text-earth-400 hover:text-sand-300"}`}>
+              {autoAdvance ? "▶ 자동" : "❙❙ 수동"}
+            </button>
+            {autoAdvance && (
+              <button onClick={cycleSpeed}
+                data-testid="log-speed"
+                title="로그 속도"
+                className="rounded border border-earth-500/60 px-1.5 py-0.5 text-pixel-sm text-sand-300 transition hover:text-cream-100">
+                {LOG_SPEEDS.find((x) => x.id === logSpeed)?.label}
+              </button>
+            )}
             <button onClick={() => setShowLog((v) => !v)}
               className={`text-pixel-sm border rounded px-1.5 py-0.5 transition ${
                 showLog ? "border-stone-600 text-sand-200" : "border-shadow-700 text-earth-400 hover:text-sand-300"}`}>

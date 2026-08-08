@@ -124,6 +124,7 @@ export default class BattleScene extends Phaser.Scene {
   private safeOnBattleEnd!: () => void;
   private safeOnPlayerSwitch!: (payload: BattlePlayerSwitchPayload) => void;
   private safeOnHit!: (payload: BattleHitPayload) => void;
+  private safeOnAutoAdvance!: () => void;
   private safeOnSparkle!: (target: "enemy" | "player") => void;
 
   constructor() {
@@ -197,6 +198,9 @@ export default class BattleScene extends Phaser.Scene {
     this.safeOnHit     = safeHandler(this, this.onHit.bind(this));
     this.safeOnSparkle = safeHandler(this, this.onSparkle.bind(this));
     gameEvents.on(GAME_EVENT.BATTLE_HIT,     this.safeOnHit);
+    // 자동 진행 타이머도 Q 와 같은 경로를 탄다 — 로그 처리 경로를 둘로 만들지 않는다
+    this.safeOnAutoAdvance = safeHandler(this, this.onAdvance.bind(this));
+    gameEvents.on(GAME_EVENT.BATTLE_LOG_ADVANCE, this.safeOnAutoAdvance);
     gameEvents.on(GAME_EVENT.BATTLE_SPARKLE, this.safeOnSparkle);
 
     this.reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -729,6 +733,7 @@ export default class BattleScene extends Phaser.Scene {
     gameEvents.off(GAME_EVENT.BATTLE_END,           this.safeOnBattleEnd);
     gameEvents.off(GAME_EVENT.BATTLE_PLAYER_SWITCH, this.safeOnPlayerSwitch);
     gameEvents.off(GAME_EVENT.BATTLE_HIT,           this.safeOnHit);
+    gameEvents.off(GAME_EVENT.BATTLE_LOG_ADVANCE,   this.safeOnAutoAdvance);
     gameEvents.off(GAME_EVENT.BATTLE_SPARKLE,       this.safeOnSparkle);
   }
 
