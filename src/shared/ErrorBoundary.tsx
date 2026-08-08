@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div
-        className="fixed inset-0 z-[3000] flex flex-col items-center justify-center gap-6 bg-black px-6 text-center"
+        className="fixed inset-0 z-[3000] flex flex-col items-center justify-center gap-6 bg-shadow-900 px-6 text-center"
         style={pixelFont}
       >
         <p className="text-pixel-sm text-ember-500 sm:text-title-sm">문제가 발생했습니다</p>

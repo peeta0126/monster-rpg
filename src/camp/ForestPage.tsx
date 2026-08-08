@@ -1405,7 +1405,7 @@ export default function ForestPage() {
     : 0;
 
   return (
-    <div className="relative flex h-screen w-full flex-col items-center overflow-hidden text-white">
+    <div className="relative flex h-screen w-full flex-col items-center overflow-hidden text-cream-100">
       <style>{FOREST_STYLES}</style>
       <ForestBackground area={area}/>
       {area && <Particles area={area}/>}
@@ -1413,7 +1413,7 @@ export default function ForestPage() {
       {/* 상단 UI */}
       <div className="absolute top-4 left-0 right-0 z-30 flex items-center justify-between px-4">
         <button onClick={phase==="enter" ? ()=>navigate("/") : exitDungeon}
-          className="rounded-xl border border-stone-600/60 bg-black/50 px-3 py-1.5 text-pixel-sm text-sand-300 hover:text-sand-200 hover:bg-black/70 backdrop-blur transition">
+          className="rounded-xl border border-stone-600/60 bg-shadow-900/50 px-3 py-1.5 text-pixel-sm text-sand-300 hover:text-sand-200 hover:bg-shadow-900/70 backdrop-blur transition">
           {phase==="enter" ? "← 베이스캠프" : "← 탈출"}
         </button>
         <div className="flex items-center gap-2">
@@ -1424,7 +1424,7 @@ export default function ForestPage() {
             </div>
           )}
           {totalPotions>0 && (
-            <div className="rounded-xl border border-stone-600/60 bg-black/50 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
+            <div className="rounded-xl border border-stone-600/60 bg-shadow-900/50 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
               🎒 ×{totalPotions}
             </div>
           )}

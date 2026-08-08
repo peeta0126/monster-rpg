@@ -707,28 +707,29 @@ export default function BattlePage() {
 
   // ─── 렌더 ────────────────────────────────────────────────────────────────────────
   return (
-    <div className="relative flex h-screen flex-col bg-shadow-900 text-white overflow-hidden">
+    <div className="relative flex h-screen flex-col bg-shadow-900 text-cream-100 overflow-hidden">
 
       {/* Phaser 캔버스 */}
       <div ref={gameRef} className="relative flex-1 min-h-0" />
 
       {/* ══════════ 하단 배틀 패널 ══════════ */}
-      <div className="shrink-0 border-t border-shadow-700 bg-[#0e0b06]">
+      <div className="shrink-0 border-t-2 border-earth-500 bg-shadow-900">
 
-        {/* 상태 바 */}
-        <div className="flex items-center justify-between border-b border-shadow-700/60 px-3 py-1.5 text-pixel-sm">
+        {/* 상태 바 — HP는 전투에서 가장 자주 보는 정보라 바를 크게 잡는다 */}
+        <div className="flex items-center justify-between border-b border-earth-500/40 px-3 py-2 text-pixel-sm">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sand-200">{player.name}</span>
+            <span className="font-bold text-cream-100">{player.name}</span>
             <span className="text-earth-400">Lv.{player.level}</span>
             {(() => {
               const pct = (player.currentHp / player.maxHp) * 100;
+              const critical = pct <= 20;
               return (
-                <div className="flex items-center gap-1">
-                  <div className="h-1.5 w-20 rounded-full bg-shadow-700 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-300"
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-48 overflow-hidden rounded-full border border-shadow-900 bg-shadow-700">
+                    <div className={`h-full rounded-full transition-all duration-300 ${critical ? "animate-pulse" : ""}`}
                       style={{ width: `${pct}%`, backgroundColor: PALETTE[hpToken(pct)] }} />
                   </div>
-                  <span className="text-sand-300 font-mono text-pixel-sm">{player.currentHp}/{player.maxHp}</span>
+                  <span className="font-mono text-pixel-sm font-bold text-sand-200">{player.currentHp}/{player.maxHp}</span>
                 </div>
               );
             })()}
@@ -775,10 +776,17 @@ export default function BattlePage() {
           </div>
         </div>
 
-        {/* 전투 기록 — 캔버스 로그는 한 줄씩 지나가므로 놓친 줄을 여기서 다시 본다 */}
+        {/* 로그 — 높이 고정. 텍스트 길이에 따라 레이아웃이 흔들리면 안 된다 (ART_DIRECTION 3-2).
+            '기록' 버튼은 지나간 줄을 다시 보는 용도로 남긴다. */}
+        <div className="flex h-14 items-center border-b border-earth-500/40 bg-shadow-700/60 px-4">
+          <p className="line-clamp-2 text-pixel-sm leading-[18px] text-sand-200">
+            {logHistory[logHistory.length - 1] ?? ""}
+          </p>
+        </div>
+
         {showLog && (
-          <div className="border-b border-shadow-700 bg-black/50 px-3 py-2">
-            <div className="max-h-24 overflow-y-auto flex flex-col-reverse gap-0.5">
+          <div className="border-b border-earth-500/40 bg-shadow-900/80 px-3 py-2">
+            <div className="flex max-h-24 flex-col-reverse gap-0.5 overflow-y-auto">
               {logHistory.length === 0
                 ? <p className="text-pixel-sm text-earth-400">아직 기록이 없습니다.</p>
                 : [...logHistory].reverse().map((line, i) => (
@@ -936,10 +944,14 @@ export default function BattlePage() {
                           onClick={() => handleMoveClick(move)}
                           disabled={isProcessing}
                           style={{ borderRadius: 0 }}
-                          className={`border px-2 py-1.5 text-left transition disabled:opacity-30 min-h-[52px] ${typeClass(move.type)}`}
+                          className={`group relative border-2 px-2 py-1.5 text-left transition
+                            hover:brightness-125 focus-visible:brightness-125 disabled:opacity-30 min-h-[52px] ${typeClass(move.type)}`}
                         >
                           <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-pixel-sm leading-tight">{move.name}</span>
+                            <span className="font-semibold text-pixel-sm leading-tight">
+                              <span className="invisible mr-1 group-hover:visible group-focus-visible:visible">▶</span>
+                              {move.name}
+                            </span>
                             <span className="text-pixel-sm opacity-50 uppercase shrink-0">{move.type}</span>
                           </div>
                           <div className="text-pixel-sm opacity-45 mt-0.5">위력 {move.power} · 명중 {move.accuracy}</div>
@@ -971,7 +983,7 @@ export default function BattlePage() {
 
       {/* 기술 교체 선택 — 4칸이 찼을 때만 뜬다 */}
       {forgetPrompt && (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/75">
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-shadow-900/75">
           <div className="w-full max-w-md mx-4 border-2 border-ember-700 bg-shadow-900/95 p-5">
             <p className="text-center text-pixel-sm font-bold text-ember-500 mb-1">
               {player.name}이(가) {forgetPrompt.incoming.name}을(를) 배우려 한다!
@@ -1015,7 +1027,7 @@ export default function BattlePage() {
 
       {/* 승리 오버레이 */}
       {showResultUI && battleOutcome === "win" && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-shadow-900/65">
           <div className="text-center px-8 py-8 border-2 border-moss-500 bg-shadow-900/95 shadow-2xl max-w-sm w-full mx-4"
             style={{ fontFamily: "var(--font-title)" }}>
             <p className="text-title-md font-bold text-moss-500 mb-3">WIN!</p>
@@ -1069,7 +1081,7 @@ export default function BattlePage() {
 
       {/* 패배 오버레이 */}
       {showResultUI && battleOutcome === "lose" && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/65">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-shadow-900/65">
           <div className="text-center px-8 py-10 border-2 border-ember-700 bg-shadow-900/95 shadow-2xl max-w-sm w-full mx-4"
             style={{ fontFamily: "var(--font-title)" }}>
             <p className="text-title-md font-bold text-ember-500 mb-4">LOSE...</p>

@@ -354,7 +354,7 @@ export default function WorkshopPage() {
   // ─── 렌더 ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-black">
+    <div className="relative h-screen w-screen overflow-hidden bg-shadow-900">
 
       {/* ══════════════════════════════════════════════════════════════════════
           레이어 1 — 흐림 배경 (여백을 자연스럽게 채움, 이미지 깨짐 방지)
@@ -374,7 +374,7 @@ export default function WorkshopPage() {
       {/* ══════════════════════════════════════════════════════════════════════
           레이어 2 — 비네팅 오버레이
           ══════════════════════════════════════════════════════════════════════ */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/45" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-shadow-900/35 via-transparent to-shadow-900/45" />
 
       {/* ══════════════════════════════════════════════════════════════════════
           레이어 3 — 게임 스테이지 (원본 이미지 비율 835:714 고정)
@@ -728,7 +728,7 @@ function WorkshopMenuModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div

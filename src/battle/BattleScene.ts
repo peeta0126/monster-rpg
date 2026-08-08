@@ -21,14 +21,18 @@ export interface BattleSceneUpdatePayload {
 
 const W = 960;
 const H = 540;
-const BATTLE_H = 400;   // 전투 비주얼 영역
+const BATTLE_H = H;     // 전투 무대는 캔버스 전체를 쓴다.
+                        // 예전엔 400까지만 그리고 400~540을 로그 칸으로 비워 뒀는데,
+                        // 로그가 React 쪽 고정 줄로 옮겨가면서 그 띠가 빈 공간으로 남았다.
 const LOG_Y = 400;      // 하단 로그 패널 시작
 const FLOOR_Y = 318;    // 탑 바닥면
 
-// 몬스터: 같은 Y선에 마주보게
-const MONSTER_Y = 232;
-const ENEMY_X = 670;
-const PLAYER_X = 290;
+// 적은 좌상단, 아군은 우하단 — 대각선 배치로 시선이 흐르게 한다 (ART_DIRECTION 3-2).
+// 예전엔 같은 Y선에 좌우로 마주 보게 두어 원근이 없었다.
+const ENEMY_X  = 300;
+const ENEMY_Y  = 206;
+const PLAYER_X = 664;
+const PLAYER_Y = 268;
 const MONSTER_SIZE = 140;
 
 // HP 패널 (몬스터 바로 위)
@@ -36,7 +40,9 @@ const MONSTER_SIZE = 140;
 // 패널 bottom = 158 (4px 여유)
 const PANEL_W = 210;
 const PANEL_H = 62;
-const PANEL_CY = 127;   // 패널 세로 중심 → top=96, bottom=158
+// HP 패널은 각자 몬스터 위에 붙는다
+const E_PANEL_CY = 108;
+const P_PANEL_CY = 396;
 
 // HP 바: 패널 안 하단
 const BAR_H = 10;
@@ -45,10 +51,10 @@ const BAR_X_INNER = 10;        // 패널 내 왼쪽 여백
 const BAR_Y_IN_PANEL = PANEL_H - 22; // 패널 상단으로부터의 Y = 40
 const BAR_W_INNER = PANEL_W - 20;    // = 190
 // 절대 좌표 캐시
-const E_BAR_X = ENEMY_X - PANEL_W / 2 + BAR_X_INNER;   // 670-105+10 = 575
-const E_BAR_Y = PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL; // 127-31+40 = 136
-const P_BAR_X = PLAYER_X - PANEL_W / 2 + BAR_X_INNER;  // 290-105+10 = 195
-const P_BAR_Y = E_BAR_Y;
+const E_BAR_X = ENEMY_X - PANEL_W / 2 + BAR_X_INNER;
+const E_BAR_Y = E_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
+const P_BAR_X = PLAYER_X - PANEL_W / 2 + BAR_X_INNER;
+const P_BAR_Y = P_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
 
 // ─── 층별 횃불 색 ──────────────────────────────────────────────────────────────
 
@@ -157,8 +163,8 @@ export default class BattleScene extends Phaser.Scene {
     if (isBoss) {
       const bossBg = this.add.graphics().setDepth(20);
       bossBg.fillStyle(HEX.mist500, 0.85);
-      bossBg.fillRoundedRect(ENEMY_X - 36, PANEL_CY - PANEL_H / 2 - 22, 72, 18, 5);
-      this.add.text(ENEMY_X, PANEL_CY - PANEL_H / 2 - 13, "★  BOSS  ★", {
+      bossBg.fillRoundedRect(ENEMY_X - 36, E_PANEL_CY - PANEL_H / 2 - 22, 72, 18, 5);
+      this.add.text(ENEMY_X, E_PANEL_CY - PANEL_H / 2 - 13, "★  BOSS  ★", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300, fontStyle: "bold",
       }).setOrigin(0.5, 0.5).setDepth(21);
     }
@@ -313,8 +319,8 @@ export default class BattleScene extends Phaser.Scene {
     // ── 발판 그림자 (픽셀아트: 사각형) ──
     const shadow = this.add.graphics().setDepth(3);
     shadow.fillStyle(HEX.shadow900, 0.55);
-    shadow.fillRect(ENEMY_X - 65, FLOOR_Y + 2, 130, 14);
-    shadow.fillRect(PLAYER_X - 65, FLOOR_Y + 2, 130, 14);
+    shadow.fillRect(ENEMY_X - 58, ENEMY_Y + MONSTER_SIZE / 2 - 10, 116, 13);
+    shadow.fillRect(PLAYER_X - 58, PLAYER_Y + MONSTER_SIZE / 2 - 10, 116, 13);
 
     // ── 횃불 ──
     this.buildTorch(115, FLOOR_Y - 52, palette);
@@ -326,11 +332,14 @@ export default class BattleScene extends Phaser.Scene {
     }).setOrigin(1, 0.5).setDepth(10).setAlpha(0.9);
 
     // ── 로그 패널 배경 ──
-    const logPanel = this.add.graphics().setDepth(10);
-    logPanel.fillStyle(HEX.shadow900, 1);
-    logPanel.fillRect(0, LOG_Y, W, H - LOG_Y);
-    logPanel.lineStyle(1, HEX.earth500, 0.6);
-    logPanel.beginPath(); logPanel.moveTo(0, LOG_Y); logPanel.lineTo(W, LOG_Y); logPanel.strokePath();
+    // 예전엔 여기에 불투명한 로그 패널을 깔아 캔버스 아래 1/4을 덮었다. 로그가 React 쪽
+    // 고정 줄로 옮겨간 지금은 바닥이 그대로 보이는 게 맞다. 대신 아래로 갈수록 어두워지는
+    // 그라디언트만 남겨 하단 UI와 자연스럽게 이어붙인다.
+    const floorFade = this.add.graphics().setDepth(10);
+    for (let i = 0; i < 24; i++) {
+      floorFade.fillStyle(HEX.shadow900, (i / 24) * 0.85);
+      floorFade.fillRect(0, LOG_Y + i * ((H - LOG_Y) / 24), W, (H - LOG_Y) / 24 + 1);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -422,28 +431,29 @@ export default class BattleScene extends Phaser.Scene {
 
     // 적 (우, flipX)
     if (this.textures.exists("enemy-mon")) {
-      this.enemySprite = this.add.image(ENEMY_X, MONSTER_Y, "enemy-mon")
-        .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setFlipX(true).setDepth(6);
+      this.enemySprite = this.add.image(ENEMY_X, ENEMY_Y, "enemy-mon")
+        .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setDepth(6);
     } else {
-      this.enemySprite = this.makeFallback(ENEMY_X, MONSTER_Y, HEX.ember700, MONSTER_SIZE);
+      this.enemySprite = this.makeFallback(ENEMY_X, ENEMY_Y, HEX.ember700, MONSTER_SIZE);
     }
 
     // 플레이어 — 파티 0번 슬롯 이미지 사용 (party-mon-0)
     if (this.textures.exists("party-mon-0")) {
-      this.playerSprite = this.add.image(PLAYER_X, MONSTER_Y, "party-mon-0")
-        .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setDepth(6);
+      this.playerSprite = this.add.image(PLAYER_X, PLAYER_Y, "party-mon-0")
+        // 아군이 우측으로 옮겨갔으니 좌측의 적을 바라보게 뒤집는다
+        .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setFlipX(true).setDepth(6);
     } else {
-      this.playerSprite = this.makeFallback(PLAYER_X, MONSTER_Y, HEX.mist500, MONSTER_SIZE);
+      this.playerSprite = this.makeFallback(PLAYER_X, PLAYER_Y, HEX.mist500, MONSTER_SIZE);
     }
 
     // 등장 애니메이션
-    this.enemySprite.setAlpha(0).setY(MONSTER_Y + 20);
-    this.playerSprite.setAlpha(0).setY(MONSTER_Y + 20);
-    this.tweens.add({ targets: this.enemySprite, alpha: 1, y: MONSTER_Y, duration: 500, delay: 200, ease: "Back.Out" });
-    this.tweens.add({ targets: this.playerSprite, alpha: 1, y: MONSTER_Y, duration: 500, delay: 420, ease: "Back.Out" });
+    this.enemySprite.setAlpha(0).setY(ENEMY_Y + 20);
+    this.playerSprite.setAlpha(0).setY(PLAYER_Y + 20);
+    this.tweens.add({ targets: this.enemySprite, alpha: 1, y: ENEMY_Y, duration: 500, delay: 200, ease: "Back.Out" });
+    this.tweens.add({ targets: this.playerSprite, alpha: 1, y: PLAYER_Y, duration: 500, delay: 420, ease: "Back.Out" });
     this.time.delayedCall(930, () => {
-      this.addFloat(this.enemySprite, MONSTER_Y, 6, 1750);
-      this.addFloat(this.playerSprite, MONSTER_Y, 5, 1950);
+      this.addFloat(this.enemySprite, ENEMY_Y, 6, 1750);
+      this.addFloat(this.playerSprite, PLAYER_Y, 5, 1950);
     });
   }
 
@@ -473,10 +483,10 @@ export default class BattleScene extends Phaser.Scene {
 
   private buildHudPanels() {
     this.buildOneHudPanel(
-      ENEMY_X, PANEL_CY, PANEL_W, PANEL_H, true,
+      ENEMY_X, E_PANEL_CY, PANEL_W, PANEL_H, true,
     );
     this.buildOneHudPanel(
-      PLAYER_X, PANEL_CY, PANEL_W, PANEL_H, false,
+      PLAYER_X, P_PANEL_CY, PANEL_W, PANEL_H, false,
     );
   }
 
@@ -576,7 +586,7 @@ export default class BattleScene extends Phaser.Scene {
     this.resultVeil.fillRect(0, 0, W, BATTLE_H);
     this.resultVeil.setVisible(false);
 
-    this.resultTitle = this.add.text(W / 2, BATTLE_H / 2 - 10, "", {
+    this.resultTitle = this.add.text(W / 2, ENEMY_Y - 10, "", {
       fontSize: "36px", fontFamily: PIXEL_FONT, resolution: textResolution(), fontStyle: "bold",
       stroke: PALETTE.shadow900, strokeThickness: 6,
     }).setOrigin(0.5, 0.5).setDepth(31).setVisible(false);
@@ -722,7 +732,7 @@ export default class BattleScene extends Phaser.Scene {
         // (Phaser가 새 텍스처의 natural size로 리셋하기 때문)
         this.playerSprite.setOrigin(0.5, 0.5);
         this.playerSprite.setDisplaySize(MONSTER_SIZE, MONSTER_SIZE);
-        this.playerSprite.setY(MONSTER_Y);
+        this.playerSprite.setY(PLAYER_Y);
 
         this.tweens.add({
           targets: this.playerSprite,
@@ -732,7 +742,7 @@ export default class BattleScene extends Phaser.Scene {
           onComplete: () => {
             // fade-in 완료 후에도 한 번 더 고정 (tween이 scale 건드릴 경우 대비)
             this.playerSprite.setDisplaySize(MONSTER_SIZE, MONSTER_SIZE);
-            this.addFloat(this.playerSprite, MONSTER_Y, 5, 1950);
+            this.addFloat(this.playerSprite, PLAYER_Y, 5, 1950);
           },
         });
       },

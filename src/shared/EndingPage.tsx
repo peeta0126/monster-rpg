@@ -12,7 +12,7 @@ export default function EndingPage() {
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex flex-col items-center justify-center gap-10 bg-black px-6 text-center"
+      className="fixed inset-0 z-[1000] flex flex-col items-center justify-center gap-10 bg-shadow-900 px-6 text-center"
       style={{ fontFamily: "var(--font-title)" }}
     >
       <div className="max-w-md space-y-5 text-pixel-sm leading-loose text-sand-200">

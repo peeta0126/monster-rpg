@@ -111,7 +111,7 @@ function AncientStars() {
   return (
     <div className="absolute inset-0">
       {stars.map((s) => (
-        <div key={s.id} className="absolute rounded-full bg-white"
+        <div key={s.id} className="absolute rounded-full bg-cream-100"
           style={{
             left:`${s.left}%`, top:`${s.top}%`,
             width:s.size, height:s.size,

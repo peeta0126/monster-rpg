@@ -51,7 +51,7 @@ export default function RegisterModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[2100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[2100] flex items-center justify-center bg-shadow-900/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div

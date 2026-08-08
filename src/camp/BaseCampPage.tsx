@@ -130,7 +130,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
       <div className="overflow-y-auto flex-1 p-5 space-y-5">
         {/* 이미지 + 스탯 */}
         <div className="flex gap-5 items-start">
-          <div className="w-28 h-28 flex items-center justify-center bg-white rounded-xl border border-sand-200 shrink-0 overflow-hidden">
+          <div className="w-28 h-28 flex items-center justify-center bg-cream-100 rounded-xl border border-sand-200 shrink-0 overflow-hidden">
             <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.name}
               className="w-24 h-24 object-contain"
               style={seen ? { mixBlendMode: "multiply" } : { filter: "brightness(0)", opacity: 0.4 }}/>
@@ -174,7 +174,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                           ? "border-ember-500 bg-ember-700/11 cursor-default"
                           : "border-stone-600 bg-shadow-800 hover:border-sand-300 active:scale-95"}`}
                     >
-                      <div className="w-14 h-14 flex items-center justify-center bg-white rounded-lg overflow-hidden">
+                      <div className="w-14 h-14 flex items-center justify-center bg-cream-100 rounded-lg overflow-hidden">
                         <img
                           src={MONSTER_IMAGE_MAP[cm.id]}
                           alt={cm.name}
@@ -279,7 +279,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -321,7 +321,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={() => setFilter("all")}
                 className={`rounded-lg px-3 py-1 text-pixel-sm font-semibold whitespace-nowrap transition
-                  ${filter === "all" ? "bg-stone-600 text-white" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
+                  ${filter === "all" ? "bg-stone-600 text-cream-100" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
               >
                 전체
               </button>
@@ -330,7 +330,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                   key={t}
                   onClick={() => setFilter(t)}
                   className={`rounded-lg px-3 py-1 text-pixel-sm font-semibold whitespace-nowrap transition
-                    ${filter === t ? "bg-stone-600 text-white" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
+                    ${filter === t ? "bg-stone-600 text-cream-100" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
                 >
                   {TYPE_GROUP_LABEL[t]}
                 </button>
@@ -358,7 +358,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                       {/* 포획 뱃지 고정 높이 영역 - 없어도 공간 유지 */}
                       <span className={`self-end text-pixel-sm font-bold h-4 leading-none ${caught ? "text-moss-500" : "invisible"}`}>포획</span>
 
-                      <div className="relative h-20 w-20 flex items-center justify-center bg-white rounded-lg overflow-hidden">
+                      <div className="relative h-20 w-20 flex items-center justify-center bg-cream-100 rounded-lg overflow-hidden">
                         {seen ? (
                           <img
                             src={MONSTER_IMAGE_MAP[m.id]}
@@ -421,7 +421,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -543,7 +543,7 @@ function TowerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/75 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -643,7 +643,7 @@ function MenuModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
