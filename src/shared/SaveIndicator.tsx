@@ -48,16 +48,19 @@ export default function SaveIndicator() {
     : status === "saved" ? (mode === "server" ? "서버에 저장됨" : "저장됨")
     : (message ?? "저장 실패 — 로컬에는 보관됨");
 
+  // 색은 마스터 팔레트 토큰만 (ART_DIRECTION 1-2).
+  // 텍스트는 어두운 배지 배경 위에서 4.5:1을 넘겨야 해서, 위험도 ember-700 대신
+  // ember-500(5.3:1)을 쓴다 — 테두리 쪽에서 ember-700으로 위험을 구분한다.
   const color =
-    status === "error" ? { border: "rgba(248,113,113,.5)", text: "#fca5a5" }
-    : status === "saving" ? { border: "rgba(161,161,170,.4)", text: "#a1a1aa" }
-    : { border: "rgba(52,211,153,.45)", text: "#6ee7b7" };
+    status === "error"    ? { border: "rgba(168,61,31,.6)",  text: "var(--color-ember-500)" }
+    : status === "saving" ? { border: "rgba(66,61,70,.5)",   text: "var(--color-sand-300)" }
+    : { border: "rgba(122,132,85,.5)", text: "var(--color-moss-500)" };
 
   return (
     <div
       className="pointer-events-none fixed bottom-3 right-3 z-[900] flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-semibold transition-opacity"
       style={{
-        background: "rgba(8,8,10,.85)",
+        background: "rgba(13,18,35,.88)",   // shadow-900
         border: `1px solid ${color.border}`,
         color: color.text,
       }}

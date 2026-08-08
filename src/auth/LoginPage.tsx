@@ -32,7 +32,7 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[2000] bg-zinc-950">
+    <div className="fixed inset-0 z-[2000] bg-shadow-900">
       <div
         className="login-stage"
         style={{

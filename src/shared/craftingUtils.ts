@@ -35,16 +35,18 @@ export const QUALITY_LABEL: Record<ItemQuality, string> = {
   elite:  "최고급 제작품",
 };
 
+// 등급 3색은 마스터 팔레트에서 서로 가장 멀리 떨어진 세 갈래를 고른다
+// (중립 sand / 마법 mist / 화염 ember) — 색약 상태에서도 명도와 색상이 모두 다르다.
 export const QUALITY_COLOR: Record<ItemQuality, string> = {
-  normal: "#a1a1aa",
-  rare:   "#818cf8",
-  elite:  "#f59e0b",
+  normal: "var(--color-sand-300)",   // #CDB27E
+  rare:   "var(--color-mist-300)",   // #AEE2D5
+  elite:  "var(--color-ember-500)",  // #E99441
 };
 
 export const QUALITY_GLOW: Record<ItemQuality, string> = {
-  normal: "rgba(161,161,170,0.3)",
-  rare:   "rgba(129,140,248,0.4)",
-  elite:  "rgba(245,158,11,0.5)",
+  normal: "rgba(205,178,126,0.3)",
+  rare:   "rgba(174,226,213,0.4)",
+  elite:  "rgba(233,148,65,0.5)",
 };
 
 export const QUALITY_MULTIPLIER: Record<ItemQuality, number> = {

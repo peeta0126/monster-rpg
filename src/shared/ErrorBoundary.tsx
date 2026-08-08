@@ -36,13 +36,13 @@ export default class ErrorBoundary extends Component<Props, State> {
         className="fixed inset-0 z-[3000] flex flex-col items-center justify-center gap-6 bg-black px-6 text-center"
         style={pixelFont}
       >
-        <p className="text-sm text-amber-200 sm:text-base">문제가 발생했습니다</p>
-        <p className="max-w-md text-[10px] leading-relaxed text-zinc-500 sm:text-xs">
+        <p className="text-sm text-ember-500 sm:text-base">문제가 발생했습니다</p>
+        <p className="max-w-md text-[10px] leading-relaxed text-sand-300 sm:text-xs">
           예상치 못한 오류로 화면을 계속 표시할 수 없습니다. 아래 버튼으로 복구해주세요.
         </p>
 
         {import.meta.env.DEV && (
-          <pre className="max-h-64 max-w-lg overflow-auto whitespace-pre-wrap rounded-md border border-red-900/60 bg-red-950/30 p-3 text-left text-[9px] leading-snug text-red-300">
+          <pre className="max-h-64 max-w-lg overflow-auto whitespace-pre-wrap rounded-md border border-ember-700/60 bg-ember-700/10 p-3 text-left text-[9px] leading-snug text-ember-500">
             {error.message}
             {error.stack ? `\n\n${error.stack}` : ""}
           </pre>
@@ -52,14 +52,14 @@ export default class ErrorBoundary extends Component<Props, State> {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-md border-2 border-amber-400/90 bg-gradient-to-b from-amber-500 to-amber-800 px-4 py-2 text-[10px] font-bold text-amber-50 transition hover:brightness-110 sm:text-xs"
+            className="rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 px-4 py-2 text-[10px] font-bold text-cream-100 transition hover:brightness-110 sm:text-xs"
           >
             새로고침
           </button>
           <button
             type="button"
             onClick={() => window.location.assign("/")}
-            className="rounded-md border border-zinc-600 px-4 py-2 text-[10px] text-zinc-400 transition hover:border-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 sm:text-xs"
+            className="rounded-md border border-stone-600 px-4 py-2 text-[10px] text-sand-300 transition hover:border-sand-300 hover:bg-shadow-800 hover:text-sand-200 sm:text-xs"
           >
             베이스캠프로
           </button>
