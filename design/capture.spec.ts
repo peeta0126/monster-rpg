@@ -87,6 +87,29 @@ test.beforeAll(() => {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 });
 
+/**
+ * 숲은 고른 구역에 따라 배경이 통째로 바뀐다. 한 장만 찍으면 나머지 두 장이 실제로
+ * 다른 그림인지 알 수가 없어서 티어별로 따로 남긴다. 잠긴 구역도 호버로 "보기"는
+ * 되므로(들어가지만 못한다) 신규 세이브로도 셋 다 찍힌다.
+ */
+const FOREST_TIERS = ["shallow", "deep", "ancient"] as const;
+
+for (const tier of FOREST_TIERS) {
+  test(`capture: forest-${tier}`, async ({ page }) => {
+    await seedStorage(page, true);
+    await page.goto("/forest");
+    await expect(page.locator("#root")).not.toBeEmpty();
+
+    const card = page.locator(`[data-testid="forest-tier-${tier}"]`);
+    await expect(card).toBeVisible();
+    await card.hover();
+    await expect(card).toHaveAttribute("data-selected", "1");
+
+    await waitForVisualSettle(page);
+    await page.screenshot({ path: path.join(OUT_DIR, `forest-${tier}.png`), fullPage: false });
+  });
+}
+
 for (const screen of SCREENS) {
   test(`capture: ${screen.name}`, async ({ page }) => {
     const consoleErrors: string[] = [];
