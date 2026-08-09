@@ -57,6 +57,12 @@ export const ELEMENT_COLOR = {
   normal:   "sand300",
 } as const satisfies Record<string, PaletteName>;
 
+/** 속성 7종의 한글 이름. 칩·툴팁이 같은 이름을 쓰게 여기 한 벌만 둔다. */
+export const ELEMENT_KO: Record<keyof typeof ELEMENT_COLOR, string> = {
+  fire: "불꽃", water: "물", grass: "풀", electric: "전기",
+  ice: "얼음", poison: "독", normal: "노말",
+};
+
 /**
  * 속성 칩(작은 태그) 의 Tailwind 클래스. 배경·테두리가 속성을 구분하고,
  * 글자색은 어두운 패널 위에서 4.5:1 을 넘기는 토큰만 쓴다 — ember-600/mist-500/

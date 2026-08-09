@@ -9,8 +9,10 @@ import { scaleToLevel } from "../shared/floorTable";
 import { getMaterial } from "../shared/items";
 import { AREA_MATERIAL_POOL } from "../shared/dropTables";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
-import { FOREST_AREAS, type ForestArea } from "./forest/areas";
-import { ForestBackground, Particles } from "./forest/ForestBackground";
+import { FOREST_AREAS, highestUnlockedArea, type ForestArea, type ForestAreaId } from "./forest/areas";
+import { ForestBackdrop } from "./forest/ForestBackdrop";
+import { ForestTierCard } from "./forest/ForestTierCard";
+import { Particles } from "./forest/Particles";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CSS 애니메이션 키프레임
@@ -334,112 +336,6 @@ function generateDungeon(_area: ForestArea): ForestNode[] {
 }
 
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 구역 선택 카드
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function AreaCard({ area, index, locked, onClick }: { area: ForestArea; index: number; locked?: boolean; onClick: ()=>void }) {
-  const monsterTypes = [...new Set(
-    area.monsterPool.map((id)=>monsters.find((m)=>m.id===id)?.type ?? "normal")
-  )];
-
-  return (
-    <button
-      onClick={onClick}
-      className="relative w-full overflow-hidden border-2 text-left transition-all
-        hover:scale-[1.01] active:scale-[.99] group"
-      style={{
-        // 잠긴 카드는 채도를 죽이고 발광을 없애 열린 카드와 확실히 갈라놓는다.
-        // 반투명 오버레이만 씌우면 아래 텍스트가 비쳐서 안내문과 겹쳐 읽힌다.
-        borderColor: locked ? PALETTE.stone600 : area.borderGlow,
-        borderRadius: 0,
-        boxShadow: locked ? "none" : `4px 4px 0px ${area.glowColor}, inset 0 0 40px ${area.glowColor}`,
-        background: `linear-gradient(135deg, ${area.skyTop}f0 0%, ${area.skyBottom}e0 100%)`,
-        filter: locked ? "saturate(.2) brightness(.5)" : undefined,
-        cursor: locked ? "not-allowed" : "pointer",
-        animationDelay: `${index*0.1}s`,
-        animation: "slideInUp .5s ease both",
-      }}
-    >
-      <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full pointer-events-none opacity-20 group-hover:opacity-35 transition-opacity"
-        style={{ background:`radial-gradient(circle, ${area.accentColor}, transparent)` }}/>
-      <div className="absolute right-4 top-4 flex gap-1.5">
-        {Array.from({length:3}).map((_,i)=>(
-          <div key={i} className="rounded-full"
-            style={{
-              width:4, height:4,
-              background: area.accentColor,
-              opacity:.5+i*.15,
-              boxShadow:`0 0 6px 2px ${area.glowColor}`,
-              animation:`crystalDrift ${2+i*.8}s ease-in-out ${i*.6}s infinite alternate`,
-            }}/>
-        ))}
-      </div>
-      <div className="relative z-10 flex gap-4 p-5">
-        <div className="flex flex-col gap-2 flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-pixel-sm font-bold tracking-widest" style={{ color:area.accentColor, opacity:.7 }}>
-              {area.subtitle}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-pixel-md font-black" style={{ color:area.accentColor }}>{area.name}</h3>
-            <span className="text-pixel-sm font-bold text-sand-300">
-              {"★".repeat(area.danger)}{"☆".repeat(5-area.danger)}
-            </span>
-          </div>
-          <p className="text-pixel-sm text-sand-300 leading-relaxed">{area.description}</p>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {monsterTypes.map((t)=>(
-              <span key={t}
-                className={`border px-2 py-0.5 text-pixel-sm font-bold ${TYPE_COLOR[t]??TYPE_COLOR.normal}`}
-                style={{ borderRadius:0, fontFamily:"var(--font-pixel)" }}>
-                {TYPE_KO[t]??t}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 items-end shrink-0">
-          <div className="text-right">
-            <p className="text-pixel-sm text-earth-400 uppercase tracking-wider">레벨</p>
-            <p className="text-pixel-sm font-bold" style={{ color:area.accentColor }}>
-              {area.levelRange[0]}~{area.levelRange[1]}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-pixel-sm text-earth-400 uppercase tracking-wider">맵 구조</p>
-            <p className="text-pixel-sm font-bold text-sand-200">랜덤 생성</p>
-          </div>
-          <div className="mt-1 px-3 py-1.5 text-pixel-sm font-bold"
-            style={{
-              background:`linear-gradient(135deg, ${area.accentColor}30, ${area.accentColor}18)`,
-              border:`2px solid ${area.accentColor}`,
-              borderRadius: 0,
-              color: area.accentColor,
-              fontFamily: "var(--font-pixel)",
-              fontSize: 12,
-              boxShadow: `2px 2px 0 ${area.accentColor}60`,
-            }}>
-            탐험하기 →
-          </div>
-        </div>
-      </div>
-      {area.danger>=4 && (
-        <div className="relative z-10 border-t px-5 py-2 text-pixel-sm font-bold flex items-center gap-1.5"
-          style={{ borderColor:`${area.accentColor}30`, color:area.accentColor, background:`${area.accentColor}12` }}>
-          <span>⚠</span><span>{area.recommendedText}</span>
-        </div>
-      )}
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity overflow-hidden">
-        <div className="absolute inset-y-0 w-16"
-          style={{
-            background:`linear-gradient(to right, transparent, ${area.accentColor}20, transparent)`,
-            animation:"shimmerPass 1.2s ease once",
-          }}/>
-      </div>
-    </button>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 던전 맵 화면
@@ -1261,6 +1157,13 @@ export default function ForestPage() {
   const [phase, setPhase]             = useState<ForestPhase>("enter");
   const [area, setArea]               = useState<ForestArea|null>(null);
 
+  /**
+   * 구역 선택 화면에서 지금 보고 있는 티어. 배경과 카드 상태가 같이 이걸 따른다.
+   * 처음에는 갈 수 있는 가장 높은 구역을 골라 둔다 — 플레이어가 이미 뚫어 놓은 곳을
+   * 다시 찾아 내려가게 하지 않는다.
+   */
+  const [selectedTier, setSelectedTier] = useState<ForestAreaId>(() => highestUnlockedArea(bestFloor).id);
+
   // 던전 상태
   const [dungeonNodes, setDungeonNodes] = useState<ForestNode[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string>("n0");
@@ -1405,7 +1308,8 @@ export default function ForestPage() {
   return (
     <div className="relative flex h-screen w-full flex-col items-center overflow-hidden text-cream-100">
       <style>{FOREST_STYLES}</style>
-      <ForestBackground area={area}/>
+      {/* 탐험에 들어가면 그 구역이, 선택 화면에서는 지금 보고 있는 구역이 배경이 된다. */}
+      <ForestBackdrop tier={area?.id ?? selectedTier}/>
       {area && <Particles area={area}/>}
 
       {/* 상단 UI */}
@@ -1430,34 +1334,30 @@ export default function ForestPage() {
       </div>
 
       {/* 중앙 콘텐츠 */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full px-4 pt-16 pb-6 overflow-y-auto">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center w-full px-4 pt-16 pb-6 overflow-y-auto">
 
         {/* ── ENTER: 구역 선택 ── */}
         {phase==="enter" && (
-          <div className="flex flex-col items-center gap-5 w-full max-w-lg">
-            <div className="text-center mb-2">
-              <p className="text-pixel-sm uppercase tracking-[.25em] text-earth-400 mb-1">EXPEDITION</p>
+          // gap 을 두지 않는다 — 물러난 카드가 scale(.75) 로 줄면서 자리에 여백을
+          // 스스로 남긴다. 여기에 gap 을 더하면 카드 사이가 벌어져 한 묶음으로 안 읽힌다.
+          <div className="flex flex-col items-center w-full max-w-lg">
+            {/* 배경 원화의 밝은 안개 위에 놓이는 자리라 글자마다 그림자를 깐다 */}
+            <div className="mb-2 text-center" style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
+              <p className="text-pixel-sm uppercase tracking-[.25em] text-sand-300 mb-1">EXPEDITION</p>
               <h1 className="text-title-md font-black text-cream-100">숲 탐험</h1>
-              <p className="text-pixel-sm text-sand-300 mt-1">탐험할 구역을 선택하세요</p>
+              <p className="text-pixel-sm text-sand-200 mt-1">탐험할 구역을 선택하세요</p>
             </div>
-            {FOREST_AREAS.map((a,i)=>{
-              const locked = bestFloor < a.unlockFloor;
-              return (
-                <div key={a.id} className="relative w-full">
-                  <AreaCard area={a} index={i} locked={locked} onClick={()=>{ if(!locked) handleEnterArea(a); }}/>
-                  {locked && (
-                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 border-2 border-stone-600"
-                      style={{ background:"rgba(13, 18, 35, .82)", borderRadius:0 }}>
-                      <span className="text-pixel-md">🔒</span>
-                      <p className="text-pixel-sm font-bold text-cream-100">
-                        무한의 탑 {a.id==="deep" ? 11 : 21}층 도달 시 해금
-                      </p>
-                      <p className="text-pixel-sm text-sand-300">현재 최고 층: {bestFloor}층</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {FOREST_AREAS.map((a)=>(
+              <ForestTierCard
+                key={a.id}
+                area={a}
+                selected={a.id === selectedTier}
+                locked={bestFloor < a.unlockFloor}
+                bestFloor={bestFloor}
+                onSelect={()=>setSelectedTier(a.id)}
+                onEnter={()=>handleEnterArea(a)}
+              />
+            ))}
           </div>
         )}
 
