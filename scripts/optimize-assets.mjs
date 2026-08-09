@@ -63,6 +63,19 @@ const RECIPES = [
   { src: "basecamp-bg.png", out: "assets/basecamp/basecamp-bg-blur.webp", width: 640, quality: 78 },
 ];
 
+/**
+ * 손대지 않는 디렉터리.
+ *
+ * 이 밑의 파일은 밖에서 이미 최적화를 마치고 들어온 최종본이다. 여기서 다시 구우면
+ * 화질만 깎인다 — WebP 재인코딩은 무손실이 아니라, 같은 quality 로 돌려도 세대마다
+ * 뭉갠다. 숲 배경 3종은 톤 보정·스크림·비네트까지 구워져 있어 특히 되돌릴 수 없다.
+ *
+ * "레시피에 안 적었으니 안전하다"로 두지 않고 검사로 박아 둔 이유: 언젠가 누가
+ * art-src/forest_deep.png 를 넣고 레시피 한 줄을 추가하면 그날 조용히 깎인다.
+ * 그때 이 검사가 먼저 죽는다.
+ */
+const PRESERVED_DIRS = ["assets/forest"];
+
 /** 몬스터 일러스트 — art-src/monsters/*.png 를 512px 상한으로 줄여 내보낸다 */
 const MONSTER_SRC_DIR = "monsters";
 const MONSTER_OUT_DIR = "assets/monsters";
@@ -101,6 +114,25 @@ function assertNoInputIsOverwritten(recipes) {
     throw new Error(
       `출력이 입력을 덮어쓴다: ${clashes.join(", ")}\n` +
       "레시피를 고칠 것. 이 검사가 없던 시절에 원본 해상도가 소리 없이 깎였다.",
+    );
+  }
+}
+
+/** 보존 디렉터리로 내보내는 레시피가 있으면 아무것도 하지 않고 죽는다. */
+function assertNothingWritesIntoPreserved(recipes) {
+  const outs = [
+    ...recipes.map((r) => r.out),
+    // --png8 단계는 public/ 을 제자리에서 다시 쓴다. 같은 규칙을 적용한다.
+    ...PIXEL_DIRS,
+    `${MONSTER_OUT_DIR}/`,
+  ];
+  const hits = outs
+    .map((out) => out.replace(/\\/g, "/"))
+    .filter((out) => PRESERVED_DIRS.some((d) => out === d || out.startsWith(`${d}/`)));
+  if (hits.length) {
+    throw new Error(
+      `보존 디렉터리에 쓰려 한다: ${hits.join(", ")}\n` +
+      "이미 최적화된 최종본이다. 다시 구우면 화질만 깎인다.",
     );
   }
 }
@@ -169,6 +201,7 @@ async function runPng8() {
 
 async function main() {
   assertNoInputIsOverwritten(RECIPES);
+  assertNothingWritesIntoPreserved(RECIPES);
 
   for (const r of RECIPES) await runRecipe(r);
   await runMonsters();

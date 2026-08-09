@@ -25,3 +25,17 @@ export const BASECAMP_BACKGROUND_BLURRED = "/assets/basecamp/basecamp-bg-blur.we
  *  좌표계는 이 이미지 기준 백분율 — src/workshop/workshopLayout.ts 참고. */
 export const WORKSHOP_BACKGROUND_IMAGE = "/assets/housing/housing_bg.webp";
 export const WORKSHOP_BACKGROUND_ASPECT_RATIO = 2400 / 1792;
+
+/**
+ * 숲 구역 배경 3종 (2603x1464, 16:9).
+ *
+ * 톤 보정·카드 영역 스크림·비네트가 이미 구워져 있는 최종본이다. 화면에서 brightness /
+ * saturate 를 덧씌우지 말 것 — 세 장의 밝기 차이가 곧 티어 차이라, 위에서 한 번 더
+ * 누르면 셋이 같은 어둠으로 뭉개진다.
+ *
+ * scripts/optimize-assets.mjs 는 이 디렉터리를 건드리지 않는다(PRESERVED_DIRS).
+ */
+export const FOREST_BG_SHALLOW = "/assets/forest/forest_shallow.webp";
+export const FOREST_BG_DEEP    = "/assets/forest/forest_deep.webp";
+export const FOREST_BG_ANCIENT = "/assets/forest/forest_ancient.webp";
+export const FOREST_BACKGROUND_ASPECT_RATIO = 2603 / 1464;

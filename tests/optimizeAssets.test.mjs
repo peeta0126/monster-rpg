@@ -64,6 +64,42 @@ test("원본(art-src/)을 건드리지 않는다", () => {
   assert.deepEqual(diff(before, after), [], "art-src/ 의 원본이 바뀌었다");
 });
 
+test("숲 배경 3종은 돌려도 바이트가 그대로다", () => {
+  const dir = path.join(PUBLIC, "assets", "forest");
+  const names = fs.readdirSync(dir).filter((f) => /\.webp$/i.test(f));
+  assert.deepEqual(
+    names.sort(),
+    ["forest_ancient.webp", "forest_deep.webp", "forest_shallow.webp"],
+    "숲 배경 3종이 public/assets/forest/ 에 없다",
+  );
+
+  const before = names.map((n) => sha(path.join(dir, n)));
+  run();
+  const after = names.map((n) => sha(path.join(dir, n)));
+  assert.deepEqual(after, before, "이미 최적화된 최종본을 다시 구웠다");
+});
+
+test("보존 디렉터리에 쓰는 레시피가 있으면 아무것도 하지 않고 죽는다", () => {
+  const src = fs.readFileSync(SCRIPT, "utf8");
+  const broken = src.replace(
+    'const RECIPES = [',
+    'const RECIPES = [\n  { src: "forest_deep.png", out: "assets/forest/forest_deep.webp" },',
+  );
+  assert.notEqual(broken, src, "레시피 배열을 못 찾았다 — 테스트가 낡았다");
+
+  const tmp = path.join(ROOT, "scripts", "__optimize-preserved.tmp.mjs");
+  fs.writeFileSync(tmp, broken);
+  try {
+    let failed = false, out = "";
+    try { execFileSync(process.execPath, [tmp], { cwd: ROOT, encoding: "utf8" }); }
+    catch (e) { failed = true; out = `${e.stdout ?? ""}${e.stderr ?? ""}`; }
+    assert.ok(failed, "보존 디렉터리에 쓰는데 그냥 돌았다");
+    assert.match(out, /보존 디렉터리에 쓰려 한다/);
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
+});
+
 test("출력이 입력을 덮는 레시피가 있으면 아무것도 하지 않고 죽는다", async () => {
   // 규칙을 어기는 레시피를 넣은 사본을 만들어 돌려본다.
   // 규칙 자체가 이 스크립트의 존재 이유라, 검사가 살아 있는지 확인해 둔다.
