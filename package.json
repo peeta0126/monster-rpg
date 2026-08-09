@@ -23,6 +23,7 @@
     "perf": "playwright test --config design/perf.config.ts",
     "design:responsive": "playwright test --config design/playwright.config.ts -g \"responsive:\"",
     "design:measure": "playwright test --config design/playwright.config.ts -g \"measure:\"",
+    "design:collision": "playwright test --config design/playwright.config.ts -g \"collision:\"",
     "design:visual": "playwright test --config design/playwright.config.ts -g visual",
     "design:visual:update": "playwright test --config design/playwright.config.ts -g visual --update-snapshots",
     "optimize:assets": "node scripts/optimize-assets.mjs",
