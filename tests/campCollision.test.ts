@@ -1,10 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
 import {
   CAMP_COLLISION_BOXES, CAMP_MAP_W, CAMP_MAP_H,
   bodyYFromSpriteY, hitsWall, reachableCells,
 } from "../src/camp/campCollision";
 import { getCampPosition } from "../src/camp/campPositionStore";
+import { GROUND_MASK_SOURCE } from "../src/camp/campGroundMask";
 
 /**
  * 베이스캠프 충돌 형상 검증.
@@ -57,7 +61,7 @@ test("충돌 박스가 지도 밖으로 크게 튀어나가지 않는다", () =>
  * 여기 숫자를 고칠 일이 생기면 씬도 같이 고친 것인지 확인할 것.
  */
 const INTERACTIONS = [
-  { label: "탑",     x: 278,  y: 1110, radius: 90 },
+  { label: "탑",     x: 285,  y: 950,  radius: 300 },
   { label: "숲",     x: 1500, y: 1900, radius: 130 },
   { label: "집",     x: 794,  y: 1215, radius: 90 },
   { label: "바로스", x: 430,  y: 1200, radius: 160 },
@@ -97,3 +101,40 @@ for (const spot of MUST_NOT_REACH) {
     assert.equal(near.length, 0, `${spot.label}(${spot.x}, ${spot.y}) 안에 설 수 있다`);
   });
 }
+
+/**
+ * 배경이 두 장이라 생기는 연출 — 전경 레이어(basecamp-bg-1) 쪽으로 걸어 들어가면
+ * 플레이어가 그 뒤로 가려진다. 이미지 위를 지나가는 게 아니라 안으로 들어가는 것처럼
+ * 보이는 자리다. 예전에는 여기를 통째로 막아 놔서 나무 앞에서 벽처럼 멈췄다.
+ *
+ * 아래 좌표는 전부 전경이 덮고 있는 곳이고, 전부 걸어 들어갈 수 있어야 한다.
+ */
+const MUST_REACH_BEHIND = [
+  { label: "탑 아치 밑",     x:  285, y:  800 },
+  { label: "남쪽 아치 밑",   x:  760, y: 2200 },
+  { label: "아치 장미덩굴",  x:  930, y: 2300 },
+  { label: "숲 가장자리",    x: 1120, y: 2100 },
+  { label: "벚나무 아래",    x: 1260, y: 1980 },
+  { label: "서쪽 수풀 가",   x:  210, y: 1150 },
+  { label: "우물 처마",      x:  330, y: 1400 },
+];
+
+for (const spot of MUST_REACH_BEHIND) {
+  test(`${spot.label} 뒤로 걸어 들어갈 수 있다`, () => {
+    const ok = reached.some((p) => Math.hypot(p.x - spot.x, p.y - spot.y) <= STEP * 1.5);
+    assert.ok(ok, `${spot.label}(${spot.x}, ${spot.y}) 앞에서 막힌다 — 가려지는 연출이 안 나온다`);
+  });
+}
+
+/**
+ * 지형 마스크는 배경 그림에서 뽑은 값이라, 배경을 갈면 다시 만들어야 한다.
+ * 그냥 두면 새 그림 위에서 옛 형상으로 걸어 다니게 된다.
+ */
+test("지형 마스크가 지금 배경에서 나온 것이다", () => {
+  const src = path.resolve(import.meta.dirname, "..", GROUND_MASK_SOURCE.file);
+  const sha = crypto.createHash("sha256").update(fs.readFileSync(src)).digest("hex");
+  assert.equal(
+    sha, GROUND_MASK_SOURCE.sha256,
+    "배경 전경 레이어가 바뀌었다. `node scripts/gen-camp-collision.mjs` 를 다시 돌릴 것",
+  );
+});

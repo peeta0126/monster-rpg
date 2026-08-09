@@ -13,7 +13,7 @@ import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
 import type { DialogueEntry } from "./campDialogues";
 import {
-  CAMP_COLLISION_BOXES, CAMP_MAP_W, CAMP_MAP_H,
+  CAMP_COLLISION_BOXES, CAMP_PROP_BOXES, CAMP_MAP_W, CAMP_MAP_H,
   PLAYER_BODY, PLAYER_BODY_OFFSET, PLAYER_SCALE, NPC_BODY,
 } from "./campCollision";
 import {
@@ -28,6 +28,18 @@ const HOUSE_X = 794,
 const HOUSE_DOOR_Y = HOUSE_Y + 135;
 const TOWER_X = 278,
   TOWER_Y = 1010;
+
+/**
+ * 탑 판정.
+ *
+ * 예전에는 (278, 1110) 반경 90 이었다. 아치 밑으로 걸어 들어갈 수 있게 되면서
+ * "가까이 갈수록 E 안내가 사라지는" 구간이 350px 생겼다 — 판정점이 아치보다 한참
+ * 아래라서다. 아치 통로 한가운데로 올리고, 길에서 아치 밑까지 한 번에 덮게 넓혔다.
+ *
+ * 반경이 커도 바로스를 가리지는 않는다. keydown 핸들러가 `dTower <= dNearestNpc`
+ * 일 때만 탑을 고르므로, 바로스 옆에서는 언제나 바로스가 이긴다.
+ */
+const TOWER_INTERACT = { x: 285, y: 950, radius: 300 };
 
 const CAM_ZOOM = 0.5;
 const NPC_DISPLAY_HEIGHT = 192;   // 플레이어(160) × 1.2배
@@ -172,12 +184,7 @@ export default class BaseCampScene extends Phaser.Scene {
       const dNearestNpc = nearestNpc
         ? Phaser.Math.Distance.Between(px, py, nearestNpc.x, nearestNpc.y)
         : Infinity;
-      const dTower = Phaser.Math.Distance.Between(
-        px,
-        py,
-        TOWER_X,
-        TOWER_Y + 100,
-      );
+      const dTower = Phaser.Math.Distance.Between(px, py, TOWER_INTERACT.x, TOWER_INTERACT.y);
       const dForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
       const dHouse = Phaser.Math.Distance.Between(
         px,
@@ -187,7 +194,7 @@ export default class BaseCampScene extends Phaser.Scene {
       );
 
       // 탑 판정과 NPC 상호작용 범위가 겹치는 구역에서는 더 가까운 쪽을 우선한다
-      if (dTower < 90 && dTower <= dNearestNpc) {
+      if (dTower < TOWER_INTERACT.radius && dTower <= dNearestNpc) {
         setCampPosition(TOWER_X, TOWER_Y + 120);
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
           from: "basecamp",
@@ -251,9 +258,16 @@ export default class BaseCampScene extends Phaser.Scene {
     g.clear();
     if (!isCollisionDebugOn()) return;
 
-    g.lineStyle(3, DEBUG_LINE_HEX, 1);
-    g.fillStyle(DEBUG_LINE_HEX, 0.12);
+    // 지형은 자동 생성이라 사각형이 60개 가까이 되고 내부 경계가 많다. 얇고 흐리게
+    // 그려야 손으로 잡은 소품 박스가 묻히지 않는다.
+    const props = new Set<string>(CAMP_PROP_BOXES.map((b) => b.id));
+    g.lineStyle(2, DEBUG_LINE_HEX, 0.45);
     for (const b of CAMP_COLLISION_BOXES) {
+      if (!props.has(b.id)) g.strokeRect(b.x, b.y, b.w, b.h);
+    }
+    g.lineStyle(3, DEBUG_LINE_HEX, 1);
+    g.fillStyle(DEBUG_LINE_HEX, 0.14);
+    for (const b of CAMP_PROP_BOXES) {
       g.fillRect(b.x, b.y, b.w, b.h);
       g.strokeRect(b.x, b.y, b.w, b.h);
     }
@@ -408,7 +422,7 @@ export default class BaseCampScene extends Phaser.Scene {
     // ── 근접 힌트 ────────────────────────────────────────────────────────────────
     const px = this.player.x,
       py = this.player.y;
-    const dTower = Phaser.Math.Distance.Between(px, py, TOWER_X, TOWER_Y + 100);
+    const dTower = Phaser.Math.Distance.Between(px, py, TOWER_INTERACT.x, TOWER_INTERACT.y);
     const dForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
     const dHouse = Phaser.Math.Distance.Between(px, py, HOUSE_X, HOUSE_DOOR_Y);
     const nearestNpc = this.getNearestNpc(px, py);
@@ -416,7 +430,7 @@ export default class BaseCampScene extends Phaser.Scene {
       ? Phaser.Math.Distance.Between(px, py, nearestNpc.x, nearestNpc.y)
       : Infinity;
     // keydown-E 핸들러와 동일한 우선순위: 탑이 더 가깝거나 같은 거리일 때만 탑 우선
-    const towerWins = dTower < 90 && dTower <= dNearestNpc;
+    const towerWins = dTower < TOWER_INTERACT.radius && dTower <= dNearestNpc;
 
     const ph = this.children.getByName("portalHint");
     const fh = this.children.getByName("forestHint");

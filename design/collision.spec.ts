@@ -4,7 +4,8 @@ import {
   COLLISION_BOXES, CRAFTING_STATIONS, EXIT_ZONE, PLAYER_BOUNDS, BG_W, BG_H,
 } from "../src/workshop/workshopLayout";
 import {
-  CAMP_COLLISION_BOXES, CAMP_MAP_W, CAMP_MAP_H, reachableCells, bodyYFromSpriteY,
+  CAMP_COLLISION_BOXES, CAMP_PROP_BOXES, CAMP_MAP_W, CAMP_MAP_H,
+  reachableCells, bodyYFromSpriteY,
 } from "../src/camp/campCollision";
 import { getCampPosition } from "../src/camp/campPositionStore";
 
@@ -23,7 +24,8 @@ import { getCampPosition } from "../src/camp/campPositionStore";
 
 const OUT = path.resolve("design/screenshots");
 const LINE = "#ff0000"; // palette-ok: 개발용 판정 선. 게임에 없는 색이어야 눈에 띈다
-const ZONE = "#00ffcc"; // palette-ok: 상호작용 반경. 충돌 선과 구분되는 색
+const ZONE = "#00ffcc";   // palette-ok: 상호작용 반경. 충돌 선과 구분되는 색
+const GROUND = "#ff8c00"; // palette-ok: 자동 생성된 지형. 손으로 잰 소품과 구분하려고 다른 색
 
 function grid(step: number, w: number, h: number, scale: number) {
   const cols = Array.from({ length: Math.floor(w / step) + 1 }, (_, i) => i * step);
@@ -88,11 +90,16 @@ test("collision: 베이스캠프", async ({ page }) => {
         width:${STEP * s}px;height:${STEP * s}px;background:rgba(0,255,204,.32)"></div>`;
     }).join("")}
     ${grid(100, CAMP_MAP_W, CAMP_MAP_H, s)}
-    ${CAMP_COLLISION_BOXES.map((b) => `
-      <div style="position:absolute;left:${b.x * s}px;top:${b.y * s}px;
+    ${CAMP_COLLISION_BOXES.map((b) => {
+      // 지형(전경 레이어에서 자동 생성)과 소품(손으로 잰 것)을 색으로 나눈다.
+      // 지형은 가장자리 40px 이 열려 있어야 정상이고, 소품은 딱 물건만 덮어야 한다.
+      const prop = CAMP_PROP_BOXES.includes(b as never);
+      const color = prop ? LINE : GROUND;
+      return `<div style="position:absolute;left:${b.x * s}px;top:${b.y * s}px;
         width:${b.w * s}px;height:${b.h * s}px;
-        border:1px solid ${LINE};background:rgba(255,0,0,.3)">
-        <span style="font:10px monospace;color:${LINE};background:rgba(0,0,0,.75)">${b.id}</span></div>`).join("")}`;
+        border:1px solid ${color};background:${prop ? "rgba(255,0,0,.28)" : "rgba(255,140,0,.18)"}">
+        ${prop ? `<span style="font:10px monospace;color:${color};background:rgba(0,0,0,.75)">${b.id}</span>` : ""}</div>`;
+    }).join("")}`;
 
   await page.setContent(shell(w, h, overlay(scale)));
   await page.waitForTimeout(500);
