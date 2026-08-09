@@ -12,6 +12,13 @@ import {
 import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
 import type { DialogueEntry } from "./campDialogues";
+import {
+  CAMP_COLLISION_BOXES, CAMP_MAP_W, CAMP_MAP_H,
+  PLAYER_BODY, PLAYER_BODY_OFFSET, PLAYER_SCALE, NPC_BODY,
+} from "./campCollision";
+import {
+  isCollisionDebugOn, onCollisionDebugChange, bindCollisionDebugKey, DEBUG_LINE_HEX,
+} from "../shared/collisionDebug";
 
 // ─── 맵 좌표 (basecamp-bg.png 1536×2730 기준) ─────────────────────────────────
 const FOREST_X = 1500,
@@ -23,7 +30,6 @@ const TOWER_X = 278,
   TOWER_Y = 1010;
 
 const CAM_ZOOM = 0.5;
-const PLAYER_SCALE = 2.5;
 const NPC_DISPLAY_HEIGHT = 192;   // 플레이어(160) × 1.2배
 const NPC_INTERACT_DISTANCE = 160; // 디스플레이 절반(160)에 맞춰 조정
 
@@ -74,6 +80,9 @@ export default class BaseCampScene extends Phaser.Scene {
   private facing: Dir8 = "S";
   private walkFrame: 1 | 2 = 1;
   private walkTimer = 0;
+  private debugGfx?: Phaser.GameObjects.Graphics;
+  private playerBodyGfx?: Phaser.GameObjects.Graphics;
+  private cleanupDebug?: () => void;
 
   constructor() {
     super("BaseCampScene");
@@ -111,8 +120,8 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   private createImpl() {
-    const mapW = 1536,
-      mapH = 2730;
+    const mapW = CAMP_MAP_W,
+      mapH = CAMP_MAP_H;
     this.cameras.main.setZoom(CAM_ZOOM);
     this.physics.world.setBounds(0, 0, mapW, mapH);
 
@@ -135,10 +144,12 @@ export default class BaseCampScene extends Phaser.Scene {
     this.player.setScale(PLAYER_SCALE);
     this.player.setDepth(initPos.y);
 
-    // 플레이어 바디를 10×10 (texture 좌표) 으로 고정 → game 좌표 25×25
-    // 64×64 스프라이트 중앙에 위치: offset = (64-10)/2 = 27
-    (this.player.body as Phaser.Physics.Arcade.Body).setSize(10, 10);
-    (this.player.body as Phaser.Physics.Arcade.Body).setOffset(27, 27);
+    // 바디는 발밑에 둔다. 예전에는 스프라이트 한가운데(offset 27,27)에 있어서,
+    // 벽 앞에 서면 발이 화단·좌판 안으로 80px 씩 파고들어 있었다.
+    // texture 좌표 → 월드 = ×PLAYER_SCALE. 64×64 스프라이트의 아래쪽에 맞춘다.
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    body.setSize(PLAYER_BODY.w / PLAYER_SCALE, PLAYER_BODY.h / PLAYER_SCALE);
+    body.setOffset(PLAYER_BODY_OFFSET.x, PLAYER_BODY_OFFSET.y);
 
     // ── 카메라 ──────────────────────────────────────────────────────────────────
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -194,78 +205,61 @@ export default class BaseCampScene extends Phaser.Scene {
         gameEvents.emit(GAME_EVENT.ENTER_HOUSING);
       }
     }));
-    //-------충돌 관리 선------------
-    const wallBodies: Phaser.GameObjects.Rectangle[] = [];
-
-    const addStaticRect = (x: number, y: number, w: number, h: number) => {
-      // alpha 0 — 화면에 그려지지 않는 충돌 판정용 사각형이라 색은 의미가 없다(팔레트 대상 아님)
-      const r = this.add.rectangle(x, y, w, h, 0x000000, 0); // palette-ok: alpha 0, 화면에 안 그려지는 판정용
-      this.physics.add.existing(r, true);
-      wallBodies.push(r);
-
-      const debug = false;
-      if (debug) {
-        const g = this.add.graphics().setDepth(9999);
-        // 개발용 판정 박스. 일부러 팔레트에 없는 형광색을 써서 실수로 켠 채 두면 바로 보이게 한다
-        g.lineStyle(2, 0x00ff88, 1); // palette-ok: 개발용 판정 박스. 켠 채 두면 바로 보이도록 일부러 형광색
-        g.strokeRect(x - w / 2, y - h / 2, w, h);
-      }
-
-      this.physics.add.collider(this.player, r);
-      return r;
-    };
-
-    const seg = (x1: number, y1: number, x2: number, y2: number, t = 16) => {
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-
-      const isH = Math.abs(dy) <= 2;
-      const isV = Math.abs(dx) <= 2;
-
-      if (isH) {
-        addStaticRect((x1 + x2) / 2, (y1 + y2) / 2, Math.abs(dx), t);
-      } else if (isV) {
-        addStaticRect((x1 + x2) / 2, (y1 + y2) / 2, t, Math.abs(dy));
-      } else {
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const steps = Math.ceil(len / t);
-
-        for (let i = 0; i <= steps; i++) {
-          const f = i / steps;
-          addStaticRect(x1 + dx * f, y1 + dy * f, t, t);
-        }
-      }
-    };
-
-    seg(380, 900, 170, 900);
-    seg(380, 900, 380, 1200);
-    seg(380, 1200, 690, 1200);
-    seg(900, 1200, 1000, 1200);
-    seg(1000, 1200, 1000, 1480);
-    seg(830, 1480, 1000, 1480);
-    seg(1030, 1800, 830, 1480, 5);
-    seg(1530, 1800, 1030, 1800);
-    seg(890, 2430, 1530, 2430);
-    seg(890, 2430, 890, 2900);
-    seg(100, 1850, 580, 1850);
-    seg(100, 1850, 100, 1960);
-    seg(540, 1960, 100, 1960);
-    seg(540, 2290, 540, 1960);
-    seg(660, 2290, 540, 2290);
-    seg(580, 1400, 580, 1850);
-    seg(170, 1400, 580, 1400);
-    seg(170, 920, 170, 1400);
-    seg(170, 1400, 580, 1400);
-    seg(700, 1100, 700, 1200);
-    seg(880, 1100, 880, 1200);
-    seg(700, 1100, 880, 1100);
-    seg(660, 2300, 660, 2900);
-
-    //좌표 확인용
+    // ── 충돌 ────────────────────────────────────────────────────────────────────
+    // 형상은 campCollision.ts 한 곳에만 있다. 좌표를 고칠 일이 있으면 여기가 아니라 거기다.
+    this.buildCollision();
 
     this.registerPlayerAnimations();
     redrawTextOnFontLoad(this);
     markSceneReady(this);
+  }
+
+  /**
+   * 정적 충돌 바디 + 개발자 모드 표시선.
+   *
+   * NPC 도 막는다 — 예전에는 통과할 수 있어서 오리온과 바로스 몸을 뚫고 지나갔다.
+   */
+  private buildCollision() {
+    const statics = this.physics.add.staticGroup();
+
+    for (const b of CAMP_COLLISION_BOXES) {
+      // alpha 0 — 화면에 안 그려지는 판정용이라 색은 의미가 없다
+      const r = this.add.rectangle(b.x + b.w / 2, b.y + b.h / 2, b.w, b.h, 0x000000, 0); // palette-ok: alpha 0, 판정 전용
+      statics.add(r);
+    }
+    for (const npc of this.npcSprites) {
+      const r = this.add.rectangle(npc.x, npc.y - NPC_BODY.h / 2, NPC_BODY.w, NPC_BODY.h, 0x000000, 0); // palette-ok: alpha 0, 판정 전용
+      statics.add(r);
+    }
+    this.physics.add.collider(this.player, statics);
+
+    // ── 개발자 모드 표시선 ─────────────────────────────────────────────────────
+    this.debugGfx = this.add.graphics().setDepth(9998);
+    this.playerBodyGfx = this.add.graphics().setDepth(9999);
+    this.cleanupDebug = bindCollisionDebugKey();
+    const unsubscribe = onCollisionDebugChange(() => this.redrawCollisionDebug());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unsubscribe();
+      this.cleanupDebug?.();
+    });
+    this.redrawCollisionDebug();
+  }
+
+  private redrawCollisionDebug() {
+    const g = this.debugGfx;
+    if (!g) return;
+    g.clear();
+    if (!isCollisionDebugOn()) return;
+
+    g.lineStyle(3, DEBUG_LINE_HEX, 1);
+    g.fillStyle(DEBUG_LINE_HEX, 0.12);
+    for (const b of CAMP_COLLISION_BOXES) {
+      g.fillRect(b.x, b.y, b.w, b.h);
+      g.strokeRect(b.x, b.y, b.w, b.h);
+    }
+    for (const npc of this.npcSprites) {
+      g.strokeRect(npc.x - NPC_BODY.w / 2, npc.y - NPC_BODY.h, NPC_BODY.w, NPC_BODY.h);
+    }
   }
 
   /**
@@ -396,8 +390,20 @@ export default class BaseCampScene extends Phaser.Scene {
       this.player.setTexture(getPlayerTextureKey(this.facing, 0));
     }
 
-    // ── depth: 플레이어 y = depth → 건물 뒤/앞 자동 처리 ──────────────────────
-    this.player.setDepth(this.player.y);
+    // ── depth: 발끝 y = depth → 건물·NPC 뒤/앞 자동 처리 ──────────────────────
+    // NPC 는 원점이 (0.5, 1) 이라 발끝이 곧 depth 다. 플레이어만 스프라이트 중심을
+    // 쓰면 기준이 어긋나 발이 NPC 앞에 있는데도 뒤로 그려진다.
+    this.player.setDepth(this.player.y + (64 / 2) * PLAYER_SCALE);
+
+    // ── 개발자 모드: 플레이어 발밑 바디 ──────────────────────────────────────
+    if (this.playerBodyGfx) {
+      this.playerBodyGfx.clear();
+      if (isCollisionDebugOn()) {
+        const b = this.player.body as Phaser.Physics.Arcade.Body;
+        this.playerBodyGfx.lineStyle(3, DEBUG_LINE_HEX, 1);
+        this.playerBodyGfx.strokeRect(b.x, b.y, b.width, b.height);
+      }
+    }
 
     // ── 근접 힌트 ────────────────────────────────────────────────────────────────
     const px = this.player.x,
