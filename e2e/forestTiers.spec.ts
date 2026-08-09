@@ -130,6 +130,25 @@ test("배경 3종이 호버 전에 이미 받아져 있다", async ({ page }) =>
   expect(loaded.every((l) => l.ok), `아직 안 받아진 배경이 있다: ${JSON.stringify(loaded)}`).toBe(true);
 });
 
+test("스크림 — 선택 화면은 원화 그대로, 탐험 중에는 덮는다", async ({ page }) => {
+  await open(page, 0);
+
+  const dimOpacity = () => page.evaluate(() => {
+    const el = document.querySelector(".forest-backdrop-dim");
+    return el ? Number(getComputedStyle(el).opacity) : null;
+  });
+
+  // 구역 선택 화면 — 원화에 이미 카드 영역 스크림이 구워져 있으니 덧씌우지 않는다
+  expect(await dimOpacity()).toBe(0);
+
+  await card(page, "shallow").click();
+  await expect(page.locator('[data-testid^="forest-node-"]').first()).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(500);
+
+  // 노드 맵부터는 UI 가 판 없이 원화 위에 흩어진다. 덮지 않으면 이동 버튼이 묻힌다.
+  expect(await dimOpacity()).toBe(1);
+});
+
 test("prefers-reduced-motion 이면 크로스페이드 없이 즉시 바뀐다", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await open(page, 0);

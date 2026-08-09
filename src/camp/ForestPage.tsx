@@ -380,8 +380,8 @@ function DungeonMapScreen({
     <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-3xl mx-4"
       style={{ animation:"slideInUp .4s ease both" }}>
 
-      {/* 헤더 */}
-      <div className="text-center">
+      {/* 헤더 — 판 없이 원화 위에 바로 놓이므로 글자마다 그림자를 깐다 */}
+      <div className="text-center" style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
         <p className="text-pixel-sm uppercase tracking-widest text-sand-300 mb-0.5">NODE MAP</p>
         <p className="text-title-sm font-black text-cream-100">{area.name} 탐험</p>
         <p className="text-pixel-sm text-sand-300">진행 {current.depth} / {MAX_DEPTH}</p>
@@ -494,7 +494,7 @@ function DungeonMapScreen({
             return (
               <div key={t} className="flex items-center gap-1">
                 <span className="text-pixel-sm">{m.icon}</span>
-                <span className="text-pixel-sm text-earth-400">{m.label}</span>
+                <span className="text-pixel-sm text-sand-300">{m.label}</span>
               </div>
             );
           })}
@@ -504,7 +504,10 @@ function DungeonMapScreen({
       {/* 이동 선택 버튼 (y 좌표 순 정렬 → 위/중/아래 라벨) */}
       {sortedNext.length > 0 && (
         <div className="w-full flex flex-col gap-2">
-          <p className="text-pixel-sm text-sand-300 text-center">어느 방향으로 탐사하시겠습니까?</p>
+          <p className="text-pixel-sm text-sand-200 text-center"
+            style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
+            어느 방향으로 탐사하시겠습니까?
+          </p>
           <div className={`grid gap-2 ${
             sortedNext.length === 1 ? "grid-cols-1" :
             sortedNext.length === 2 ? "grid-cols-2" : "grid-cols-3"
@@ -514,15 +517,17 @@ function DungeonMapScreen({
                 onClick={() => onSelectNode(node.id)}
                 className="flex flex-col items-center gap-1.5 rounded-xl py-3 px-2 transition-all active:scale-95"
                 style={{
-                  background: "rgba(243, 229, 185, 0.04)",
-                  border: `1.5px solid ${area.accentColor}50`,
+                  // 4% 크림 채움이었다. 옛 그라디언트 배경 위에서만 성립하던 값이라
+                  // 원화로 바꾸자 버튼이 통째로 사라졌다 — 자기 판을 들게 한다.
+                  background: rgba("shadow900", 0.82),
+                  border: `2px solid ${area.accentColor}`,
                   color: area.accentColor,
                 }}>
                 <span className="text-pixel-md">🌫️</span>
                 <span className="text-pixel-sm font-bold">
                   {getNextDirLabel(i, sortedNext.length)}
                 </span>
-                <span className="text-pixel-sm text-earth-400">미지의 공간</span>
+                <span className="text-pixel-sm text-sand-300">미지의 공간</span>
               </button>
             ))}
           </div>
@@ -531,7 +536,7 @@ function DungeonMapScreen({
 
       {/* 귀환 */}
       <button onClick={onExit}
-        className="w-full rounded-xl border border-stone-600 bg-shadow-800/60 py-2.5 text-pixel-sm text-sand-300 hover:text-sand-200 transition">
+        className="w-full rounded-xl border border-stone-600 bg-shadow-900/85 py-2.5 text-pixel-sm text-sand-300 hover:text-sand-200 transition">
         ← 숲 떠나기
       </button>
     </div>
@@ -1308,25 +1313,27 @@ export default function ForestPage() {
   return (
     <div className="relative flex h-screen w-full flex-col items-center overflow-hidden text-cream-100">
       <style>{FOREST_STYLES}</style>
-      {/* 탐험에 들어가면 그 구역이, 선택 화면에서는 지금 보고 있는 구역이 배경이 된다. */}
-      <ForestBackdrop tier={area?.id ?? selectedTier}/>
+      {/* 탐험에 들어가면 그 구역이, 선택 화면에서는 지금 보고 있는 구역이 배경이 된다.
+          안에 들어간 뒤로는 UI 가 화면 전체에 흩어져서 원화를 한 겹 눌러야 읽힌다. */}
+      <ForestBackdrop tier={area?.id ?? selectedTier} dim={phase !== "enter"}/>
       {area && <Particles area={area}/>}
 
-      {/* 상단 UI */}
+      {/* 상단 UI — 구역 선택 화면에서는 스크림 없는 원화 위에 바로 뜬다.
+          얕은 숲 캔버스 상단이 밝아서 반투명 판으로는 글자가 뜬다. */}
       <div className="absolute top-4 left-0 right-0 z-30 flex items-center justify-between px-4">
         <button onClick={phase==="enter" ? ()=>navigate("/") : exitDungeon}
-          className="rounded-xl border border-stone-600/60 bg-shadow-900/50 px-3 py-1.5 text-pixel-sm text-sand-300 hover:text-sand-200 hover:bg-shadow-900/70 backdrop-blur transition">
+          className="rounded-xl border border-stone-600/60 bg-shadow-900/85 px-3 py-1.5 text-pixel-sm text-sand-300 hover:text-sand-200 hover:bg-shadow-900 backdrop-blur transition">
           {phase==="enter" ? "← 베이스캠프" : "← 탈출"}
         </button>
         <div className="flex items-center gap-2">
           {area && (
             <div className="rounded-xl px-3 py-1.5 text-pixel-sm font-bold backdrop-blur"
-              style={{ background:"rgba(13, 18, 35, .5)", border:`1px solid ${area.borderGlow}`, color: area.accentColor }}>
+              style={{ background: rgba("shadow900", 0.85), border:`1px solid ${area.borderGlow}`, color: area.accentColor }}>
               {area.name} {currentNode && phase!=="enter" ? `· ${currentNode.depth}/${maxDepth}` : ""}
             </div>
           )}
           {totalPotions>0 && (
-            <div className="rounded-xl border border-stone-600/60 bg-shadow-900/50 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
+            <div className="rounded-xl border border-stone-600/60 bg-shadow-900/85 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
               🎒 ×{totalPotions}
             </div>
           )}
