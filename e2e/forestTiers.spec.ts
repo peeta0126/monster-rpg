@@ -130,6 +130,22 @@ test("배경 3종이 호버 전에 이미 받아져 있다", async ({ page }) =>
   expect(loaded.every((l) => l.ok), `아직 안 받아진 배경이 있다: ${JSON.stringify(loaded)}`).toBe(true);
 });
 
+test("prefers-reduced-motion 이면 크로스페이드 없이 즉시 바뀐다", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await open(page, 0);
+
+  const transitions = await page.evaluate(() =>
+    Array.from(document.querySelectorAll(".forest-backdrop-layer"))
+      .map((el) => getComputedStyle(el).transitionDuration));
+  expect(transitions.every((d) => d === "0s"), `배경이 아직 애니메이션한다: ${transitions}`).toBe(true);
+
+  const card = await page.evaluate(() => {
+    const el = document.querySelector(".tier-card");
+    return el ? getComputedStyle(el).transitionDuration : null;
+  });
+  expect(card).toBe("0s");
+});
+
 test("얕은 숲 진입 · 상단 UI 가 그대로다", async ({ page }) => {
   await open(page, 0, { small: 3 });
 
