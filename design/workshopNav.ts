@@ -1,5 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { PLAYER_BOUNDS, isBlocked } from "../src/workshop/workshopLayout";
+import { PLAYER_BOUNDS, isPlayerBlocked } from "../src/workshop/workshopLayout";
 
 /**
  * 공방 안에서 플레이어를 걸어 다니게 하는 공용 헬퍼.
@@ -33,7 +33,7 @@ export function findPath(from: Pt, target: Pt, radius: number): Pt[] | null {
   const walkable = (p: Pt) =>
     p.x >= PLAYER_BOUNDS.minX && p.x <= PLAYER_BOUNDS.maxX &&
     p.y >= PLAYER_BOUNDS.minY && p.y <= PLAYER_BOUNDS.maxY &&
-    !isBlocked(p);
+    !isPlayerBlocked(p);
 
   const start = { x: Math.round(from.x), y: Math.round(from.y) };
   const prev = new Map<string, Pt | null>([[key(start), null]]);
@@ -65,17 +65,24 @@ export async function walkTo(page: Page, target: Pt, tolerance = 3): Promise<boo
   const deadline = Date.now() + 30_000;
   // 매 칸을 정확히 밟을 필요는 없다. 4칸마다 하나씩만 노려도 경로 모양은 유지된다.
   for (const wp of path.filter((_, i) => i % 4 === 0 || i === path.length - 1)) {
-    while (Date.now() < deadline) {
+    // 한 웨이포인트에서 제자리걸음이면 다음으로 넘어간다. 가구 모서리에 붙으면
+    // 한 축이 막힌 채로 남은 축의 오차가 임계값보다 작아 영영 안 움직이는 자리가 있다.
+    let stalled = 0;
+    let prev = await readPos(page);
+    while (Date.now() < deadline && stalled < 6) {
       const p = await readPos(page);
       const dx = wp.x - p.x, dy = wp.y - p.y;
       if (Math.hypot(dx, dy) <= 1.5) break;
       const keys: string[] = [];
-      if (Math.abs(dx) > 0.8) keys.push(dx > 0 ? "ArrowRight" : "ArrowLeft");
-      if (Math.abs(dy) > 0.8) keys.push(dy > 0 ? "ArrowDown" : "ArrowUp");
+      // 임계값은 한 스텝(약 0.4%)보다 작아야 한다. 크면 모서리에서 굳는다.
+      if (Math.abs(dx) > 0.3) keys.push(dx > 0 ? "ArrowRight" : "ArrowLeft");
+      if (Math.abs(dy) > 0.3) keys.push(dy > 0 ? "ArrowDown" : "ArrowUp");
       if (!keys.length) break;
       for (const k of keys) await page.keyboard.down(k);
       await page.waitForTimeout(80);
       for (const k of keys) await page.keyboard.up(k);
+      stalled = Math.hypot(p.x - prev.x, p.y - prev.y) < 0.2 ? stalled + 1 : 0;
+      prev = p;
     }
   }
   const end = await readPos(page);

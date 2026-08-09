@@ -11,12 +11,15 @@ import {
   WORKSHOP_BACKGROUND_IMAGE,
 } from "../shared/assetPaths";
 import {
-  BG_RATIO, INITIAL_POS, PLAYER_BOUNDS, PLAYER_DISPLAY,
+  BG_RATIO, INITIAL_POS, PLAYER_BOUNDS, PLAYER_DISPLAY, PLAYER_FOOT,
   COLLISION_BOXES, CRAFTING_STATIONS, EXIT_ZONE,
   SHOW_COLLISION_DEBUG, SHOW_INTERACTION_DEBUG,
-  clamp, isBlocked, findInteractable,
+  clamp, isPlayerBlocked, findInteractable,
   type Point, type StationDef, type WorkshopStationType,
 } from "./workshopLayout";
+import {
+  isCollisionDebugOn, onCollisionDebugChange, bindCollisionDebugKey, DEBUG_LINE_CSS,
+} from "../shared/collisionDebug";
 
 // --- 타입 -------------------------------------------------------------
 
@@ -89,6 +92,16 @@ export default function WorkshopPage() {
 
   // ── 패널 토글 ────────────────────────────────────────────────────────────────
   const [showCraftedPanel, setShowCraftedPanel] = useState(false);
+
+  // ── 충돌 박스 표시 (개발자 모드 전용, F9 토글) ────────────────────────────────
+  // SHOW_COLLISION_DEBUG 는 개발자 모드 없이 강제로 켜는 스위치다.
+  const [debugOn, setDebugOn] = useState(isCollisionDebugOn);
+  useEffect(() => {
+    const unbind = bindCollisionDebugKey();
+    const unsubscribe = onCollisionDebugChange(() => setDebugOn(isCollisionDebugOn()));
+    return () => { unbind(); unsubscribe(); };
+  }, []);
+  const showCollision = SHOW_COLLISION_DEBUG || debugOn;
 
   // 잠긴 동안에는 서 있는 자세로 그린다. walkFrame 상태를 effect 로 되돌리지 않고
   // 그릴 때 정하는 이유는, 모달을 닫는 순간 한 프레임 걷는 자세가 스치는 걸 막기 위해서다.
@@ -205,14 +218,14 @@ export default function WorkshopPage() {
 
           // X축 단독 검사 / Y축 단독 검사 — 항상 원래 prev 기준으로 검사해야
           // 대각선 이동 시 박스 모서리를 파고들어 갇히는 현상을 막을 수 있음
-          const collideX = isBlocked({ x: nx, y: prev.y });
-          const collideY = isBlocked({ x: prev.x, y: ny });
+          const collideX = isPlayerBlocked({ x: nx, y: prev.y });
+          const collideY = isPlayerBlocked({ x: prev.x, y: ny });
           if (!collideX) rx = nx;
           if (!collideY) ry = ny;
 
           // 대각선 이동: 각 축은 개별적으로 안전해 보여도 합쳐진 목적지가
           // 박스 내부라면(모서리 통과) 이동 자체를 취소 — 박스 안에 끼는 버그 방지
-          if (!collideX && !collideY && isBlocked({ x: nx, y: ny })) {
+          if (!collideX && !collideY && isPlayerBlocked({ x: nx, y: ny })) {
             rx = prev.x;
             ry = prev.y;
           }
@@ -379,21 +392,38 @@ export default function WorkshopPage() {
             </>
           )}
 
-          {/* ── 디버그: 충돌 박스 표시 (SHOW_COLLISION_DEBUG = true 시) ────── */}
-          {SHOW_COLLISION_DEBUG && COLLISION_BOXES.map((box) => (
+          {/* ── 디버그: 충돌 박스 (개발자 모드 · F9 로 토글) ───────────────── */}
+          {showCollision && COLLISION_BOXES.map((box) => (
             <div
               key={box.id}
-              className="pointer-events-none absolute z-40 border border-ember-600 bg-ember-600/20 text-pixel-sm font-bold text-ember-500"
+              className="pointer-events-none absolute z-40 text-pixel-sm font-bold"
               style={{
                 left:   `${box.x}%`,
                 top:    `${box.y}%`,
                 width:  `${box.width}%`,
                 height: `${box.height}%`,
+                border: `2px solid ${DEBUG_LINE_CSS}`,
+                background: "rgba(255, 0, 0, .12)", // palette-ok: 개발용 판정 박스
+                color: DEBUG_LINE_CSS,
               }}
             >
               <span className="px-0.5" style={{ textShadow: `0 1px 2px ${PALETTE.shadow900}` }}>{box.id}</span>
             </div>
           ))}
+
+          {/* 플레이어 발밑 판정 상자 — 박스와 같은 색이어야 어디서 걸리는지 보인다 */}
+          {showCollision && (
+            <div
+              className="pointer-events-none absolute z-40"
+              style={{
+                left:   `${pos.x - PLAYER_FOOT.halfW}%`,
+                top:    `${pos.y - PLAYER_FOOT.halfH}%`,
+                width:  `${PLAYER_FOOT.halfW * 2}%`,
+                height: `${PLAYER_FOOT.halfH * 2}%`,
+                border: `2px solid ${DEBUG_LINE_CSS}`,
+              }}
+            />
+          )}
 
           {/* ── 제작대 위치 표식 ────────────────────────────────────────────
               상호작용 안내가 "가까이 가야" 뜨는 탓에, 넓은 방에 처음 들어오면
@@ -436,7 +466,7 @@ export default function WorkshopPage() {
           {/* ── 디버그: 판정 원 ──────────────────────────────────────────────
               제작대는 초록, 출입구는 모래색. 충돌 박스와 같은 플래그로 켜야
               박스와 원의 어긋남을 한 장에서 볼 수 있다. */}
-          {SHOW_COLLISION_DEBUG && [
+          {showCollision && [
             ...CRAFTING_STATIONS.map((s) => ({ ...s, tint: "moss500" as const })),
             { ...EXIT_ZONE, tint: "sand300" as const },
           ].map((z) => (

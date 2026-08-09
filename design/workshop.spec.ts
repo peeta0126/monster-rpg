@@ -13,6 +13,12 @@ import {
  * 로그인 우회는 capture.spec.ts 와 같은 방식(zustand persist 키에 게스트 세션 주입)이다.
  */
 
+/**
+ * 제작대까지 얼마나 파고들 것인가. 제작대 중심은 자기 충돌 박스 안이라 반경의
+ * 절반까지는 못 들어간다 — 실제로 설 수 있는 가장 가까운 자리가 반경의 0.6~0.65배다.
+ */
+const APPROACH = 0.8;
+
 test.describe("workshop:", () => {
   test("스폰 위치가 INITIAL_POS 다", async ({ page }) => {
     await openWorkshop(page);
@@ -83,7 +89,7 @@ test.describe("workshop:", () => {
   for (const station of CRAFTING_STATIONS) {
     test(`${station.label} 근접 → SPACE → 모달`, async ({ page }) => {
       await openWorkshop(page);
-      const reached = await walkTo(page, station, station.radius * 0.6);
+      const reached = await walkTo(page, station, APPROACH * station.radius);
       expect(reached, `${station.id} 까지 못 갔다`).toBe(true);
 
       await expect(page.getByText(`${station.label} 사용하기`)).toBeVisible();
@@ -121,7 +127,7 @@ test.describe("workshop:", () => {
     await openWorkshop(page);
     // 아티팩트 제작대는 아래쪽이라 출입구와 가장 가깝다
     const bench = CRAFTING_STATIONS.find((s) => s.id === "artifact-workbench")!;
-    await walkTo(page, bench, bench.radius * 0.6);
+    await walkTo(page, bench, APPROACH * bench.radius);
     await expect(page.getByText(`${bench.label} 사용하기`)).toBeVisible();
     await expect(page.getByText(EXIT_ZONE.label)).toBeHidden();
   });
@@ -133,7 +139,7 @@ test.describe("workshop:", () => {
   test("모달이 열려 있으면 방향키로 움직이지도 돌지도 않는다", async ({ page }) => {
     await openWorkshop(page);
     const anvil = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
-    await walkTo(page, anvil, anvil.radius * 0.6);
+    await walkTo(page, anvil, APPROACH * anvil.radius);
     await page.keyboard.press("Space");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
 
@@ -163,7 +169,7 @@ test.describe("workshop:", () => {
   test("방향키를 누른 채 모달을 열었다 닫아도 미끄러지지 않는다", async ({ page }) => {
     await openWorkshop(page);
     const anvil = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
-    await walkTo(page, anvil, anvil.radius * 0.6);
+    await walkTo(page, anvil, APPROACH * anvil.radius);
 
     // 방향키를 누른 상태로 모달을 연다. 이 상태에서 keyup 을 놓치면 닫는 순간
     // 유령 입력이 남아 플레이어가 저 혼자 미끄러진다.
@@ -207,7 +213,7 @@ test.describe("workshop:", () => {
   test("연금술: 가위바위보 미니게임으로 물약이 제작된다", async ({ page }) => {
     await openWorkshop(page);
     const alchemy = CRAFTING_STATIONS.find((s) => s.id === "alchemy-workbench")!;
-    await walkTo(page, alchemy, alchemy.radius * 0.6);
+    await walkTo(page, alchemy, APPROACH * alchemy.radius);
     await page.keyboard.press("Space");
     await expect(page.getByRole("heading", { name: "연금술 제작대" })).toBeVisible();
 
@@ -228,7 +234,7 @@ test.describe("workshop:", () => {
   test("아티팩트: 방향키 QTE 미니게임으로 아티팩트가 제작된다", async ({ page }) => {
     await openWorkshop(page);
     const bench = CRAFTING_STATIONS.find((s) => s.id === "artifact-workbench")!;
-    await walkTo(page, bench, bench.radius * 0.6);
+    await walkTo(page, bench, APPROACH * bench.radius);
     await page.keyboard.press("Space");
     await expect(page.getByRole("heading", { name: "아티팩트 제작대" })).toBeVisible();
 
@@ -251,7 +257,7 @@ test.describe("workshop:", () => {
   test("모루: 제작한 아티팩트가 목록에 뜬다", async ({ page }) => {
     await openWorkshop(page);
     const anvil = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
-    await walkTo(page, anvil, anvil.radius * 0.6);
+    await walkTo(page, anvil, APPROACH * anvil.radius);
     await page.keyboard.press("Space");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
     await expect(page.getByText(/레벨업|강화|분해|합성/).first()).toBeVisible();

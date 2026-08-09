@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   INITIAL_POS, PLAYER_BOUNDS, COLLISION_BOXES, CRAFTING_STATIONS, EXIT_ZONE,
-  isBlocked, distanceTo, findInteractable, type Point,
+  isBlocked, isPlayerBlocked, distanceTo, findInteractable, type Point,
 } from "../src/workshop/workshopLayout";
 
 test("스폰 지점이 벽 안이 아니고 이동 범위 안에 있다", () => {
-  assert.equal(isBlocked(INITIAL_POS), false);
+  assert.equal(isPlayerBlocked(INITIAL_POS), false);
   assert.ok(INITIAL_POS.x >= PLAYER_BOUNDS.minX && INITIAL_POS.x <= PLAYER_BOUNDS.maxX);
   assert.ok(INITIAL_POS.y >= PLAYER_BOUNDS.minY && INITIAL_POS.y <= PLAYER_BOUNDS.maxY);
 });
@@ -75,7 +75,7 @@ test("BFS: 스폰에서 제작대 3개와 출입구에 전부 도달할 수 있�
   const walkable = (p: Point) =>
     p.x >= PLAYER_BOUNDS.minX && p.x <= PLAYER_BOUNDS.maxX &&
     p.y >= PLAYER_BOUNDS.minY && p.y <= PLAYER_BOUNDS.maxY &&
-    !isBlocked(p);
+    !isPlayerBlocked(p);
 
   const start = { x: INITIAL_POS.x, y: INITIAL_POS.y };
   assert.ok(walkable(start), "스폰 지점부터 걸을 수 없다");

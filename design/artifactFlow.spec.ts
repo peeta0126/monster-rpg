@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { openWorkshop, walkTo } from "./workshopNav";
+import { CRAFTING_STATIONS } from "../src/workshop/workshopLayout";
 
 /**
  * 아티팩트 한 살이 — 제작 → 강화 → 장착 → 스탯 반영 → 보너스 증가.
@@ -20,12 +21,16 @@ import { openWorkshop, walkTo } from "./workshopNav";
  * +0 → +1 강화는 성공률 100% 라(ENHANCEMENT_SUCCESS_RATE[0]) 결과가 흔들리지 않는다.
  */
 
-const BENCH = { x: 25, y: 80 };
-const ANVIL = { x: 26, y: 38 };
+// 좌표를 베껴 두면 제작대를 옮겼을 때 스펙만 조용히 딴 데를 찍는다. 원본에서 읽는다.
+const BENCH = CRAFTING_STATIONS.find((s) => s.id === "artifact-workbench")!;
+const ANVIL = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
+
+/** 제작대 중심은 자기 충돌 박스 안이라 반경의 0.8배까지만 다가갈 수 있다 */
+const APPROACH = 0.8;
 
 /** 아티팩트 제작대에서 힘의 목걸이를 상한까지 만든다. 일괄 제작이라 전부 같은 등급이다. */
 async function craftBatch(page: Page) {
-  expect(await walkTo(page, BENCH, 6), "아티팩트 제작대까지 못 갔다").toBe(true);
+  expect(await walkTo(page, BENCH, APPROACH * BENCH.radius), "아티팩트 제작대까지 못 갔다").toBe(true);
   await expect(page.getByText("아티팩트 제작대 사용하기")).toBeVisible();
   await page.keyboard.press("Space");
   await expect(page.getByRole("heading", { name: "아티팩트 제작대" })).toBeVisible();
@@ -77,7 +82,7 @@ test.describe("artifact:", () => {
     await craftBatch(page);
 
     // ── 2. 모루에서 첫 번째를 두 번째를 재료로 강화한다 (+0 → +1, 성공률 100%) ──
-    expect(await walkTo(page, ANVIL, 6), "모루까지 못 갔다").toBe(true);
+    expect(await walkTo(page, ANVIL, APPROACH * ANVIL.radius), "모루까지 못 갔다").toBe(true);
     await page.keyboard.press("Space");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
     await page.getByRole("button", { name: /강화/ }).first().click();
