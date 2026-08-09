@@ -51,6 +51,9 @@ export function ForestTierCard({
 }) {
   const types = monsterTypes(area);
   const accent = area.accentColor;
+  // 잠긴 구역에는 티어 강조색을 쓰지 않는다. 색이 곧 "갈 수 있다"는 신호라,
+  // 이름만 회색이고 레벨·부제는 강조색이면 어느 쪽이 맞는 말인지 모르게 된다.
+  const nameColor = locked ? "var(--color-sand-300)" : accent;
 
   return (
     <button
@@ -75,8 +78,8 @@ export function ForestTierCard({
         // 배경 원화 위에 얹히므로 카드 판을 충분히 덮어야 본문이 4.5:1 을 넘는다.
         // 색은 거의 shadow-900 하나로 간다 — 판에 색을 넣으면 뒤의 원화와 싸운다.
         background: selected
-          ? `linear-gradient(160deg, ${rgba("shadow900", 0.9)} 0%, ${rgba("shadow900", 0.84)} 100%)`
-          : rgba("shadow900", 0.82),
+          ? `linear-gradient(160deg, ${rgba("shadow900", 0.92)} 0%, ${rgba("shadow900", 0.86)} 100%)`
+          : rgba("shadow900", 0.85),
         cursor: locked ? "default" : "pointer",
       }}
     >
@@ -85,13 +88,16 @@ export function ForestTierCard({
       <div className="relative z-10 flex gap-4 p-5">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           {/* 영문 서브타이틀은 선택된 카드에서만. 항상 띄우면 한글 이름과 자리를 다툰다. */}
+          {/* 부제·라벨은 강조색을 쓰지 않는다. moss-500 은 12px 글자로 쓰면 얕은 숲
+              카드(가장 밝은 원화 위)에서 4.2:1 까지 떨어진다 — 큰 글자와 테두리·버튼
+              채움에만 남기고, 작은 글자는 sand 계열로 뺀다. */}
           {selected && (
-            <span className="text-pixel-sm font-bold tracking-widest" style={{ color: accent }}>
+            <span className="text-pixel-sm font-bold tracking-widest text-sand-300">
               {area.subtitle}
             </span>
           )}
-          <h3 className="text-pixel-md font-black" style={{ color: locked ? undefined : accent }}>
-            {locked ? <span className="text-sand-300">🔒 {area.name}</span> : area.name}
+          <h3 className="text-pixel-md font-black" style={{ color: nameColor }}>
+            {locked ? `🔒 ${area.name}` : area.name}
           </h3>
           {selected && (
             <p className="text-pixel-sm leading-relaxed text-sand-200">{area.description}</p>
@@ -109,11 +115,9 @@ export function ForestTierCard({
 
         <div className="flex shrink-0 flex-col items-end gap-2">
           {/* ★ 등급 대신 레벨 숫자를 크게. 추상 등급보다 구체적인 숫자가 세다. */}
-          <p className="text-pixel-sm uppercase tracking-wider text-earth-400">레벨</p>
-          <p className="text-pixel-md font-black leading-none" style={{ color: locked ? undefined : accent }}>
-            <span className={locked ? "text-sand-300" : undefined}>
-              {area.levelRange[0]}–{area.levelRange[1]}
-            </span>
+          <p className="text-pixel-sm uppercase tracking-wider text-sand-300">레벨</p>
+          <p className="text-pixel-md font-black leading-none" style={{ color: nameColor }}>
+            {area.levelRange[0]}–{area.levelRange[1]}
           </p>
           {selected && !locked && (
             <p className="text-pixel-sm text-sand-300">맵 구조 · 랜덤 생성</p>
