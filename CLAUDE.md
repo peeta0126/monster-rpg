@@ -61,3 +61,8 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
   확인. 배경이 실제로 다른지, 노드 맵의 이동 버튼이 읽히는지는 눈으로만 잡힌다.
 - 회귀는 `npx playwright test e2e/forestTiers.spec.ts` (해금·기본 선택·프리로드·스크림·
   reduced-motion) 와 `node --import tsx --test tests/forestAreas.test.ts`.
+
+## git 규칙
+- 한 단계(phase) 작업이 끝나면 main 에 병합하고 push 한다. 브랜치에 오래 쌓아두지 않는다.
+- push 는 사용자가 요청할 때만 한다. 단 작업 완료 보고 시 "push 필요 여부"를 항상 알린다.
+- force push 와 rebase 는 하지 않는다.
