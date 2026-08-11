@@ -24,11 +24,14 @@ const RESULT_TEXT: Record<RpsResult, { text: string; color: string }> = {
   lose: { text: "패배...", color: PALETTE.ember500 },
 };
 
-const CARD: Record<RpsChoice, string> = {
-  scissors: PALETTE.ember700,
-  rock:     PALETTE.stone600,
-  paper:    PALETTE.ember500,
-};
+/**
+ * 세 버튼은 같은 판이다.
+ *
+ * 예전엔 가위 빨강 · 바위 회색 · 보 주황으로 갈라 뒀는데, 아이콘 셋이 같은 살색으로
+ * 통일되면서 그 색이 아무것도 가리키지 않게 됐다. 무엇을 고르든 위험은 같으니
+ * 색으로 구분할 것이 애초에 없다 — 구분은 호버와 결과 화면의 강조가 한다.
+ */
+const CARD_BORDER = rgba("shadow700", 1);
 
 const REVEAL_MS = 900;
 
@@ -137,7 +140,7 @@ export function CatchMiniGame({
             <button key={c} type="button" onClick={() => choose(c)}
               data-testid={`forest-rps-${c}`}
               className="flex flex-1 flex-col items-center gap-2 rounded-xl py-4 transition active:scale-95 hover:brightness-125"
-              style={{ background: rgba("shadow900", 0.6), border: `1.5px solid ${CARD[c]}` }}>
+              style={{ background: rgba("shadow900", 0.6), border: `1.5px solid ${CARD_BORDER}` }}>
               <RpsIcon choice={c} className="h-12 w-12"/>
               <span className="text-pixel-sm font-black text-sand-200">{RPS_KO[c]}</span>
             </button>

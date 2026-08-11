@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { RpsIcon } from "./RpsIcon";
-import type { RpsChoice } from "./rps";
+import { RPS_KO, type RpsChoice } from "./rps";
 import type { RpsResult } from "../shared/craftingUtils";
-import { PALETTE } from "../shared/palette";
+import { PALETTE, rgba } from "../shared/palette";
 
 // ─── 중세 공방 팔레트 (CraftingModal과 통일) ──────────────────────────────────
 const C = {
   bg:          PALETTE.shadow900,
   card:        PALETTE.stone600,
-  cardHover:   PALETTE.earth500,
-  border:      "rgba(132, 75, 63, 1)",
-  borderGold:  "rgba(233, 148, 65, .807)",
+  border:      PALETTE.earth500,
   textPrimary: PALETTE.cream100,
   textMuted:   PALETTE.sand300,
   textFaint:   PALETTE.earth500,
@@ -26,12 +24,6 @@ const RPS_CHOICES: RpsChoice[] = ["rock", "paper", "scissors"];
 function pickComputerChoice(): RpsChoice {
   return RPS_CHOICES[Math.floor(Math.random() * RPS_CHOICES.length)];
 }
-
-const RPS_LABEL: Record<RpsChoice, string> = {
-  rock:     "바위",
-  paper:    "보",
-  scissors: "가위",
-};
 
 function getResult(player: RpsChoice, computer: RpsChoice): RpsResult {
   if (player === computer) return "draw";
@@ -58,9 +50,9 @@ const RESULT_COLOR: Record<RpsResult, string> = {
 };
 
 const RESULT_BG: Record<RpsResult, string> = {
-  win:  "rgba(122, 132, 85, .057)",
-  draw: "rgba(132, 75, 63, .167)",
-  lose: "rgba(168, 61, 31, .087)",
+  win:  rgba("moss500", 0.057),
+  draw: rgba("earth500", 0.167),
+  lose: rgba("ember700", 0.087),
 };
 
 const QUALITY_HINT: Record<RpsResult, string> = {
@@ -140,7 +132,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
                   className="text-pixel-sm font-bold"
                   style={{ color: C.textMuted }}
                 >
-                  {RPS_LABEL[choice]}
+                  {RPS_KO[choice]}
                 </span>
               </button>
             ))}
@@ -151,16 +143,21 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
         <>
           {/* 선택 비교 */}
           <div className="mb-4 grid grid-cols-2 gap-3">
+            {/* 아이콘 셋의 색이 같아진 뒤로는 "내가 고른 것"을 판이 대신 말해 줘야 한다 */}
             <div
               className="flex flex-col items-center gap-2 rounded-xl p-3"
-              style={{ background: C.card, border: `1px solid ${C.border}` }}
+              style={{
+                background: C.card,
+                border: `1px solid ${C.gold}`,
+                boxShadow: `0 0 12px ${rgba("ember500", 0.25)}`,
+              }}
             >
               <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
                 내 선택
               </p>
               <RpsIcon choice={playerChoice!} active className="h-16 w-16" />
               <p className="text-pixel-sm font-black" style={{ color: C.textPrimary }}>
-                {RPS_LABEL[playerChoice!]}
+                {RPS_KO[playerChoice!]}
               </p>
             </div>
 
@@ -173,7 +170,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
               </p>
               <RpsIcon choice={computerChoice!} className="h-16 w-16" />
               <p className="text-pixel-sm font-black" style={{ color: C.textPrimary }}>
-                {RPS_LABEL[computerChoice!]}
+                {RPS_KO[computerChoice!]}
               </p>
             </div>
           </div>
@@ -204,10 +201,10 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
             onClick={() => onFinish(result)}
             className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
             style={{
-              background: "rgba(132, 75, 63, .515)",
-              border: `1px solid rgba(233, 148, 65, .605)`,
+              background: rgba("earth500", 0.515),
+              border: `1px solid ${rgba("ember500", 0.605)}`,
               color: C.textPrimary,
-              boxShadow: "0 0 16px rgba(132, 75, 63, .421)",
+              boxShadow: `0 0 16px ${rgba("earth500", 0.421)}`,
             }}
           >
             ⚒  제작 완료
