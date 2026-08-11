@@ -127,7 +127,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
                   minWidth: 80,
                 }}
               >
-                <RpsIcon choice={choice} className="h-14 w-14" />
+                <RpsIcon choice={choice} className="h-[57px] w-[57px]" />
                 <span
                   className="text-pixel-sm font-bold"
                   style={{ color: C.textMuted }}
@@ -155,7 +155,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
               <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
                 내 선택
               </p>
-              <RpsIcon choice={playerChoice!} active className="h-16 w-16" />
+              <RpsIcon choice={playerChoice!} active className="h-[76px] w-[76px]" />
               <p className="text-pixel-sm font-black" style={{ color: C.textPrimary }}>
                 {RPS_KO[playerChoice!]}
               </p>
@@ -168,7 +168,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
               <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
                 상대 선택
               </p>
-              <RpsIcon choice={computerChoice!} className="h-16 w-16" />
+              <RpsIcon choice={computerChoice!} className="h-[76px] w-[76px]" />
               <p className="text-pixel-sm font-black" style={{ color: C.textPrimary }}>
                 {RPS_KO[computerChoice!]}
               </p>

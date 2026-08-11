@@ -141,7 +141,7 @@ export function CatchMiniGame({
               data-testid={`forest-rps-${c}`}
               className="flex flex-1 flex-col items-center gap-2 rounded-xl py-4 transition active:scale-95 hover:brightness-125"
               style={{ background: rgba("shadow900", 0.6), border: `1.5px solid ${CARD_BORDER}` }}>
-              <RpsIcon choice={c} className="h-12 w-12"/>
+              <RpsIcon choice={c} className="h-[57px] w-[57px]"/>
               <span className="text-pixel-sm font-black text-sand-200">{RPS_KO[c]}</span>
             </button>
           ))}
@@ -160,7 +160,7 @@ export function CatchMiniGame({
         <Hand choice={picked!} label="나" highlight={result === "win"}/>
         <p className="text-pixel-md font-black text-earth-400">VS</p>
         {stage === "reveal"
-          ? <p className="w-24 text-center text-pixel-sm text-earth-400">공개 중...</p>
+          ? <p className="w-28 text-center text-pixel-sm text-earth-400">공개 중...</p>
           : <Hand choice={computer!} label={monster.name} highlight={result === "lose"}/>}
       </div>
 
@@ -219,14 +219,14 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function Hand({ choice, label, highlight }: { choice: RpsChoice; label: string; highlight: boolean }) {
   return (
-    <div className="flex w-24 flex-col items-center gap-2">
+    <div className="flex w-28 flex-col items-center gap-2">
       <p className="truncate text-pixel-sm text-sand-300">{label}</p>
       <div className="rounded-2xl p-3"
         style={{
           background: highlight ? rgba("moss500", 0.12) : rgba("cream100", 0.04),
           border: `1px solid ${highlight ? rgba("moss500", 0.4) : rgba("cream100", 0.06)}`,
         }}>
-        <RpsIcon choice={choice} className="h-12 w-12" active={highlight}/>
+        <RpsIcon choice={choice} className="h-[76px] w-[76px]" active={highlight}/>
       </div>
       <p className="text-pixel-sm font-bold text-sand-200">{RPS_KO[choice]}</p>
     </div>
