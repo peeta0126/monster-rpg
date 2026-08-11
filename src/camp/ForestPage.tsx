@@ -16,7 +16,7 @@ import { Particles } from "./forest/Particles";
 import { NODE_META, isDangerousNode, type ForestNodeType } from "./forest/nodes";
 import { generateDungeon, type ForestNode } from "./forest/dungeon";
 import {
-  NODE_ALERT, alertBand, clampAlert, isForcedRetreat,
+  NODE_ALERT, alertBand, clampAlert, isForcedRetreat, appliesAlertOnArrival,
   applyMaterialMultiplier, catchRateWithAlert, type ScoutLevel,
 } from "./forest/alert";
 import { AlertMeter } from "./forest/AlertMeter";
@@ -255,8 +255,11 @@ function scoutNode(node: ForestNode, scout: ScoutLevel): { icon: string; title: 
   const delta = NODE_ALERT[node.type];
   const deltaText = delta === 0 ? "소란 변화 없음" : delta > 0 ? `소란 +${delta}` : `소란 ${delta}`;
 
-  if (scout === "detail") return { icon: meta.icon, title: meta.label, sub: `${meta.hint} · ${deltaText}` };
-  if (scout === "type")   return { icon: meta.icon, title: meta.label, sub: deltaText };
+  // 주인만 소란이 도착 시점에 붙는다 — 같은 "+30"이라도 걸리는 자리가 다르다
+  const when = appliesAlertOnArrival(node.type) ? `깨우면 ${deltaText}` : deltaText;
+
+  if (scout === "detail") return { icon: meta.icon, title: meta.label, sub: `${meta.hint} · ${when}` };
+  if (scout === "type")   return { icon: meta.icon, title: meta.label, sub: when };
   if (scout === "danger") {
     return isDangerousNode(node.type)
       ? { icon: "❗", title: "험한 기운", sub: "무언가 강한 것이 있다" }
@@ -553,6 +556,12 @@ function NodeArrivedScreen({ node, onContinue }: {
             {node.type === "elite"    && "강력한 존재가 느껴집니다..."}
             {node.type === "boss"     && "숲의 주인이 깨어났다!"}
           </p>
+          {/* 주인은 깨우는 순간 소란이 붙는다. 그 대가가 무엇인지 누르기 전에 말해 준다 */}
+          {appliesAlertOnArrival(node.type) && (
+            <p className="mt-3 text-pixel-sm font-bold text-ember-500">
+              깨우는 순간 소란 +{NODE_ALERT[node.type]} · 그만큼 포획이 어려워진다
+            </p>
+          )}
         </div>
         <div className="px-6 pb-6 pt-2">
           <button onClick={onContinue}
@@ -1239,6 +1248,9 @@ export default function ForestPage() {
       n.id === currentNodeId ? { ...n, cleared: true } : n
     ));
 
+    // 도착할 때 이미 붙인 노드(주인)는 여기서 다시 올리지 않는다
+    if (appliesAlertOnArrival(node.type)) return alert;
+
     const next = clampAlert(alert + NODE_ALERT[node.type]);
     setAlert(next);
     setAlertPeak(peak => Math.max(peak, next));
@@ -1251,12 +1263,26 @@ export default function ForestPage() {
     const node = dungeonNodes.find(n => n.id === currentNodeId);
     if (!node || !area) return;
 
+    /**
+     * 이 노드의 판정에 쓸 소란도.
+     *
+     * 주인은 깨우는 순간 숲이 뒤집힌다 — 그래서 여기서 먼저 올리고, 그 값으로
+     * 수확과 포획 확률을 굴린다. 소란 100 에 닿아도 주인 앞에서는 쫓겨나지 않는다.
+     * 여기까지 걸어온 판을 문턱에서 끊는 건 대가가 아니라 몰수다.
+     */
+    let judgeAlert = alert;
+    if (appliesAlertOnArrival(node.type)) {
+      judgeAlert = clampAlert(alert + NODE_ALERT[node.type]);
+      setAlert(judgeAlert);
+      setAlertPeak(peak => Math.max(peak, judgeAlert));
+    }
+
     if (node.type === "rest") { setPhase("rest"); return; }
     if (node.type === "event") { setPhase("event"); return; }
     if (node.type === "material") {
       const collected: {id:string;count:number}[] = [];
-      const d1 = rollDrop(area, alert); if (d1) collected.push(d1);
-      const d2 = rollDrop(area, alert); if (d2 && d2.id !== d1?.id) collected.push(d2);
+      const d1 = rollDrop(area, judgeAlert); if (d1) collected.push(d1);
+      const d2 = rollDrop(area, judgeAlert); if (d2 && d2.id !== d1?.id) collected.push(d2);
       if (collected.length > 0) {
         collected.forEach(d => addMaterial(d.id, d.count));
         setDrops(collected);
@@ -1273,7 +1299,7 @@ export default function ForestPage() {
       const elite = node.type === "elite" || node.type === "boss";
       const mon = pickMonster(area, elite);
       const collected: {id:string;count:number}[] = [];
-      const d = rollDrop(area, alert); if (d) { collected.push(d); collected.forEach(dd => addMaterial(dd.id, dd.count)); }
+      const d = rollDrop(area, judgeAlert); if (d) { collected.push(d); collected.forEach(dd => addMaterial(dd.id, dd.count)); }
       setDrops(collected);
       setWildMonster(mon);
       setIsElite(elite);

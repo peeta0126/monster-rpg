@@ -13,7 +13,7 @@ import { AREA_MATERIAL_POOL, rollBattleDrop } from "../../src/shared/dropTables"
 import { FOREST_AREAS, type ForestArea } from "../../src/camp/forest/areas";
 import { generateDungeon } from "../../src/camp/forest/dungeon";
 import {
-  NODE_ALERT, applyMaterialMultiplier, clampAlert, isForcedRetreat,
+  NODE_ALERT, applyMaterialMultiplier, clampAlert, isForcedRetreat, appliesAlertOnArrival,
 } from "../../src/camp/forest/alert";
 import {
   applyDamage, applyStatusEffect, calculateDamage, checkStatusEffects,
@@ -376,8 +376,14 @@ export function runForest(
       options[Math.floor(Math.random() * options.length)];
     visited++;
 
-    // 수확 배수는 이 노드를 밟기 전 소란도로 계산한다(게임과 같은 순서)
+    // 주인만 깨우는 순간(판정 전) 소란이 붙는다. 나머지는 판정이 끝난 뒤다
     const type = current.type;
+    if (appliesAlertOnArrival(type)) {
+      alert = clampAlert(alert + NODE_ALERT[type]);
+      alertPeak = Math.max(alertPeak, alert);
+    }
+
+    // 수확 배수는 그렇게 정해진 소란도로 계산한다(게임과 같은 순서)
     if (type === "material") {
       const d1 = rollDrop(area, alert); if (d1) drops.push(d1);
       const d2 = rollDrop(area, alert); if (d2 && d2.id !== d1?.id) drops.push(d2);
@@ -386,8 +392,10 @@ export function runForest(
       encounters.push(pickForestMonster(area, type === "elite" || type === "boss"));
     }
 
-    alert = clampAlert(alert + NODE_ALERT[type]);
-    alertPeak = Math.max(alertPeak, alert);
+    if (!appliesAlertOnArrival(type)) {
+      alert = clampAlert(alert + NODE_ALERT[type]);
+      alertPeak = Math.max(alertPeak, alert);
+    }
 
     // 주인을 잡으면 소란이 얼마든 완주다 — 그 뒤에 밟을 노드가 없다
     if (type === "boss") break;

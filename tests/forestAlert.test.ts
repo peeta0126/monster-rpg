@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   ALERT_BANDS, ALERT_MAX, NODE_ALERT, DEFEAT_ALERT,
   alertBand, clampAlert, isForcedRetreat, applyMaterialMultiplier, catchRateWithAlert,
+  appliesAlertOnArrival,
 } from "../src/camp/forest/alert.ts";
 import { NODE_META, isDangerousNode, type ForestNodeType } from "../src/camp/forest/nodes.ts";
 
@@ -110,6 +111,18 @@ test("포획 페널티는 시도를 무의미하게 만들지 않는다", () => 
   assert.ok(worst > 0, "확률이 0 이면 시도 자체가 가짜 선택이 된다");
   assert.ok(worst < 0.18, "가장 시끄러울 때가 조용할 때보다 잘 잡히면 안 된다");
   assert.equal(catchRateWithAlert(0.72, 0), 0.72, "조용할 때는 기본 확률 그대로여야 한다");
+});
+
+test("주인만 소란이 판정 전에 붙는다", () => {
+  const arrival = (Object.keys(NODE_ALERT) as ForestNodeType[]).filter(appliesAlertOnArrival);
+  assert.deepEqual(arrival, ["boss"], "도착 시점에 소란이 붙는 노드는 주인 하나뿐이어야 한다");
+
+  // 주인은 마지막 노드라 판정 후에 붙이면 그 뒤에 걸릴 데가 없다 — 죽은 값이 된다.
+  // 앞으로 당겨야 자기 포획 확률에 스스로 걸린다.
+  const base = 0.72;
+  const atBoss = catchRateWithAlert(base, 60 + NODE_ALERT.boss);
+  const without = catchRateWithAlert(base, 60);
+  assert.ok(atBoss < without, "주인을 깨운 대가가 주인 포획 확률에 걸리지 않는다");
 });
 
 test("패배 대가가 노드 하나보다 무겁다", () => {

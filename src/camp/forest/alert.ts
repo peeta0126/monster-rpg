@@ -98,6 +98,20 @@ export const NODE_ALERT: Record<ForestNodeType, number> = {
 /** 전투에서 지면 붙는 소란. 런이 끝나지는 않지만 대가는 확실하다. */
 export const DEFEAT_ALERT = 30;
 
+/**
+ * 소란이 **판정 전**에 붙는 노드.
+ *
+ * 보통은 판정이 끝난 뒤에 붙는다. 방금 올린 소란으로 그 노드의 수확을 불리면
+ * 앞뒤가 안 맞기 때문이다. 주인만 반대다 — 주인은 마지막 노드라 뒤에 밟을 칸이
+ * 없어서, 판정 후에 붙이면 그 +30 이 아무 데도 걸리지 않는 죽은 값이 된다.
+ *
+ * 도착 시점으로 당기면 "주인을 깨웠다 → 숲이 뒤집혔다 → 그 상태로 붙는다"가 되어
+ * 자기 포획 확률에 스스로 걸린다. 탐욕이 치르는 마지막 청구서다.
+ */
+export function appliesAlertOnArrival(type: ForestNodeType): boolean {
+  return type === "boss";
+}
+
 export function clampAlert(value: number): number {
   return Math.max(0, Math.min(ALERT_MAX, Math.round(value)));
 }
