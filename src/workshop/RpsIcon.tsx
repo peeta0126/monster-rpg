@@ -1,140 +1,35 @@
-import type { RpsChoice } from "./rps";
-import { PALETTE } from "../shared/palette";
-
 /**
- * 아이콘 3종의 명암 램프.
+ * 가위바위보 아이콘 — 19×19 픽셀 그리드.
  *
- * 픽셀아트 아이콘이라 body/light/dark/line 4단계가 다 필요하다 — 단색 토큰 하나로
- * 접으면 형태가 사라진다. 그래서 마스터 팔레트 안에서 명도가 서로 다른 4개를 골라
- * 램프를 다시 짰다. 비활성(inactive)은 같은 램프를 한 단계씩 어둡게 민 것이다.
+ * 바위(주먹)는 참고 아트에서 픽셀 단위로 추출한 원본 그대로다.
+ * 보(편 손)와 가위(V)는 같은 그리드·같은 명암 구조로 새로 그렸다.
  *
- * 세 아이콘은 색상으로도 갈린다: 바위=중성(stone), 보=모래/크림(sand), 가위=화염(ember).
+ * 색은 index.css 의 @theme 토큰을 CSS 변수로 참조한다(아래 VAR). 참고 아트의 원색이
+ * shadow-900 / shadow-700 / earth-400 / sand-200 / cream-100 과 육안으로 구분되지 않을
+ * 만큼 가까워서 새 토큰은 만들지 않았다.
+ *
+ * 픽셀 데이터는 [토큰, x, y, 너비] 가로 런(run) 배열이다.
+ *
+ * 표시 크기는 19의 정수배로만 준다(57 · 76). 그 외에서는 어떤 픽셀이 3px, 어떤 픽셀이
+ * 4px 로 나와 손가락 폭이 들쭉날쭉해진다. `RpsChoice`·`RPS_KO` 는 rps.ts 한 벌뿐이다.
  */
-const RPS_RAMP = {
-  rock: {
-    active:   { body: PALETTE.stone600,  light: PALETTE.sand300,  dark: PALETTE.shadow700, line: PALETTE.shadow900 },
-    inactive: { body: PALETTE.shadow700, light: PALETTE.stone600, dark: PALETTE.shadow900, line: PALETTE.shadow900 },
-  },
-  paper: {
-    active:   { body: PALETTE.sand300,  light: PALETTE.cream100, dark: PALETTE.earth500, line: PALETTE.stone600  },
-    inactive: { body: PALETTE.earth400, light: PALETTE.sand300,  dark: PALETTE.earth500, line: PALETTE.shadow700 },
-  },
-  scissors: {
-    active:   { body: PALETTE.ember600, light: PALETTE.ember500, dark: PALETTE.ember700,  line: PALETTE.shadow900 },
-    inactive: { body: PALETTE.ember700, light: PALETTE.ember600, dark: PALETTE.shadow900, line: PALETTE.shadow900 },
-  },
-} as const;
 
-const ramp = (kind: keyof typeof RPS_RAMP, active?: boolean) =>
-  RPS_RAMP[kind][active ? "active" : "inactive"];
+import { RPS_KO, type RpsChoice } from "./rps";
 
-// ─── 바위 (Rock) ───────────────────────────────────────────────────────────────
-function RockSvg({ active }: { active?: boolean }) {
-  const { body, light, dark, line: crack } = ramp("rock", active);
-  return (
-    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges" className="w-full h-full">
-      {/* 바위 몸통 - 픽셀 덩어리 */}
-      <rect x="12" y="20" width="24" height="20" fill={body}/>
-      <rect x="8"  y="24" width="32" height="12" fill={body}/>
-      <rect x="10" y="18" width="8"  height="4"  fill={body}/>
-      <rect x="30" y="18" width="8"  height="4"  fill={body}/>
-      <rect x="16" y="14" width="16" height="8"  fill={body}/>
-      {/* 상단 하이라이트 */}
-      <rect x="16" y="14" width="16" height="4"  fill={light}/>
-      <rect x="10" y="18" width="8"  height="2"  fill={light}/>
-      <rect x="30" y="18" width="8"  height="2"  fill={light}/>
-      {/* 좌측 하이라이트 */}
-      <rect x="8"  y="24" width="4"  height="12" fill={light} opacity="0.5"/>
-      {/* 우측 그림자 */}
-      <rect x="36" y="24" width="4"  height="12" fill={dark}/>
-      <rect x="32" y="36" width="4"  height="4"  fill={dark}/>
-      {/* 하단 그림자 */}
-      <rect x="12" y="36" width="24" height="4"  fill={dark}/>
-      {/* 균열 */}
-      <rect x="22" y="16" width="2"  height="8"  fill={crack}/>
-      <rect x="20" y="22" width="6"  height="2"  fill={crack}/>
-      <rect x="30" y="28" width="4"  height="2"  fill={crack}/>
-      <rect x="14" y="30" width="6"  height="2"  fill={crack}/>
-    </svg>
-  );
-}
+type Tok = "K" | "d" | "s" | "b" | "h" | "S" | "a";
+type Run = [Tok, number, number, number];
 
-// ─── 보 (Paper) ──────────────────────────────────────────────────────────────
-function PaperSvg({ active }: { active?: boolean }) {
-  const { body, light, dark, line } = ramp("paper", active);
-  return (
-    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges" className="w-full h-full">
-      {/* 손바닥 */}
-      <rect x="10" y="28" width="28" height="16" fill={body}/>
-      {/* 엄지 */}
-      <rect x="6"  y="30" width="8"  height="8"  fill={body}/>
-      <rect x="4"  y="32" width="4"  height="6"  fill={body}/>
-      {/* 검지 */}
-      <rect x="10" y="6"  width="8"  height="26" fill={body}/>
-      {/* 중지 */}
-      <rect x="20" y="4"  width="8"  height="28" fill={body}/>
-      {/* 약지 */}
-      <rect x="30" y="8"  width="8"  height="24" fill={body}/>
-      {/* 새끼 */}
-      <rect x="38" y="14" width="6"  height="18" fill={body}/>
-      {/* 손가락 상단 하이라이트 */}
-      <rect x="10" y="6"  width="8"  height="4"  fill={light}/>
-      <rect x="20" y="4"  width="8"  height="4"  fill={light}/>
-      <rect x="30" y="8"  width="8"  height="4"  fill={light}/>
-      <rect x="38" y="14" width="6"  height="4"  fill={light}/>
-      {/* 손가락 사이 그림자 */}
-      <rect x="18" y="28" width="2"  height="4"  fill={dark}/>
-      <rect x="28" y="28" width="2"  height="4"  fill={dark}/>
-      <rect x="38" y="28" width="2"  height="4"  fill={dark}/>
-      {/* 손바닥 주름선 */}
-      <rect x="10" y="36" width="28" height="2"  fill={line} opacity="0.4"/>
-      <rect x="10" y="40" width="28" height="2"  fill={line} opacity="0.3"/>
-      {/* 손가락 마디선 */}
-      <rect x="10" y="20" width="8"  height="2"  fill={line} opacity="0.4"/>
-      <rect x="20" y="18" width="8"  height="2"  fill={line} opacity="0.4"/>
-      <rect x="30" y="22" width="8"  height="2"  fill={line} opacity="0.4"/>
-    </svg>
-  );
-}
+/** 토큰 → @theme CSS 변수 */
+const VAR: Record<Tok, string> = { K: "--color-shadow-900", d: "--color-shadow-700", s: "--color-earth-400", b: "--color-sand-200", h: "--color-cream-100", S: "--color-stone-600", a: "--color-sand-300" };
 
-// ─── 가위 (Scissors) ─────────────────────────────────────────────────────────
-function ScissorsSvg({ active }: { active?: boolean }) {
-  const { body, light, dark, line } = ramp("scissors", active);
-  return (
-    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges" className="w-full h-full">
-      {/* 손바닥 */}
-      <rect x="10" y="30" width="28" height="14" fill={body}/>
-      {/* 엄지 */}
-      <rect x="6"  y="32" width="8"  height="8"  fill={body}/>
-      <rect x="4"  y="34" width="4"  height="6"  fill={body}/>
-      {/* 검지 (올라감) */}
-      <rect x="10" y="6"  width="8"  height="28" fill={body}/>
-      {/* 중지 (올라감, 벌어짐) */}
-      <rect x="22" y="4"  width="8"  height="30" fill={body}/>
-      {/* 약지 (접힘) */}
-      <rect x="32" y="26" width="8"  height="12" fill={body}/>
-      {/* 새끼 (접힘) */}
-      <rect x="40" y="30" width="6"  height="10" fill={body}/>
-      {/* 손가락 상단 하이라이트 */}
-      <rect x="10" y="6"  width="8"  height="4"  fill={light}/>
-      <rect x="22" y="4"  width="8"  height="4"  fill={light}/>
-      {/* V자 간격 강조 */}
-      <rect x="18" y="28" width="4"  height="6"  fill={dark}/>
-      {/* 우측 그림자 */}
-      <rect x="36" y="30" width="4"  height="10" fill={dark} opacity="0.5"/>
-      {/* 손바닥 주름 */}
-      <rect x="10" y="38" width="28" height="2"  fill={line} opacity="0.4"/>
-      {/* 마디선 */}
-      <rect x="10" y="20" width="8"  height="2"  fill={line} opacity="0.4"/>
-      <rect x="22" y="18" width="8"  height="2"  fill={line} opacity="0.4"/>
-      {/* 손가락 측면 하이라이트 */}
-      <rect x="10" y="6"  width="2"  height="24" fill={light} opacity="0.4"/>
-      <rect x="22" y="4"  width="2"  height="26" fill={light} opacity="0.4"/>
-    </svg>
-  );
-}
+/** 선택된 상태에서 한 단계 밝게. 외곽선(K)만 그대로 둔다 — 밝히면 형태가 흐려진다 */
+const ACTIVE: Record<Tok, Tok> = { K: "K", d: "S", s: "a", b: "h", h: "h", S: "S", a: "a" };
 
-// ─── Public component ─────────────────────────────────────────────────────────
+const ROCK: Run[] = [["K",7,0,3],["K",3,1,4],["h",7,1,3],["K",10,1,4],["K",2,2,1],["h",3,2,3],["K",6,2,1],["h",7,2,1],["b",8,2,2],["K",10,2,1],["h",11,2,3],["K",14,2,1],["K",2,3,1],["b",3,3,3],["K",6,3,1],["b",7,3,3],["K",10,3,1],["h",11,3,1],["b",12,3,2],["K",14,3,4],["K",2,4,1],["b",3,4,3],["K",6,4,1],["b",7,4,3],["K",10,4,1],["b",11,4,3],["K",14,4,1],["h",15,4,3],["K",18,4,1],["K",2,5,1],["b",3,5,3],["K",6,5,1],["h",7,5,1],["b",8,5,2],["K",10,5,1],["b",11,5,3],["K",14,5,1],["h",15,5,1],["b",16,5,2],["K",18,5,1],["K",2,6,5],["d",7,6,2],["s",9,6,1],["K",10,6,1],["s",11,6,3],["d",14,6,1],["h",15,6,1],["b",16,6,2],["K",18,6,1],["K",1,7,1],["b",2,7,3],["s",5,7,1],["b",6,7,3],["K",9,7,2],["s",11,7,3],["K",14,7,1],["s",15,7,3],["K",18,7,1],["K",0,8,1],["b",1,8,4],["s",5,8,4],["d",9,8,2],["s",11,8,3],["K",14,8,1],["s",15,8,3],["K",18,8,1],["K",0,9,1],["b",1,9,4],["s",5,9,4],["d",9,9,1],["s",10,9,1],["d",11,9,3],["s",14,9,1],["d",15,9,3],["K",18,9,1],["K",0,10,1],["b",1,10,3],["s",4,10,1],["d",5,10,4],["s",9,10,9],["K",18,10,1],["K",0,11,1],["b",1,11,3],["s",4,11,4],["d",8,11,1],["s",9,11,9],["K",18,11,1],["K",0,12,1],["b",1,12,8],["d",9,12,1],["s",10,12,2],["b",12,12,5],["s",17,12,1],["K",18,12,1],["K",0,13,1],["b",1,13,8],["d",9,13,1],["s",10,13,1],["b",11,13,6],["s",17,13,1],["K",18,13,1],["K",1,14,1],["b",2,14,7],["s",9,14,1],["h",10,14,1],["b",11,14,6],["s",17,14,1],["K",18,14,1],["K",2,15,1],["h",3,15,1],["b",4,15,12],["s",16,15,1],["K",17,15,1],["K",3,16,1],["b",4,16,11],["s",15,16,1],["K",16,16,1],["K",3,17,1],["b",4,17,11],["s",15,17,1],["K",16,17,1],["K",3,18,14]];
+const PAPER: Run[] = [["K",6,0,3],["K",5,1,1],["h",6,1,3],["K",9,1,5],["K",1,2,5],["b",6,2,3],["K",9,2,1],["h",10,2,3],["K",13,2,1],["K",1,3,1],["h",2,3,3],["K",5,3,1],["b",6,3,3],["K",9,3,1],["b",10,3,3],["K",13,3,1],["K",1,4,1],["b",2,4,3],["K",5,4,1],["b",6,4,3],["K",9,4,1],["b",10,4,3],["K",13,4,5],["K",1,5,1],["b",2,5,3],["K",5,5,1],["b",6,5,3],["K",9,5,1],["b",10,5,3],["K",13,5,1],["h",14,5,3],["K",17,5,1],["K",1,6,1],["b",2,6,3],["K",5,6,1],["b",6,6,3],["K",9,6,1],["b",10,6,3],["K",13,6,1],["b",14,6,3],["K",17,6,1],["K",1,7,1],["b",2,7,3],["K",5,7,1],["b",6,7,3],["K",9,7,1],["b",10,7,3],["K",13,7,1],["b",14,7,3],["K",17,7,1],["K",1,8,1],["b",2,8,3],["K",5,8,1],["b",6,8,3],["K",9,8,1],["b",10,8,3],["K",13,8,1],["b",14,8,3],["K",17,8,1],["K",1,9,1],["b",2,9,2],["s",4,9,1],["K",5,9,1],["b",6,9,2],["s",8,9,1],["K",9,9,1],["b",10,9,2],["s",12,9,1],["K",13,9,1],["b",14,9,2],["s",16,9,1],["K",17,9,1],["K",1,10,1],["b",2,10,15],["K",17,10,1],["K",0,11,3],["b",3,11,14],["K",17,11,1],["K",0,12,1],["h",1,12,1],["b",2,12,1],["K",3,12,1],["b",4,12,3],["s",7,12,5],["b",12,12,5],["K",17,12,1],["K",0,13,1],["b",1,13,2],["K",3,13,1],["b",4,13,3],["s",7,13,6],["b",13,13,4],["K",17,13,1],["K",0,14,1],["b",1,14,7],["s",8,14,5],["b",13,14,4],["K",17,14,1],["K",1,15,1],["b",2,15,14],["s",16,15,1],["K",17,15,1],["K",2,16,1],["b",3,16,13],["s",16,16,1],["K",17,16,1],["K",3,17,1],["b",4,17,12],["s",16,17,1],["K",17,17,1],["K",3,18,14]];
+const SCISSORS: Run[] = [["K",2,0,9],["K",2,1,1],["h",3,1,3],["K",6,1,1],["h",7,1,3],["K",10,1,1],["K",2,2,1],["b",3,2,3],["K",6,2,1],["b",7,2,3],["K",10,2,1],["K",2,3,1],["b",3,3,3],["K",6,3,1],["b",7,3,3],["K",10,3,1],["K",2,4,1],["b",3,4,3],["K",6,4,1],["b",7,4,3],["K",10,4,1],["K",2,5,1],["b",3,5,3],["K",6,5,1],["b",7,5,3],["K",10,5,5],["K",2,6,1],["b",3,6,3],["K",6,6,1],["b",7,6,3],["K",10,6,1],["h",11,6,3],["K",14,6,5],["K",1,7,1],["b",2,7,3],["s",5,7,1],["b",6,7,3],["K",9,7,2],["s",11,7,3],["K",14,7,1],["s",15,7,3],["K",18,7,1],["K",0,8,1],["b",1,8,4],["s",5,8,4],["d",9,8,2],["s",11,8,3],["K",14,8,1],["s",15,8,3],["K",18,8,1],["K",0,9,1],["b",1,9,4],["s",5,9,4],["d",9,9,1],["s",10,9,1],["d",11,9,3],["s",14,9,1],["d",15,9,3],["K",18,9,1],["K",0,10,1],["b",1,10,3],["s",4,10,1],["d",5,10,4],["s",9,10,9],["K",18,10,1],["K",0,11,1],["b",1,11,3],["s",4,11,4],["d",8,11,1],["s",9,11,9],["K",18,11,1],["K",0,12,1],["b",1,12,8],["d",9,12,1],["s",10,12,2],["b",12,12,5],["s",17,12,1],["K",18,12,1],["K",0,13,1],["b",1,13,8],["d",9,13,1],["s",10,13,1],["b",11,13,6],["s",17,13,1],["K",18,13,1],["K",1,14,1],["b",2,14,7],["s",9,14,1],["h",10,14,1],["b",11,14,6],["s",17,14,1],["K",18,14,1],["K",2,15,1],["h",3,15,1],["b",4,15,12],["s",16,15,1],["K",17,15,1],["K",3,16,1],["b",4,16,11],["s",15,16,1],["K",16,16,1],["K",3,17,1],["b",4,17,11],["s",15,17,1],["K",16,17,1],["K",3,18,14]];
+
+const DATA: Record<RpsChoice, Run[]> = { rock: ROCK, paper: PAPER, scissors: SCISSORS };
 
 interface RpsIconProps {
   choice: RpsChoice;
@@ -142,12 +37,26 @@ interface RpsIconProps {
   className?: string;
 }
 
-export function RpsIcon({ choice, active, className = "w-16 h-16" }: RpsIconProps) {
+export function RpsIcon({ choice, active = false, className = "w-16 h-16" }: RpsIconProps) {
   return (
-    <div className={`${className} pixel-img`}>
-      {choice === "rock"     && <RockSvg     active={active} />}
-      {choice === "paper"    && <PaperSvg    active={active} />}
-      {choice === "scissors" && <ScissorsSvg active={active} />}
-    </div>
+    <svg
+      viewBox="0 0 19 19"
+      xmlns="http://www.w3.org/2000/svg"
+      shapeRendering="crispEdges"
+      className={className}
+      role="img"
+      aria-label={RPS_KO[choice]}
+    >
+      {DATA[choice].map(([t, x, y, w], i) => (
+        <rect
+          key={i}
+          x={x}
+          y={y}
+          width={w}
+          height={1}
+          fill={`var(${VAR[active ? ACTIVE[t] : t]})`}
+        />
+      ))}
+    </svg>
   );
 }
