@@ -9,3 +9,4 @@ export { SmallScreenNotice } from "./SmallScreenNotice";
 export { SceneTransition } from "./SceneTransition";
 export { ObjectiveBanner } from "./ObjectiveBanner";
 export { AudioSettings } from "./AudioSettings";
+export { GameMenu, type GameMenuItem } from "./GameMenu";

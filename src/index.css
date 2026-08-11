@@ -126,3 +126,22 @@ canvas {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-4px); }
 }
+
+/* 우상단 메뉴가 버튼 밑에서 말려 내려온다.
+   높이는 내용에 따라 다르므로 max-height 대신 grid 1fr 를 애니메이션한다 —
+   자식의 overflow:hidden 이 잘리는 부분을 감춰 준다. */
+@keyframes menuUnroll {
+  from { grid-template-rows: 0fr; }
+  to   { grid-template-rows: 1fr; }
+}
+.menu-unroll {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: menuUnroll 160ms ease-out;
+}
+.menu-unroll > * {
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-unroll { animation: none; }
+}

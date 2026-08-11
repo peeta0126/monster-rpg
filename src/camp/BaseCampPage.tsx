@@ -9,6 +9,7 @@ import { usePlayerStore } from "../shared/playerStore";
 import { getNextObjective } from "../shared/nextObjective";
 import { ObjectiveBanner } from "../shared/ui/ObjectiveBanner";
 import { AudioSettings } from "../shared/ui/AudioSettings";
+import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
 import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
 import { ALL_QUESTS } from "./campDialogues";
@@ -614,9 +615,11 @@ function TowerModal({
   );
 }
 
-// ── 메뉴 모달 ──────────────────────────────────────────────────────────────────────
+// ── 우상단 메뉴 ────────────────────────────────────────────────────────────────────
 
-function MenuModal({
+function CampMenu({
+  open,
+  onOpen,
   onClose,
   onOpenQuestLog,
   onOpenDex,
@@ -626,6 +629,8 @@ function MenuModal({
   towerCleared,
   onReplayEnding,
 }: {
+  open: boolean;
+  onOpen: () => void;
   onClose: () => void;
   onOpenQuestLog: () => void;
   onOpenDex: () => void;
@@ -639,62 +644,43 @@ function MenuModal({
   const isGuest = useAuthStore((s) => s.isGuest);
   const [showAudio, setShowAudio] = useState(false);
 
-  const items = [
+  // 메뉴를 닫으면 소리 패널도 접는다 — 다시 열었을 때 펼쳐진 채로 나오면 목록이 밀린다.
+  // effect 로 하면 한 번 더 렌더되고 그 사이 프레임에 펼쳐진 메뉴가 보인다.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) setShowAudio(false);
+  }
+
+  const items: GameMenuItem[] = [
     // 탑 재도전 때마다 캐릭터를 탑까지 걸어가게 하지 않기 위해 메뉴에서도 층 선택을 연다
-    { label: "무한의 탑", emoji: "🗼", color: "border-mist-500/60 text-mist-300 hover:bg-mist-500/11",     onClick: onOpenTower },
-    { label: "퀘스트",    emoji: "📜", color: "border-ember-700/60 text-ember-500 hover:bg-ember-700/11", onClick: onOpenQuestLog },
-    { label: "내 몬스터", emoji: "👾", color: "border-mist-500/60 text-mist-300 hover:bg-mist-500/11", onClick: onGoToMonsters },
-    { label: "가방",      emoji: "🎒", color: "border-ember-700/60 text-ember-500 hover:bg-ember-700/11",   onClick: onGoToFarm },
-    { label: "도감",      emoji: "📖", color: "border-stone-600 text-sand-200 hover:bg-shadow-700/60",         onClick: onOpenDex },
-    { label: "소리",      emoji: "🔊", color: "border-stone-600 text-sand-200 hover:bg-shadow-700/60",         onClick: () => setShowAudio((v) => !v) },
+    { label: "무한의 탑", emoji: "🗼", tone: "info",   onClick: onOpenTower },
+    { label: "퀘스트",    emoji: "📜", tone: "accent", onClick: onOpenQuestLog },
+    { label: "내 몬스터", emoji: "👾", tone: "info",   onClick: onGoToMonsters },
+    { label: "가방",      emoji: "🎒", tone: "accent", onClick: onGoToFarm },
+    { label: "도감",      emoji: "📖",                 onClick: onOpenDex },
     // 엔딩을 본 사람만 다시 볼 수 있다
     ...(towerCleared
-      ? [{ label: "엔딩 다시 보기", emoji: "🏆", color: "border-ember-500/70 text-ember-500 hover:bg-ember-500/10", onClick: onReplayEnding }]
+      ? [{ label: "엔딩 다시 보기", emoji: "🏆", tone: "gold" as const, onClick: onReplayEnding }]
       : []),
-    { label: isGuest ? "로그인" : "로그아웃", emoji: "🚪", color: "border-ember-700/60 text-ember-500 hover:bg-ember-700/11", onClick: logout },
+    {
+      label: "소리",
+      emoji: "🔊",
+      separated: true,
+      onClick: () => setShowAudio((v) => !v),
+      panel: showAudio ? <div className="px-2 py-2"><AudioSettings /></div> : null,
+    },
+    { label: isGuest ? "로그인" : "로그아웃", emoji: "🚪", tone: "accent", onClick: logout },
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/80 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-sm rounded-2xl border border-stone-600 bg-shadow-900 p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-title-sm font-bold text-cream-100">메뉴</h2>
-            {towerCleared && (
-              <span className="rounded border border-ember-500/70 px-1.5 py-0.5 text-pixel-sm font-bold text-ember-500">
-                클리어
-              </span>
-            )}
-          </div>
-          <span className="text-pixel-sm text-earth-400">ESC: 닫기</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          {items.map((it) => (
-            <button
-              key={it.label}
-              onClick={it.onClick}
-              className={`flex flex-col items-center gap-1.5 rounded-xl border bg-shadow-800/70 py-4 text-pixel-sm font-semibold transition active:scale-95 ${it.color}`}
-            >
-              <span className="text-pixel-md">{it.emoji}</span>
-              {it.label}
-            </button>
-          ))}
-        </div>
-
-        {showAudio && (
-          <div className="mt-3">
-            <AudioSettings />
-          </div>
-        )}
-      </div>
-    </div>
+    <GameMenu
+      open={open}
+      onOpen={onOpen}
+      onClose={onClose}
+      items={items}
+      badge={towerCleared ? "클리어" : undefined}
+    />
   );
 }
 
@@ -834,30 +820,24 @@ export default function BaseCampPage() {
         WASD / 방향키 이동 · E 상호작용 · TAB 메뉴
       </div>
 
-      {/* 메뉴 버튼 */}
-      <button
-        onClick={() => setMenuOpen(true)}
-        className="fixed bottom-4 right-4 z-40 rounded-xl border border-stone-600 bg-shadow-800/90 px-4 py-2 text-pixel-sm font-semibold text-sand-200 shadow-lg hover:bg-shadow-700 hover:text-cream-100 backdrop-blur"
-      >
-        ☰ 메뉴 (Tab)
-      </button>
+      {/* 우상단 메뉴 — 버튼 아래로 펼쳐진다 */}
+      <CampMenu
+        open={menuOpen}
+        onOpen={() => setMenuOpen(true)}
+        onClose={() => setMenuOpen(false)}
+        onOpenQuestLog={() => { setMenuOpen(false); setQuestLogOpen(true); }}
+        onOpenDex={() => { setMenuOpen(false); setDexOpen(true); }}
+        onGoToMonsters={() => navigate("/monsters")}
+        onGoToFarm={() => navigate("/farm", { state: { from: "basecamp" } })}
+        towerCleared={towerCleared}
+        onReplayEnding={() => { setMenuOpen(false); navigate("/ending"); }}
+        onOpenTower={() => {
+          setMenuOpen(false);
+          setHealed(false);
+          setTowerPayload({ from: "menu", portalId: "none", isCatchZone: false });
+        }}
+      />
 
-      {menuOpen && (
-        <MenuModal
-          onClose={() => setMenuOpen(false)}
-          onOpenQuestLog={() => { setMenuOpen(false); setQuestLogOpen(true); }}
-          onOpenDex={() => { setMenuOpen(false); setDexOpen(true); }}
-          onGoToMonsters={() => navigate("/monsters")}
-          onGoToFarm={() => navigate("/farm", { state: { from: "basecamp" } })}
-          towerCleared={towerCleared}
-          onReplayEnding={() => { setMenuOpen(false); navigate("/ending"); }}
-          onOpenTower={() => {
-            setMenuOpen(false);
-            setHealed(false);
-            setTowerPayload({ from: "menu", portalId: "none", isCatchZone: false });
-          }}
-        />
-      )}
 
       {dexOpen && <DexModal onClose={() => setDexOpen(false)} />}
 

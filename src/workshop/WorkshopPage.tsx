@@ -6,6 +6,7 @@ import { usePlayerStore } from "../shared/playerStore";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
 import { PALETTE, withAlpha } from "../shared/palette";
 import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
+import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
 import { getPlayerFrame, type Dir8 } from "../shared/playerSprite";
 import {
   WORKSHOP_BACKGROUND_IMAGE,
@@ -256,6 +257,16 @@ export default function WorkshopPage() {
   }, []);
 
   // ─── 렌더 ──────────────────────────────────────────────────────────────────
+
+  const menuItems: GameMenuItem[] = [
+    { label: "내 몬스터", emoji: "👾", tone: "info",   onClick: () => navigate("/monsters") },
+    { label: "가방",      emoji: "🎒", tone: "accent", onClick: () => navigate("/farm", { state: { from: "workshop" } }) },
+    {
+      label: "제작 목록",
+      emoji: "📜",
+      onClick: () => { setShowCraftedPanel((v) => !v); setMenuOpen(false); },
+    },
+  ];
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-shadow-900">
@@ -537,38 +548,18 @@ export default function WorkshopPage() {
         </h1>
       </div>
 
-      {/* 우상단 메뉴 버튼 */}
-      <div className="absolute right-4 top-4 z-40">
-        <button
-          type="button"
-          onClick={() => setMenuOpen(true)}
-          style={{
-            background: "rgba(13, 18, 35, .88)",
-            border: "1px solid rgba(132, 75, 63, 1)",
-            color: PALETTE.cream100,
-          }}
-          className="rounded-lg px-3 py-2 text-pixel-sm font-bold backdrop-blur transition hover:brightness-125"
-        >
-          ☰ 메뉴 (Tab)
-        </button>
-      </div>
+      {/* 우상단 메뉴 — 버튼 아래로 펼쳐진다 */}
+      <GameMenu
+        open={menuOpen}
+        onOpen={() => setMenuOpen(true)}
+        onClose={() => setMenuOpen(false)}
+        items={menuItems}
+      />
 
-      {menuOpen && (
-        <WorkshopMenuModal
-          onClose={() => setMenuOpen(false)}
-          onGoToMonsters={() => navigate("/monsters")}
-          onGoToFarm={() => navigate("/farm", { state: { from: "workshop" } })}
-          onToggleCraftedPanel={() => {
-            setShowCraftedPanel((v) => !v);
-            setMenuOpen(false);
-          }}
-        />
-      )}
-
-      {/* 최근 제작 아이템 패널 */}
+      {/* 최근 제작 아이템 패널 — 메뉴 바(top-4 + 높이 48) 바로 아래에 폭을 맞춰 붙인다 */}
       {showCraftedPanel && (
         <div
-          className="absolute right-4 top-16 z-40 w-56 rounded-xl p-4 backdrop-blur shadow-2xl"
+          className="absolute right-4 top-20 z-40 w-64 rounded-xl p-4 backdrop-blur shadow-2xl"
           style={{
             background: "rgba(13, 18, 35, .95)",
             border: "1px solid rgba(132, 75, 63, 1)",
@@ -634,63 +625,6 @@ export default function WorkshopPage() {
           onClose={() => setActiveStation(null)}
         />
       )}
-    </div>
-  );
-}
-
-// ─── 워크샵 메뉴(Tab) 모달 ───────────────────────────────────────────────────
-
-function WorkshopMenuModal({
-  onClose,
-  onGoToMonsters,
-  onGoToFarm,
-  onToggleCraftedPanel,
-}: {
-  onClose: () => void;
-  onGoToMonsters: () => void;
-  onGoToFarm: () => void;
-  onToggleCraftedPanel: () => void;
-}) {
-  const items = [
-    { label: "내 몬스터", emoji: "👾", onClick: onGoToMonsters },
-    { label: "가방",      emoji: "🎒", onClick: onGoToFarm },
-    { label: "제작 목록", emoji: "📜", onClick: onToggleCraftedPanel },
-  ];
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/80 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-sm rounded-2xl p-6 shadow-2xl"
-        style={{ background: "rgba(13, 18, 35, .97)", border: "1px solid rgba(132, 75, 63, 1)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-title-sm font-black" style={{ color: PALETTE.cream100 }}>메뉴</h2>
-          <span className="text-pixel-sm" style={{ color: PALETTE.earth500 }}>ESC: 닫기</span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2.5">
-          {items.map((it) => (
-            <button
-              key={it.label}
-              type="button"
-              onClick={it.onClick}
-              className="flex flex-col items-center gap-1.5 rounded-xl py-4 text-pixel-sm font-semibold transition active:scale-95 hover:brightness-125"
-              style={{
-                background: "rgba(66, 61, 70, .088)",
-                border: "1px solid rgba(132, 75, 63, .936)",
-                color: PALETTE.cream100,
-              }}
-            >
-              <span className="text-pixel-md">{it.emoji}</span>
-              {it.label}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

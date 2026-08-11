@@ -124,6 +124,50 @@ test("capture: forest-nodes", async ({ page }) => {
   await page.screenshot({ path: path.join(OUT_DIR, "forest-nodes.png"), fullPage: false });
 });
 
+/**
+ * Tab 메뉴는 우상단 버튼에 붙어 아래로 펼쳐진다. 닫힌 화면만 찍으면 펼친 목록이
+ * 목표 배너·최근 제작 패널과 겹치는지를 알 수가 없어서 열린 상태로 한 장 더 남긴다.
+ */
+const MENU_SCREENS = [
+  { name: "basecamp-menu", path: "/", phaser: true },
+  { name: "workshop-menu", path: "/workshop", phaser: false },
+] as const;
+
+for (const screen of MENU_SCREENS) {
+  test(`capture: ${screen.name}`, async ({ page }) => {
+    await seedStorage(page, true);
+    await page.goto(screen.path);
+    await expect(page.locator("#root")).not.toBeEmpty();
+    if (screen.phaser) {
+      await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
+    }
+    await waitForVisualSettle(page);
+
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("menu")).toBeVisible();
+    await page.waitForTimeout(200);
+
+    await page.screenshot({ path: path.join(OUT_DIR, `${screen.name}.png`), fullPage: false });
+  });
+}
+
+/** 소리 설정은 메뉴 안에서 펼쳐진다 — 슬라이더가 메뉴 폭에 눌리지 않는지는 눈으로만 잡힌다 */
+test("capture: basecamp-menu-audio", async ({ page }) => {
+  await seedStorage(page, true);
+  await page.goto("/");
+  await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
+  await waitForVisualSettle(page);
+
+  await page.keyboard.press("Tab");
+  await page.getByRole("menuitem", { name: "소리" }).click();
+  await expect(page.getByText("SOUND")).toBeVisible();
+  // 커서를 치운다 — 눌렀던 항목에 hover 가 남으면 기본 색을 볼 수 없다
+  await page.mouse.move(40, 600);
+  await page.waitForTimeout(200);
+
+  await page.screenshot({ path: path.join(OUT_DIR, "basecamp-menu-audio.png"), fullPage: false });
+});
+
 for (const screen of SCREENS) {
   test(`capture: ${screen.name}`, async ({ page }) => {
     const consoleErrors: string[] = [];
