@@ -141,7 +141,8 @@ npm run lint
 ```txt
 monster-rpg/
 ├─ public/
-│  ├─ vite.svg
+│  ├─ favicon-32.png      # art-src/voyager-atelier-logo.png 에서 굽는다
+│  ├─ apple-touch-icon.png
 │  └─ assets/
 │     ├─ basecamp/        # 베이스캠프 배경 이미지
 │     ├─ monsters/        # Phaser와 React에서 사용하는 몬스터 이미지

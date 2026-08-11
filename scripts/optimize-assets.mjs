@@ -61,6 +61,19 @@ const RECIPES = [
    * 위 불변식 검사가 그걸 잡아냈다. 다른 레시피와 똑같이 마스터에서만 뜬다.
    */
   { src: "basecamp-bg.png", out: "assets/basecamp/basecamp-bg-blur.webp", width: 640, quality: 78 },
+
+  /**
+   * 파비콘 — 로고를 정사각에 담아 PNG 로 뽑는다.
+   *
+   * 여기만 webp 가 아니라 png 다. 파비콘으로서의 webp 는 Safari 16 미만이 못 읽는데,
+   * 아이콘은 몇 KB 라 아껴 봐야 의미가 없다.
+   *
+   * 로고가 564×442 라 그대로 줄이면 정사각 슬롯에서 세로가 남는다. `square` 는 긴 변에
+   * 맞춰 담고 남는 자리를 투명으로 채운다 — 탭 아이콘이 찌그러지지 않는다.
+   * 180 은 iOS 홈 화면이 요구하는 크기다(그보다 작으면 확대되어 뭉갠다).
+   */
+  { src: "voyager-atelier-logo.png", out: "favicon-32.png",        square: 32,  format: "png" },
+  { src: "voyager-atelier-logo.png", out: "apple-touch-icon.png",  square: 180, format: "png" },
 ];
 
 /** 몬스터 일러스트 — art-src/monsters/*.png 를 512px 상한으로 줄여 내보낸다 */
@@ -114,12 +127,24 @@ async function runRecipe(r) {
 
   const out = path.join(PUBLIC, r.out);
   const label = r.out;
-  if (DRY) { console.log(`webp  ${label}`); return; }
+  const format = r.format ?? "webp";
+  if (DRY) { console.log(`${format.padEnd(4)}  ${label}`); return; }
 
   await fs.mkdir(path.dirname(out), { recursive: true });
   let img = sharp(input);
-  if (r.width) img = img.resize({ width: r.width, withoutEnlargement: true });
-  await img.webp({ quality: r.quality ?? 82, effort: 6 }).toFile(out);
+  if (r.square) {
+    // 긴 변에 맞춰 담고 남는 자리는 투명. fit:"cover" 로 채우면 로고가 잘린다.
+    img = img.resize(r.square, r.square, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    });
+  } else if (r.width) {
+    img = img.resize({ width: r.width, withoutEnlargement: true });
+  }
+  await (format === "png"
+    ? img.png({ palette: true, compressionLevel: 9, effort: 10 })
+    : img.webp({ quality: r.quality ?? 82, effort: 6 })
+  ).toFile(out);
 
   const b = await sizeOf(input);
   const a = await sizeOf(out);
