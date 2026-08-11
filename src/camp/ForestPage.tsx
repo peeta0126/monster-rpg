@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { rgba } from "../shared/palette";
 import { usePlayerStore } from "../shared/playerStore";
@@ -11,6 +11,9 @@ import { alertBand } from "./forest/alert";
 import { ForestRunView } from "./forest/ForestRunView";
 import { SettleScreen } from "./forest/SettleScreen";
 import { startRun, type ForestRun, type RunBagEntry, type SettleReason } from "./forest/runStore";
+import {
+  loadForest, saveForestRun, saveForestSettlement, clearForest, type LoadedForest,
+} from "./forest/runStorage";
 
 /**
  * 숲 화면.
@@ -20,6 +23,9 @@ import { startRun, type ForestRun, type RunBagEntry, type SettleReason } from ".
  *
  * 예전에는 이 파일 하나가 1,500줄이었다. 노드 맵 SVG·좌표 계산·사건별 화면이 전부
  * 여기 있었기 때문인데, 지도를 걷어내면서 같이 흩어 놓았다.
+ *
+ * 걷다 만 원정은 저장돼 있다. 들어오면 **묻지 않고 그 자리로 되돌린다** — 이어할지
+ * 고르게 하면 그 선택 자체가 리롤이 된다(마음에 안 드는 사건을 버릴 수 있다).
  */
 
 /** 원정이 끝난 뒤 정산 화면에 넘길 것 */
@@ -30,15 +36,43 @@ interface Settlement {
   alertPeak: number;
 }
 
+/** 저장된 구역. 못 알아보면 얕은 숲으로 둔다 — 정산 화면에 이름 한 줄이 필요할 뿐이다 */
+function areaOf(loaded: LoadedForest): ForestArea | null {
+  const id = loaded.kind === "run" ? loaded.run.areaId
+    : loaded.kind === "settle" ? loaded.settlement.areaId
+    : null;
+  if (id === null) return null;
+  return FOREST_AREAS.find((a) => a.id === id) ?? FOREST_AREAS[0];
+}
+
 export default function ForestPage() {
   const navigate = useNavigate();
   const bestFloor = usePlayerStore((s) => s.bestFloor);
   const addMaterial = usePlayerStore((s) => s.addMaterial);
 
-  const [selectedTier, setSelectedTier] = useState<ForestAreaId>(() => highestUnlockedArea(bestFloor).id);
-  const [area, setArea] = useState<ForestArea | null>(null);
-  const [run, setRun] = useState<ForestRun | null>(null);
-  const [settlement, setSettlement] = useState<Settlement | null>(null);
+  // 화면을 그리기 전에 한 번만 읽는다. 나중에 읽으면 구역 선택 화면이 한 프레임 스친다
+  const [restored] = useState(loadForest);
+  const restoredArea = areaOf(restored);
+
+  const [selectedTier, setSelectedTier] = useState<ForestAreaId>(
+    () => restoredArea?.id ?? highestUnlockedArea(bestFloor).id);
+  const [area, setArea] = useState<ForestArea | null>(restoredArea);
+  const [run, setRun] = useState<ForestRun | null>(
+    () => restored.kind === "run" ? restored.run : null);
+  const [settlement, setSettlement] = useState<Settlement | null>(
+    () => restored.kind === "settle" ? restored.settlement : null);
+
+  /**
+   * 저장은 상태가 바뀔 때마다 한다.
+   *
+   * 걸음 끝마다가 아니라 **걸음 안의 한 칸마다**여야 한다 — 시도 횟수가 안 남으면
+   * 새로고침이 곧 리롤이다(runStore 의 StepProgress 참조).
+   */
+  useEffect(() => {
+    if (run) saveForestRun(run);
+    else if (settlement && area) saveForestSettlement({ areaId: area.id, ...settlement });
+    else clearForest();
+  }, [run, settlement, area]);
 
   const enterArea = (a: ForestArea) => {
     setArea(a);

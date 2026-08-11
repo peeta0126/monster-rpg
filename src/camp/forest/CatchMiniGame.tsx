@@ -34,7 +34,24 @@ const REVEAL_MS = 900;
 
 type Stage = "select" | "reveal" | "result";
 
-export function CatchMiniGame({ monster, alert, seed, onDone }: {
+/**
+ * 이 시도의 굴림.
+ *
+ * 시도 번호마다 갈래가 다르되 같은 번호는 늘 같은 수를 낸다. 새로고침 뒤에 결과
+ * 화면을 다시 그릴 때도 여기서 상대의 수를 되찾는다 — 그래서 저장할 것은 내가 낸
+ * 수 하나뿐이다.
+ */
+function attemptRng(seed: number, attempt: number) {
+  return makeRng((seed ^ (attempt * 0x9E3779B9)) >>> 0).rng;
+}
+
+function compHand(rng: () => number): RpsChoice {
+  return (["rock", "paper", "scissors"] as RpsChoice[])[Math.floor(rng() * 3)];
+}
+
+export function CatchMiniGame({
+  monster, alert, seed, attempts, pending, onReveal, onResult, onDone,
+}: {
   monster: Monster;
   alert: number;
   /**
@@ -44,15 +61,32 @@ export function CatchMiniGame({ monster, alert, seed, onDone }: {
    * 언제나 같은 결과가 나와야 리롤이 막힌다.
    */
   seed: number;
+  /**
+   * 지금까지 건 시도 횟수. 런이 들고 있고 저장된다.
+   *
+   * 여기 안에 두면 새로고침이 시도를 되살린다 — 같은 시도 번호는 같은 수를 내므로,
+   * 방금 본 상대의 수를 알고 다시 낼 수 있게 된다. 시드로 리롤을 막아 놓고 횟수를
+   * 화면에 두면 그 자물쇠가 열린다.
+   */
+  attempts: number;
+  /** 아직 안 넘긴 시도의 결과. 새로고침으로 돌아왔으면 이 화면부터 다시 그린다 */
+  pending: { hand: RpsChoice; caught: boolean } | null;
+  /** 상대의 수가 공개되는 순간 부른다. 결과를 보기 전에 시도를 먼저 태운다 */
+  onReveal: () => void;
+  /** 굴림이 끝난 순간 부른다. 플레이어가 화면을 넘기기 전에 결과를 런에 적어 둔다 */
+  onResult: (r: { hand: RpsChoice; caught: boolean }) => void;
   /** caught=false 이고 시도가 남지 않았으면 놓친 것이다 */
   onDone: (result: { caught: boolean }) => void;
 }) {
-  const [stage, setStage] = useState<Stage>("select");
-  const [triesLeft, setTriesLeft] = useState(CATCH_ATTEMPTS);
-  const [picked, setPicked] = useState<RpsChoice | null>(null);
-  const [computer, setComputer] = useState<RpsChoice | null>(null);
-  const [result, setResult] = useState<RpsResult | null>(null);
-  const [caught, setCaught] = useState(false);
+  // 마운트 시점의 pending 으로 결과 화면을 복원한다. 상대의 수는 시드에서 다시 나온다
+  const [stage, setStage] = useState<Stage>(() => pending ? "result" : "select");
+  const triesLeft = Math.max(0, CATCH_ATTEMPTS - attempts);
+  const [picked, setPicked] = useState<RpsChoice | null>(() => pending?.hand ?? null);
+  const [computer, setComputer] = useState<RpsChoice | null>(
+    () => pending ? compHand(attemptRng(seed, Math.max(0, attempts - 1))) : null);
+  const [result, setResult] = useState<RpsResult | null>(
+    () => pending ? getRpsResult(pending.hand, compHand(attemptRng(seed, Math.max(0, attempts - 1)))) : null);
+  const [caught, setCaught] = useState(() => pending?.caught ?? false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -61,19 +95,20 @@ export function CatchMiniGame({ monster, alert, seed, onDone }: {
   const pct = (r: RpsResult) => Math.round(catchChance(r, alert) * 100);
 
   const choose = (choice: RpsChoice) => {
-    // 시도 번호마다 다른 갈래를 쓰되, 같은 번호는 늘 같은 결과가 나온다
-    const attempt = CATCH_ATTEMPTS - triesLeft;
-    const { rng } = makeRng((seed ^ (attempt * 0x9E3779B9)) >>> 0);
-    const comp: RpsChoice = (["rock", "paper", "scissors"] as RpsChoice[])[Math.floor(rng() * 3)];
+    const rng = attemptRng(seed, attempts);
+    const comp = compHand(rng);
     const res = getRpsResult(choice, comp);
     setPicked(choice); setComputer(comp); setResult(res); setStage("reveal");
+    // 시도는 결과가 아니라 **공개**에 태운다. 상대의 수를 본 뒤 새로고침해도 그 수는
+    // 이미 쓴 번호에 묶여 있어야 한다
+    onReveal();
 
     timer.current = setTimeout(() => {
       timer.current = null;
       const ok = rng() < catchChance(res, alert);
       setCaught(ok);
-      if (!ok) setTriesLeft((n) => Math.max(0, n - 1));
       setStage("result");
+      onResult({ hand: choice, caught: ok });
     }, REVEAL_MS);
   };
 

@@ -1,6 +1,7 @@
 import { clampAlert, isForcedRetreat, stepAlertDelta, appliesAlertOnArrival } from "./alert";
 import { rollStep, rollFork, pathName, escapeAlert, FORK_CHANCE, type ForestStepKind, type Rng } from "./steps";
 import type { ForestAreaId } from "./areas";
+import type { RpsChoice } from "../../workshop/rps";
 
 /**
  * 한 번의 원정 상태.
@@ -24,6 +25,39 @@ export interface RunBagEntry {
   count: number;
 }
 
+/**
+ * 걸음 **안**에서 어디까지 왔는가.
+ *
+ * 이걸 안 적으면 새로고침이 곧 리롤이 된다. 사건의 굴림은 (seed, depth) 로 고정돼
+ * 있어서 다시 들어가면 같은 몬스터가 같은 수를 낸다 — 진 다음에 되돌아가 이길 수
+ * 있다는 뜻이다. 그래서 "몇 번 걸었는가"까지 런의 일부로 둔다.
+ *
+ * 반대로 여기 없는 것(수확 목록·상대 몬스터·둥지 후보)은 저장하지 않는다. 전부
+ * 같은 시드에서 다시 나오므로, 적어 두면 표가 두 벌이 된다.
+ */
+export interface StepProgress {
+  /** 사건에 들어갔는가. 들어간 순간 굴림이 끝난 것이라 재입장이 곧 리롤이다 */
+  entered: boolean;
+  /** 둥지에서 고른 후보 번호. 아직 안 골랐으면 null */
+  pick: number | null;
+  /** 포획을 몇 번 걸었는가. 상대의 수가 공개되는 순간 늘어난다 */
+  attempts: number;
+  /**
+   * 굴림은 끝났는데 플레이어가 아직 안 넘긴 시도.
+   *
+   * 포획 결과 화면은 **기다리는 화면**이라 여기서 탭이 오래 열려 있다. 적어 두지
+   * 않으면 그 사이의 새로고침이 방금 잡은 몬스터를 지운다.
+   */
+  pending: { hand: RpsChoice; caught: boolean } | null;
+  /** 판정이 끝났으면 그 결과. 포획이 없는 사건은 끝나도 null 이다 */
+  done: { caught: boolean; escaped: boolean } | null;
+}
+
+/** 아직 아무것도 안 한 걸음 */
+export const NEW_STEP: StepProgress = {
+  entered: false, pick: null, attempts: 0, pending: null, done: null,
+};
+
 export interface ForestRun {
   runVersion: number;
   areaId: ForestAreaId;
@@ -45,6 +79,8 @@ export interface ForestRun {
    * 정찰 등급이 정하지 정 이름이 정하는 게 아니다.
    */
   fork: { kinds: [ForestStepKind, ForestStepKind]; names: [string, string] } | null;
+  /** 지금 걸음을 어디까지 치렀는가. 새로고침이 리롤이 되지 않게 하는 자리다 */
+  step: StepProgress;
   /** 다음 사건을 뽑을 시드. 걸음마다 굴러간다 */
   seed: number;
 }
@@ -85,6 +121,7 @@ export function startRun(areaId: ForestAreaId, startingAlert: number, seed = ran
     bag: [],
     caught: 0,
     ...nextEncounter(alert, 0, rng),
+    step: NEW_STEP,
     seed: nextSeed(),
   };
 }
@@ -109,6 +146,11 @@ function nextEncounter(alert: number, depth: number, rng: Rng): Pick<ForestRun, 
 /** 갈림길에서 한 갈래를 고른다. 아직 판정 전이라 소란은 움직이지 않는다 */
 export function chooseFork(run: ForestRun, kind: ForestStepKind): ForestRun {
   return { ...run, current: kind, fork: null };
+}
+
+/** 걸음 안에서 한 칸 나아간다. 화면이 자기 상태로 들고 있으면 새로고침에 날아간다 */
+export function advanceStep(run: ForestRun, patch: Partial<StepProgress>): ForestRun {
+  return { ...run, step: { ...run.step, ...patch } };
 }
 
 // ── 한 걸음 ──────────────────────────────────────────────────────────────────
@@ -161,6 +203,7 @@ export function resolveStep(run: ForestRun, outcome: StepOutcome): ForestRun {
     bag,
     caught: run.caught + (outcome.caught ? 1 : 0),
     ...nextEncounter(alert, depth, rng),
+    step: NEW_STEP,
     seed: nextSeed(),
   };
 }
@@ -250,6 +293,37 @@ function parseFork(raw: unknown): ForestRun["fork"] {
   };
 }
 
+/**
+ * 걸음 진행 기록.
+ *
+ * 모양이 어긋나면 "안 걸은 걸음"으로 되돌린다. 세이브를 손으로 고쳐 시도 횟수를
+ * 0 으로 만드는 건 막지 못하지만, 그건 시드를 고치는 것과 같은 부류라 애초에 막을
+ * 수 없다. 여기서 막는 것은 **새로고침**이다.
+ */
+function parseStep(raw: unknown): StepProgress {
+  if (!raw || typeof raw !== "object") return NEW_STEP;
+  const s = raw as Record<string, unknown>;
+  const done = s.done && typeof s.done === "object"
+    ? {
+      caught: !!(s.done as Record<string, unknown>).caught,
+      escaped: !!(s.done as Record<string, unknown>).escaped,
+    }
+    : null;
+
+  const p = s.pending as Record<string, unknown> | null | undefined;
+  const pending = p && typeof p === "object" && typeof p.hand === "string"
+    ? { hand: p.hand as RpsChoice, caught: !!p.caught }
+    : null;
+
+  return {
+    entered: !!s.entered,
+    pick: typeof s.pick === "number" ? s.pick : null,
+    attempts: typeof s.attempts === "number" ? Math.max(0, Math.floor(s.attempts)) : 0,
+    pending,
+    done,
+  };
+}
+
 export function parseRun(raw: unknown): { ok: true; run: ForestRun } | { ok: false; reason: "empty" | "stale" } {
   if (raw === null || raw === undefined) return { ok: false, reason: "empty" };
   if (typeof raw !== "object") return { ok: false, reason: "stale" };
@@ -285,6 +359,7 @@ export function parseRun(raw: unknown): { ok: true; run: ForestRun } | { ok: fal
       caught: r.caught as number,
       current: r.current as ForestStepKind,
       fork: parseFork(r.fork),
+      step: parseStep(r.step),
       seed: (r.seed as number) >>> 0,
     },
   };

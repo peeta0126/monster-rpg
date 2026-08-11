@@ -21,8 +21,8 @@ import { CATCH_ATTEMPTS, catchChance } from "../../src/camp/forest/catchRules";
  * 시뮬 정규화용 숫자다 — "몬스터가 강화석 1.5개짜리"라는 뜻이 아니다. 포획 연출과
  * 도감 등록의 체감은 이 숫자와 무관하게 크게 만든다.
  *
- * ⚠️ 미해결: 도감이 차면 몬스터 가치가 실제로 떨어져 조우 계열이 후반에 나쁜 선택이
- *    된다. 중복 몬스터를 재료·강화 자원으로 환원하는 경로가 나중에 필요하다.
+ * ⚠️ 이 값은 판이 진행되면 실제로 떨어진다(도감이 차면 조우가 나쁜 선택이 된다).
+ *    미해결 항목이고 배경은 docs/FOREST_BALANCE.md 의 "미해결" 절에 있다.
  */
 const MONSTER_VALUE = Number(process.env.MONSTER_VALUE ?? 6);
 

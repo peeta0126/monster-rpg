@@ -135,7 +135,9 @@ export function StepEventPanel({
  */
 export function NestPanel({ monsters, onPick }: {
   monsters: Monster[];
-  onPick: (m: Monster) => void;
+  /** 고른 몬스터가 아니라 **몇 번째**를 넘긴다 — 후보는 시드에서 다시 나오므로
+   *  저장해 둘 것은 번호 하나면 된다 */
+  onPick: (index: number) => void;
 }) {
   const tint = TIER_COLOR.rare;
   return (
@@ -146,7 +148,7 @@ export function NestPanel({ monsters, onPick }: {
           <button
             key={`${m.id}-${i}`}
             type="button"
-            onClick={() => onPick(m)}
+            onClick={() => onPick(i)}
             data-testid={`forest-nest-pick-${i}`}
             className="flex flex-col items-center gap-2 rounded-xl px-3 py-3 transition active:scale-95"
             style={{ background: rgba("shadow900", 0.6), border: `1px solid ${tint}55` }}

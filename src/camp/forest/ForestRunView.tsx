@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import { rgba } from "../../shared/palette";
 import { scaleToLevel } from "../../shared/floorTable";
 import { monsters } from "../../monster/monsters";
@@ -10,8 +10,8 @@ import {
   STEP_DEFS, hasCatch, scoutStep, rollStepRewards, type ForestStepKind,
 } from "./steps";
 import {
-  makeRng, resolveStep, judgeAlert, bagTotal, runIsOver, chooseFork,
-  type ForestRun, type RunBagEntry, type SettleReason,
+  makeRng, resolveStep, judgeAlert, bagTotal, runIsOver, chooseFork, advanceStep,
+  type ForestRun, type RunBagEntry, type SettleReason, type StepProgress,
 } from "./runStore";
 import { AlertGauge, AlertBandSummary } from "./AlertGauge";
 import { StepEventPanel, NestPanel } from "./StepEventPanel";
@@ -27,17 +27,15 @@ import { catchChance } from "./catchRules";
  * 우리는 한 걸음씩만 고른다. 볼 것은 지금 눈앞의 사건 하나뿐이다.
  */
 
-/** 걸음 안에서의 진행 단계 */
+/** 걸음 안에서의 진행 단계. run.step 에서 파생된다 — 따로 들고 있지 않는다 */
 type StepPhase = "event" | "nest" | "catch" | "resolved";
 
-/** 한 걸음의 판정 결과를 모아 두는 자리 */
+/** 이번 걸음의 굴림. 시드에서 다시 나오므로 저장하지 않는다 */
 interface StepDraft {
   gained: RunBagEntry[];
   monster: Monster | null;
   /** 둥지에서 고를 수 있는 후보 */
   choices: Monster[];
-  caught: boolean;
-  escaped: boolean;
 }
 
 function pickMonsterFor(area: ForestArea, kind: ForestStepKind, rng: () => number): Monster {
@@ -56,75 +54,89 @@ function pickMonsterFor(area: ForestArea, kind: ForestStepKind, rng: () => numbe
 export function ForestRunView({ area, run, setRun, onSettle }: {
   area: ForestArea;
   run: ForestRun;
-  setRun: (run: ForestRun) => void;
+  /**
+   * 런 갱신. 함수형도 받는다 — 포획 결과는 900ms 뒤에 도착해서, 그때 닫아 둔 런으로
+   * 덮어쓰면 그 사이에 태운 시도가 되살아난다(그게 곧 리롤이다).
+   */
+  setRun: Dispatch<SetStateAction<ForestRun | null>>;
   onSettle: (reason: SettleReason, bag: RunBagEntry[], caught: number, alertPeak: number) => void;
 }) {
   const addCapturedMonster = usePlayerStore((s) => s.addCapturedMonster);
   const addToDexSeen = usePlayerStore((s) => s.addToDexSeen);
   const addToDexCaught = usePlayerStore((s) => s.addToDexCaught);
 
-  const [phase, setPhase] = useState<StepPhase>("event");
-  const [draft, setDraft] = useState<StepDraft | null>(null);
-
   const kind = run.current;
   const def = STEP_DEFS[kind];
   const band = alertBand(run.alert);
   // 이 걸음의 수확·포획은 소란이 오르기 전 값으로 굴린다 (주인만 깨우는 순간 먼저 오른다)
   const alertForJudge = judgeAlert(run);
+  const step = run.step;
 
   /**
-   * 사건을 실제로 굴린다.
+   * 이번 걸음의 굴림.
    *
-   * 시드 RNG 라 같은 런 상태에서는 언제나 같은 결과가 나온다 — 새로고침으로 다시
-   * 굴리는 리롤이 불가능하다.
+   * 시드가 (seed, depth) 로 고정돼 있어 몇 번을 다시 계산해도 같은 결과가 나온다.
+   * 그래서 수확 목록도 상대 몬스터도 저장하지 않는다 — 새로고침하면 여기서 그대로
+   * 다시 나온다. 저장하는 건 "어디까지 했는가"(run.step) 뿐이다.
    */
-  const enterStep = useCallback(() => {
+  const draft = useMemo<StepDraft | null>(() => {
+    if (!step.entered) return null;
     const { rng } = makeRng(run.seed ^ (run.depth + 1));
     const gained = rollStepRewards(area, kind, alertForJudge, rng);
 
     if (kind === "nest") {
       const count = 2 + (rng() < 0.5 ? 1 : 0);
       const choices = Array.from({ length: count }, () => pickMonsterFor(area, kind, rng));
-      choices.forEach((m) => addToDexSeen(m.id));
-      setDraft({ gained, monster: null, choices, caught: false, escaped: false });
-      setPhase("nest");
-      return;
+      return { gained, choices, monster: step.pick === null ? null : choices[step.pick] ?? null };
     }
-
     if (hasCatch(kind)) {
-      const monster = pickMonsterFor(area, kind, rng);
-      addToDexSeen(monster.id);
-      setDraft({ gained, monster, choices: [], caught: false, escaped: false });
-      setPhase("catch");
-      return;
+      return { gained, choices: [], monster: pickMonsterFor(area, kind, rng) };
     }
+    return { gained, choices: [], monster: null };
+  }, [area, kind, alertForJudge, run.seed, run.depth, step.entered, step.pick]);
 
-    setDraft({ gained, monster: null, choices: [], caught: false, escaped: false });
-    setPhase("resolved");
-  }, [area, kind, alertForJudge, run.seed, run.depth, addToDexSeen]);
+  // 본 것은 도감에 남는다. 굴림이 순수해야 복원이 성립하므로 기록은 굴림 밖에서 한다
+  useEffect(() => {
+    if (!draft) return;
+    for (const m of draft.choices) addToDexSeen(m.id);
+    if (draft.monster) addToDexSeen(draft.monster.id);
+  }, [draft, addToDexSeen]);
+
+  /** 걸음 안에서 한 칸 나아간다. 이 갱신 하나하나가 그대로 저장된다 */
+  const patchStep = useCallback((patch: Partial<StepProgress>) => {
+    setRun((prev) => prev ? advanceStep(prev, patch) : prev);
+  }, [setRun]);
+
+  const phase: StepPhase =
+    !step.entered ? "event"
+    : step.done ? "resolved"
+    : kind === "nest" && step.pick === null ? "nest"
+    : hasCatch(kind) ? "catch"
+    : "resolved";
 
   /** 판정이 끝난 걸음을 런에 반영하고 다음 걸음으로 */
-  const commitStep = useCallback((d: StepDraft) => {
-    const next = resolveStep(run, { gained: d.gained, caught: d.caught, escaped: d.escaped });
-    setDraft(null);
-    setPhase("event");
+  const commitStep = useCallback(() => {
+    if (!draft) return;
+    const next = resolveStep(run, {
+      gained: draft.gained,
+      caught: step.done?.caught,
+      escaped: step.done?.escaped,
+    });
 
     // 주인은 만나면 거기서 끝난다
     if (kind === "warden") { onSettle("warden", next.bag, next.caught, next.alertPeak); return; }
     if (runIsOver(next)) { onSettle("forced", next.bag, next.caught, next.alertPeak); return; }
     setRun(next);
-  }, [run, kind, onSettle, setRun]);
+  }, [draft, run, step.done, kind, onSettle, setRun]);
 
   const onCatchDone = useCallback((result: { caught: boolean }, monster: Monster) => {
-    if (!draft) return;
     if (result.caught) {
       // 몬스터는 즉시 확정이다. 정산 대상이 아니라서 퇴각해도 잃지 않는다
       addToDexCaught(monster.id);
       addCapturedMonster(monster);
     }
-    setDraft({ ...draft, monster, caught: result.caught, escaped: !result.caught });
-    setPhase("resolved");
-  }, [draft, addToDexCaught, addCapturedMonster]);
+    patchStep({ pending: null, done: { caught: result.caught, escaped: !result.caught } });
+  }, [patchStep, addToDexCaught, addCapturedMonster]);
 
   /** 지금 돌아가면 확정될 것 */
   const banked = useMemo(() => {
@@ -148,7 +160,9 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
         style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
         <div>
           <h1 className="text-title-sm font-black text-cream-100">{area.name}</h1>
-          <p className="text-pixel-sm text-sand-300">깊이 {run.depth}</p>
+          <p className="text-pixel-sm text-sand-300" data-testid="forest-depth" data-depth={run.depth}>
+            깊이 {run.depth}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <AlertGauge value={run.alert}/>
@@ -181,15 +195,12 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
               : hasCatch(kind)   ? "조우한다"
               : "살펴본다"
             }
-            onAction={enterStep}
+            onAction={() => patchStep({ entered: true })}
           />
         )}
 
         {phase === "nest" && draft && (
-          <NestPanel monsters={draft.choices} onPick={(m) => {
-            setDraft({ ...draft, monster: m, choices: [] });
-            setPhase("catch");
-          }}/>
+          <NestPanel monsters={draft.choices} onPick={(i) => patchStep({ pick: i })}/>
         )}
 
         {phase === "catch" && draft?.monster && (
@@ -197,6 +208,10 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
             monster={draft.monster}
             alert={alertForJudge}
             seed={(run.seed ^ (run.depth + 1)) >>> 0}
+            attempts={step.attempts}
+            pending={step.pending}
+            onReveal={() => patchStep({ attempts: step.attempts + 1, pending: null })}
+            onResult={(r) => patchStep({ pending: r })}
             onDone={(r) => onCatchDone(r, draft.monster!)}
           />
         )}
@@ -207,10 +222,10 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
             monster={draft.monster}
             gained={draft.gained}
             alertAfter={kind === "hideout" ? Math.max(0, run.alert + delta) : undefined}
-            catchRate={draft.monster && !draft.caught && !draft.escaped
+            catchRate={draft.monster && !step.done
               ? catchChance("draw", alertForJudge) : undefined}
             actionLabel="계속 걷는다"
-            onAction={() => commitStep(draft)}
+            onAction={commitStep}
           />
         )}
       </div>

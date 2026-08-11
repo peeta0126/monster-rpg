@@ -62,6 +62,19 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
 - 회귀는 `npx playwright test e2e/forestTiers.spec.ts` (해금·기본 선택·프리로드·스크림·
   reduced-motion) 와 `node --import tsx --test tests/forestAreas.test.ts`.
 
+## 숲 원정 저장
+- 저장은 `src/camp/forest/runStorage.ts` 한 곳(`monster-rpg-forest-run`). 사건의 굴림은
+  저장하지 않는다 — (seed, depth) 로 고정돼 있어 화면에서 다시 나온다.
+- **걸음 안의 진행까지 저장한다**(`run.step`). 시도 횟수를 화면 상태로 두면 새로고침이
+  곧 리롤이다: 같은 시도 번호는 상대가 같은 수를 내므로, 지고 나서 F5 하면 이길 수 있다.
+  포획 결과 화면은 사람을 기다리는 화면이라 여기서 제일 오래 머문다(`step.pending`).
+- 걸음 안의 상태를 새로 만들면 `StepProgress` 에 넣고 `patchStep` 으로만 고칠 것.
+  포획 결과는 900ms 뒤에 오므로 `setRun(값)` 으로 덮으면 그 사이 태운 시도가 되살아난다.
+- 정산 화면도 저장한다. 런은 끝났는데 재료는 아직 창고 밖이라 여기서 잃으면 제일 아프다.
+- 읽을 수 없는 세이브는 마이그레이션하지 않는다. 가방만 건져 100% 정산(`stale`)으로 보낸다.
+- 회귀는 `node --import tsx --test tests/forestRunStorage.test.ts` 와
+  `npx playwright test e2e/forest.spec.ts` (새로고침·정산 복원·옛 세이브).
+
 ## git 규칙
 - 한 단계(phase) 작업이 끝나면 main 에 병합하고 push 한다. 브랜치에 오래 쌓아두지 않는다.
 - push 는 사용자가 요청할 때만 한다. 단 작업 완료 보고 시 "push 필요 여부"를 항상 알린다.

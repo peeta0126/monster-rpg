@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   startRun, resolveStep, makeRng, addToBag, dropRandom, bagTotal,
-  settleBag, recoveryRate, parseRun, judgeAlert, runIsOver, RUN_VERSION,
+  settleBag, recoveryRate, parseRun, judgeAlert, runIsOver, advanceStep,
+  RUN_VERSION, NEW_STEP,
   type ForestRun,
 } from "../src/camp/forest/runStore.ts";
 import { FORK_CHANCE, rollStep, rollFork, wardenCanAppear, STEP_DEFS } from "../src/camp/forest/steps.ts";
@@ -175,6 +176,34 @@ test("깨진 값에도 안 터진다", () => {
   for (const bad of [null, undefined, 0, "", "런", [], { runVersion: RUN_VERSION }, { runVersion: RUN_VERSION, bag: "herb" }]) {
     const parsed = parseRun(bad);
     assert.equal(parsed.ok, false, `${JSON.stringify(bad)} 를 읽을 수 있다고 판단했다`);
+  }
+});
+
+test("걸음이 끝나면 진행 기록이 비워진다", () => {
+  // 안 비우면 다음 걸음이 "이미 들어간 상태"로 시작해 사건 패널을 건너뛴다
+  const walked = advanceStep(run0(), { entered: true, attempts: 2 });
+  const next = resolveStep(walked, {});
+  assert.deepEqual(next.step, NEW_STEP);
+});
+
+test("포획 시도 횟수가 저장에 살아남는다 — 새로고침 리롤이 막힌다", () => {
+  // 시도 번호마다 상대의 수가 정해져 있다. 횟수를 잃으면 방금 본 수를 알고 다시 낼 수 있다
+  const run = advanceStep(run0(), {
+    entered: true, attempts: 2, pending: { hand: "rock", caught: false },
+  });
+  const parsed = parseRun(JSON.parse(JSON.stringify(run)));
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) {
+    assert.equal(parsed.run.step.attempts, 2, "시도 횟수가 초기화됐다");
+    assert.deepEqual(parsed.run.step.pending, { hand: "rock", caught: false });
+  }
+});
+
+test("진행 기록이 깨져 있으면 안 걸은 걸음으로 되돌린다", () => {
+  for (const bad of [undefined, null, 7, "entered", { attempts: "셋" }]) {
+    const parsed = parseRun({ ...run0(), step: bad });
+    assert.equal(parsed.ok, true, "진행 기록 하나 때문에 런 전체를 버리면 안 된다");
+    if (parsed.ok) assert.equal(parsed.run.step.attempts, 0);
   }
 });
 
