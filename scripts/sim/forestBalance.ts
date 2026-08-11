@@ -9,6 +9,10 @@
  */
 import { FOREST_AREAS } from "../../src/camp/forest/areas";
 import { runForest, type ForestStrategy } from "./gameModel";
+import { materialValue } from "../../src/shared/dropTables";
+
+/** 몬스터 1마리의 가치 (시뮬 정규화용). forestSteps.ts 와 같은 값을 쓴다 */
+const MONSTER_VALUE = Number(process.env.MONSTER_VALUE ?? 6);
 
 const RUNS = 20000;
 /** 강제 퇴각 시 회수율 (STEP 4 정산) */
@@ -33,9 +37,10 @@ function measure(areaIdx: number, strategy: ForestStrategy): Row {
   let materials = 0, carried = 0, peak = 0, forced = 0, steps = 0, escapes = 0, warden = 0;
   for (let i = 0; i < RUNS; i++) {
     const r = runForest(FOREST_AREAS[areaIdx], strategy, BANK_AT);
-    const got = r.drops.reduce((a, d) => a + d.count, 0);
+    const got = r.drops.reduce((a, d) => a + d.count * materialValue(d.id), 0);
     materials += got;
-    carried += r.forcedRetreat ? got * FORCED_RECOVERY : got;
+    // 재료만 회수율에 걸린다. 몬스터는 잡는 즉시 확정이라 퇴각해도 남는다
+    carried += (r.forcedRetreat ? got * FORCED_RECOVERY : got) + r.caught * MONSTER_VALUE;
     peak += r.alertPeak;
     steps += r.steps;
     escapes += r.escapes;

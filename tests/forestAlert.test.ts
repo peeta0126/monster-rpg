@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  ALERT_BANDS, ALERT_MAX, STEP_ALERT, ESCAPE_ALERT,
+  ALERT_BANDS, ALERT_MAX, STEP_ALERT,
   alertBand, clampAlert, isForcedRetreat, applyMaterialMultiplier, catchRateWithAlert,
   appliesAlertOnArrival, stepAlertDelta,
 } from "../src/camp/forest/alert.ts";
-import { STEP_DEFS, isDangerous, type ForestStepKind } from "../src/camp/forest/steps.ts";
+import { STEP_DEFS, isDangerous, escapeAlert, type ForestStepKind } from "../src/camp/forest/steps.ts";
 
 /**
  * 소란도는 숲이 이월하는 유일한 자원이다. 여기서 지키는 건 숫자 자체가 아니라
@@ -125,10 +125,20 @@ test("주인만 소란이 판정 전에 붙는다", () => {
   assert.ok(atBoss < without, "주인을 깨운 대가가 주인 포획 확률에 걸리지 않는다");
 });
 
-test("놓침의 대가가 사건 하나보다 무겁다", () => {
-  // 놓치고도 최고 소란 사건보다 싸면 일부러 놓치는 게 이득이 된다
-  const maxStep = Math.max(...Object.values(STEP_ALERT).map(Number));
-  assert.ok(ESCAPE_ALERT >= maxStep, "놓침이 가장 비싼 사건보다 싸다");
+test("놓침의 대가는 쫓던 것의 등급을 따른다", () => {
+  // 무조건 +30 이면 소란 예산의 24% 를 한 번에 태운다. 놓치는 건 상당 부분 운이라
+  // "실패는 내가 욕심냈기 때문"이라는 원칙에 어긋났다 — 무엇을 쫓을지는 플레이어가 고른다
+  assert.ok(escapeAlert("encounter") < escapeAlert("nest"), "일반이 희귀만큼 시끄럽다");
+  assert.ok(escapeAlert("nest") < escapeAlert("warden"), "희귀가 주인만큼 시끄럽다");
+
+  // 놓침이 그 사건 자체보다 싸야 "놓쳐도 본전"이 아니게 된다
+  for (const kind of Object.keys(STEP_ALERT) as ForestStepKind[]) {
+    if (STEP_ALERT[kind] <= 0) continue;
+    assert.ok(
+      escapeAlert(kind) > 0,
+      `${kind}: 놓쳐도 대가가 없다`,
+    );
+  }
 });
 
 test("깊이가 압력을 준다 — 은신처는 반대로 마른다", () => {

@@ -94,13 +94,8 @@ export const STEP_ALERT: Record<ForestStepKind, number> = {
   warden:    30,
 };
 
-/**
- * 놓쳤을 때 붙는 소란. 런이 끝나지는 않지만 대가는 확실하다.
- *
- * 숲에서 일어나는 실패는 전투 패배가 아니라 "못 가져옴"이다. 그래서 이름도
- * defeat 이 아니라 escape 다 — 달아난 건 몬스터고, 플레이어는 계속 걸을 수 있다.
- */
-export const ESCAPE_ALERT = 30;
+// 놓쳤을 때 붙는 소란은 쫓던 것의 등급에 비례한다 — steps.ts 의 escapeAlert() 가 정한다.
+// 숲에서 일어나는 실패는 전투 패배가 아니라 "못 가져옴"이다. 그래서 이름도 escape 다.
 
 /**
  * 깊이가 붙이는 압력.

@@ -1,15 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { rgba } from "../../shared/palette";
-import { AREA_MATERIAL_POOL } from "../../shared/dropTables";
 import { scaleToLevel } from "../../shared/floorTable";
 import { monsters } from "../../monster/monsters";
 import type { Monster } from "../../shared/game";
 import { usePlayerStore } from "../../shared/playerStore";
 import type { ForestArea } from "./areas";
-import { alertBand, applyMaterialMultiplier, stepAlertDelta } from "./alert";
+import { alertBand, stepAlertDelta } from "./alert";
 import {
-  STEP_DEFS, STEP_ROLLS, RARE_MATERIALS, hasCatch, isGuaranteed, scoutStep,
-  type ForestStepKind,
+  STEP_DEFS, hasCatch, scoutStep, rollStepRewards, type ForestStepKind,
 } from "./steps";
 import {
   makeRng, resolveStep, judgeAlert, bagTotal, runIsOver, chooseFork,
@@ -55,30 +53,6 @@ function pickMonsterFor(area: ForestArea, kind: ForestStepKind, rng: () => numbe
   return scaleToLevel(base, level);
 }
 
-/** 이 사건이 내놓는 재료. 배수는 소란이 오르기 전 값으로 계산한다 */
-function rollRewards(area: ForestArea, kind: ForestStepKind, alert: number, rng: () => number): RunBagEntry[] {
-  const rolls = STEP_ROLLS[kind];
-  if (rolls === 0) return [];
-
-  const areaPool = AREA_MATERIAL_POOL[area.id] ?? AREA_MATERIAL_POOL.shallow;
-  // 이변은 희귀 표에서만 뽑는다 — 구역 풀 그대로면 흔적과 다를 게 없다
-  const rarePool = areaPool.filter((id) => RARE_MATERIALS.includes(id));
-  const pool = kind === "anomaly" && rarePool.length > 0 ? rarePool : areaPool;
-
-  const out: RunBagEntry[] = [];
-  for (let i = 0; i < rolls; i++) {
-    const hit = rng() <= area.materialRate || (isGuaranteed(kind) && out.length === 0 && i === rolls - 1);
-    if (!hit) continue;
-    const id = pool[Math.floor(rng() * pool.length)];
-    const base = 1 + area.materialBonus + (rng() < 0.3 ? 1 : 0);
-    const count = applyMaterialMultiplier(base, alert);
-    const at = out.findIndex((o) => o.id === id);
-    if (at === -1) out.push({ id, count });
-    else out[at] = { ...out[at], count: out[at].count + count };
-  }
-  return out;
-}
-
 export function ForestRunView({ area, run, setRun, onSettle }: {
   area: ForestArea;
   run: ForestRun;
@@ -106,7 +80,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
    */
   const enterStep = useCallback(() => {
     const { rng } = makeRng(run.seed ^ (run.depth + 1));
-    const gained = rollRewards(area, kind, alertForJudge, rng);
+    const gained = rollStepRewards(area, kind, alertForJudge, rng);
 
     if (kind === "nest") {
       const count = 2 + (rng() < 0.5 ? 1 : 0);

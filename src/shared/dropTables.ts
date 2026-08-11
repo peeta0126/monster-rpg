@@ -50,3 +50,33 @@ export function rollBattleDrop(floor: number): { id: string; count: number }[] {
 
   return drops;
 }
+
+/**
+ * 재료의 상대 가치.
+ *
+ * 개수만 세면 약초 1개와 강화석 1개가 같은 무게가 된다 — 밸런스를 그렇게 재면
+ * 희귀 재료만 주는 사건(이변)이 흔적보다 못한 것으로 계산된다. 실제로 그랬다.
+ *
+ * 기준은 두 가지다.
+ *   1) 희소성 — 어느 구역 풀에 몇 번 들어 있는가 (AREA_MATERIAL_POOL 이 원본)
+ *   2) 제작 위치 — 상위 아티팩트·강화가 요구하는 것일수록 위
+ *
+ * 값을 바꾸면 밸런스 측정(scripts/sim/forestBalance.ts)의 기준이 통째로 움직인다.
+ */
+export const MATERIAL_VALUE: Record<string, number> = {
+  // 흔한 것 — 얕은 숲에서 그냥 나온다
+  herb: 1, berry: 1, root: 1, wood_plank: 1, leather: 1, slime_extract: 1,
+  // 중급 — 깊은 숲부터. 아티팩트 제작이 요구한다
+  iron_fragment: 2, magic_dust: 2,
+  // 희귀 — 고대 숲에 몰려 있고 상위 제작의 병목이다
+  crystal: 3, monster_essence: 3,
+  // 최상 — 장비 강화 전용이라 대체재가 없다
+  enhancement_stone: 4,
+  // 오름 전용. 숲에서는 안 나온다
+  ormr_essence: 8,
+};
+
+/** 값이 없는 재료는 흔한 것으로 친다 — 새 재료를 넣고 표를 안 고쳐도 0 으로 세지 않게 */
+export function materialValue(id: string): number {
+  return MATERIAL_VALUE[id] ?? 1;
+}

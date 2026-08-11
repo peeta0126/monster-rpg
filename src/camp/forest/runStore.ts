@@ -1,5 +1,5 @@
-import { clampAlert, isForcedRetreat, stepAlertDelta, appliesAlertOnArrival, ESCAPE_ALERT } from "./alert";
-import { rollStep, rollFork, pathName, FORK_CHANCE, type ForestStepKind, type Rng } from "./steps";
+import { clampAlert, isForcedRetreat, stepAlertDelta, appliesAlertOnArrival } from "./alert";
+import { rollStep, rollFork, pathName, escapeAlert, FORK_CHANCE, type ForestStepKind, type Rng } from "./steps";
 import type { ForestAreaId } from "./areas";
 
 /**
@@ -148,7 +148,7 @@ export function resolveStep(run: ForestRun, outcome: StepOutcome): ForestRun {
 
   // 놓침은 전투 패배가 아니다. 런은 계속되고, 대신 짐을 흘린다
   if (outcome.escaped) {
-    alert = clampAlert(alert + ESCAPE_ALERT);
+    alert = clampAlert(alert + escapeAlert(run.current));
     bag = dropRandom(bag, 2, rng);
   }
 

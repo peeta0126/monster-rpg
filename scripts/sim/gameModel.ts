@@ -9,13 +9,13 @@
 import {
   getFloorEnemy, getFloorEnemySkill, MAX_TOWER_FLOOR, scaleToLevel,
 } from "../../src/shared/floorTable";
-import { AREA_MATERIAL_POOL, rollBattleDrop } from "../../src/shared/dropTables";
+import { rollBattleDrop } from "../../src/shared/dropTables";
 import { FOREST_AREAS, type ForestArea } from "../../src/camp/forest/areas";
 import {
-  FORK_CHANCE, STEP_ROLLS, hasCatch, rollFork, rollStep, type ForestStepKind,
+  FORK_CHANCE, hasCatch, rollFork, rollStep, rollStepRewards, escapeAlert, type ForestStepKind,
 } from "../../src/camp/forest/steps";
 import {
-  STEP_ALERT, ESCAPE_ALERT, applyMaterialMultiplier, clampAlert, isForcedRetreat,
+  STEP_ALERT, clampAlert, isForcedRetreat,
   appliesAlertOnArrival, stepAlertDelta,
 } from "../../src/camp/forest/alert";
 import { makeRng } from "../../src/camp/forest/runStore";
@@ -315,14 +315,6 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
 // ─── 숲 (ForestPage 이식) ────────────────────────────────────────────────────
 
 
-function rollDrop(area: ForestArea, alert: number): { id: string; count: number } | null {
-  if (Math.random() > area.materialRate) return null;
-  const pool = AREA_MATERIAL_POOL[area.id] ?? AREA_MATERIAL_POOL.shallow;
-  const id = pool[Math.floor(Math.random() * pool.length)];
-  const base = 1 + area.materialBonus + (Math.random() < 0.3 ? 1 : 0);
-  return { id, count: applyMaterialMultiplier(base, alert) };
-}
-
 function pickForestMonster(area: ForestArea, elite: boolean): Monster {
   const pool = elite ? area.monsterPool.slice(-2) : area.monsterPool;
   const id = pool[Math.floor(Math.random() * pool.length)];
@@ -349,6 +341,8 @@ export interface ForestRunResult {
   metWarden: boolean;
   /** 포획을 놓친 횟수 */
   escapes: number;
+  /** 포획에 성공한 수 — 몬스터는 즉시 확정이라 정산에 안 걸린다 */
+  caught: number;
 }
 
 /**
@@ -379,6 +373,7 @@ export function runForest(
   let alertPeak = alert;
   let depth = 0;
   let escapes = 0;
+  let caught = 0;
   let forcedRetreat = false;
   let metWarden = false;
 
@@ -407,17 +402,16 @@ export function runForest(
     }
 
     // 수확 배수는 그렇게 정해진 소란도로 계산한다(게임과 같은 순서)
-    for (let i = 0; i < STEP_ROLLS[kind]; i++) {
-      const d = rollDrop(area, alert);
-      if (d) drops.push(d);
-    }
+    drops.push(...rollStepRewards(area, kind, alert, rng));
     if (hasCatch(kind)) {
       encounters.push(pickForestMonster(area, kind === "champion" || kind === "warden"));
       // 시도 3회를 다 쓰면 놓친다. 승/무/패는 균등이라 시도당 성공률은 평균값이다
       const per = (catchChance("win", alert) + catchChance("draw", alert) + catchChance("lose", alert)) / 3;
       if (Math.pow(1 - per, CATCH_ATTEMPTS) > rng()) {
         escapes++;
-        alert = clampAlert(alert + ESCAPE_ALERT);
+        alert = clampAlert(alert + escapeAlert(kind));
+      } else {
+        caught++;
       }
     }
 
@@ -433,7 +427,7 @@ export function runForest(
     if (alert >= bankAlert) break;   // 자진 귀환
   }
 
-  return { drops, encounters, steps: depth, alert, alertPeak, forcedRetreat, metWarden, escapes };
+  return { drops, encounters, steps: depth, alert, alertPeak, forcedRetreat, metWarden, escapes, caught };
 }
 
 /**

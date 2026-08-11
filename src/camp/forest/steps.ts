@@ -1,4 +1,7 @@
 import { PALETTE } from "../../shared/palette";
+import { AREA_MATERIAL_POOL } from "../../shared/dropTables";
+import { applyMaterialMultiplier } from "./alert";
+import type { ForestArea, ForestAreaId } from "./areas";
 import { STEP_ALERT, stepAlertDelta, appliesAlertOnArrival, type ScoutLevel } from "./alert";
 
 /**
@@ -148,24 +151,53 @@ export function isDangerous(kind: ForestStepKind): boolean {
 // ── 사건 보상 ────────────────────────────────────────────────────────────────
 
 /**
- * 희귀로 치는 재료.
+ * 이변 전용 보상 표.
  *
- * 이변은 이 표에서만 뽑는다 — "희귀 테이블 전용"이 구역 풀을 그대로 쓰면서
- * 개수만 늘리는 것이면 흔적과 다를 게 없다.
+ * 이변의 정체는 "희귀 재료"가 아니라 **그 구역 기준으로 이례적으로 좋은 보상**이다.
+ * 구역 일반 풀(AREA_MATERIAL_POOL)에서 뽑으면 얕은 숲에는 희귀 재료가 아예 없어서
+ * 폴백이 걸리고, 이변이 흔적의 열화판이 된다(실제로 k 0.14 였다).
+ *
+ * 일반 풀을 건드리지 않는 것이 중요하다 — 얕은 숲 일반 풀에 수정을 넣으면 그쪽이
+ * 수정 파밍 루트가 되어 깊은 숲의 존재 이유가 약해진다. 여기서만, 소란 +25 를 치른
+ * 사람에게만 나온다.
  */
-export const RARE_MATERIALS = [
-  "crystal", "magic_dust", "monster_essence", "enhancement_stone", "iron_fragment",
-];
+export const ANOMALY_POOL: Record<ForestAreaId, [string, number][]> = {
+  // 얕은 숲 — 일반 재료 노다지. 수정은 12% 로 살짝 열어 둔다
+  shallow: [["herb", 25], ["berry", 20], ["root", 20], ["wood_plank", 12], ["leather", 11], ["crystal", 12]],
+  // 깊은 숲 — 수정 중심
+  deep:    [["crystal", 40], ["magic_dust", 22], ["iron_fragment", 18], ["herb", 12], ["root", 8]],
+  // 고대 숲 — 강화석 중심
+  ancient: [["enhancement_stone", 35], ["monster_essence", 27], ["crystal", 22], ["magic_dust", 16]],
+};
+
+/**
+ * 굴림 한 번이 주는 개수 배수.
+ *
+ * 굴림 횟수만으로 사건을 가르면 비싼 사건이 "여러 번 조금씩"이 되어, 소란을 크게
+ * 쓰고도 수확이 흔적과 비슷해진다. 걸음 수를 소란이 정하는 구조에서는 그게 곧
+ * 손해라서, 비싼 사건은 한 번에 크게 준다.
+ */
+export const STEP_YIELD: Record<ForestStepKind, number> = {
+  trace:     1,
+  encounter: 1,
+  nest:      2,
+  anomaly:   3,
+  hideout:   0,
+  champion:  3,
+  warden:    3,
+};
 
 /** 이 사건이 재료를 몇 번 굴리는가. 0 이면 재료가 안 나온다 */
 export const STEP_ROLLS: Record<ForestStepKind, number> = {
   trace:     2,
-  encounter: 1,
-  nest:      0,
-  anomaly:   2,
+  encounter: 2,
+  // 둥지는 몬스터 선택권이 핵심이지만 소란 +20 을 쓰면서 재료가 0 이면 안 된다.
+  // 둥지 주변에서 긁어 오는 몫이다
+  nest:      4,
+  anomaly:   3,
   hideout:   0,
-  champion:  4,
-  warden:    3,
+  champion:  5,
+  warden:    4,
 };
 
 /** 이 사건에서 포획 기회가 있는가 */
@@ -173,7 +205,76 @@ export function hasCatch(kind: ForestStepKind): boolean {
   return kind === "encounter" || kind === "nest" || kind === "champion" || kind === "warden";
 }
 
-/** 흔적은 "확정 소량"이라 빗나가도 한 번은 준다 */
+/**
+ * 굴림이 다 빗나가도 한 번은 주는 사건.
+ *
+ * 흔적만 보장이 있었다. 소란을 두 배 쓰는 조우가 굴림 한 번에 성공률 40% 라
+ * 기대 수확이 흔적의 1/3 이었다 — 비싼 길이 언제나 손해였다.
+ * 재료를 내놓는 사건이면 전부 보장한다. 은신처만 예외다(수확이 없는 게 그 값이다).
+ */
 export function isGuaranteed(kind: ForestStepKind): boolean {
-  return kind === "trace";
+  return STEP_ROLLS[kind] > 0;
+}
+
+/**
+ * 이 사건이 내놓는 재료.
+ *
+ * 화면(ForestRunView)과 시뮬(gameModel)이 각자 굴리고 있었다 — 한쪽에만 희귀 풀과
+ * 확정 규칙이 있어서 시뮬이 게임보다 적게 쟀다. 굴림은 여기 한 벌뿐이다.
+ *
+ * 배수는 **소란이 오르기 전** 값으로 먹인다. 호출부가 그 값을 넘긴다.
+ */
+export function rollStepRewards(
+  area: ForestArea,
+  kind: ForestStepKind,
+  alert: number,
+  rng: Rng,
+): { id: string; count: number }[] {
+  const rolls = STEP_ROLLS[kind];
+  if (rolls === 0) return [];
+
+  const areaPool = AREA_MATERIAL_POOL[area.id] ?? AREA_MATERIAL_POOL.shallow;
+  const anomalyPool = ANOMALY_POOL[area.id];
+
+  const out: { id: string; count: number }[] = [];
+  for (let i = 0; i < rolls; i++) {
+    // 마지막 굴림까지 빈손이면 한 번은 준다
+    const guaranteed = isGuaranteed(kind) && out.length === 0 && i === rolls - 1;
+    if (rng() > area.materialRate && !guaranteed) continue;
+
+    const id = usesRarePool(kind)
+      ? weightedId(anomalyPool, rng)
+      : areaPool[Math.floor(rng() * areaPool.length)];
+    const base = 1 + area.materialBonus + (rng() < 0.3 ? 1 : 0);
+    const count = applyMaterialMultiplier(base * STEP_YIELD[kind], alert);
+
+    const at = out.findIndex((o) => o.id === id);
+    if (at === -1) out.push({ id, count });
+    else out[at] = { ...out[at], count: out[at].count + count };
+  }
+  return out;
+}
+
+/** 이변 전용 표를 쓰는 사건 */
+export function usesRarePool(kind: ForestStepKind): boolean {
+  return kind === "anomaly" || kind === "warden";
+}
+
+function weightedId(entries: [string, number][], rng: Rng): string {
+  const total = entries.reduce((s, [, w]) => s + w, 0);
+  let r = rng() * total;
+  for (const [id, w] of entries) { r -= w; if (r <= 0) return id; }
+  return entries[entries.length - 1][0];
+}
+
+/**
+ * 놓쳤을 때 붙는 소란 — 쫓던 것의 등급에 비례한다.
+ *
+ * 예전엔 무조건 +30 이었다. 소란 예산의 24% 를 한 번에 태우는데 놓치는 건 상당 부분
+ * 운이라, "실패는 내가 욕심냈기 때문이어야 한다"는 원칙에 어긋났다. 희귀한 놈을
+ * 쫓다 놓치면 크게 시끄러워지는 건 자연스럽고, 무엇을 쫓을지는 플레이어가 골랐다.
+ */
+export function escapeAlert(kind: ForestStepKind): number {
+  if (kind === "warden") return 25;
+  return STEP_DEFS[kind].tier === "rare" ? 15 : 8;
 }
