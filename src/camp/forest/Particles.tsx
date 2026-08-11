@@ -7,8 +7,18 @@ import type { ForestArea } from "./areas";
  * 여기 있는 건 그 위에 얹는 움직임뿐이다.
  */
 
-function LeafParticles() {
-  const [leaves] = useState(()=>Array.from({length:18},(_,i)=>({
+/**
+ * 밀도 배수를 개수로 바꾼다. 배수가 바뀌면 배열이 다시 만들어져 위치도 다시 뽑히므로,
+ * 최대 개수를 한 번만 만들어 두고 앞에서부터 잘라 쓴다 — 소란도가 오를 때 화면이
+ * 통째로 새로 뿌려지지 않고 입자만 늘어난다.
+ */
+const MAX_DENSITY = 2;
+function visibleCount(base: number, density: number) {
+  return Math.round(base * Math.min(density, MAX_DENSITY));
+}
+
+function LeafParticles({ density }: { density: number }) {
+  const [leaves] = useState(()=>Array.from({length:18 * MAX_DENSITY},(_,i)=>({
     id:i,
     x: Math.random()*100,
     delay: Math.random()*10,
@@ -20,7 +30,7 @@ function LeafParticles() {
   })));
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {leaves.map(l=>(
+      {leaves.slice(0, visibleCount(18, density)).map(l=>(
         <div key={l.id} className="absolute" style={{
           left:`${l.x}%`, top:"-3%",
           width:l.size, height:l.size*.55,
@@ -33,8 +43,8 @@ function LeafParticles() {
   );
 }
 
-function FireflyParticles() {
-  const [flies] = useState(()=>Array.from({length:22},(_,i)=>({
+function FireflyParticles({ density }: { density: number }) {
+  const [flies] = useState(()=>Array.from({length:22 * MAX_DENSITY},(_,i)=>({
     id:i,
     x:Math.random()*100,
     y:20+Math.random()*65,
@@ -45,7 +55,7 @@ function FireflyParticles() {
   })));
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {flies.map(f=>(
+      {flies.slice(0, visibleCount(22, density)).map(f=>(
         <div key={f.id} className="absolute rounded-full" style={{
           left:`${f.x}%`, top:`${f.y}%`,
           width:f.size, height:f.size,
@@ -58,8 +68,8 @@ function FireflyParticles() {
   );
 }
 
-function CrystalParticles() {
-  const [crystals] = useState(()=>Array.from({length:16},(_,i)=>({
+function CrystalParticles({ density }: { density: number }) {
+  const [crystals] = useState(()=>Array.from({length:16 * MAX_DENSITY},(_,i)=>({
     id:i,
     x:5+Math.random()*90,
     y:10+Math.random()*80,
@@ -70,7 +80,7 @@ function CrystalParticles() {
   })));
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {crystals.map(c=>(
+      {crystals.slice(0, visibleCount(16, density)).map(c=>(
         <div key={c.id} className="absolute" style={{
           left:`${c.x}%`, bottom:`${c.y}%`,
           width:c.size, height:c.size*1.5,
@@ -84,8 +94,9 @@ function CrystalParticles() {
   );
 }
 
-export function Particles({ area }: { area: ForestArea }) {
-  if (area.particleType==="leaf")    return <LeafParticles/>;
-  if (area.particleType==="firefly") return <FireflyParticles/>;
-  return <CrystalParticles/>;
+/** density: 소란도 구간이 주는 밀도 배수. 1 이 기본이고 소란이 오를수록 입자가 늘어난다 */
+export function Particles({ area, density = 1 }: { area: ForestArea; density?: number }) {
+  if (area.particleType==="leaf")    return <LeafParticles density={density}/>;
+  if (area.particleType==="firefly") return <FireflyParticles density={density}/>;
+  return <CrystalParticles density={density}/>;
 }

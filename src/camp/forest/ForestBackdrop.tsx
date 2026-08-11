@@ -38,7 +38,15 @@ const DIM_ALPHA = 0.62;
  * 중간 프레임에서 합성 알파가 1 밑으로 떨어져 배경이 한 번 어두워진다. 밑을 채워
  * 두면 그 침몰이 없다.
  */
-export function ForestBackdrop({ tier, dim = false }: { tier: ForestAreaId; dim?: boolean }) {
+export function ForestBackdrop({ tint, tier, dim = false }: {
+  tier: ForestAreaId;
+  dim?: boolean;
+  /**
+   * 소란도 틴트. 새 이미지를 굽지 않고 원화 위에 색만 한 겹 얹는다 —
+   * 숲이 달아오르는 걸 배경으로 보여 주는 자리다. 없으면 아무것도 안 깐다.
+   */
+  tint?: string;
+}) {
   // 마지막 원소가 현재 층. 새로 고른 층을 꺼내 맨 뒤로 보낸다.
   const [stack, setStack] = useState<ForestAreaId[]>(() => [tier]);
 
@@ -78,6 +86,14 @@ export function ForestBackdrop({ tier, dim = false }: { tier: ForestAreaId; dim?
           opacity: dim ? 1 : 0,
         }}
       />
+      {tint && (
+        <div
+          className="forest-backdrop-dim absolute inset-0"
+          data-testid="forest-tint"
+          // 스크림보다 위다 — 스크림 밑에 깔면 62% 어둠에 색이 먹혀 구간이 안 구분된다
+          style={{ zIndex: FOREST_AREAS.length + 2, background: tint }}
+        />
+      )}
     </div>
   );
 }

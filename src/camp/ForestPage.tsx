@@ -13,6 +13,12 @@ import { FOREST_AREAS, highestUnlockedArea, type ForestArea, type ForestAreaId }
 import { ForestBackdrop } from "./forest/ForestBackdrop";
 import { ForestTierCard } from "./forest/ForestTierCard";
 import { Particles } from "./forest/Particles";
+import { NODE_META, isDangerousNode, type ForestNodeType } from "./forest/nodes";
+import {
+  NODE_ALERT, alertBand, clampAlert, isForcedRetreat,
+  applyMaterialMultiplier, catchRateWithAlert, type ScoutLevel,
+} from "./forest/alert";
+import { AlertMeter } from "./forest/AlertMeter";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CSS 애니메이션 키프레임
@@ -147,13 +153,10 @@ const FOREST_STYLES = `
 
 type ForestPhase =
   | "enter" | "dungeon" | "exploring"
-  | "node_arrived" | "no_encounter"
+  | "node_arrived"
   | "item_drop" | "encounter" | "rps_select"
   | "rps_result" | "catch_result"
-  | "rest" | "event" | "boss_cleared";
-
-// ── 노드 타입 ──────────────────────────────────────────────────────────────────
-type ForestNodeType = "start" | "battle" | "material" | "event" | "rest" | "elite" | "boss";
+  | "rest" | "event" | "boss_cleared" | "forced_retreat";
 
 interface ForestNode {
   id: string;
@@ -167,18 +170,7 @@ interface ForestNode {
 }
 
 
-// ── 노드 스타일 ───────────────────────────────────────────────────────────────
-// 노드 7종. 팔레트에 색상환이 다 없어서 색만으로는 7개를 못 가른다 —
-// 아이콘(형태)이 1차 구분이고 색은 보조다. 글자색은 전부 4.5:1 을 넘기는 토큰만 썼다.
-const NODE_META: Record<ForestNodeType, { icon: string; label: string; color: string; bg: string }> = {
-  start:    { icon: "🌲", label: "입구",     color: PALETTE.sand300,  bg: rgba("moss500",  0.18) },
-  battle:   { icon: "⚔️", label: "전투",     color: PALETTE.ember500, bg: rgba("ember600", 0.18) },
-  material: { icon: "🌿", label: "채집",     color: PALETTE.sand200,  bg: rgba("moss500",  0.22) },
-  event:    { icon: "❓", label: "이벤트",   color: PALETTE.mist300,  bg: rgba("mist500",  0.18) },
-  rest:     { icon: "🔥", label: "휴식",     color: PALETTE.ember500, bg: rgba("ember500", 0.14) },
-  elite:    { icon: "💀", label: "강적",     color: PALETTE.sand200,  bg: rgba("earth500", 0.28) },
-  boss:     { icon: "👁", label: "보스",     color: PALETTE.cream100, bg: rgba("ember700", 0.32) },
-};
+// 노드 표시 정보(NODE_META)는 forest/nodes.ts 한 벌뿐이다. 여기에 다시 적지 말 것.
 
 // 속성 색은 shared/palette.ts 의 ELEMENT_COLOR 가 단일 출처다. 여기서 따로 정하지 않는다.
 const TYPE_GLOW: Record<string, string> = Object.fromEntries(
@@ -207,10 +199,11 @@ const CATCH_RATE: Record<RpsResult,number> = { win:.72, draw:.42, lose:.18 };
  * (첫 조우에서 지면 그 몬스터는 그냥 사라졌다). 몇 번은 더 붙어볼 수 있게 한다.
  */
 const CATCH_ATTEMPTS = 3;
-const RPS_RESULT_DATA: Record<RpsResult,{text:string; color:string; desc:string; bg:string}> = {
-  win:  { text:"승리!", color:"text-moss-500", desc:"포획 확률 72%", bg:"from-moss-500/80 to-moss-500/40" },
-  draw: { text:"무승부", color:"text-ember-500",  desc:"포획 확률 42%", bg:"from-ember-700/80 to-ember-700/40" },
-  lose: { text:"패배...", color:"text-ember-500",   desc:"포획 확률 18%", bg:"from-ember-700/80 to-ember-700/40" },
+// 확률 문구는 여기 적지 않는다 — 소란도가 깎은 뒤의 실제 값을 화면에서 계산해 쓴다
+const RPS_RESULT_DATA: Record<RpsResult,{text:string; color:string; bg:string}> = {
+  win:  { text:"승리!",  color:"text-moss-500",  bg:"from-moss-500/80 to-moss-500/40" },
+  draw: { text:"무승부", color:"text-ember-500", bg:"from-ember-700/80 to-ember-700/40" },
+  lose: { text:"패배...", color:"text-ember-500", bg:"from-ember-700/80 to-ember-700/40" },
 };
 
 /**
@@ -232,12 +225,17 @@ function pickMonster(area: ForestArea, elite = false) {
   const level = lvMin + Math.floor(Math.random()*(area.levelRange[1]-lvMin+1));
   return scaleToLevel(base, level);
 }
-function rollDrop(area: ForestArea): {id:string; count:number}|null {
+/**
+ * 재료 굴림. 개수에 소란도 배수가 걸린다 — 소란은 이 노드를 **처리하기 전** 값이다.
+ * 노드를 밟은 대가(소란 증가)는 판정이 끝난 뒤에 붙으므로, 방금 올린 소란으로
+ * 그 노드의 수확을 불리는 일은 없다.
+ */
+function rollDrop(area: ForestArea, alert: number): {id:string; count:number}|null {
   if (Math.random()>area.materialRate) return null;
   const pool = AREA_MATERIAL_POOL[area.id] ?? AREA_MATERIAL_POOL.shallow;
   const id = pool[Math.floor(Math.random()*pool.length)];
-  const count = 1 + area.materialBonus + (Math.random()<.3?1:0);
-  return { id, count };
+  const base = 1 + area.materialBonus + (Math.random()<.3?1:0);
+  return { id, count: applyMaterialMultiplier(base, alert) };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -349,15 +347,36 @@ function getNextDirLabel(index: number, total: number): string {
   return labels[index] ?? `${index + 1}번 길`;
 }
 
+/**
+ * 정찰 결과 한 칸. 소란도가 낮을수록 더 많이 보인다 — 이게 소란을 낮게 유지할
+ * 유일한 이유이자, 다이얼이 "항상 최대"로 수렴하지 않게 막는 안전장치다.
+ */
+function scoutNode(node: ForestNode, scout: ScoutLevel): { icon: string; title: string; sub: string } {
+  const meta = NODE_META[node.type];
+  const delta = NODE_ALERT[node.type];
+  const deltaText = delta === 0 ? "소란 변화 없음" : delta > 0 ? `소란 +${delta}` : `소란 ${delta}`;
+
+  if (scout === "detail") return { icon: meta.icon, title: meta.label, sub: `${meta.hint} · ${deltaText}` };
+  if (scout === "type")   return { icon: meta.icon, title: meta.label, sub: deltaText };
+  if (scout === "danger") {
+    return isDangerousNode(node.type)
+      ? { icon: "❗", title: "험한 기운", sub: "무언가 강한 것이 있다" }
+      : { icon: "🌫️", title: "잠잠함",   sub: "특별한 기척은 없다" };
+  }
+  return { icon: "🌫️", title: "미지의 공간", sub: "아무것도 읽히지 않는다" };
+}
+
 function DungeonMapScreen({
-  nodes, currentNodeId, area, onSelectNode, onExit,
+  nodes, currentNodeId, area, alert, onSelectNode, onExit,
 }: {
   nodes: ForestNode[];
   currentNodeId: string;
   area: ForestArea;
+  alert: number;
   onSelectNode: (nodeId: string) => void;
   onExit: () => void;
 }) {
+  const band = alertBand(alert);
   const current    = nodes.find(n => n.id === currentNodeId)!;
   const nextNodes  = current.nextIds.map(id => nodes.find(n => n.id === id)!).filter(Boolean);
   const MAX_DEPTH  = Math.max(...nodes.map(n => n.depth));
@@ -430,7 +449,9 @@ function DungeonMapScreen({
                 const isCurrent   = node.id === currentNodeId;
                 const isCleared   = clearedIds.has(node.id);
                 const isReachable = reachableIds.has(node.id);
-                const meta  = NODE_META[node.revealed ? node.type : "start"];
+                // 정찰이 되는 만큼은 도착 전에도 아이콘이 보인다
+                const scouted = isReachable && (band.scout === "detail" || band.scout === "type");
+                const meta  = NODE_META[node.revealed || scouted ? node.type : "start"];
                 const dimmed = !isCurrent && !isCleared && !isReachable;
 
                 return (
@@ -460,10 +481,10 @@ function DungeonMapScreen({
                     />
                     {/* 아이콘 */}
                     <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="middle"
-                      fontSize={node.revealed ? 11 : 12}
+                      fontSize={node.revealed || scouted ? 11 : 12}
                       opacity={dimmed ? 0.22 : 1}
                       style={{ userSelect:"none", pointerEvents:"none" }}>
-                      {node.revealed ? meta.icon : (isReachable ? "?" : "·")}
+                      {node.revealed || scouted ? meta.icon : (isReachable ? "?" : "·")}
                     </text>
                     {/* BOSS 라벨 */}
                     {node.type === "boss" && node.revealed && (
@@ -506,30 +527,36 @@ function DungeonMapScreen({
         <div className="w-full flex flex-col gap-2">
           <p className="text-pixel-sm text-sand-200 text-center"
             style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
-            어느 방향으로 탐사하시겠습니까?
+            {band.scout === "none"
+              ? "숲이 너무 시끄러워 앞이 읽히지 않는다"
+              : "어느 방향으로 탐사하시겠습니까?"}
           </p>
           <div className={`grid gap-2 ${
             sortedNext.length === 1 ? "grid-cols-1" :
             sortedNext.length === 2 ? "grid-cols-2" : "grid-cols-3"
           }`}>
-            {sortedNext.map((node, i) => (
-              <button key={node.id}
-                onClick={() => onSelectNode(node.id)}
-                className="flex flex-col items-center gap-1.5 rounded-xl py-3 px-2 transition-all active:scale-95"
-                style={{
-                  // 4% 크림 채움이었다. 옛 그라디언트 배경 위에서만 성립하던 값이라
-                  // 원화로 바꾸자 버튼이 통째로 사라졌다 — 자기 판을 들게 한다.
-                  background: rgba("shadow900", 0.82),
-                  border: `2px solid ${area.accentColor}`,
-                  color: area.accentColor,
-                }}>
-                <span className="text-pixel-md">🌫️</span>
-                <span className="text-pixel-sm font-bold">
-                  {getNextDirLabel(i, sortedNext.length)}
-                </span>
-                <span className="text-pixel-sm text-sand-300">미지의 공간</span>
-              </button>
-            ))}
+            {sortedNext.map((node, i) => {
+              const scout = scoutNode(node, band.scout);
+              return (
+                <button key={node.id}
+                  data-testid={`forest-move-${node.id}`}
+                  onClick={() => onSelectNode(node.id)}
+                  className="flex flex-col items-center gap-1.5 rounded-xl py-3 px-2 transition-all active:scale-95"
+                  style={{
+                    // 4% 크림 채움이었다. 옛 그라디언트 배경 위에서만 성립하던 값이라
+                    // 원화로 바꾸자 버튼이 통째로 사라졌다 — 자기 판을 들게 한다.
+                    background: rgba("shadow900", 0.82),
+                    border: `2px solid ${area.accentColor}`,
+                    color: area.accentColor,
+                  }}>
+                  <span className="text-pixel-md">{scout.icon}</span>
+                  <span className="text-pixel-sm font-bold">
+                    {getNextDirLabel(i, sortedNext.length)} · {scout.title}
+                  </span>
+                  <span className="text-pixel-sm text-sand-300">{scout.sub}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -648,39 +675,96 @@ function NodeArrivedScreen({ node, onContinue }: {
 // 휴식 화면
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function RestScreen({ onContinue }: { area: ForestArea; onContinue: () => void }) {
+/**
+ * 은신처. HP 회복처가 아니라 **소란을 되사는 자리**다.
+ *
+ * HP 를 돌려주면 숲이 소모전이 되고 그건 무한의 탑과 똑같아진다. 여기서 치르는 값은
+ * 체력이 아니라 기회비용이다 — 이 노드에서는 아무것도 안 나온다.
+ */
+function RestScreen({ alertBefore, alertAfter, onContinue }: {
+  area: ForestArea; alertBefore: number; alertAfter: number; onContinue: () => void;
+}) {
+  const gained = alertBefore - alertAfter;
   return (
     <div className="relative z-10 flex flex-col items-center gap-5 max-w-sm w-full mx-4"
       style={{ animation:"slideInUp .4s ease both" }}>
       <div className="w-full rounded-2xl overflow-hidden"
         style={{
-          background:"rgba(13, 18, 35, 0.85)",
-          border:"1px solid rgba(233, 148, 65, 0.35)",
+          background: rgba("shadow900", 0.85),
+          border: `1px solid ${rgba("mist500", 0.35)}`,
           backdropFilter:"blur(14px)",
         }}>
-        <div className="px-6 pt-7 pb-5 text-center" style={{ background:"linear-gradient(to bottom, rgba(233, 148, 65, 0.08), transparent)" }}>
+        <div className="px-6 pt-7 pb-5 text-center" style={{ background:`linear-gradient(to bottom, ${rgba("mist500", 0.08)}, transparent)` }}>
           <div className="text-pixel-lg mb-3" style={{ animation:"monsterFloat 3s ease-in-out infinite" }}>🔥</div>
-          <p className="text-pixel-sm uppercase tracking-widest text-sand-300 mb-1">REST AREA</p>
-          <p className="text-pixel-md font-black text-cream-100">모닥불 휴식처</p>
+          <p className="text-pixel-sm uppercase tracking-widest text-sand-300 mb-1">HIDEOUT</p>
+          <p className="text-pixel-md font-black text-cream-100">은신처</p>
           <p className="text-pixel-sm text-sand-300 mt-2 leading-relaxed">
-            숲 한가운데서 모닥불을 발견했다.<br/>
-            잠시 쉬어가며 체력을 회복했다.
+            바위 그늘에 몸을 숨기고 숨을 골랐다.<br/>
+            숲이 다시 잠잠해진다.
           </p>
         </div>
         <div className="px-6 pb-6 flex flex-col gap-3">
-          <div className="flex items-center gap-3 rounded-xl p-3"
-            style={{ background:"rgba(233, 148, 65, 0.08)", border:"1px solid rgba(233, 148, 65, 0.2)" }}>
-            <span className="text-pixel-md">💚</span>
-            <p className="text-pixel-sm text-ember-500 font-semibold">HP 소량 회복 (구현 예정)</p>
+          <div className="flex items-center justify-between gap-3 rounded-xl p-3"
+            style={{ background: rgba("mist500", 0.08), border:`1px solid ${rgba("mist500", 0.2)}` }}>
+            <p className="text-pixel-sm font-semibold text-mist-300">소란도</p>
+            <p className="font-mono text-pixel-sm font-black text-mist-300">
+              {alertBefore} → {alertAfter} <span className="text-earth-400">(-{gained})</span>
+            </p>
           </div>
           <button onClick={onContinue}
             className="w-full rounded-xl py-3 text-pixel-sm font-bold transition active:scale-95"
             style={{
-              background:"linear-gradient(135deg, rgba(233, 148, 65, 0.2), rgba(233, 148, 65, 0.08))",
-              border:"1.5px solid rgba(233, 148, 65, 0.5)",
-              color:PALETTE.ember500,
+              background:`linear-gradient(135deg, ${rgba("mist500", 0.2)}, ${rgba("mist500", 0.08)})`,
+              border:`1.5px solid ${rgba("mist500", 0.5)}`,
+              color:PALETTE.mist300,
             }}>
             계속 탐험하기 →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 강제 퇴각. 소란도가 100 에 닿으면 숲이 등을 떠민다.
+ *
+ * 지금은 여기서 그냥 나가는 것으로 끝난다 — 회수율 50% 와 지킬 것 1개 지정은
+ * 채집망(STEP 3)과 정산(STEP 4)이 들어온 뒤에 붙는다.
+ */
+function ForcedRetreatScreen({ area, peak, onExit }: {
+  area: ForestArea; peak: number; onExit: () => void;
+}) {
+  return (
+    <div className="relative z-10 flex flex-col items-center gap-5 max-w-sm w-full mx-4"
+      style={{ animation:"fadeInScale .45s ease both" }}>
+      <div className="w-full rounded-2xl overflow-hidden text-center"
+        style={{
+          background: rgba("shadow900", 0.9),
+          border: `2px solid ${rgba("ember700", 0.55)}`,
+          backdropFilter:"blur(16px)",
+          boxShadow: `0 0 40px ${rgba("ember700", 0.22)}`,
+        }}>
+        <div className="px-6 pt-8 pb-5" style={{ background:`linear-gradient(to bottom, ${rgba("ember700", 0.14)}, transparent)` }}>
+          <div className="text-pixel-lg mb-3" style={{ animation:"catchShakeX .6s ease" }}>🌫️</div>
+          <p className="text-pixel-sm uppercase tracking-widest text-ember-500 mb-1">FORCED RETREAT</p>
+          <p className="text-title-sm font-black text-cream-100">숲이 깨어났다</p>
+          <p className="text-pixel-sm text-sand-300 mt-2 leading-relaxed">
+            사방에서 기척이 몰려든다.<br/>
+            {area.name}에서 더 버틸 수 없다.
+          </p>
+          <p className="mt-3 font-mono text-pixel-sm text-ember-500">이번 원정 최고 소란 {peak}</p>
+        </div>
+        <div className="px-6 pb-7">
+          <button onClick={onExit}
+            data-testid="forced-retreat-exit"
+            className="w-full rounded-xl py-3 text-pixel-sm font-black transition active:scale-95"
+            style={{
+              background:`linear-gradient(135deg, ${rgba("ember700", 0.3)}, ${rgba("ember700", 0.12)})`,
+              border:`2px solid ${rgba("ember700", 0.6)}`,
+              color:PALETTE.ember500,
+            }}>
+            숲에서 빠져나간다
           </button>
         </div>
       </div>
@@ -961,11 +1045,14 @@ const RPS_CARD_STYLES: Record<RpsChoice, { border: string; shadow: string; label
   paper:    { border:PALETTE.ember500, shadow:"rgba(233, 148, 65, .35)", label:"보",  bg:"rgba(233, 148, 65, .1)" },
 };
 
-function RpsSelectScreen({ monster, area, onSelect }: {
+function RpsSelectScreen({ monster, area, alert, onSelect }: {
   monster: ReturnType<typeof pickMonster>;
   area: ForestArea;
+  alert: number;
   onSelect:(c:RpsChoice)=>void;
 }) {
+  const pct = (r: RpsResult) => Math.round(catchRateWithAlert(CATCH_RATE[r], alert) * 100);
+  const penalty = Math.round(alertBand(alert).catchPenalty * 100);
   const [hovered, setHovered] = useState<RpsChoice|null>(null);
   const choices: RpsChoice[] = ["scissors","rock","paper"];
   return (
@@ -984,9 +1071,12 @@ function RpsSelectScreen({ monster, area, onSelect }: {
           <p className="text-pixel-sm text-sand-300">Lv.{monster.level} · {TYPE_KO[monster.type ?? "normal"]??monster.type}</p>
         </div>
         <div className="ml-auto flex flex-col items-end gap-0.5 text-pixel-sm text-earth-400">
-          <span>이기면 <span className="text-moss-500 font-bold">72%</span></span>
-          <span>비기면 <span className="text-ember-500 font-bold">42%</span></span>
-          <span>지면 <span className="text-ember-500 font-bold">18%</span></span>
+          <span>이기면 <span className="text-moss-500 font-bold">{pct("win")}%</span></span>
+          <span>비기면 <span className="text-ember-500 font-bold">{pct("draw")}%</span></span>
+          <span>지면 <span className="text-ember-500 font-bold">{pct("lose")}%</span></span>
+          {penalty > 0 && (
+            <span className="text-ember-500">소란 때문에 -{penalty}%p</span>
+          )}
         </div>
       </div>
       <div className="flex gap-4 w-full">
@@ -1016,9 +1106,10 @@ function RpsSelectScreen({ monster, area, onSelect }: {
   );
 }
 
-function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catchSuccess, catchPlace, triesLeft, onRetry, onContinue, onExit }: {
+function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, alert, wildMonster, catchSuccess, catchPlace, triesLeft, onRetry, onContinue, onExit }: {
   pChoice:RpsChoice; cChoice:RpsChoice; rpsResult:RpsResult;
   phase: "rps_result"|"catch_result";
+  alert: number;
   wildMonster: ReturnType<typeof pickMonster>|null;
   catchSuccess:boolean|null; catchPlace:"storage"|"full"|null;
   triesLeft:number; onRetry:()=>void;
@@ -1027,6 +1118,8 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
   const [showComp, setShowComp] = useState(false);
   useEffect(()=>{ const t = setTimeout(()=>setShowComp(true), 700); return ()=>clearTimeout(t); },[]);
   const res = RPS_RESULT_DATA[rpsResult];
+  // 표에 적힌 확률이 아니라 실제로 굴린 확률을 적는다 — 소란도가 깎은 만큼 다르다
+  const shownRate = Math.round(catchRateWithAlert(CATCH_RATE[rpsResult], alert) * 100);
   const winnerIsPlayer = rpsResult==="win";
   const winnerIsComp   = rpsResult==="lose";
   return (
@@ -1037,7 +1130,7 @@ function RpsResultScreen({ pChoice, cChoice, rpsResult, phase, wildMonster, catc
         {phase==="catch_result" && (
           <div className={`px-6 py-4 text-center bg-gradient-to-b ${res.bg}`}>
             <p className={`text-title-md font-black ${res.color}`} style={{ animation:"numberPop .5s ease both" }}>{res.text}</p>
-            <p className="text-pixel-sm text-sand-300 mt-0.5">{res.desc}</p>
+            <p className="text-pixel-sm text-sand-300 mt-0.5">포획 확률 {shownRate}%</p>
           </div>
         )}
         <div className="flex items-center gap-3 px-6 py-5 justify-center">
@@ -1174,6 +1267,15 @@ export default function ForestPage() {
   const [currentNodeId, setCurrentNodeId] = useState<string>("n0");
   const [pendingNodeId, setPendingNodeId] = useState<string|null>(null);
 
+  /**
+   * 소란도 — 이 탐험이 이월하는 유일한 자원. 구역을 나가면 0 으로 돌아간다.
+   * 노드를 밟은 대가는 판정이 끝난 뒤(markCleared)에 붙고, 그 노드의 수확 배수는
+   * 붙기 전 값으로 계산한다.
+   */
+  const [alert, setAlert] = useState(0);
+  /** 이번 원정에서 가장 높았던 소란. 정산 화면이 "최고 긴장"으로 쓴다(STEP 5) */
+  const [alertPeak, setAlertPeak] = useState(0);
+
   // 기존 전투/드롭 상태
   const [wildMonster, setWildMonster] = useState<ReturnType<typeof pickMonster>|null>(null);
   const [isElite, setIsElite]         = useState(false);
@@ -1218,13 +1320,29 @@ export default function ForestPage() {
     return () => clearTimeout(t);
   }, [phase, pendingNodeId, area]);
 
-  // 현재 노드를 클리어 처리. handleEnterNode보다 먼저 선언해야 한다 —
-  // 뒤에 두면 선언 전 참조(TDZ)가 되어, 렌더 중 호출되는 경로가 하나라도 생기면 즉시 터진다.
-  const markCleared = useCallback(() => {
+  /**
+   * 현재 노드를 클리어 처리하고 그 노드의 소란 증감을 붙인다. 판정이 끝난 시점이다.
+   *
+   * handleEnterNode 보다 먼저 선언해야 한다 — 뒤에 두면 선언 전 참조(TDZ)가 되어,
+   * 렌더 중 호출되는 경로가 하나라도 생기면 즉시 터진다.
+   *
+   * 이미 cleared 인 노드에는 다시 붙이지 않는다. 채집 실패처럼 한 노드에서
+   * markCleared 가 두 번 불릴 수 있는 경로가 있어서, 안 막으면 소란이 두 번 오른다.
+   */
+  const markCleared = useCallback((): number => {
+    const node = dungeonNodes.find(n => n.id === currentNodeId);
+    if (!node || node.cleared) return alert;
+
     setDungeonNodes(prev => prev.map(n =>
       n.id === currentNodeId ? { ...n, cleared: true } : n
     ));
-  }, [currentNodeId]);
+
+    const next = clampAlert(alert + NODE_ALERT[node.type]);
+    setAlert(next);
+    setAlertPeak(peak => Math.max(peak, next));
+    // 소란 상태는 아직 반영 전이라, 이 판정의 결과를 보고 갈라야 하는 쪽은 이 값을 쓴다
+    return next;
+  }, [dungeonNodes, currentNodeId, alert]);
 
   // 노드 도착 후 진입
   const handleEnterNode = useCallback(() => {
@@ -1235,15 +1353,17 @@ export default function ForestPage() {
     if (node.type === "event") { setPhase("event"); return; }
     if (node.type === "material") {
       const collected: {id:string;count:number}[] = [];
-      const d1 = rollDrop(area); if (d1) collected.push(d1);
-      const d2 = rollDrop(area); if (d2 && d2.id !== d1?.id) collected.push(d2);
+      const d1 = rollDrop(area, alert); if (d1) collected.push(d1);
+      const d2 = rollDrop(area, alert); if (d2 && d2.id !== d1?.id) collected.push(d2);
       if (collected.length > 0) {
         collected.forEach(d => addMaterial(d.id, d.count));
         setDrops(collected);
         setPhase("item_drop");
       } else {
-        markCleared();
-        setPhase("dungeon");
+        // 굴림이 다 빗나가도 발자국은 남는다 — 소란은 똑같이 오르고, 그 때문에
+        // 강제 퇴각선을 넘길 수도 있다
+        const nextAlert = markCleared();
+        setPhase(isForcedRetreat(nextAlert) ? "forced_retreat" : "dungeon");
       }
       return;
     }
@@ -1251,7 +1371,7 @@ export default function ForestPage() {
       const elite = node.type === "elite" || node.type === "boss";
       const mon = pickMonster(area, elite);
       const collected: {id:string;count:number}[] = [];
-      const d = rollDrop(area); if (d) { collected.push(d); collected.forEach(dd => addMaterial(dd.id, dd.count)); }
+      const d = rollDrop(area, alert); if (d) { collected.push(d); collected.forEach(dd => addMaterial(dd.id, dd.count)); }
       setDrops(collected);
       setWildMonster(mon);
       setIsElite(elite);
@@ -1260,16 +1380,15 @@ export default function ForestPage() {
       setPhase("encounter");
       return;
     }
-  }, [dungeonNodes, currentNodeId, area, addMaterial, addToDexSeen, markCleared]);
+  }, [dungeonNodes, currentNodeId, area, alert, addMaterial, addToDexSeen, markCleared]);
 
   // 노드 처리 완료 → 맵으로 복귀 or 던전 완료
   const returnToMap = useCallback(() => {
-    markCleared();
+    const nextAlert = markCleared();
     const node = dungeonNodes.find(n => n.id === currentNodeId);
-    if (node?.type === "boss") {
-      setPhase("boss_cleared");
-      return;
-    }
+    // 주인을 잡았으면 소란이 얼마든 완주다 — 어차피 여기서 탐험이 끝난다
+    if (node?.type === "boss") { setPhase("boss_cleared"); return; }
+    if (isForcedRetreat(nextAlert)) { setPhase("forced_retreat"); return; }
     // 다음 노드가 없으면 완료
     if (!node?.nextIds?.length) { setPhase("boss_cleared"); return; }
     setPhase("dungeon");
@@ -1282,7 +1401,7 @@ export default function ForestPage() {
     setPhase("rps_result");
     rpsTimerRef.current = setTimeout(()=>{
       rpsTimerRef.current = null;
-      const ok = Math.random()<CATCH_RATE[res];
+      const ok = Math.random()<catchRateWithAlert(CATCH_RATE[res], alert);
       setCatchSuccess(ok);
       if (ok&&wildMonster) {
         addToDexCaught(wildMonster.id);
@@ -1302,6 +1421,8 @@ export default function ForestPage() {
     setWildMonster(null); setPChoice(null); setCChoice(null); setRpsResult(null);
     setCatchSuccess(null); setCatchPlace(null); setDrops([]); setIsElite(false);
     setCatchTriesLeft(CATCH_ATTEMPTS);
+    // 소란은 숲을 나가면 가라앉는다. 구역 사이로는 이월하지 않는다
+    setAlert(0); setAlertPeak(0);
   };
 
   const totalPotions = Object.values(potions).reduce((a,b)=>a+b, 0);
@@ -1315,8 +1436,12 @@ export default function ForestPage() {
       <style>{FOREST_STYLES}</style>
       {/* 탐험에 들어가면 그 구역이, 선택 화면에서는 지금 보고 있는 구역이 배경이 된다.
           안에 들어간 뒤로는 UI 가 화면 전체에 흩어져서 원화를 한 겹 눌러야 읽힌다. */}
-      <ForestBackdrop tier={area?.id ?? selectedTier} dim={phase !== "enter"}/>
-      {area && <Particles area={area}/>}
+      <ForestBackdrop
+        tier={area?.id ?? selectedTier}
+        dim={phase !== "enter"}
+        tint={area ? alertBand(alert).tint : undefined}
+      />
+      {area && <Particles area={area} density={alertBand(alert).particleMul}/>}
 
       {/* 상단 UI — 구역 선택 화면에서는 스크림 없는 원화 위에 바로 뜬다.
           얕은 숲 캔버스 상단이 밝아서 반투명 판으로는 글자가 뜬다. */}
@@ -1326,6 +1451,7 @@ export default function ForestPage() {
           {phase==="enter" ? "← 베이스캠프" : "← 탈출"}
         </button>
         <div className="flex items-center gap-2">
+          {area && phase !== "enter" && <AlertMeter value={alert}/>}
           {area && (
             <div className="rounded-xl px-3 py-1.5 text-pixel-sm font-bold backdrop-blur"
               style={{ background: rgba("shadow900", 0.85), border:`1px solid ${area.borderGlow}`, color: area.accentColor }}>
@@ -1374,6 +1500,7 @@ export default function ForestPage() {
             nodes={dungeonNodes}
             currentNodeId={currentNodeId}
             area={area}
+            alert={alert}
             onSelectNode={handleSelectNode}
             onExit={exitDungeon}
           />
@@ -1387,9 +1514,14 @@ export default function ForestPage() {
           <NodeArrivedScreen node={currentNode} area={area} onContinue={handleEnterNode}/>
         )}
 
-        {/* ── REST ── */}
+        {/* ── 은신처 ── */}
         {phase==="rest" && area && (
-          <RestScreen area={area} onContinue={returnToMap}/>
+          <RestScreen
+            area={area}
+            alertBefore={alert}
+            alertAfter={clampAlert(alert + NODE_ALERT.rest)}
+            onContinue={returnToMap}
+          />
         )}
 
         {/* ── EVENT ── */}
@@ -1412,14 +1544,14 @@ export default function ForestPage() {
 
         {/* ── RPS SELECT ── */}
         {phase==="rps_select" && wildMonster && area && (
-          <RpsSelectScreen monster={wildMonster} area={area} onSelect={handleRps}/>
+          <RpsSelectScreen monster={wildMonster} area={area} alert={alert} onSelect={handleRps}/>
         )}
 
         {/* ── RPS / CATCH RESULT ── */}
         {(phase==="rps_result"||phase==="catch_result") && pChoice && cChoice && rpsResult && (
           <RpsResultScreen
             pChoice={pChoice} cChoice={cChoice} rpsResult={rpsResult}
-            phase={phase as "rps_result"|"catch_result"}
+            phase={phase as "rps_result"|"catch_result"} alert={alert}
             wildMonster={wildMonster} catchSuccess={catchSuccess} catchPlace={catchPlace}
             triesLeft={catchTriesLeft}
             onRetry={() => { setPChoice(null); setCChoice(null); setRpsResult(null); setCatchSuccess(null); setPhase("rps_select"); }}
@@ -1430,6 +1562,11 @@ export default function ForestPage() {
         {/* ── BOSS CLEARED ── */}
         {phase==="boss_cleared" && area && (
           <BossClearedScreen area={area} onExit={() => { exitDungeon(); navigate("/"); }}/>
+        )}
+
+        {/* ── 강제 퇴각 ── */}
+        {phase==="forced_retreat" && area && (
+          <ForcedRetreatScreen area={area} peak={alertPeak} onExit={exitDungeon}/>
         )}
       </div>
     </div>

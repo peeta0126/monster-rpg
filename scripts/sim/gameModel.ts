@@ -11,6 +11,10 @@ import {
 } from "../../src/shared/floorTable";
 import { AREA_MATERIAL_POOL, rollBattleDrop } from "../../src/shared/dropTables";
 import { FOREST_AREAS, type ForestArea } from "../../src/camp/forest/areas";
+import type { ForestNodeType } from "../../src/camp/forest/nodes";
+import {
+  NODE_ALERT, applyMaterialMultiplier, clampAlert, isForcedRetreat,
+} from "../../src/camp/forest/alert";
 import {
   applyDamage, applyStatusEffect, calculateDamage, checkStatusEffects,
   benchExpShare, createBattleMonster, gainExp, getAIAction, getTypeMultiplier, isFainted,
@@ -308,12 +312,12 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
 
 const CATCH_RATE = { win: 0.72, draw: 0.42, lose: 0.18 };
 
-function rollDrop(area: ForestArea): { id: string; count: number } | null {
+function rollDrop(area: ForestArea, alert: number): { id: string; count: number } | null {
   if (Math.random() > area.materialRate) return null;
   const pool = AREA_MATERIAL_POOL[area.id] ?? AREA_MATERIAL_POOL.shallow;
   const id = pool[Math.floor(Math.random() * pool.length)];
-  const count = 1 + area.materialBonus + (Math.random() < 0.3 ? 1 : 0);
-  return { id, count };
+  const base = 1 + area.materialBonus + (Math.random() < 0.3 ? 1 : 0);
+  return { id, count: applyMaterialMultiplier(base, alert) };
 }
 
 function pickForestMonster(area: ForestArea, elite: boolean): Monster {
@@ -336,31 +340,51 @@ export interface ForestRunResult {
   drops: { id: string; count: number }[];
   encounters: Monster[];
   nodes: number;
+  /** 탐험이 끝났을 때의 소란도 */
+  alert: number;
+  /** 이번 탐험의 최고 소란 */
+  alertPeak: number;
+  /** 소란 100 에 걸려 쫓겨났는가 */
+  forcedRetreat: boolean;
 }
 
-/** 숲 탐험 1회: 입구 → 보스까지 한 경로(깊이당 노드 1개)를 지난다 */
+/**
+ * 숲 탐험 1회: 입구 → 주인까지 한 경로(깊이당 노드 1개)를 지난다.
+ *
+ * 노드 가중치 표는 아직 ForestPage.tsx 와 여기 두 곳에 있다 — 노드 개편(STEP 2)에서
+ * 생성기를 따로 빼면서 합친다. 소란도 표(NODE_ALERT·배수)는 이미 한 벌이라 여기서
+ * 그대로 불러 쓴다. 사본을 만들면 시뮬이 게임이 아니라 사본을 잰다.
+ */
 export function runForest(area: ForestArea): ForestRunResult {
   const totalCols = 6 + Math.floor(Math.random() * 3);
   const maxDepth = totalCols - 1;
   const drops: { id: string; count: number }[] = [];
   const encounters: Monster[] = [];
+  let alert = 0;
+  let alertPeak = 0;
+  let forcedRetreat = false;
 
   for (let depth = 1; depth <= maxDepth; depth++) {
     const p = depth / maxDepth;
-    const type = depth === maxDepth ? "boss" : weightedPick<string>(
+    const type = depth === maxDepth ? "boss" : weightedPick<ForestNodeType>(
       p < 0.35 ? [["battle", 4], ["material", 3], ["event", 2], ["rest", 1]] :
       p < 0.65 ? [["battle", 3], ["material", 3], ["event", 2], ["rest", 2]] :
                  [["battle", 3], ["material", 2], ["event", 2], ["rest", 2], ["elite", 3]],
     );
+    // 수확 배수는 이 노드를 밟기 전 소란도로 계산한다(게임과 같은 순서)
     if (type === "material") {
-      const d1 = rollDrop(area); if (d1) drops.push(d1);
-      const d2 = rollDrop(area); if (d2 && d2.id !== d1?.id) drops.push(d2);
+      const d1 = rollDrop(area, alert); if (d1) drops.push(d1);
+      const d2 = rollDrop(area, alert); if (d2 && d2.id !== d1?.id) drops.push(d2);
     } else if (type === "battle" || type === "elite" || type === "boss") {
-      const d = rollDrop(area); if (d) drops.push(d);
+      const d = rollDrop(area, alert); if (d) drops.push(d);
       encounters.push(pickForestMonster(area, type === "elite" || type === "boss"));
     }
+
+    alert = clampAlert(alert + NODE_ALERT[type]);
+    alertPeak = Math.max(alertPeak, alert);
+    if (isForcedRetreat(alert)) { forcedRetreat = true; break; }
   }
-  return { drops, encounters, nodes: maxDepth };
+  return { drops, encounters, nodes: maxDepth, alert, alertPeak, forcedRetreat };
 }
 
 /** 가위바위보 포획 시도 1회 (플레이어는 상대 수를 알 수 없으므로 승/무/패가 균등) */
