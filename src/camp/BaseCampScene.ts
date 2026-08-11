@@ -14,32 +14,17 @@ import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campD
 import type { DialogueEntry } from "./campDialogues";
 import {
   CAMP_COLLISION_BOXES, CAMP_PROP_BOXES, CAMP_MAP_W, CAMP_MAP_H,
-  PLAYER_BODY, PLAYER_BODY_OFFSET, PLAYER_SCALE, NPC_BODY,
+  CAMP_INTERACTIONS, PLAYER_BODY, PLAYER_BODY_OFFSET, PLAYER_SCALE, NPC_BODY,
+  footYFromSpriteY, safeSpawn,
+  type CampInteraction,
 } from "./campCollision";
 import {
   isCollisionDebugOn, onCollisionDebugChange, bindCollisionDebugKey, DEBUG_LINE_HEX,
 } from "../shared/collisionDebug";
 
-// ─── 맵 좌표 (basecamp-bg.png 1536×2730 기준) ─────────────────────────────────
-const FOREST_X = 1500,
-  FOREST_Y = 1900;
-const HOUSE_X = 794,
-  HOUSE_Y = 1080;
-const HOUSE_DOOR_Y = HOUSE_Y + 135;
-const TOWER_X = 278,
-  TOWER_Y = 1010;
-
-/**
- * 탑 판정.
- *
- * 예전에는 (278, 1110) 반경 90 이었다. 아치 밑으로 걸어 들어갈 수 있게 되면서
- * "가까이 갈수록 E 안내가 사라지는" 구간이 350px 생겼다 — 판정점이 아치보다 한참
- * 아래라서다. 아치 통로 한가운데로 올리고, 길에서 아치 밑까지 한 번에 덮게 넓혔다.
- *
- * 반경이 커도 바로스를 가리지는 않는다. keydown 핸들러가 `dTower <= dNearestNpc`
- * 일 때만 탑을 고르므로, 바로스 옆에서는 언제나 바로스가 이긴다.
- */
-const TOWER_INTERACT = { x: 285, y: 950, radius: 300 };
+// ─── 맵 좌표 ──────────────────────────────────────────────────────────────────
+// 탑·숲·집의 판정 좌표와 복귀 좌표는 campCollision.ts 의 CAMP_INTERACTIONS 한 벌뿐이다.
+// 여기 숫자를 다시 적지 말 것 — 충돌 형상과 같이 움직여야 하는 값이라 거기 있다.
 
 const CAM_ZOOM = 0.5;
 const NPC_DISPLAY_HEIGHT = 192;   // 플레이어(160) × 1.2배
@@ -95,6 +80,8 @@ export default class BaseCampScene extends Phaser.Scene {
   private debugGfx?: Phaser.GameObjects.Graphics;
   private playerBodyGfx?: Phaser.GameObjects.Graphics;
   private cleanupDebug?: () => void;
+  /** 근접 안내. 하나만 두고 매 프레임 플레이어를 따라 옮긴다. */
+  private hint?: Phaser.GameObjects.Text;
 
   constructor() {
     super("BaseCampScene");
@@ -150,11 +137,13 @@ export default class BaseCampScene extends Phaser.Scene {
     // ─────────────────────────────────────────────────────────────────────────────
     // 플레이어
     // ─────────────────────────────────────────────────────────────────────────────
-    const initPos = getCampPosition();
+    // 벽 안에서 시작하면 그대로 갇힌다 — 정적 바디는 이미 겹쳐 있는 것을 밀어내지 않는다.
+    // 형상을 고치는 중에 실제로 걸렸다. 들어올 자리는 테스트가 지키지만, 여기서도 한 번 본다.
+    const initPos = safeSpawn(getCampPosition());
     this.player = this.physics.add.sprite(initPos.x, initPos.y, "player-down");
     this.player.setCollideWorldBounds(true);
     this.player.setScale(PLAYER_SCALE);
-    this.player.setDepth(initPos.y);
+    this.player.setDepth(footYFromSpriteY(initPos.y));
 
     // 바디는 발밑에 둔다. 예전에는 스프라이트 한가운데(offset 27,27)에 있어서,
     // 벽 앞에 서면 발이 화단·좌판 안으로 80px 씩 파고들어 있었다.
@@ -177,38 +166,25 @@ export default class BaseCampScene extends Phaser.Scene {
     };
 
     // ── E 키 ────────────────────────────────────────────────────────────────────
+    // 판정은 findTarget 하나로만 한다. 예전에는 여기와 근접 안내가 각자 조건을 갖고
+    // 있어서 "E: 숲 입장" 이 떠 있는데 E 가 안 먹는 구간이 30px 씩 있었다.
     keyboard.on("keydown-E", safeHandler(this, () => {
-      const px = this.player.x,
-        py = this.player.y;
-      const nearestNpc = this.getNearestNpc(px, py);
-      const dNearestNpc = nearestNpc
-        ? Phaser.Math.Distance.Between(px, py, nearestNpc.x, nearestNpc.y)
-        : Infinity;
-      const dTower = Phaser.Math.Distance.Between(px, py, TOWER_INTERACT.x, TOWER_INTERACT.y);
-      const dForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
-      const dHouse = Phaser.Math.Distance.Between(
-        px,
-        py,
-        HOUSE_X,
-        HOUSE_DOOR_Y,
-      );
+      const target = this.findTarget();
+      if (!target) return;
+      if (target.kind === "npc") { this.showNpcDialogue(target.npc); return; }
 
-      // 탑 판정과 NPC 상호작용 범위가 겹치는 구역에서는 더 가까운 쪽을 우선한다
-      if (dTower < TOWER_INTERACT.radius && dTower <= dNearestNpc) {
-        setCampPosition(TOWER_X, TOWER_Y + 120);
+      const { spot } = target;
+      setCampPosition(spot.returnAt.x, spot.returnAt.y);
+      if (spot.id === "tower") {
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
           from: "basecamp",
           portalId: "dungeon-entrance-1",
           isCatchZone: false,
           floor: 1,
         });
-      } else if (nearestNpc) {
-        this.showNpcDialogue(nearestNpc);
-      } else if (dForest < 130) {
-        setCampPosition(FOREST_X, FOREST_Y + 80);
+      } else if (spot.id === "forest") {
         gameEvents.emit(GAME_EVENT.ENTER_FOREST);
-      } else if (dHouse < 90) {
-        setCampPosition(HOUSE_X, HOUSE_DOOR_Y + 60);
+      } else {
         gameEvents.emit(GAME_EVENT.ENTER_HOUSING);
       }
     }));
@@ -318,6 +294,34 @@ export default class BaseCampScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * 지금 E 로 할 수 있는 것. 범위 안에서 **가장 가까운** 하나를 고른다.
+   *
+   * 우선순위 규칙이 한 군데에만 있어야 근접 안내와 E 가 어긋나지 않는다. 거리 비교가
+   * 곧 규칙이라 판정 원이 겹쳐도 예측이 된다 — 오리온 옆에 서면 오리온, 숲 쪽으로
+   * 두 걸음 가면 숲이다.
+   */
+  private findTarget():
+    | { kind: "npc"; npc: BaseCampNpcInstance; dist: number }
+    | { kind: "spot"; spot: CampInteraction; dist: number }
+    | null {
+    const px = this.player.x, py = this.player.y;
+    let best:
+      | { kind: "npc"; npc: BaseCampNpcInstance; dist: number }
+      | { kind: "spot"; spot: CampInteraction; dist: number }
+      | null = null;
+
+    const npc = this.getNearestNpc(px, py);
+    if (npc) {
+      best = { kind: "npc", npc, dist: Phaser.Math.Distance.Between(px, py, npc.x, npc.y) };
+    }
+    for (const spot of CAMP_INTERACTIONS) {
+      const dist = Phaser.Math.Distance.Between(px, py, spot.x, spot.y);
+      if (dist <= spot.radius && (!best || dist < best.dist)) best = { kind: "spot", spot, dist };
+    }
+    return best;
+  }
+
   private getNearestNpc(x: number, y: number): BaseCampNpcInstance | null {
     let nearest: BaseCampNpcInstance | null = null;
     let nearestDistance = NPC_INTERACT_DISTANCE;
@@ -405,9 +409,7 @@ export default class BaseCampScene extends Phaser.Scene {
     }
 
     // ── depth: 발끝 y = depth → 건물·NPC 뒤/앞 자동 처리 ──────────────────────
-    // NPC 는 원점이 (0.5, 1) 이라 발끝이 곧 depth 다. 플레이어만 스프라이트 중심을
-    // 쓰면 기준이 어긋나 발이 NPC 앞에 있는데도 뒤로 그려진다.
-    this.player.setDepth(this.player.y + (64 / 2) * PLAYER_SCALE);
+    this.player.setDepth(footYFromSpriteY(this.player.y));
 
     // ── 개발자 모드: 플레이어 발밑 바디 ──────────────────────────────────────
     if (this.playerBodyGfx) {
@@ -420,26 +422,25 @@ export default class BaseCampScene extends Phaser.Scene {
     }
 
     // ── 근접 힌트 ────────────────────────────────────────────────────────────────
-    const px = this.player.x,
-      py = this.player.y;
-    const dTower = Phaser.Math.Distance.Between(px, py, TOWER_INTERACT.x, TOWER_INTERACT.y);
-    const dForest = Phaser.Math.Distance.Between(px, py, FOREST_X, FOREST_Y);
-    const dHouse = Phaser.Math.Distance.Between(px, py, HOUSE_X, HOUSE_DOOR_Y);
-    const nearestNpc = this.getNearestNpc(px, py);
-    const dNearestNpc = nearestNpc
-      ? Phaser.Math.Distance.Between(px, py, nearestNpc.x, nearestNpc.y)
-      : Infinity;
-    // keydown-E 핸들러와 동일한 우선순위: 탑이 더 가깝거나 같은 거리일 때만 탑 우선
-    const towerWins = dTower < TOWER_INTERACT.radius && dTower <= dNearestNpc;
+    // 안내는 하나뿐이고, 판정은 E 키와 같은 findTarget 을 쓴다. 예전에는 대상마다
+    // 텍스트를 따로 만들고 지웠는데, 만든 자리에 그대로 못박혀 있어서 걸어가면
+    // 안내만 월드에 남아 떠다녔다. 매 프레임 플레이어 위로 옮긴다.
+    this.updateHint(this.findTarget());
+  }
 
-    const ph = this.children.getByName("portalHint");
-    const fh = this.children.getByName("forestHint");
-    const hh = this.children.getByName("houseHint");
-    const nh = this.children.getByName("npcHint");
+  private updateHint(target: ReturnType<BaseCampScene["findTarget"]>) {
+    const label = target
+      ? target.kind === "npc" ? target.npc.name : target.spot.label
+      : null;
 
-    if (nearestNpc && !towerWins && !nh) {
-      this.add
-        .text(px - 46, py - 80, `E: ${nearestNpc.name}`, {
+    if (!label) {
+      this.hint?.destroy();
+      this.hint = undefined;
+      return;
+    }
+    if (!this.hint) {
+      this.hint = this.add
+        .text(0, 0, "", {
           fontSize: "24px",
           fontFamily: PIXEL_FONT,
           resolution: textResolution(),
@@ -447,50 +448,12 @@ export default class BaseCampScene extends Phaser.Scene {
           backgroundColor: withAlpha("shadow900", 0.93),
           padding: { x: 6, y: 3 },
         })
-        .setName("npcHint")
+        .setOrigin(0.5, 1)
+        .setName("interactHint")
         .setDepth(9999);
-    } else if ((!nearestNpc || towerWins) && nh) nh.destroy();
-
-    if (towerWins && !ph) {
-      this.add
-        .text(px - 46, py - 80, "E: 탑 입장", {
-          fontSize: "24px",
-          fontFamily: PIXEL_FONT,
-          resolution: textResolution(),
-          color: PALETTE.sand200,
-          backgroundColor: withAlpha("shadow900", 0.93),
-          padding: { x: 6, y: 3 },
-        })
-        .setName("portalHint")
-        .setDepth(9999);
-    } else if (!towerWins && ph) ph.destroy();
-
-    if (dForest < 130 && !fh) {
-      this.add
-        .text(px - 46, py - 80, "E: 숲 입장", {
-          fontSize: "24px",
-          fontFamily: PIXEL_FONT,
-          resolution: textResolution(),
-          color: PALETTE.sand200,
-          backgroundColor: withAlpha("shadow900", 0.93),
-          padding: { x: 6, y: 3 },
-        })
-        .setName("forestHint")
-        .setDepth(9999);
-    } else if (dForest >= 160 && fh) fh.destroy();
-
-    if (dHouse < 90 && !hh) {
-      this.add
-        .text(px - 46, py - 80, "E: 집 입장", {
-          fontSize: "24px",
-          fontFamily: PIXEL_FONT,
-          resolution: textResolution(),
-          color: PALETTE.sand200,
-          backgroundColor: withAlpha("shadow900", 0.93),
-          padding: { x: 6, y: 3 },
-        })
-        .setName("houseHint")
-        .setDepth(9999);
-    } else if (dHouse >= 120 && hh) hh.destroy();
+    }
+    const text = `E: ${label}`;
+    if (this.hint.text !== text) this.hint.setText(text);
+    this.hint.setPosition(this.player.x, this.player.y - 60);
   }
 }

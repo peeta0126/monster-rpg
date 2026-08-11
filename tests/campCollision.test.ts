@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import sharp from "sharp";
 import {
-  CAMP_COLLISION_BOXES, CAMP_MAP_W, CAMP_MAP_H,
-  bodyYFromSpriteY, hitsWall, reachableCells,
+  CAMP_COLLISION_BOXES, CAMP_MAP_W, CAMP_MAP_H, CAMP_INTERACTIONS,
+  bodyYFromSpriteY, footYFromSpriteY, hitsWall, reachableCells,
 } from "../src/camp/campCollision";
 import { getCampPosition } from "../src/camp/campPositionStore";
 import { GROUND_MASK_SOURCE } from "../src/camp/campGroundMask";
@@ -57,20 +58,36 @@ test("충돌 박스가 지도 밖으로 크게 튀어나가지 않는다", () =>
 });
 
 /**
- * 상호작용 지점. 좌표와 사거리는 BaseCampScene 의 keydown-E 핸들러와 같아야 한다.
- * 여기 숫자를 고칠 일이 생기면 씬도 같이 고친 것인지 확인할 것.
+ * 상호작용 지점. 탑·숲·집은 CAMP_INTERACTIONS 한 벌에서 그대로 가져온다 —
+ * 예전에는 여기 숫자를 베껴 두고 "씬도 같이 고쳤는지 확인할 것"이라고 적어 뒀는데,
+ * 그건 표가 두 벌이라는 뜻이었다. NPC 는 씬이 스프라이트와 함께 들고 있어 여기 적는다.
  */
-const INTERACTIONS = [
-  { label: "탑",     x: 285,  y: 950,  radius: 300 },
-  { label: "숲",     x: 1500, y: 1900, radius: 130 },
-  { label: "집",     x: 794,  y: 1215, radius: 90 },
+const NPC_SPOTS = [
   { label: "바로스", x: 430,  y: 1200, radius: 160 },
   { label: "오리온", x: 1090, y: 1950, radius: 160 },
 ];
 
-for (const spot of INTERACTIONS) {
+for (const spot of [...CAMP_INTERACTIONS.map((i) => ({ ...i, label: i.id })), ...NPC_SPOTS]) {
   test(`${spot.label} 상호작용 범위 안까지 걸어갈 수 있다`, () => {
     assert.ok(canStandWithin(spot, spot.radius), `${spot.label}(${spot.x}, ${spot.y}) 에 닿지 못한다`);
+  });
+}
+
+/**
+ * 다른 화면에서 돌아왔을 때 서는 자리.
+ *
+ * 예전에는 호출부에서 `FOREST_Y + 80` 처럼 즉석에서 더했고, 숲의 결과는 수풀 한가운데라
+ * **벽 안에서 시작**했다. 좌표를 표로 옮긴 김에 여기서 못 박는다.
+ */
+for (const spot of CAMP_INTERACTIONS) {
+  test(`${spot.id} 에서 돌아온 자리가 벽 안이 아니다`, () => {
+    const by = bodyYFromSpriteY(spot.returnAt.y);
+    assert.equal(
+      hitsWall(spot.returnAt.x, by), false,
+      `${spot.id} 의 returnAt(${spot.returnAt.x}, ${spot.returnAt.y}) 이 벽 안이다`,
+    );
+    const ok = reached.some((p) => Math.hypot(p.x - spot.returnAt.x, p.y - by) <= STEP * 1.5);
+    assert.ok(ok, `${spot.id} 의 returnAt 에서 걸어 나올 수 없다`);
   });
 }
 
@@ -108,15 +125,17 @@ for (const spot of MUST_NOT_REACH) {
  * 보이는 자리다. 예전에는 여기를 통째로 막아 놔서 나무 앞에서 벽처럼 멈췄다.
  *
  * 아래 좌표는 전부 전경이 덮고 있는 곳이고, 전부 걸어 들어갈 수 있어야 한다.
+ * 각 자리의 가시성은 34~68% 로 재서 골랐다 — 몸이 반쯤 가려지되 사라지지는 않는,
+ * 이 연출이 성립하는 구간이다. 기준을 조이다 여기가 막히면 연출이 없어진 것이다.
  */
 const MUST_REACH_BEHIND = [
-  { label: "탑 아치 밑",     x:  285, y:  800 },
-  { label: "남쪽 아치 밑",   x:  760, y: 2200 },
-  { label: "아치 장미덩굴",  x:  930, y: 2300 },
-  { label: "숲 가장자리",    x: 1120, y: 2100 },
-  { label: "벚나무 아래",    x: 1260, y: 1980 },
-  { label: "서쪽 수풀 가",   x:  210, y: 1150 },
-  { label: "우물 처마",      x:  330, y: 1400 },
+  { label: "탑 아치 밑",     x:  280, y:  780 },
+  { label: "남쪽 아치 밑",   x:  780, y: 2240 },
+  { label: "아치 오른쪽 수풀", x: 1040, y: 2280 },
+  { label: "숲 가장자리",    x: 1120, y: 2120 },
+  { label: "벚나무 아래",    x: 1220, y: 1980 },
+  { label: "서쪽 수풀 가",   x:  240, y: 1260 },
+  { label: "우물 처마",      x:  320, y: 1380 },
 ];
 
 for (const spot of MUST_REACH_BEHIND) {
@@ -125,6 +144,81 @@ for (const spot of MUST_REACH_BEHIND) {
     assert.ok(ok, `${spot.label}(${spot.x}, ${spot.y}) 앞에서 막힌다 — 가려지는 연출이 안 나온다`);
   });
 }
+
+/**
+ * 이 파일에서 제일 중요한 검사다.
+ *
+ * "여기는 들어갈 수 있다 / 없다"만 보다가 놓친 게 있었다 — **들어갈 수는 있는데
+ * 들어가면 몸이 화면에서 사라지는 자리.** 우물 앞 돌턱에서 가시성이 0% 였고, 닿는
+ * 칸의 4%가 10% 미만이었는데 테스트 35개가 전부 통과했다. 눈으로도 안 잡힌다 —
+ * 캡처는 배경 위에 상자를 그릴 뿐 플레이어를 세워 보지 않기 때문이다.
+ *
+ * 그래서 실제로 세워 본다. 전경 레이어 알파와 스프라이트를 겹쳐 보이는 픽셀을 센다.
+ * 아치 밑처럼 **지나가는** 자리는 생성기가 TUNNELS 로 빼 두고 여기서도 뺀다.
+ */
+test("걸어 닿는 어느 칸에서도 플레이어가 사라지지 않는다", async () => {
+  const { display, bodyToSpriteY } = GROUND_MASK_SOURCE.sprite;
+  const root = path.resolve(import.meta.dirname, "..");
+
+  const fg = await sharp(path.join(root, GROUND_MASK_SOURCE.file))
+    .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width: W, height: H, channels: C } = fg.info;
+
+  const pl = await sharp(path.join(root, "public/assets/player/player-down.png"))
+    .resize(display, display, { kernel: "nearest" })
+    .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const half = display / 2;
+  const opaque: Array<[number, number]> = [];
+  for (let y = 0; y < display; y++) {
+    for (let x = 0; x < display; x++) {
+      // 스프라이트 좌표 → 발밑 바디 중심 기준 상대 좌표
+      if (pl.data[(y * display + x) * pl.info.channels + 3] > 32) {
+        opaque.push([x - half, y - half - bodyToSpriteY]);
+      }
+    }
+  }
+
+  const inTunnel = (x: number, y: number) =>
+    GROUND_MASK_SOURCE.tunnels.some(
+      (t) => x >= t.x && x < t.x + t.w && y >= t.y && y < t.y + t.h,
+    );
+
+  /**
+   * 이만큼은 보여야 한다.
+   *
+   * 생성기의 바닥 기준선(15%)보다 일부러 낮게 잡았다. 생성기는 픽셀 단위로 자르지만
+   * 열림/막힘은 16px 칸 단위라, 칸 안에 한 점만 통과해도 그 칸이 열린다 — 몇 %p 는
+   * 반올림으로 빠질 수 있다. 그 여유보다 낮게 두면 여기서 걸리는 건 반올림이 아니라
+   * 진짜 구멍(소품 박스가 빠졌거나 TUNNELS 가 너무 넓거나)이다.
+   */
+  const MIN = 0.12;
+
+  let worst = { x: 0, y: 0, ratio: 1 };
+  for (const p of reached) {
+    if (inTunnel(p.x, p.y)) continue;
+    let visible = 0, total = 0;
+    for (const [dx, dy] of opaque) {
+      const x = p.x + dx, y = p.y + dy;
+      if (x < 0 || x >= W || y < 0 || y >= H) continue;
+      total++;
+      if (fg.data[(y * W + x) * C + 3] <= GROUND_MASK_SOURCE.alphaCutoff) visible++;
+    }
+    const ratio = total ? visible / total : 1;
+    if (ratio < worst.ratio) worst = { x: p.x, y: p.y, ratio };
+  }
+
+  assert.ok(
+    worst.ratio >= MIN,
+    `(${worst.x}, ${worst.y}) 에서 플레이어가 ${(worst.ratio * 100).toFixed(0)}% 밖에 안 보인다. ` +
+    "지나가는 자리라면 gen-camp-collision.mjs 의 TUNNELS 에, 아니면 형상을 고칠 것",
+  );
+});
+
+/** 생성기는 TS 를 못 읽어 이 값을 상수로 적어 둔다. 어긋나면 마스크 전체가 밀린다. */
+test("생성기가 쓴 스프라이트 규격이 씬과 같다", () => {
+  assert.equal(GROUND_MASK_SOURCE.sprite.bodyToSpriteY, bodyYFromSpriteY(0));
+  assert.equal(footYFromSpriteY(0) > bodyYFromSpriteY(0), true, "발끝이 바디 중심보다 아래여야 한다");
+});
 
 /**
  * 지형 마스크는 배경 그림에서 뽑은 값이라, 배경을 갈면 다시 만들어야 한다.

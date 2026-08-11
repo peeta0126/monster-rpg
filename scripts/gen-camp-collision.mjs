@@ -14,8 +14,9 @@
  *   투명(alpha ≤ 16) = 바닥. 여기서는 플레이어가 배경 위에 그려진다.
  *   불투명                = 전경. 여기로 들어가면 가려진다.
  *
- * 바닥을 TUCK px 만큼 부풀린 것이 걸어 다닐 수 있는 범위다. 딱 바닥 경계에서 멈추면
- * 나무 앞에서 벽에 부딪힌 것처럼 뚝 서고, 가려지는 연출이 아예 나오지 않는다.
+ * 딱 바닥 경계에서 멈추면 나무 앞에서 벽에 부딪힌 것처럼 뚝 서고, 가려지는 연출이
+ * 아예 나오지 않는다. 그래서 바닥 밖으로 한 걸음 더 열어 준다 — 어디까지 열지는
+ * 거리가 아니라 **몸이 얼마나 남아 보이는지**로 정한다(VISIBILITY_MIN).
  *
  * ⚠️ 이 파일이 만드는 건 "지형"뿐이다. 바닥 구멍 안에 있는 소품(작업대·화단·좌판
  *    바구니·통나무)은 전경이 아니라 배경 레이어에 있어서 플레이어가 그 위에 그려진다.
@@ -34,24 +35,68 @@ const OUT = path.join(ROOT, "src/camp/campGroundMask.ts");
 const ALPHA_CUTOFF = 16;
 
 /**
- * 바닥 밖으로 얼마나 더 들어갈 수 있는가(px). 가로·세로가 다르다.
+ * 바닥 밖으로 나갈 수 있는 최대 거리(px). 여기까지가 후보고, 실제로 열리는지는
+ * 아래 가시성 기준이 정한다.
  *
- * 스프라이트가 92×160 이라 방향에 따라 가려지는 양이 딴판이다.
- *
- *   옆에서 수풀로 들어가면  보이는 폭 = 46 − TUCK.x   (반너비 46)
- *   위로 나무 밑에 들어가면 보이는 높이 = TUCK.y + 15 (발밑 바디 반높이 15)
- *
- * 같은 값을 쓰면 한쪽이 반드시 어긋난다. 40 등방으로 해 봤더니 서쪽 수풀에서 몸이
- * 통째로 가려 안 보였고, 24 로 줄이니 이번엔 숲 입구가 사거리 밖으로 밀려났다.
- * 가로는 좁게, 세로는 넓게 — 어느 쪽으로 들어가도 몸의 3할쯤은 남는다.
+ * 예전에는 이 값이 곧 답이었다(가로 22 · 세로 46 등방). 그런데 세로 대칭이 틀렸다 —
+ * 아래쪽 물체로 들어가면 다리만 가리지만, 위쪽 나무·벽으로 들어가면 그 물체가 발끝
+ * 위 145px 을 통째로 덮는다. 같은 46 을 위아래에 쓴 결과 우물 앞 돌턱에서 플레이어가
+ * **100% 사라졌다**(닿는 칸의 4%가 10% 미만으로 가려져 있었다).
  */
-const TUCK = { x: 22, y: 46 };
+const MAX_TUCK = { x: 30, y: 60 };
+
+/**
+ * 뒤로 들어간 자리에서 플레이어가 최소한 이만큼은 보여야 한다(스프라이트 불투명
+ * 픽셀 기준).
+ *
+ * 고정 거리 대신 이걸 재는 이유: "얼마나 들어갈 수 있는가"는 원래 거리가 아니라
+ * **얼마나 남아 보이는가**의 문제였다. 물체 높이가 자리마다 다르니 거리로는 표현이
+ * 안 된다. 나무 밑은 조금만 들어가도 몸이 없어지고, 낮은 수풀은 깊이 들어가도 멀쩡하다.
+ */
+const VISIBILITY_MIN = 0.35;
+
+/**
+ * 진짜 바닥에서도 이만큼은 보여야 한다.
+ *
+ * 바닥은 원칙적으로 다 열어 준다 — 길 위로 가지가 드리운 자리까지 막으면 길이 끊긴다.
+ * 다만 원화의 바닥 구멍이 벽 밑동보다 살짝 높게 잘린 데가 있어서(우물 앞 돌턱),
+ * 거기 서면 벽이 몸을 통째로 덮었다. 바닥이든 아니든 "화면에서 사라지는 자리"는
+ * 없어야 한다는 최소선이다. 지나가는 자리는 TUNNELS 로 뺀다.
+ */
+const GROUND_VISIBILITY_MIN = 0.15;
+
+/**
+ * 전경 밑을 **지나가는** 통로. 여기서는 가시성 기준을 건너뛴다.
+ *
+ * 아치는 길을 가로질러 놓여 있어서 알파에서도 바닥이 통째로 끊긴다. 잠깐 가려지는
+ * 건 아치를 통과하는 연출이라 맞는데, 가시성으로 자르면 길 자체가 막힌다 —
+ * "뒤로 들어가 서 있는 자리"와 "밑으로 지나가는 자리"는 다른 것이다.
+ *
+ * 자동으로 가릴 방법이 없어 여기 적는다. 빠뜨리면 아래 연결성 검사가 생성 단계에서
+ * 죽으므로 조용히 막히는 일은 없다.
+ */
+const TUNNELS = [
+  // 통로 폭만. 넓게 잡으면 아치 기둥 속까지 열려 거기서 몸이 사라진다.
+  { id: "south-arch", x: 640, y: 2112, w: 240, h: 192 },
+];
 
 /** 사각형 격자 크기(px). 작을수록 그림에 붙지만 바디 수가 는다. */
 const CELL = 16;
 
 /** 바닥이 이어져 있는지 판정할 시작점 — 씬의 기본 스폰(발밑 기준) */
 const SEED = { x: 794, y: 1280 };
+
+/** 가시성을 잴 때 세우는 스프라이트. 씬이 쓰는 것과 같은 크기여야 한다. */
+const PLAYER_PNG = path.join(ROOT, "public/assets/player/player-down.png");
+const PLAYER_DISPLAY = 160;
+
+/**
+ * 스프라이트 중심 → 발밑 바디 중심의 y 차이(px).
+ *
+ * campCollision.ts 의 `bodyYFromSpriteY(0)` 과 같아야 한다. 여기는 TS 를 못 읽는
+ * 독립 스크립트라 값을 적어 두고, 어긋나면 tests/campCollision.test.ts 가 잡는다.
+ */
+const BODY_TO_SPRITE_Y = 50;
 
 const buf = fs.readFileSync(SRC);
 const sha = crypto.createHash("sha256").update(buf).digest("hex");
@@ -82,10 +127,9 @@ const ground = new Uint8Array(W * H);
   }
 }
 
-// ── 3. TUCK 만큼 부풀리기 ─────────────────────────────────────────────────────
+// ── 3. 바닥 밖 후보 만들기 ────────────────────────────────────────────────────
 // 가로/세로 반경이 다르므로 1차원 팽창을 두 번 건다(분리 가능한 사각 구조 요소).
-// 결과는 "바닥에서 x 로 TUCK.x, y 로 TUCK.y 안쪽까지"가 열린 영역이다.
-const walkable = (() => {
+const candidate = (() => {
   const rowPass = new Uint8Array(W * H);
   for (let y = 0; y < H; y++) {
     // 각 행에서 마지막으로 바닥이었던 x 까지의 거리를 좌/우 두 번 훑는다
@@ -93,13 +137,13 @@ const walkable = (() => {
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
       if (ground[i]) last = x;
-      if (x - last <= TUCK.x) rowPass[i] = 1;
+      if (x - last <= MAX_TUCK.x) rowPass[i] = 1;
     }
     last = 1 << 20;
     for (let x = W - 1; x >= 0; x--) {
       const i = y * W + x;
       if (ground[i]) last = x;
-      if (last - x <= TUCK.x) rowPass[i] = 1;
+      if (last - x <= MAX_TUCK.x) rowPass[i] = 1;
     }
   }
   const out = new Uint8Array(W * H);
@@ -108,19 +152,91 @@ const walkable = (() => {
     for (let y = 0; y < H; y++) {
       const i = y * W + x;
       if (rowPass[i]) last = y;
-      if (y - last <= TUCK.y) out[i] = 1;
+      if (y - last <= MAX_TUCK.y) out[i] = 1;
     }
     last = 1 << 20;
     for (let y = H - 1; y >= 0; y--) {
       const i = y * W + x;
       if (rowPass[i]) last = y;
-      if (last - y <= TUCK.y) out[i] = 1;
+      if (last - y <= MAX_TUCK.y) out[i] = 1;
     }
   }
   return out;
 })();
 
-// ── 4. 격자로 내리고 사각형으로 병합 ──────────────────────────────────────────
+// ── 4. 가시성으로 후보 거르기 ─────────────────────────────────────────────────
+// 바닥 밖 한 걸음은 "전경 뒤로 들어가는" 자리다. 얼마나 들어갈 수 있는지는 거리가
+// 아니라 **몸이 얼마나 남아 보이는지**로 정해야 한다. 물체 높이가 자리마다 달라서
+// 거리로는 표현이 안 된다 — 예전 고정 46px 이 우물 앞에서 몸을 통째로 지웠다.
+//
+// 스프라이트 불투명 픽셀을 행별 구간으로 쪼개 두고, 전경 불투명 픽셀의 적분 이미지로
+// 한 자리당 구간 수만큼만 조회한다. 픽셀마다 스프라이트를 겹쳐 세는 것보다 수백 배 빠르다.
+const spriteRuns = await (async () => {
+  const { data, info } = await sharp(PLAYER_PNG)
+    .resize(PLAYER_DISPLAY, PLAYER_DISPLAY, { kernel: "nearest" })
+    .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const S = info.width, ch = info.channels, half = S / 2;
+  const runs = [];
+  let total = 0;
+  for (let y = 0; y < S; y++) {
+    let start = -1;
+    for (let x = 0; x <= S; x++) {
+      const on = x < S && data[(y * S + x) * ch + 3] > 32;
+      if (on && start < 0) start = x;
+      if (!on && start >= 0) {
+        // 발밑 바디 중심 기준 상대 좌표로 저장한다
+        runs.push({ dy: y - half - BODY_TO_SPRITE_Y, x0: start - half, x1: x - 1 - half });
+        total += x - start;
+        start = -1;
+      }
+    }
+  }
+  return { runs, total };
+})();
+
+// 전경 불투명 픽셀의 적분 이미지 (경계 밖은 가려지지 않은 것으로 친다)
+const integral = new Int32Array((W + 1) * (H + 1));
+for (let y = 0; y < H; y++) {
+  let rowSum = 0;
+  for (let x = 0; x < W; x++) {
+    if (data[(y * W + x) * C + 3] > ALPHA_CUTOFF) rowSum++;
+    integral[(y + 1) * (W + 1) + x + 1] = integral[y * (W + 1) + x + 1] + rowSum;
+  }
+}
+/** [x0, x1] × 한 행의 전경 불투명 픽셀 수 */
+function opaqueInRow(y, x0, x1) {
+  if (y < 0 || y >= H) return 0;
+  const a = Math.max(0, x0), b = Math.min(W - 1, x1);
+  if (b < a) return 0;
+  const r0 = y * (W + 1), r1 = (y + 1) * (W + 1);
+  return integral[r1 + b + 1] - integral[r1 + a] - integral[r0 + b + 1] + integral[r0 + a];
+}
+
+/** 발밑 바디 중심이 (x, y) 일 때 스프라이트가 전경 밖으로 보이는 비율 */
+function visibleRatio(x, y) {
+  let hidden = 0;
+  for (const r of spriteRuns.runs) hidden += opaqueInRow(y + r.dy, x + r.x0, x + r.x1);
+  return 1 - hidden / spriteRuns.total;
+}
+
+const inTunnel = (x, y) =>
+  TUNNELS.some((t) => x >= t.x && x < t.x + t.w && y >= t.y && y < t.y + t.h);
+
+const walkable = new Uint8Array(W * H);
+let trimmed = 0;
+for (let y = 0; y < H; y++) {
+  for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (!candidate[i]) continue;
+    if (inTunnel(x, y)) { walkable[i] = 1; continue; }
+    // 바닥은 거의 다 열어 준다. 기준선이 다른 이유는 위 상수 주석 참고.
+    const need = ground[i] ? GROUND_VISIBILITY_MIN : VISIBILITY_MIN;
+    if (visibleRatio(x, y) >= need) walkable[i] = 1;
+    else trimmed++;
+  }
+}
+
+// ── 5. 격자로 내리고 사각형으로 병합 ──────────────────────────────────────────
 // 걸을 수 있는 픽셀이 한 점이라도 있으면 열린 칸으로 친다. 애매하면 열어 두는 쪽이
 // 맞다 — 막아 두면 "들어갈 수 있어 보이는데 안 들어가지는" 자리가 생긴다.
 const cols = Math.ceil(W / CELL), rows = Math.ceil(H / CELL);
@@ -163,7 +279,59 @@ for (let cy = 0; cy < rows; cy++) {
   }
 }
 
-// ── 5. 쓰기 ───────────────────────────────────────────────────────────────────
+// ── 6. 연결성 검사 ───────────────────────────────────────────────────────────
+// 가시성으로 자르다 보면 좁은 길이 조용히 막힌다. 실제로 남쪽 아치가 그랬다 —
+// 아치 석조가 알파에서 길을 가로질러 끊어 놓아서, 옆으로 새던 35px 짜리 틈까지
+// 잘리자 통로가 없어졌다. 그런 건 캡처를 볼 때가 아니라 여기서 죽어야 한다.
+//
+// 소품 박스(CAMP_PROP_BOXES)는 여기 안 들어간다. 그건 씬 쪽 값이라 tests/campCollision.test.ts
+// 가 둘을 합쳐 다시 본다. 여기서 보는 건 지형만으로 길이 이어지는가다.
+{
+  const HALF_W = 30, HALF_H = 15;   // campCollision.ts 의 PLAYER_BODY 절반
+  const STEP = 8;
+  const fits = (x, y) => {
+    if (x - HALF_W < 0 || x + HALF_W >= W || y - HALF_H < 0 || y + HALF_H >= H) return false;
+    for (let cy = ((y - HALF_H) / CELL) | 0; cy <= ((y + HALF_H) / CELL) | 0; cy++)
+      for (let cx = ((x - HALF_W) / CELL) | 0; cx <= ((x + HALF_W) / CELL) | 0; cx++)
+        if (blocked[cy * cols + cx]) return false;
+    return true;
+  };
+  const key = (x, y) => y * W + x;
+  const seen = new Set([key(SEED.x, SEED.y)]);
+  const queue = [[SEED.x, SEED.y]];
+  if (!fits(SEED.x, SEED.y)) throw new Error(`스폰 (${SEED.x}, ${SEED.y}) 에 플레이어가 못 선다`);
+  for (let head = 0; head < queue.length; head++) {
+    const [x, y] = queue[head];
+    for (const [dx, dy] of [[STEP, 0], [-STEP, 0], [0, STEP], [0, -STEP]]) {
+      const nx = x + dx, ny = y + dy;
+      if (seen.has(key(nx, ny)) || !fits(nx, ny)) continue;
+      seen.add(key(nx, ny));
+      queue.push([nx, ny]);
+    }
+  }
+  /** 여기까지는 걸어갈 수 있어야 한다(발밑 바디 좌표). 못 가면 길이 막힌 것이다. */
+  const REQUIRED = [
+    { id: "탑 아치",     x:  285, y:  900 },
+    { id: "우물 앞",     x:  300, y: 1750 },
+    { id: "노점 앞",     x:  980, y: 1850 },
+    // 숲 입구는 수풀 가장자리까지다. 안쪽은 캐노피라 설 자리가 아니다.
+    { id: "숲 앞",       x: 1180, y: 2030 },
+    { id: "남쪽 아치 밑", x:  760, y: 2200 },
+    { id: "남쪽 끝",     x:  760, y: 2650 },
+  ];
+  const lost = REQUIRED.filter(
+    (r) => ![...seen].some((k) => Math.hypot((k % W) - r.x, ((k / W) | 0) - r.y) <= 40),
+  );
+  if (lost.length) {
+    throw new Error(
+      `스폰에서 못 가는 곳이 생겼다: ${lost.map((l) => `${l.id}(${l.x}, ${l.y})`).join(", ")}\n` +
+      "  가시성 기준이 좁은 길을 잘랐을 수 있다. 지나가는 자리라면 TUNNELS 에 적을 것.",
+    );
+  }
+  console.log(`  연결성 OK · 걸어 닿는 자리 ${seen.size.toLocaleString()}개(${STEP}px 격자)`);
+}
+
+// ── 7. 쓰기 ───────────────────────────────────────────────────────────────────
 const body = rects
   .map((r) => `  { x: ${String(r.x).padStart(4)}, y: ${String(r.y).padStart(4)}, ` +
               `w: ${String(r.w).padStart(4)}, h: ${String(r.h).padStart(4)} },`)
@@ -172,8 +340,9 @@ const body = rects
 fs.writeFileSync(OUT, `// 자동 생성 — 손으로 고치지 말 것. \`node scripts/gen-camp-collision.mjs\`
 //
 // basecamp-bg-1.webp(전경 레이어)의 알파에서 뽑은 지형 충돌이다. 투명한 곳이 바닥이고,
-// 거기서 가로 ${TUCK.x}px · 세로 ${TUCK.y}px 까지는 더 들어갈 수 있다 — 그만큼 전경에 가려서 "안으로 들어가는" 연출이 된다.
-// 왜 이렇게 하는지는 scripts/gen-camp-collision.mjs 주석 참고.
+// 바깥으로는 최대 가로 ${MAX_TUCK.x}px · 세로 ${MAX_TUCK.y}px 까지 후보로 두되, 그 자리에 섰을 때 스프라이트가
+// ${(VISIBILITY_MIN * 100).toFixed(0)}% 이상 보이는 칸만 연다 — 그만큼만 전경 뒤로 "들어가 보이는" 연출이 된다.
+// 왜 거리가 아니라 가시성인지는 scripts/gen-camp-collision.mjs 주석 참고.
 //
 // 소품(작업대·화단·좌판)은 여기 없다. 그건 배경 레이어라 알파로 안 잡힌다 —
 // campCollision.ts 의 CAMP_PROP_BOXES 가 덮는다.
@@ -183,8 +352,14 @@ export const GROUND_MASK_SOURCE = {
   file: "public/assets/basecamp/basecamp-bg-1.webp",
   sha256: "${sha}",
   alphaCutoff: ${ALPHA_CUTOFF},
-  tuck: { x: ${TUCK.x}, y: ${TUCK.y} },
+  maxTuck: { x: ${MAX_TUCK.x}, y: ${MAX_TUCK.y} },
+  visibilityMin: ${VISIBILITY_MIN},
+  groundVisibilityMin: ${GROUND_VISIBILITY_MIN},
+  /** 가시성을 잴 때 쓴 스프라이트 규격. campCollision 의 값과 어긋나면 테스트가 잡는다. */
+  sprite: { display: ${PLAYER_DISPLAY}, bodyToSpriteY: ${BODY_TO_SPRITE_Y} },
   cell: ${CELL},
+  /** 가시성 기준을 건너뛴 구역(전경 밑을 지나가는 통로). 회귀 테스트가 여기만 빼고 본다. */
+  tunnels: ${JSON.stringify(TUNNELS)},
 } as const;
 
 /** 지형 충돌 사각형 (왼쪽 위 모서리 기준, 원본 ${W}×${H} px) */
@@ -195,5 +370,6 @@ ${body}
 
 const openCells = blocked.length - blocked.reduce((a, b) => a + b, 0);
 console.log(`${SRC.replace(ROOT + path.sep, "")} → ${OUT.replace(ROOT + path.sep, "")}`);
-console.log(`  바닥 ${ground.reduce((a, b) => a + b, 0).toLocaleString()}px · tuck ${TUCK.x}/${TUCK.y}px · 격자 ${CELL}px`);
+console.log(`  바닥 ${ground.reduce((a, b) => a + b, 0).toLocaleString()}px · 격자 ${CELL}px`);
+console.log(`  바깥 후보 최대 ${MAX_TUCK.x}/${MAX_TUCK.y}px · 가시성 ${(VISIBILITY_MIN * 100) | 0}% 미만이라 잘라낸 픽셀 ${trimmed.toLocaleString()}개`);
 console.log(`  열린 칸 ${openCells}/${blocked.length} · 사각형 ${rects.length}개`);

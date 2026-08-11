@@ -119,6 +119,57 @@ test("collision: 베이스캠프", async ({ page }) => {
 });
 
 /**
+ * 걸어 닿는 자리마다 플레이어를 세워 놓고 **게임과 같은 순서**로 겹쳐 찍는다.
+ *   배경(basecamp-bg) → 플레이어 → 전경(basecamp-bg-1)
+ *
+ * 위의 박스 오버레이가 못 보는 것을 본다. 오버레이는 배경 위에 사각형을 그릴 뿐이라
+ * "여기 설 수 있다"까지만 보여 주는데, 정작 문제는 **서면 어떻게 보이는가** 쪽에 있었다.
+ * 화단 위에 올라서 있거나, 벽 뒤로 들어가 몸이 통째로 사라지거나 하는 것은 이 그림에서만
+ * 한눈에 보인다(실제로 우물 앞 0% 구간과 남쪽 소품 누락을 이걸로 찾았다).
+ *
+ * 소품 박스를 새로 그려 넣었으면 이 캡처를 Read 로 열어 "물건 위에 선 사람"이 없는지 볼 것.
+ */
+test("collision: 베이스캠프 인물 배치", async ({ page }) => {
+  await page.setViewportSize({ width: CAMP_MAP_W, height: 950 });
+  await page.goto("/");
+
+  const GRID = 150;
+  const spawn = getCampPosition();
+  const cells = [...reachableCells({ x: spawn.x, y: bodyYFromSpriteY(spawn.y) }, 10)];
+
+  // 격자 칸마다 중심에 가장 가까운 자리 하나만 세운다 — 촘촘하면 서로 겹쳐 못 읽는다
+  const best = new Map<string, { d: number; x: number; y: number }>();
+  const bodyToSprite = bodyYFromSpriteY(0);
+  for (const k of cells) {
+    const [bx, by] = k.split(",").map(Number);
+    const gx = Math.round(bx / GRID), gy = Math.round(by / GRID);
+    const d = Math.hypot(bx - gx * GRID, by - gy * GRID);
+    const key = `${gx},${gy}`;
+    const cur = best.get(key);
+    if (!cur || d < cur.d) best.set(key, { d, x: bx, y: by - bodyToSprite });
+  }
+
+  await page.setContent(shell(CAMP_MAP_W, CAMP_MAP_H, `
+    <img src="/assets/basecamp/basecamp-bg.webp"
+      style="position:absolute;left:0;top:0;width:${CAMP_MAP_W}px;height:${CAMP_MAP_H}px">
+    ${[...best.values()].map((p) => `
+      <img src="/assets/player/player-down.png" class="pixel-img"
+        style="position:absolute;left:${Math.round(p.x) - 80}px;top:${Math.round(p.y) - 80}px;
+          width:160px;height:160px;image-rendering:pixelated">`).join("")}
+    <img src="/assets/basecamp/basecamp-bg-1.webp"
+      style="position:absolute;left:0;top:0;width:${CAMP_MAP_W}px;height:${CAMP_MAP_H}px">
+  `));
+  await page.waitForTimeout(800);
+  for (const [i, top] of [0, 910, 1820].entries()) {
+    await page.screenshot({
+      path: path.join(OUT, `collision-basecamp-people-${i + 1}.png`),
+      fullPage: true,
+      clip: { x: 0, y: top, width: CAMP_MAP_W, height: 910 },
+    });
+  }
+});
+
+/**
  * 공방을 실제로 걸어 다니며 확인한다. 정적 오버레이는 "박스가 그림과 맞는가"를 보고,
  * 이건 "밀어붙였을 때 스프라이트가 가구에 파묻히는가"를 본다.
  */
