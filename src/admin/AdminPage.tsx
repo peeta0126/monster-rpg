@@ -3,9 +3,6 @@ import { fetchAdminUsers, deleteAdminUser } from "./adminApi";
 import type { AdminUser } from "./adminApi";
 
 const pixelFont = { fontFamily: "var(--font-pixel)" };
-
-function formatDate(iso: string | null) {
-  if (!iso) return "없음";
   return new Date(iso).toLocaleString("ko-KR");
 }
 
