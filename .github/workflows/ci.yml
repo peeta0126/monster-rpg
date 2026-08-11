@@ -1,0 +1,33 @@
+# push 전에 빌드가 도는지 아무도 확인하지 않아서, formatDate 가 머리 두 줄만 사라진 채
+# main 에 올라간 적이 있다(4603d3b). 표에서 계속 호출하고 있어 컴파일 자체가 안 됐는데
+# 며칠 아무도 몰랐다. 그걸 막는 게 이 파일의 전부다.
+#
+# e2e(playwright)는 일부러 뺐다. 브라우저 내려받는 데만 1~2분이고, 캔버스 캡처가
+# 러너 환경에 따라 흔들린다. 여기서는 "컴파일되는가"까지만 본다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # eslint + 하드코딩 색 검사(scripts/check-hardcoded-colors.mjs)
+      - run: npm run lint
+
+      # subset-fonts → tsc -b → vite build. 타입 오류가 여기서 걸린다.
+      - run: npm run build
+
+      - run: npm test

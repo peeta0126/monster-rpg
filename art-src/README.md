@@ -36,6 +36,7 @@
 | 파일 | 크기 | 나가는 곳 | 지키는 것 |
 | --- | --- | --- | --- |
 | `housing_bg.png` | 2400×1792 / 3.8MB | `public/assets/housing/housing_bg.webp` | `tests/workshopBackground.test.mjs` |
+| `voyager-atelier-logo.png` | 564×442 / 330KB | `public/favicon-32.png` · `public/apple-touch-icon.png` | — |
 
 배경을 정말로 교체하면 그 테스트의 `MASTER_SHA256` 을 같이 갱신하세요.
 
