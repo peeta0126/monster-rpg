@@ -1,5 +1,5 @@
-import { rgba } from "../../shared/palette";
-import type { ForestNodeType } from "./nodes";
+import { PALETTE, rgba } from "../../shared/palette";
+import type { ForestStepKind } from "./steps";
 
 /**
  * 소란도 — 숲이 유일하게 이월하는 자원.
@@ -79,37 +79,63 @@ export const ALERT_BANDS: AlertBand[] = [
 ];
 
 /**
- * 노드를 처리하면 소란도가 이만큼 움직인다.
+ * 걸음 사건 하나를 치르면 소란도가 이만큼 움직인다(깊이 배율 적용 전 기본값).
  *
  * 은신처만 음수다 — HP 회복이 아니라 **소란을 되사는 자리**다. 그래서 은신처를
- * 밟는 값은 그 노드에서 아무것도 못 얻는다는 기회비용으로 치른다.
- * event 는 0 이다. 보상이 없는 노드라 대가도 없어야 하고, STEP 2 에서 삭제된다.
+ * 고르는 값은 그 걸음에서 아무것도 못 얻는다는 기회비용으로 치른다.
  */
-export const NODE_ALERT: Record<ForestNodeType, number> = {
-  start:    0,
-  material: 5,
-  battle:   10,
-  event:    0,
-  rest:     -25,
-  elite:    25,
-  boss:     30,
+export const STEP_ALERT: Record<ForestStepKind, number> = {
+  trace:     5,
+  encounter: 10,
+  nest:      20,
+  anomaly:   25,
+  hideout:   -25,
+  champion:  30,
+  warden:    30,
 };
 
-/** 전투에서 지면 붙는 소란. 런이 끝나지는 않지만 대가는 확실하다. */
-export const DEFEAT_ALERT = 30;
+/**
+ * 놓쳤을 때 붙는 소란. 런이 끝나지는 않지만 대가는 확실하다.
+ *
+ * 숲에서 일어나는 실패는 전투 패배가 아니라 "못 가져옴"이다. 그래서 이름도
+ * defeat 이 아니라 escape 다 — 달아난 건 몬스터고, 플레이어는 계속 걸을 수 있다.
+ */
+export const ESCAPE_ALERT = 30;
 
 /**
- * 소란이 **판정 전**에 붙는 노드.
+ * 깊이가 붙이는 압력.
  *
- * 보통은 판정이 끝난 뒤에 붙는다. 방금 올린 소란으로 그 노드의 수확을 불리면
- * 앞뒤가 안 맞기 때문이다. 주인만 반대다 — 주인은 마지막 노드라 뒤에 밟을 칸이
- * 없어서, 판정 후에 붙이면 그 +30 이 아무 데도 걸리지 않는 죽은 값이 된다.
+ * 걸음 상한이 없고 은신처로 계속 깎을 수 있으면 안전한 무한 파밍이 된다 — 그러면
+ * 다이얼이 무의미하다. 인위적인 벽 대신 깊이가 값을 올린다. "얼마나 오래 버티느냐"가
+ * 실력이 되고, 은신처는 초반에 크고 후반에 작아진다.
+ */
+const ALERT_DEPTH_DIVISOR = 20;
+const HIDEOUT_DECAY_DEPTH = 40;
+
+/** 이 깊이에서 이 사건이 실제로 올리는(내리는) 소란 */
+export function stepAlertDelta(kind: ForestStepKind, depth: number): number {
+  const base = STEP_ALERT[kind];
+  if (base < 0) {
+    // 은신처: 깊이가 깊을수록 덜 회복된다. 40 걸음이면 아예 안 듣는다
+    const decay = Math.max(0, 1 - depth / HIDEOUT_DECAY_DEPTH);
+    // + 0 은 -0 을 지운다. 화면에 "소란 -0" 이라고 적히고 테스트도 -0 을 잡는다
+    return Math.round(base * decay) + 0;
+  }
+  return Math.round(base * (1 + depth / ALERT_DEPTH_DIVISOR));
+}
+
+/**
+ * 소란이 **판정 전**에 붙는 사건.
+ *
+ * 보통은 판정이 끝난 뒤에 붙는다. 방금 올린 소란으로 그 걸음의 수확을 불리면
+ * 앞뒤가 안 맞기 때문이다. 주인만 반대다 — 주인을 만나면 거기서 런이 끝나서,
+ * 판정 후에 붙이면 그 +30 이 아무 데도 걸리지 않는 죽은 값이 된다.
  *
  * 도착 시점으로 당기면 "주인을 깨웠다 → 숲이 뒤집혔다 → 그 상태로 붙는다"가 되어
  * 자기 포획 확률에 스스로 걸린다. 탐욕이 치르는 마지막 청구서다.
  */
-export function appliesAlertOnArrival(type: ForestNodeType): boolean {
-  return type === "boss";
+export function appliesAlertOnArrival(kind: ForestStepKind): boolean {
+  return kind === "warden";
 }
 
 export function clampAlert(value: number): number {
@@ -140,4 +166,16 @@ export function applyMaterialMultiplier(count: number, alert: number): number {
  */
 export function catchRateWithAlert(baseRate: number, alert: number): number {
   return Math.max(0.05, baseRate - alertBand(alert).catchPenalty);
+}
+
+/**
+ * 구간을 나타내는 색. 게이지와 요약 줄이 같은 색을 써야 같은 것을 말하는 걸로 읽힌다.
+ * 조용함만 서늘한 쪽(mist)에 두고 위로 갈수록 붉어진다.
+ */
+export function bandColor(alert: number): string {
+  const id = alertBand(alert).id;
+  if (id === "calm") return PALETTE.mist300;
+  if (id === "stir") return PALETTE.sand200;
+  if (id === "wary") return PALETTE.ember500;
+  return PALETTE.ember700;
 }

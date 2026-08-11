@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  ALERT_BANDS, ALERT_MAX, NODE_ALERT, DEFEAT_ALERT,
+  ALERT_BANDS, ALERT_MAX, STEP_ALERT, ESCAPE_ALERT,
   alertBand, clampAlert, isForcedRetreat, applyMaterialMultiplier, catchRateWithAlert,
-  appliesAlertOnArrival,
+  appliesAlertOnArrival, stepAlertDelta,
 } from "../src/camp/forest/alert.ts";
-import { NODE_META, isDangerousNode, type ForestNodeType } from "../src/camp/forest/nodes.ts";
+import { STEP_DEFS, isDangerous, type ForestStepKind } from "../src/camp/forest/steps.ts";
 
 /**
  * 소란도는 숲이 이월하는 유일한 자원이다. 여기서 지키는 건 숫자 자체가 아니라
@@ -65,27 +65,27 @@ test("clamp 는 0~100 을 벗어나지 않는다", () => {
   assert.equal(isForcedRetreat(ALERT_MAX), true);
 });
 
-test("노드 표와 소란 표의 종류가 정확히 일치한다", () => {
-  const metaKeys = Object.keys(NODE_META).sort();
-  const alertKeys = Object.keys(NODE_ALERT).sort();
-  assert.deepEqual(alertKeys, metaKeys, "노드를 추가하고 소란값을 안 정하면 undefined 가 더해진다");
+test("사건 표와 소란 표의 종류가 정확히 일치한다", () => {
+  const defKeys = Object.keys(STEP_DEFS).sort();
+  const alertKeys = Object.keys(STEP_ALERT).sort();
+  assert.deepEqual(alertKeys, defKeys, "사건을 추가하고 소란값을 안 정하면 undefined 가 더해진다");
 });
 
 test("은신처만 소란을 되산다", () => {
-  const negative = (Object.keys(NODE_ALERT) as ForestNodeType[]).filter((t) => NODE_ALERT[t] < 0);
-  assert.deepEqual(negative, ["rest"], "소란을 낮추는 노드는 은신처 하나뿐이어야 한다");
+  const negative = (Object.keys(STEP_ALERT) as ForestStepKind[]).filter((t) => STEP_ALERT[t] < 0);
+  assert.deepEqual(negative, ["hideout"], "소란을 낮추는 사건은 은신처 하나뿐이어야 한다");
 
   // 은신처가 한 노드의 평균 상승분보다 적게 돌려주면 다이얼을 되돌릴 방법이 없다
-  const gains = (Object.keys(NODE_ALERT) as ForestNodeType[])
-    .map((t) => NODE_ALERT[t]).filter((v) => v > 0);
+  const gains = (Object.keys(STEP_ALERT) as ForestStepKind[])
+    .map((t) => STEP_ALERT[t]).filter((v) => v > 0);
   const avgGain = gains.reduce((a, b) => a + b, 0) / gains.length;
-  assert.ok(-NODE_ALERT.rest >= avgGain, "은신처가 평균 상승분도 못 되돌린다");
+  assert.ok(-STEP_ALERT.hideout >= avgGain, "은신처가 평균 상승분도 못 되돌린다");
 });
 
 test("위험 표시는 소란을 크게 올리는 노드에만 붙는다", () => {
-  for (const t of Object.keys(NODE_ALERT) as ForestNodeType[]) {
-    if (isDangerousNode(t)) {
-      assert.ok(NODE_ALERT[t] >= 25, `${t}: 위험하다면서 소란은 조금만 올린다`);
+  for (const t of Object.keys(STEP_ALERT) as ForestStepKind[]) {
+    if (isDangerous(t)) {
+      assert.ok(STEP_ALERT[t] >= 25, `${t}: 위험하다면서 소란은 조금만 올린다`);
     }
   }
 });
@@ -114,19 +114,32 @@ test("포획 페널티는 시도를 무의미하게 만들지 않는다", () => 
 });
 
 test("주인만 소란이 판정 전에 붙는다", () => {
-  const arrival = (Object.keys(NODE_ALERT) as ForestNodeType[]).filter(appliesAlertOnArrival);
-  assert.deepEqual(arrival, ["boss"], "도착 시점에 소란이 붙는 노드는 주인 하나뿐이어야 한다");
+  const arrival = (Object.keys(STEP_ALERT) as ForestStepKind[]).filter(appliesAlertOnArrival);
+  assert.deepEqual(arrival, ["warden"], "도착 시점에 소란이 붙는 사건은 주인 하나뿐이어야 한다");
 
   // 주인은 마지막 노드라 판정 후에 붙이면 그 뒤에 걸릴 데가 없다 — 죽은 값이 된다.
   // 앞으로 당겨야 자기 포획 확률에 스스로 걸린다.
   const base = 0.72;
-  const atBoss = catchRateWithAlert(base, 60 + NODE_ALERT.boss);
+  const atBoss = catchRateWithAlert(base, 60 + STEP_ALERT.warden);
   const without = catchRateWithAlert(base, 60);
   assert.ok(atBoss < without, "주인을 깨운 대가가 주인 포획 확률에 걸리지 않는다");
 });
 
-test("패배 대가가 노드 하나보다 무겁다", () => {
-  // 지고도 최고 소란 노드보다 싸면 일부러 지는 게 이득이 된다
-  const maxNode = Math.max(...Object.values(NODE_ALERT));
-  assert.ok(DEFEAT_ALERT >= maxNode, "패배가 가장 비싼 노드보다 싸다");
+test("놓침의 대가가 사건 하나보다 무겁다", () => {
+  // 놓치고도 최고 소란 사건보다 싸면 일부러 놓치는 게 이득이 된다
+  const maxStep = Math.max(...Object.values(STEP_ALERT).map(Number));
+  assert.ok(ESCAPE_ALERT >= maxStep, "놓침이 가장 비싼 사건보다 싸다");
+});
+
+test("깊이가 압력을 준다 — 은신처는 반대로 마른다", () => {
+  // 걸음 상한이 없으니 깊이가 값을 올리지 않으면 안전한 무한 파밍이 된다
+  assert.ok(
+    stepAlertDelta("encounter", 10) > stepAlertDelta("encounter", 0),
+    "깊이 10 의 조우가 깊이 0 과 같은 소란을 올린다",
+  );
+  assert.ok(
+    Math.abs(stepAlertDelta("hideout", 20)) < Math.abs(stepAlertDelta("hideout", 0)),
+    "은신처가 깊이와 무관하게 같은 양을 되돌려 준다",
+  );
+  assert.equal(stepAlertDelta("hideout", 40), 0, "깊이 40 이면 은신처가 더는 듣지 않아야 한다");
 });

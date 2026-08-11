@@ -16,23 +16,30 @@ const FORCED_RECOVERY = 0.5;
 
 const STRATEGIES: ForestStrategy[] = ["avoid", "random", "greedy"];
 
+/** 자진 귀환 기준 — 소란이 이 값에 닿으면 돌아간다 */
+const BANK_AT = Number(process.env.BANK_AT ?? 85);
+
 interface Row {
   materials: number;
   carried: number;
   peak: number;
   forced: number;
-  nodes: number;
+  steps: number;
+  escapes: number;
+  warden: number;
 }
 
 function measure(areaIdx: number, strategy: ForestStrategy): Row {
-  let materials = 0, carried = 0, peak = 0, forced = 0, nodes = 0;
+  let materials = 0, carried = 0, peak = 0, forced = 0, steps = 0, escapes = 0, warden = 0;
   for (let i = 0; i < RUNS; i++) {
-    const r = runForest(FOREST_AREAS[areaIdx], strategy);
+    const r = runForest(FOREST_AREAS[areaIdx], strategy, BANK_AT);
     const got = r.drops.reduce((a, d) => a + d.count, 0);
     materials += got;
     carried += r.forcedRetreat ? got * FORCED_RECOVERY : got;
     peak += r.alertPeak;
-    nodes += r.nodes;
+    steps += r.steps;
+    escapes += r.escapes;
+    if (r.metWarden) warden++;
     if (r.forcedRetreat) forced++;
   }
   return {
@@ -40,9 +47,13 @@ function measure(areaIdx: number, strategy: ForestStrategy): Row {
     carried: carried / RUNS,
     peak: peak / RUNS,
     forced: (forced / RUNS) * 100,
-    nodes: nodes / RUNS,
+    steps: steps / RUNS,
+    escapes: escapes / RUNS,
+    warden: (warden / RUNS) * 100,
   };
 }
+
+console.log(`자진 귀환 기준: 소란 ${BANK_AT} (BANK_AT 환경변수로 조절)`);
 
 for (const [i, area] of FOREST_AREAS.entries()) {
   console.log(`\n${area.name} (시작 소란 ${area.startingAlert})`);
@@ -53,9 +64,10 @@ for (const [i, area] of FOREST_AREAS.entries()) {
     console.log(
       `  ${s.padEnd(6)} 재료 ${r.materials.toFixed(1).padStart(5)}  ` +
       `반입 ${r.carried.toFixed(2).padStart(5)}  ` +
-      `노드 ${r.nodes.toFixed(1).padStart(4)}  ` +
+      `걸음 ${r.steps.toFixed(1).padStart(4)}  ` +
       `최고소란 ${r.peak.toFixed(0).padStart(3)}  ` +
-      `강제퇴각 ${r.forced.toFixed(1).padStart(5)}%`,
+      `퇴각 ${r.forced.toFixed(1).padStart(5)}%  ` +
+      `놓침 ${r.escapes.toFixed(2)}  주인 ${r.warden.toFixed(1)}%`,
     );
   }
   const avoid = rows.get("avoid")!.carried;

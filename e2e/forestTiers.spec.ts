@@ -142,10 +142,13 @@ test("스크림 — 선택 화면은 원화 그대로, 탐험 중에는 덮는�
   expect(await dimOpacity()).toBe(0);
 
   await card(page, "shallow").click();
-  await expect(page.locator('[data-testid^="forest-node-"]').first()).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.locator('[data-testid="forest-step-panel"], [data-testid="forest-fork"]').first(),
+  ).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(500);
 
-  // 노드 맵부터는 UI 가 판 없이 원화 위에 흩어진다. 덮지 않으면 이동 버튼이 묻힌다.
+  // 탐험 중에도 덮기는 덮는다. 다만 얕게 — 배경이 무대라서 노드 맵 시절만큼 누르면
+  // 원화가 벽지가 된다. 세기는 ForestBackdrop 의 WALK_DIM_ALPHA 가 정한다.
   expect(await dimOpacity()).toBe(1);
 });
 
@@ -165,16 +168,24 @@ test("prefers-reduced-motion 이면 크로스페이드 없이 즉시 바뀐다",
   expect(card).toBe("0s");
 });
 
-test("얕은 숲 진입 · 상단 UI 가 그대로다", async ({ page }) => {
+test("얕은 숲 진입 · 상단 UI 가 바뀐다", async ({ page }) => {
   await open(page, 0, { small: 3 });
 
-  // 상단 우측 재화 표시
-  await expect(page.getByText("×3")).toBeVisible();
-  // 베이스캠프로 나가는 길
+  // 선택 화면에는 나가는 길이 있어야 한다
   await expect(page.getByRole("button", { name: /베이스캠프/ })).toBeVisible();
 
   await card(page, "shallow").click();
-  await expect(page.locator('[data-testid^="forest-node-"]').first()).toBeVisible({ timeout: 20_000 });
-  // 들어간 뒤에도 재화는 그대로 보인다
-  await expect(page.getByText("×3")).toBeVisible();
+  await expect(
+    page.locator('[data-testid="forest-step-panel"], [data-testid="forest-fork"]').first(),
+  ).toBeVisible({ timeout: 20_000 });
+
+  /**
+   * 들어가면 상단 바가 원정용으로 바뀐다 — 구역명·깊이 / 소란도 / 채집망.
+   *
+   * 예전에는 물약 개수(🎒 ×N)가 여기 있었다. 숲에는 전투가 없어서 물약을 쓸 데가
+   * 없고, 그 자리는 이제 이 원정에서 실제로 움직이는 값들이 쓴다.
+   */
+  await expect(page.locator('[data-testid="forest-alert"]')).toBeVisible();
+  await expect(page.getByText("깊이 0")).toBeVisible();
+  await expect(page.getByText("채집망")).toBeVisible();
 });

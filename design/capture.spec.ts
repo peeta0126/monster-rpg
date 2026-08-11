@@ -111,17 +111,19 @@ for (const tier of FOREST_TIERS) {
 }
 
 /**
- * 노드 맵은 구역 배경 위에 바로 얹힌다 — 카드처럼 판을 깔고 그리는 화면이 아니라서
- * 원화가 바뀌면 여기가 제일 먼저 읽히지 않게 된다. 선택 화면과 따로 남긴다.
+ * 탐험 화면은 원화 위에 바로 얹힌다 — 배경이 무대라서 원화가 바뀌면 여기가 제일
+ * 먼저 읽히지 않게 된다. 선택 화면과 따로 남긴다.
  */
-test("capture: forest-nodes", async ({ page }) => {
+test("capture: forest-walk", async ({ page }) => {
   await seedStorage(page, true);
   await page.goto("/forest");
   await page.locator('[data-testid="forest-tier-shallow"]').click();
-  await expect(page.locator('[data-testid^="forest-node-"]').first()).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.locator('[data-testid="forest-step-panel"], [data-testid="forest-fork"]').first(),
+  ).toBeVisible({ timeout: 20_000 });
 
   await waitForVisualSettle(page);
-  await page.screenshot({ path: path.join(OUT_DIR, "forest-nodes.png"), fullPage: false });
+  await page.screenshot({ path: path.join(OUT_DIR, "forest-walk.png"), fullPage: false });
 });
 
 /**

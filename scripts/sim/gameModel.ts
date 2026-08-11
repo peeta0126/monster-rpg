@@ -11,10 +11,15 @@ import {
 } from "../../src/shared/floorTable";
 import { AREA_MATERIAL_POOL, rollBattleDrop } from "../../src/shared/dropTables";
 import { FOREST_AREAS, type ForestArea } from "../../src/camp/forest/areas";
-import { generateDungeon } from "../../src/camp/forest/dungeon";
 import {
-  NODE_ALERT, applyMaterialMultiplier, clampAlert, isForcedRetreat, appliesAlertOnArrival,
+  FORK_CHANCE, STEP_ROLLS, hasCatch, rollFork, rollStep, type ForestStepKind,
+} from "../../src/camp/forest/steps";
+import {
+  STEP_ALERT, ESCAPE_ALERT, applyMaterialMultiplier, clampAlert, isForcedRetreat,
+  appliesAlertOnArrival, stepAlertDelta,
 } from "../../src/camp/forest/alert";
+import { makeRng } from "../../src/camp/forest/runStore";
+import { CATCH_ATTEMPTS, catchChance } from "../../src/camp/forest/catchRules";
 import {
   applyDamage, applyStatusEffect, calculateDamage, checkStatusEffects,
   benchExpShare, createBattleMonster, gainExp, getAIAction, getTypeMultiplier, isFainted,
@@ -310,8 +315,6 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
 // ─── 숲 (ForestPage 이식) ────────────────────────────────────────────────────
 
 
-const CATCH_RATE = { win: 0.72, draw: 0.42, lose: 0.18 };
-
 function rollDrop(area: ForestArea, alert: number): { id: string; count: number } | null {
   if (Math.random() > area.materialRate) return null;
   const pool = AREA_MATERIAL_POOL[area.id] ?? AREA_MATERIAL_POOL.shallow;
@@ -334,82 +337,115 @@ export type ForestStrategy = "avoid" | "random" | "greedy";
 export interface ForestRunResult {
   drops: { id: string; count: number }[];
   encounters: Monster[];
-  nodes: number;
-  /** 탐험이 끝났을 때의 소란도 */
+  /** 걸은 걸음 수 */
+  steps: number;
+  /** 원정이 끝났을 때의 소란도 */
   alert: number;
-  /** 이번 탐험의 최고 소란 */
+  /** 이번 원정의 최고 소란 */
   alertPeak: number;
   /** 소란 100 에 걸려 쫓겨났는가 */
   forcedRetreat: boolean;
+  /** 주인을 만나 끝났는가 */
+  metWarden: boolean;
+  /** 포획을 놓친 횟수 */
+  escapes: number;
 }
 
 /**
- * 숲 탐험 1회. 게임과 같은 생성기(generateDungeon)로 그래프를 만들고 실제로 걸어간다.
+ * 원정 1회. 게임과 같은 표(steps.ts)로 사건을 뽑고 같은 순서로 판정한다.
  *
- * 예전에는 여기서 노드 타입을 직접 굴렸다 — 가중치 표가 두 벌이 되어, 게임 쪽을
- * 고쳐도 시뮬은 옛 분포를 계속 쟀다. 분기에서 무엇을 고르느냐가 소란도의 전부라
- * 그래프 없이는 전략을 잴 수도 없다.
+ * 전략은 갈림길에서 무엇을 고르느냐다 — 소란이 덜 오르는 쪽(avoid) · 무작위(random) ·
+ * 더 오르는 쪽(greedy). 갈림길이 아닌 걸음은 선택지가 없으므로 전략과 무관하다.
  *
- * strategy: 갈림길에서 소란이 덜 오르는 쪽(avoid) · 무작위(random) · 더 오르는 쪽(greedy)
+ * 자진 귀환 시점은 사람이 정하는 것이라 시뮬이 대신 정할 수 없다. 여기서는
+ * "쫓겨나거나 주인을 만날 때까지 걷는다"를 상한으로 두고, 그 전에 멈추는 판단은
+ * 정산 쪽(반입량)에서 따진다.
  */
 export function runForest(
   area: ForestArea,
   strategy: ForestStrategy = "random",
+  /**
+   * 자진 귀환 기준. 소란이 이 값에 닿으면 스스로 돌아간다.
+   *
+   * 언제 멈출지는 사람이 정하는 것이라 시뮬이 대신 정할 수 없다 — 대신 정책을
+   * 파라미터로 두고 여러 기준을 훑는다. 기본값은 "쫓겨날 때까지" 다.
+   */
+  bankAlert = Infinity,
 ): ForestRunResult {
-  const nodes = generateDungeon();
-  const byId = new Map(nodes.map((n) => [n.id, n]));
   const drops: { id: string; count: number }[] = [];
   const encounters: Monster[] = [];
 
-  let alert = area.startingAlert;
+  let alert = clampAlert(area.startingAlert);
   let alertPeak = alert;
+  let depth = 0;
+  let escapes = 0;
   let forcedRetreat = false;
-  let visited = 0;
-  let current = nodes.find((n) => n.depth === 0)!;
+  let metWarden = false;
 
-  while (current.nextIds.length > 0) {
-    const options = current.nextIds.map((id) => byId.get(id)!).filter(Boolean);
-    const sorted = [...options].sort((a, b) => NODE_ALERT[a.type] - NODE_ALERT[b.type]);
-    current =
-      strategy === "avoid"  ? sorted[0] :
-      strategy === "greedy" ? sorted[sorted.length - 1] :
-      options[Math.floor(Math.random() * options.length)];
-    visited++;
+  // 무한 루프 방지용 상한. 실제 런은 깊이 압력 때문에 훨씬 전에 끝난다
+  const HARD_CAP = 200;
 
-    // 주인만 깨우는 순간(판정 전) 소란이 붙는다. 나머지는 판정이 끝난 뒤다
-    const type = current.type;
-    if (appliesAlertOnArrival(type)) {
-      alert = clampAlert(alert + NODE_ALERT[type]);
+  let seed = Math.floor(Math.random() * 0xFFFFFFFF) >>> 0;
+
+  while (depth < HARD_CAP) {
+    const { rng, nextSeed } = makeRng(seed);
+
+    // 갈림길이면 두 갈래 중 전략에 따라 고른다
+    let kind: ForestStepKind;
+    if (rng() < FORK_CHANCE) {
+      const [a, b] = rollFork(alert, depth, rng);
+      const [lo, hi] = STEP_ALERT[a] <= STEP_ALERT[b] ? [a, b] : [b, a];
+      kind = strategy === "avoid" ? lo : strategy === "greedy" ? hi : (rng() < 0.5 ? a : b);
+    } else {
+      kind = rollStep(alert, depth, rng);
+    }
+
+    // 주인만 깨우는 순간(판정 전) 소란이 붙는다
+    if (appliesAlertOnArrival(kind)) {
+      alert = clampAlert(alert + stepAlertDelta(kind, depth));
       alertPeak = Math.max(alertPeak, alert);
     }
 
     // 수확 배수는 그렇게 정해진 소란도로 계산한다(게임과 같은 순서)
-    if (type === "material") {
-      const d1 = rollDrop(area, alert); if (d1) drops.push(d1);
-      const d2 = rollDrop(area, alert); if (d2 && d2.id !== d1?.id) drops.push(d2);
-    } else if (type === "battle" || type === "elite" || type === "boss") {
-      const d = rollDrop(area, alert); if (d) drops.push(d);
-      encounters.push(pickForestMonster(area, type === "elite" || type === "boss"));
+    for (let i = 0; i < STEP_ROLLS[kind]; i++) {
+      const d = rollDrop(area, alert);
+      if (d) drops.push(d);
+    }
+    if (hasCatch(kind)) {
+      encounters.push(pickForestMonster(area, kind === "champion" || kind === "warden"));
+      // 시도 3회를 다 쓰면 놓친다. 승/무/패는 균등이라 시도당 성공률은 평균값이다
+      const per = (catchChance("win", alert) + catchChance("draw", alert) + catchChance("lose", alert)) / 3;
+      if (Math.pow(1 - per, CATCH_ATTEMPTS) > rng()) {
+        escapes++;
+        alert = clampAlert(alert + ESCAPE_ALERT);
+      }
     }
 
-    if (!appliesAlertOnArrival(type)) {
-      alert = clampAlert(alert + NODE_ALERT[type]);
-      alertPeak = Math.max(alertPeak, alert);
+    if (!appliesAlertOnArrival(kind)) {
+      alert = clampAlert(alert + stepAlertDelta(kind, depth));
     }
+    alertPeak = Math.max(alertPeak, alert);
+    depth++;
+    seed = nextSeed();
 
-    // 주인을 잡으면 소란이 얼마든 완주다 — 그 뒤에 밟을 노드가 없다
-    if (type === "boss") break;
+    if (kind === "warden") { metWarden = true; break; }
     if (isForcedRetreat(alert)) { forcedRetreat = true; break; }
+    if (alert >= bankAlert) break;   // 자진 귀환
   }
 
-  return { drops, encounters, nodes: visited, alert, alertPeak, forcedRetreat };
+  return { drops, encounters, steps: depth, alert, alertPeak, forcedRetreat, metWarden, escapes };
 }
 
-/** 가위바위보 포획 시도 1회 (플레이어는 상대 수를 알 수 없으므로 승/무/패가 균등) */
-export function tryCatch(): boolean {
+/**
+ * 가위바위보 포획 시도 1회.
+ *
+ * 플레이어는 상대 수를 모르므로 승/무/패가 균등하다. 확률표는 catchRules.ts 한 벌뿐이라
+ * 여기서 사본을 만들지 않는다 — 포획률을 고쳤는데 시뮬이 옛 값을 재던 적이 있다.
+ */
+export function tryCatch(alert = 0): boolean {
   const r = Math.random();
-  const rate = r < 1 / 3 ? CATCH_RATE.win : r < 2 / 3 ? CATCH_RATE.draw : CATCH_RATE.lose;
-  return Math.random() < rate;
+  const result = r < 1 / 3 ? "win" : r < 2 / 3 ? "draw" : "lose";
+  return Math.random() < catchChance(result, alert);
 }
 
 // ─── 제작 / 모루 ─────────────────────────────────────────────────────────────

@@ -8,11 +8,17 @@ const FADE_MS = 300;
 const BACKDROP_STYLES = `
 .forest-backdrop-layer,
 .forest-backdrop-dim { transition: opacity ${FADE_MS}ms ease-in-out; }
+.forest-backdrop-layer { transition: opacity ${FADE_MS}ms ease-in-out, transform 1.2s ease-out; }
 @media (prefers-reduced-motion: reduce) {
   .forest-backdrop-layer,
   .forest-backdrop-dim { transition: none; }
+  .forest-backdrop-layer { transform: none !important; }
 }
 `;
+
+/** 깊이당 확대율과 그 상한. 과하면 원화가 뭉개지고 화면이 멀미난다 */
+const DEPTH_ZOOM_STEP = 0.006;
+const DEPTH_ZOOM_MAX = 1.08;
 
 /**
  * 탐험 중 화면에 까는 스크림의 세기.
@@ -27,6 +33,15 @@ const BACKDROP_STYLES = `
 const DIM_ALPHA = 0.62;
 
 /**
+ * 탐험 중에는 훨씬 얕게 덮는다.
+ *
+ * 0.62 는 노드 맵 시절 값이다 — UI 가 화면 전체에 흩어져 있어서 그만큼 눌러야 했다.
+ * 지금은 사건 패널이 자기 판을 들고 있어서 배경까지 어둡게 할 이유가 없고, 그러면
+ * 원화가 무대가 아니라 벽지가 된다.
+ */
+const WALK_DIM_ALPHA = 0.3;
+
+/**
  * 숲 배경 3종을 겹쳐 두고 티어에 따라 opacity 로 넘긴다.
  *
  * 왜 겹쳐 두나 — src 를 갈아끼우면 새 이미지가 디코딩될 때까지 한 프레임이 비어
@@ -38,9 +53,16 @@ const DIM_ALPHA = 0.62;
  * 중간 프레임에서 합성 알파가 1 밑으로 떨어져 배경이 한 번 어두워진다. 밑을 채워
  * 두면 그 침몰이 없다.
  */
-export function ForestBackdrop({ tint, tier, dim = false }: {
+export function ForestBackdrop({ tint, tier, dim = false, walking = false, depth = 0 }: {
   tier: ForestAreaId;
   dim?: boolean;
+  /** 탐험 중인가. 스크림을 얕게 덮는다 — 배경이 무대다 */
+  walking?: boolean;
+  /**
+   * 걸음 수. 깊이 들어갈수록 배경이 아주 천천히 확대된다 — 전진하는 느낌만 주고
+   * 그 이상은 하지 않는다. 1.08 이 상한이라 원화가 뭉개지지 않는다.
+   */
+  depth?: number;
   /**
    * 소란도 틴트. 새 이미지를 굽지 않고 원화 위에 색만 한 겹 얹는다 —
    * 숲이 달아오르는 걸 배경으로 보여 주는 자리다. 없으면 아무것도 안 깐다.
@@ -55,16 +77,18 @@ export function ForestBackdrop({ tint, tier, dim = false }: {
     setStack([...stack.filter((id) => id !== tier), tier]);
   }
 
+  const zoom = Math.min(DEPTH_ZOOM_MAX, 1 + depth * DEPTH_ZOOM_STEP);
+
   return (
     // isolate — 레이어의 z-index 를 이 안에 가둔다. 없으면 페이지 전체 쌓임 맥락에
     // 섞여 배경이 UI 위로 올라온다(카드가 통째로 사라진다).
     <div className="absolute inset-0 z-0 isolate overflow-hidden bg-shadow-900" aria-hidden>
       <style>{BACKDROP_STYLES}</style>
       {FOREST_AREAS.map((area) => {
-        const depth = stack.indexOf(area.id);
+        const stackDepth = stack.indexOf(area.id);
         // 맨 위(현재)와 바로 아래(직전)만 보인다. 그보다 깊은 층은 어차피 가려져 있다.
         // 아직 한 번도 안 고른 층은 depth -1 — 프리로드만 되고 화면에는 안 나온다.
-        const visible = depth >= 0 && depth >= stack.length - 2;
+        const visible = stackDepth >= 0 && stackDepth >= stack.length - 2;
         return (
           <img
             key={area.id}
@@ -73,7 +97,11 @@ export function ForestBackdrop({ tint, tier, dim = false }: {
             alt=""
             decoding="async"
             fetchPriority={area.id === tier ? "high" : "low"}
-            style={{ zIndex: depth + 1, opacity: visible ? 1 : 0 }}
+            style={{
+              zIndex: stackDepth + 1,
+              opacity: visible ? 1 : 0,
+              transform: `scale(${zoom})`,
+            }}
           />
         );
       })}
@@ -82,7 +110,7 @@ export function ForestBackdrop({ tint, tier, dim = false }: {
         style={{
           // 레이어 셋 위. 스택이 자라도 항상 맨 위에 있어야 한다.
           zIndex: FOREST_AREAS.length + 1,
-          background: rgba("shadow900", DIM_ALPHA),
+          background: rgba("shadow900", walking ? WALK_DIM_ALPHA : DIM_ALPHA),
           opacity: dim ? 1 : 0,
         }}
       />
