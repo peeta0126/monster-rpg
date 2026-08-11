@@ -1,6 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { openWorkshop, walkTo } from "./workshopNav";
+import { CRAFTING_STATIONS } from "../src/workshop/workshopLayout";
 
 /**
  * 디자인 검증용 화면 캡처.
@@ -124,6 +126,59 @@ test("capture: forest-walk", async ({ page }) => {
 
   await waitForVisualSettle(page);
   await page.screenshot({ path: path.join(OUT_DIR, "forest-walk.png"), fullPage: false });
+});
+
+/**
+ * 가위바위보는 두 곳에서 같은 아이콘을 쓴다 — 공방 제작 품질과 숲 포획.
+ *
+ * 아이콘이 19×19 그리드라 표시 크기가 19의 배수(57·76)일 때만 픽셀 폭이 균일하다.
+ * 그건 숫자로는 확인이 안 되고 확대해서 눈으로 봐야 잡힌다. 두 화면 다 남기는 이유는
+ * 판(공방은 갈색 카드, 숲은 원화 위 반투명)이 달라서 같은 색이 다르게 읽히기 때문이다.
+ */
+test("capture: workshop-rps", async ({ page }) => {
+  await openWorkshop(page);
+  const alchemy = CRAFTING_STATIONS.find((s) => s.id === "alchemy-workbench")!;
+  await walkTo(page, alchemy, 0.6 * alchemy.radius);
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("heading", { name: "연금술 제작대" })).toBeVisible();
+
+  await page.getByRole("button", { name: "테스트 재료" }).click();
+  await page.getByText("작은 회복 물약").first().click();
+  await page.getByRole("button", { name: /제작 시작|개 제작/ }).click();
+
+  await expect(page.getByRole("button", { name: /가위|바위|보/ }).first()).toBeVisible();
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "workshop-rps-select.png"), fullPage: false });
+
+  // 결과 화면 — 내가 고른 쪽에 테두리가 붙는다. 아이콘 색만으로는 구분이 안 되기 때문
+  await page.getByRole("button", { name: /바위/ }).first().click();
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "workshop-rps-result.png"), fullPage: false });
+});
+
+/**
+ * 숲 포획 화면은 걸어서 닿으려면 조우가 나올 때까지 굴려야 한다. 저장된 원정을 직접
+ * 심어 조우 한가운데로 들어간다 — 세이브 형식이 곧 게임 상태라 이게 가장 짧은 길이다.
+ */
+test("capture: forest-rps", async ({ page }) => {
+  await seedStorage(page, true);
+  await page.addInitScript(({ k, v }) => localStorage.setItem(k as string, v as string), {
+    k: "monster-rpg-forest-run",
+    v: JSON.stringify({
+      run: {
+        runVersion: 1, areaId: "shallow", depth: 3, alert: 30, alertPeak: 30,
+        bag: [{ id: "herb", count: 2 }], caught: 0,
+        current: "encounter", fork: null,
+        step: { entered: true, pick: null, attempts: 0, pending: null, done: null },
+        seed: 4242,
+      },
+    }),
+  });
+  await page.goto("/forest");
+
+  await expect(page.locator('[data-testid="forest-rps-rock"]')).toBeVisible({ timeout: 20_000 });
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "forest-rps.png"), fullPage: false });
 });
 
 /**

@@ -6,6 +6,8 @@
     "module": "ESNext",
     "types": ["node"],
     "skipLibCheck": true,
+    /* tests/ 에서 컴포넌트를 renderToStaticMarkup 으로 찍어 보므로 JSX 를 알아야 한다 */
+    "jsx": "react-jsx",
 
     /* Bundler mode */
     "moduleResolution": "bundler",
