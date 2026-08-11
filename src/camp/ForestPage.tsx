@@ -14,6 +14,7 @@ import { ForestBackdrop } from "./forest/ForestBackdrop";
 import { ForestTierCard } from "./forest/ForestTierCard";
 import { Particles } from "./forest/Particles";
 import { NODE_META, isDangerousNode, type ForestNodeType } from "./forest/nodes";
+import { generateDungeon, type ForestNode } from "./forest/dungeon";
 import {
   NODE_ALERT, alertBand, clampAlert, isForcedRetreat,
   applyMaterialMultiplier, catchRateWithAlert, type ScoutLevel,
@@ -158,18 +159,6 @@ type ForestPhase =
   | "rps_result" | "catch_result"
   | "rest" | "event" | "boss_cleared" | "forced_retreat";
 
-interface ForestNode {
-  id: string;
-  type: ForestNodeType;
-  depth: number;
-  col: number;       // 0-based column within this depth
-  totalCols: number; // total columns in this depth
-  nextIds: string[];
-  cleared: boolean;
-  revealed: boolean; // 도착 후 true
-}
-
-
 // 노드 표시 정보(NODE_META)는 forest/nodes.ts 한 벌뿐이다. 여기에 다시 적지 말 것.
 
 // 속성 색은 shared/palette.ts 의 ELEMENT_COLOR 가 단일 출처다. 여기서 따로 정하지 않는다.
@@ -242,102 +231,12 @@ function rollDrop(area: ForestArea, alert: number): {id:string; count:number}|nu
 // 노드 맵 생성
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function weightedPick<T>(weights: [T, number][]): T {
-  const total = weights.reduce((s, [, w]) => s + w, 0);
-  let r = Math.random() * total;
-  for (const [v, w] of weights) { r -= w; if (r <= 0) return v; }
-  return weights[weights.length - 1][0];
-}
-
-// ── 탐험 맵 디버그 (true 시 노드 id/좌표 표시) ─────────────────────────────────
-const SHOW_EXPLORE_MAP_DEBUG = false;
-
-function generateDungeon(_area: ForestArea): ForestNode[] {
-  // 탐험마다 랜덤 총 컬럼 수 (6~8)
-  const TOTAL_COLS = 6 + Math.floor(Math.random() * 3); // 6, 7, 8
-  const MAX_DEPTH  = TOTAL_COLS - 1;
-
-  // 각 column(depth) 별 row 수: 시작·보스=1, 중간=2~4
-  const depthCols = Array.from({ length: TOTAL_COLS }, (_, d) => {
-    if (d === 0 || d === MAX_DEPTH) return 1;
-    return 2 + Math.floor(Math.random() * 3); // 2~4
-  });
-
-  // 진행도 기반 노드 타입 가중치
-  function colWeights(depth: number): [ForestNodeType, number][] {
-    if (depth === 0)         return [["start",  1]];
-    if (depth === MAX_DEPTH) return [["boss",   1]];
-    const p = depth / MAX_DEPTH;
-    if (p < 0.35) return [["battle",4],["material",3],["event",2],["rest",1]];
-    if (p < 0.65) return [["battle",3],["material",3],["event",2],["rest",2]];
-    // 후반: elite 비율 증가, rest 증가
-    return [["battle",3],["material",2],["event",2],["rest",2],["elite",3]];
-  }
-
-  const nodes: ForestNode[] = [];
-  let idCounter = 0;
-  const depthNodes: ForestNode[][] = [];
-
-  for (let depth = 0; depth <= MAX_DEPTH; depth++) {
-    const cols = depthCols[depth];
-    const layer: ForestNode[] = [];
-    for (let col = 0; col < cols; col++) {
-      layer.push({
-        id:        `n${idCounter++}`,
-        type:      weightedPick(colWeights(depth)),
-        depth,
-        col,
-        totalCols: cols,
-        nextIds:   [],
-        cleared:   depth === 0,
-        revealed:  depth === 0,
-      });
-    }
-    depthNodes.push(layer);
-    nodes.push(...layer);
-  }
-
-  // 연결: 가까운 row 우선 + 일부 랜덤 + 미연결 노드 보정
-  for (let d = 0; d < MAX_DEPTH; d++) {
-    const curr = depthNodes[d];
-    const next = depthNodes[d + 1];
-    const assigned = new Set<string>();
-
-    for (const cn of curr) {
-      const closestIdx = Math.round(
-        (cn.col / Math.max(cn.totalCols - 1, 1)) * (next.length - 1)
-      );
-      const closest = next[closestIdx];
-      cn.nextIds.push(closest.id);
-      assigned.add(closest.id);
-
-      if (next.length > 1 && Math.random() < 0.45) {
-        const others = next.filter(n => n.id !== closest.id);
-        const extra  = others[Math.floor(Math.random() * others.length)];
-        if (!cn.nextIds.includes(extra.id)) {
-          cn.nextIds.push(extra.id);
-          assigned.add(extra.id);
-        }
-      }
-    }
-
-    // 연결 없는 next 노드 보정 (항상 경로 존재 보장)
-    for (const nn of next) {
-      if (!assigned.has(nn.id)) {
-        const src = curr[Math.floor(Math.random() * curr.length)];
-        if (!src.nextIds.includes(nn.id)) src.nextIds.push(nn.id);
-      }
-    }
-  }
-
-  return nodes;
-}
-
-
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // 던전 맵 화면
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// 탐험 맵 디버그 (true 면 노드 id/좌표를 맵에 표시)
+const SHOW_EXPLORE_MAP_DEBUG = false;
 
 // y 좌표 기준 정렬된 다음 노드 방향 라벨
 function getNextDirLabel(index: number, total: number): string {
@@ -648,11 +547,11 @@ function NodeArrivedScreen({ node, onContinue }: {
           <p className="text-pixel-md font-black" style={{ color: meta.color }}>{meta.label} 구역</p>
           <p className="text-pixel-sm text-sand-300 mt-2">
             {node.type === "battle"   && "야생 몬스터가 기다리고 있습니다!"}
-            {node.type === "material" && "희귀 재료를 발견했습니다!"}
+            {node.type === "material" && "무언가 지나간 흔적이 남아 있습니다."}
             {node.type === "event"    && "수상한 기운이 감돌고 있습니다..."}
-            {node.type === "rest"     && "아늑한 모닥불이 보입니다."}
+            {node.type === "rest"     && "몸을 숨길 만한 바위 그늘이 있습니다."}
             {node.type === "elite"    && "강력한 존재가 느껴집니다..."}
-            {node.type === "boss"     && "깊은 숲의 주인이 깨어났다!"}
+            {node.type === "boss"     && "숲의 주인이 깨어났다!"}
           </p>
         </div>
         <div className="px-6 pb-6 pt-2">
@@ -663,7 +562,7 @@ function NodeArrivedScreen({ node, onContinue }: {
               border:`1.5px solid ${meta.color}60`,
               color: meta.color,
             }}>
-            {node.type === "rest" ? "휴식하기" : "진입하기"} →
+            {node.type === "rest" ? "몸을 숨긴다" : "진입하기"} →
           </button>
         </div>
       </div>
@@ -1292,10 +1191,13 @@ export default function ForestPage() {
 
   // 구역 선택 → 던전 생성
   const handleEnterArea = (a: ForestArea) => {
-    const nodes = generateDungeon(a);
+    const nodes = generateDungeon();
     setArea(a);
     setDungeonNodes(nodes);
     setCurrentNodeId(nodes.find(n => n.depth === 0)!.id);
+    // 깊은 곳은 이미 깨어 있다 — 0 에서 시작하면 런 앞쪽 절반이 늘 배수 1.0 이었다
+    setAlert(a.startingAlert);
+    setAlertPeak(a.startingAlert);
     setPhase("dungeon");
   };
 

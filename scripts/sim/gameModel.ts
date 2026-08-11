@@ -11,7 +11,7 @@ import {
 } from "../../src/shared/floorTable";
 import { AREA_MATERIAL_POOL, rollBattleDrop } from "../../src/shared/dropTables";
 import { FOREST_AREAS, type ForestArea } from "../../src/camp/forest/areas";
-import type { ForestNodeType } from "../../src/camp/forest/nodes";
+import { generateDungeon } from "../../src/camp/forest/dungeon";
 import {
   NODE_ALERT, applyMaterialMultiplier, clampAlert, isForcedRetreat,
 } from "../../src/camp/forest/alert";
@@ -329,12 +329,7 @@ function pickForestMonster(area: ForestArea, elite: boolean): Monster {
   return scaleToLevel(base, level);
 }
 
-function weightedPick<T>(weights: [T, number][]): T {
-  const total = weights.reduce((s, [, w]) => s + w, 0);
-  let r = Math.random() * total;
-  for (const [v, w] of weights) { r -= w; if (r <= 0) return v; }
-  return weights[weights.length - 1][0];
-}
+export type ForestStrategy = "avoid" | "random" | "greedy";
 
 export interface ForestRunResult {
   drops: { id: string; count: number }[];
@@ -349,29 +344,40 @@ export interface ForestRunResult {
 }
 
 /**
- * 숲 탐험 1회: 입구 → 주인까지 한 경로(깊이당 노드 1개)를 지난다.
+ * 숲 탐험 1회. 게임과 같은 생성기(generateDungeon)로 그래프를 만들고 실제로 걸어간다.
  *
- * 노드 가중치 표는 아직 ForestPage.tsx 와 여기 두 곳에 있다 — 노드 개편(STEP 2)에서
- * 생성기를 따로 빼면서 합친다. 소란도 표(NODE_ALERT·배수)는 이미 한 벌이라 여기서
- * 그대로 불러 쓴다. 사본을 만들면 시뮬이 게임이 아니라 사본을 잰다.
+ * 예전에는 여기서 노드 타입을 직접 굴렸다 — 가중치 표가 두 벌이 되어, 게임 쪽을
+ * 고쳐도 시뮬은 옛 분포를 계속 쟀다. 분기에서 무엇을 고르느냐가 소란도의 전부라
+ * 그래프 없이는 전략을 잴 수도 없다.
+ *
+ * strategy: 갈림길에서 소란이 덜 오르는 쪽(avoid) · 무작위(random) · 더 오르는 쪽(greedy)
  */
-export function runForest(area: ForestArea): ForestRunResult {
-  const totalCols = 6 + Math.floor(Math.random() * 3);
-  const maxDepth = totalCols - 1;
+export function runForest(
+  area: ForestArea,
+  strategy: ForestStrategy = "random",
+): ForestRunResult {
+  const nodes = generateDungeon();
+  const byId = new Map(nodes.map((n) => [n.id, n]));
   const drops: { id: string; count: number }[] = [];
   const encounters: Monster[] = [];
-  let alert = 0;
-  let alertPeak = 0;
-  let forcedRetreat = false;
 
-  for (let depth = 1; depth <= maxDepth; depth++) {
-    const p = depth / maxDepth;
-    const type = depth === maxDepth ? "boss" : weightedPick<ForestNodeType>(
-      p < 0.35 ? [["battle", 4], ["material", 3], ["event", 2], ["rest", 1]] :
-      p < 0.65 ? [["battle", 3], ["material", 3], ["event", 2], ["rest", 2]] :
-                 [["battle", 3], ["material", 2], ["event", 2], ["rest", 2], ["elite", 3]],
-    );
+  let alert = area.startingAlert;
+  let alertPeak = alert;
+  let forcedRetreat = false;
+  let visited = 0;
+  let current = nodes.find((n) => n.depth === 0)!;
+
+  while (current.nextIds.length > 0) {
+    const options = current.nextIds.map((id) => byId.get(id)!).filter(Boolean);
+    const sorted = [...options].sort((a, b) => NODE_ALERT[a.type] - NODE_ALERT[b.type]);
+    current =
+      strategy === "avoid"  ? sorted[0] :
+      strategy === "greedy" ? sorted[sorted.length - 1] :
+      options[Math.floor(Math.random() * options.length)];
+    visited++;
+
     // 수확 배수는 이 노드를 밟기 전 소란도로 계산한다(게임과 같은 순서)
+    const type = current.type;
     if (type === "material") {
       const d1 = rollDrop(area, alert); if (d1) drops.push(d1);
       const d2 = rollDrop(area, alert); if (d2 && d2.id !== d1?.id) drops.push(d2);
@@ -382,9 +388,13 @@ export function runForest(area: ForestArea): ForestRunResult {
 
     alert = clampAlert(alert + NODE_ALERT[type]);
     alertPeak = Math.max(alertPeak, alert);
+
+    // 주인을 잡으면 소란이 얼마든 완주다 — 그 뒤에 밟을 노드가 없다
+    if (type === "boss") break;
     if (isForcedRetreat(alert)) { forcedRetreat = true; break; }
   }
-  return { drops, encounters, nodes: maxDepth, alert, alertPeak, forcedRetreat };
+
+  return { drops, encounters, nodes: visited, alert, alertPeak, forcedRetreat };
 }
 
 /** 가위바위보 포획 시도 1회 (플레이어는 상대 수를 알 수 없으므로 승/무/패가 균등) */

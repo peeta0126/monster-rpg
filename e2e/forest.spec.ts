@@ -55,11 +55,13 @@ async function resolveNodeScreen(page: Page, timeoutMs = 25_000): Promise<void> 
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (page.url().includes("/battle")) return;              // 전투는 호출부가 처리
-    if (await clickIfVisible(page, /진입하기|휴식하기/)) continue;
+    if (await clickIfVisible(page, /진입하기|몸을 숨긴다/)) continue;
     if (await clickIfVisible(page, /도망가기/)) continue;      // 포획은 운이라 도망으로 통일
     if (await clickIfVisible(page, /계속|돌아가기|확인/)) continue;
     // 구역을 다 돌면 클리어 화면이 뜬다. 이것도 정상 종료다.
     if ((await page.getByText("DUNGEON CLEARED").count()) > 0) return;
+    // 소란 100 이면 숲이 등을 떠민다. 여기서 멈추는 것도 정상 종료다
+    if ((await page.locator('[data-testid="forced-retreat-exit"]').count()) > 0) return;
     // 맵으로 돌아왔으면 이 노드는 끝난 것이다
     if ((await page.locator('[data-testid^="forest-node-"]').count()) > 0) return;
     await page.waitForTimeout(300);
@@ -85,7 +87,8 @@ test("숲 탐험 — 노드를 돌다가 갇히지 않는다", async ({ page }) 
 
   let visited = 0;
   let cleared = false;
-  for (let step = 0; step < 8; step++) {
+  // 런이 8~10 노드라 넉넉하게 돈다. 소란 100 에 걸려 중간에 쫓겨나는 판도 정상 종료다
+  for (let step = 0; step < 12; step++) {
     if (page.url().includes("/battle")) break;
 
     const reachable = page.locator('[data-testid^="forest-node-"][data-reachable="1"]');
@@ -99,6 +102,7 @@ test("숲 탐험 — 노드를 돌다가 갇히지 않는다", async ({ page }) 
 
     // 노드 맵으로 돌아왔거나, 전투로 넘어갔거나, 구역을 다 돈 것이어야 한다.
     if (page.url().includes("/battle")) break;
+    if ((await page.locator('[data-testid="forced-retreat-exit"]').count()) > 0) break;
     if ((await page.getByText("DUNGEON CLEARED").count()) > 0) {
       cleared = true;
       break;
