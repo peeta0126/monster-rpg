@@ -793,7 +793,7 @@ export default function BattlePage() {
         {/* 로그 — 높이 고정. 텍스트 길이에 따라 레이아웃이 흔들리면 안 된다 (ART_DIRECTION 3-2).
             '기록' 버튼은 지나간 줄을 다시 보는 용도로 남긴다. */}
         <div className="flex h-14 items-center border-b border-earth-500/40 bg-shadow-700/60 px-4">
-          <p className="line-clamp-2 text-pixel-sm leading-[18px] text-sand-200">
+          <p data-testid="battle-log-line" className="line-clamp-2 text-pixel-sm leading-[18px] text-sand-200">
             {logHistory[logHistory.length - 1] ?? ""}
           </p>
         </div>

@@ -53,6 +53,11 @@ const BAR_X_INNER = 10;        // 패널 내 왼쪽 여백
 const BAR_Y_IN_PANEL = PANEL_H - 22; // 패널 상단으로부터의 Y = 40
 const BAR_W_INNER = PANEL_W - 20;    // = 190
 // 절대 좌표 캐시
+// 로그 넘기기 키. 누르고 있으면 이 간격으로 계속 넘어간다 — 연타보다 빠르되
+// 무슨 일이 있었는지는 읽히는 속도.
+const ADVANCE_KEYS = ["Q", "SPACE"] as const;
+const HOLD_ADVANCE_MS = 110;
+
 const E_BAR_X = ENEMY_X - PANEL_W / 2 + BAR_X_INNER;
 const E_BAR_Y = E_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
 const P_BAR_X = PLAYER_X - PANEL_W / 2 + BAR_X_INNER;
@@ -89,6 +94,8 @@ export default class BattleScene extends Phaser.Scene {
 
   // ── 로그 알림 ──
   private logState: LogState = "idle";
+  /** 지금 눌려 있는 넘기기 키. 비어 있지 않으면 로그가 계속 흐른다. */
+  private heldKeys = new Set<string>();
 
   private notifBox!: Phaser.GameObjects.Graphics;
   private notifText!: Phaser.GameObjects.Text;
@@ -625,8 +632,24 @@ export default class BattleScene extends Phaser.Scene {
 
   private registerInput() {
     const safeOnAdvance = safeHandler(this, this.onAdvance.bind(this));
-    this.input.keyboard!.on("keydown-Q", safeOnAdvance);
-    this.input.keyboard!.on("keydown-SPACE", safeOnAdvance);
+
+    // 누르면 그 자리에서 넘어간다. 자동 진행이 켜져 있어도 타이머를 기다릴 필요가 없다 —
+    // 기다리는 것과 넘기는 것이 둘 다 돼야 한다.
+    for (const key of ADVANCE_KEYS) {
+      this.input.keyboard!.on(`keydown-${key}`, () => { this.heldKeys.add(key); safeOnAdvance(); });
+      this.input.keyboard!.on(`keyup-${key}`,   () => this.heldKeys.delete(key));
+    }
+    // 누르고 있으면 계속 흐른다. OS 키 반복에 맡기면 첫 반복까지 0.5초를 멈춰 있어
+    // 홀드가 연타보다 느리게 느껴진다.
+    this.time.addEvent({
+      delay: HOLD_ADVANCE_MS, loop: true,
+      callback: () => { if (this.heldKeys.size > 0) safeOnAdvance(); },
+    });
+    // 창을 벗어나면 keyup 이 안 온다. 그대로 두면 돌아왔을 때 로그가 혼자 흘러간다.
+    const clearHeld = () => this.heldKeys.clear();
+    this.game.events.on(Phaser.Core.Events.BLUR, clearHeld);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off(Phaser.Core.Events.BLUR, clearHeld));
+
     // 로그 박스 영역(하단) 클릭 또는 "showing" 상태면 어디 클릭해도 진행
     this.input.on("pointerdown", safeHandler(this, (p: Phaser.Input.Pointer) => {
       if (p.y > LOG_Y || this.logState === "showing") this.onAdvance();

@@ -2,7 +2,10 @@ import { test, expect } from "@playwright/test";
 
 /**
  * 자동 진행이 실제로 Q 없이 굴러가는지. npm run design:autolog
- * 켜기 전/후로 같은 시간 동안 진행된 로그 수를 비교한다.
+ * 기본이 자동이므로 수동으로 바꿔 "멈추는" 것까지 반대 방향으로 확인한다.
+ *
+ * 한 전투 안에서 두세 턴 이상 굴리지 않는다 — 1층 적의 한 방이 60 이라 신규 파티(120)는
+ * 세 턴째에 쓰러진다. 쓰러지면 커맨드가 영영 안 돌아와 엉뚱한 실패로 보인다.
  */
 const GUEST = JSON.stringify({ state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 });
 
@@ -16,28 +19,44 @@ test("fx: 로그 자동 진행", async ({ page }) => {
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // 기본은 수동
-  await expect(page.getByTestId("log-auto")).toContainText("수동");
-  await expect(page.getByTestId("log-speed")).toHaveCount(0);
+  /** 하단 고정 줄 — 지금 보이는 로그 한 줄 */
+  const line = () => page.getByTestId("battle-log-line").innerText();
 
-  // 수동일 때: 기술을 쓰고 3초를 그냥 두면 로그에서 멈춰 있다 (커맨드가 안 돌아온다)
-  await page.getByTestId("cmd-attack").click();
-  await page.locator('[data-testid^="move-"]').first().click();
-  await page.waitForTimeout(3000);
-  // 메뉴는 항상 떠 있고 disabled 로만 막힌다 — 존재 여부가 아니라 활성 여부를 본다
-  await expect(page.getByTestId("cmd-attack")).toBeDisabled();
-
-  // 자동으로 바꾸면 Q 없이 흘러가 커맨드가 돌아온다
-  await page.keyboard.press("q");            // 멈춰 있던 줄 하나만 수동으로 넘기고
-  await page.waitForTimeout(200);
-  await page.getByTestId("log-auto").click();
+  // 기본은 자동 — 설정을 찾아 켠 사람만 편한 상태로 두지 않는다
   await expect(page.getByTestId("log-auto")).toContainText("자동");
   await expect(page.getByTestId("log-speed")).toBeVisible();
 
-  await expect(page.getByTestId("cmd-attack")).toBeEnabled({ timeout: 30_000 });
-
   // 속도 버튼이 순환한다
-  const before = await page.getByTestId("log-speed").innerText();
+  const speed = await page.getByTestId("log-speed").innerText();
   await page.getByTestId("log-speed").click();
-  await expect(page.getByTestId("log-speed")).not.toHaveText(before);
+  await expect(page.getByTestId("log-speed")).not.toHaveText(speed);
+
+  // 수동으로 바꾸면 로그가 한 줄에서 멈춘다
+  await page.getByTestId("log-auto").click();
+  await expect(page.getByTestId("log-auto")).toContainText("수동");
+  await expect(page.getByTestId("log-speed")).toHaveCount(0);
+
+  await page.getByTestId("cmd-attack").click();
+  await page.locator('[data-testid^="move-"]').first().click();
+  await page.waitForTimeout(1200);
+  const stalled = await line();
+  await page.waitForTimeout(2000);
+  expect(await line()).toBe(stalled);
+  // 메뉴는 항상 떠 있고 disabled 로만 막힌다 — 존재 여부가 아니라 활성 여부를 본다
+  await expect(page.getByTestId("cmd-attack")).toBeDisabled();
+
+  // 키를 누르고 있으면 남은 줄이 알아서 흘러간다 (연타가 아니라 keydown 한 번이다).
+  // 바로 위에서 2초를 그냥 뒀을 때는 같은 자리였으니, 이 3초는 홀드가 민 것이다.
+  await page.keyboard.down("q");
+  await expect(page.getByTestId("cmd-attack")).toBeEnabled({ timeout: 3000 });
+  await page.keyboard.up("q");
+
+  // 자동으로 되돌리면 아무 키 없이 다음 줄로 넘어간다
+  await page.getByTestId("log-auto").click();
+  await expect(page.getByTestId("log-auto")).toContainText("자동");
+  await page.getByTestId("cmd-attack").click();
+  await page.locator('[data-testid^="move-"]').first().click();
+  await page.waitForTimeout(300);
+  const firstLine = await line();
+  await expect.poll(line, { timeout: 10_000 }).not.toBe(firstLine);
 });
