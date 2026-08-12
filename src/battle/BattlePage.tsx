@@ -74,6 +74,7 @@ import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { BattleCommandMenu } from "./BattleCommandMenu";
 import { previewMove } from "./damagePreview";
 import { statusDetail, statusLabel } from "./statusInfo";
+import { TypeChartPanel } from "./TypeChartPanel";
 import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
@@ -135,6 +136,8 @@ export default function BattlePage() {
   /** 결과 화면에서 회복을 눌렀는지 (중복 클릭 방지 겸 피드백) */
   const [healed,        setHealed]        = useState(false);
   const [showLog,       setShowLog]       = useState(false);
+  /** 속성 상성표. 전투를 멈추지 않고 패널 위에 떠 있기만 한다 */
+  const [showTypeChart, setShowTypeChart] = useState(false);
   /** 보관함이 가득 차서 자리를 못 준 포획 — 각인으로 흡수할지 물어본다 */
   const [overflowCapture, setOverflowCapture] = useState<BattleMonster | null>(null);
   /** 기술 칸이 찼을 때 띄우는 "무엇을 잊을까" 선택 창 */
@@ -177,6 +180,18 @@ export default function BattlePage() {
     const t = setTimeout(() => setShowResultUI(true), 500);
     return () => clearTimeout(t);
   }, [battleOutcome]);
+
+  // 상성표는 T 하나로 열고 닫는다. code 로 보는 건 한글 자판에서도 같은 키가 되게 하려는 것.
+  // Esc 는 쓰지 않는다 — 커맨드 메뉴의 "뒤로"와 같은 키라 표를 닫으면서 커서까지 되돌아간다.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "KeyT") return;
+      e.preventDefault();
+      setShowTypeChart((v) => !v);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // ─── Phaser 동기화 ─────────────────────────────────────────────────────────────
   const syncHpToPhaser = useCallback((p: BattleMonster, e: BattleMonster) => {
@@ -745,7 +760,15 @@ export default function BattlePage() {
       <div ref={gameRef} className="relative flex-1 min-h-0" />
 
       {/* ══════════ 하단 배틀 패널 ══════════ */}
-      <div data-testid="battle-panel" className="shrink-0 border-t-2 border-earth-500 bg-shadow-900">
+      <div data-testid="battle-panel" className="relative shrink-0 border-t-2 border-earth-500 bg-shadow-900">
+
+        {/* 상성표 — 패널 바로 위에 뜬다. 레이아웃을 밀지 않으니 캔버스가 줄었다 늘었다 하지 않고,
+            열어 둔 채로 기술을 골라도 된다. */}
+        {showTypeChart && (
+          <div className="absolute bottom-full right-3 z-40 mb-2">
+            <TypeChartPanel enemyType={enemyState.type} onClose={() => setShowTypeChart(false)} />
+          </div>
+        )}
 
         {/* 상태 바 — HP는 전투에서 가장 자주 보는 정보라 바를 크게 잡는다 */}
         <div className="flex items-center justify-between border-b border-earth-500/40 px-3 py-2 text-pixel-sm">
@@ -793,6 +816,13 @@ export default function BattlePage() {
                 {LOG_SPEEDS.find((x) => x.id === logSpeed)?.label}
               </button>
             )}
+            <button onClick={() => setShowTypeChart((v) => !v)}
+              data-testid="cmd-type-chart"
+              title="속성 상성표 (T)"
+              className={`text-pixel-sm border rounded px-1.5 py-0.5 transition ${
+                showTypeChart ? "border-mist-500 text-mist-300" : "border-shadow-700 text-earth-400 hover:text-sand-300"}`}>
+              상성 T
+            </button>
             <button onClick={() => setShowLog((v) => !v)}
               className={`text-pixel-sm border rounded px-1.5 py-0.5 transition ${
                 showLog ? "border-stone-600 text-sand-200" : "border-shadow-700 text-earth-400 hover:text-sand-300"}`}>

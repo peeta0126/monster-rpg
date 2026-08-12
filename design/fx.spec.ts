@@ -71,3 +71,30 @@ test("fx: 전투 HUD 경고", async ({ page }) => {
   await page.waitForTimeout(400);
   await page.screenshot({ path: path.join(OUT, "_hud-status.png") });
 });
+
+/** 상성표. 전투 중에 T 하나로 열리고, 지금 상대의 줄이 강조되는지 본다. */
+test("fx: 속성 상성표", async ({ page }) => {
+  fs.mkdirSync(OUT, { recursive: true });
+  await page.addInitScript(() => {
+    localStorage.setItem("monster-rpg-auth", JSON.stringify({
+      state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
+    localStorage.removeItem("monster-rpg-player");
+  });
+  await page.goto("/battle");
+  await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
+  await page.waitForTimeout(1200);
+
+  // 1층 상대는 물 속성이다 — 물 행/열이 강조돼야 한다
+  await page.keyboard.press("t");
+  await expect(page.getByTestId("type-chart")).toBeVisible();
+  await page.screenshot({ path: path.join(OUT, "_type-chart.png") });
+
+  // 열어 둔 채로 기술을 고를 수 있어야 한다 (전투를 멈추지 않는다)
+  await page.getByTestId("cmd-attack").click();
+  await expect(page.locator('[data-testid^="move-"]').first()).toBeVisible();
+  await expect(page.getByTestId("type-chart")).toBeVisible();
+  await page.screenshot({ path: path.join(OUT, "_type-chart-with-moves.png") });
+
+  await page.keyboard.press("t");
+  await expect(page.getByTestId("type-chart")).toHaveCount(0);
+});

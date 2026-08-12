@@ -41,3 +41,9 @@ export const typeChart: Record<ElementType, Partial<Record<ElementType, number>>
     poison: 0.5, // 독 → 독: 0.5배
   },
 };
+
+/**
+ * 화면에 상성표를 그릴 때 쓰는 속성 순서. 위 선언 순서를 그대로 따르므로 속성을 추가하면
+ * 표도 저절로 늘어난다 — 순서를 따로 적어 두면 새 속성이 표에서만 빠진다.
+ */
+export const ELEMENT_ORDER = Object.keys(typeChart) as ElementType[];

@@ -1,9 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { elementChip, hpToken, isHpDanger, HP_DANGER_PCT, ELEMENT_CHIP_INK, ELEMENT_COLOR } from "../src/shared/palette";
 import { STATUS_META, statusBadge, statusDetail, statusLabel } from "../src/battle/statusInfo";
 import { STATUS_TICK_RATIO, checkStatusEffects, createBattleMonster } from "../src/battle/battleUtils";
+import { typeChart, ELEMENT_ORDER } from "../src/battle/typeChart";
 import type { ElementType } from "../src/shared/game";
 
 /** 적이 누구인지·내가 얼마나 위험한지를 화면이 제대로 말하는가 */
@@ -75,6 +79,26 @@ test("상태이상 표시는 좁은 곳·넓은 곳이 같은 표를 쓴다", ()
   // 깎이지 않는 상태이상에는 피해율을 붙이지 않는다
   assert.equal(statusDetail("paralysis"), "⚡마비 지속");
   assert.equal(statusLabel(null), "");
+});
+
+// ─── 상성표 ────────────────────────────────────────────────────────────────────
+
+test("상성표가 typeChart 의 속성을 하나도 빠뜨리지 않는다", () => {
+  assert.deepEqual(ELEMENT_ORDER, Object.keys(typeChart));
+  assert.deepEqual([...ELEMENT_ORDER].sort(), (Object.keys(ELEMENT_COLOR) as ElementType[]).sort());
+});
+
+/**
+ * 표를 손으로 옮겨 적지 않았는지 본다. 배율이 화면 코드에 박혀 있으면 상성을 고친 날
+ * 표만 옛말을 한다 — 값은 전투가 쓰는 getTypeMultiplier 에서만 나와야 한다.
+ */
+test("상성표 화면이 배율을 직접 적고 있지 않다", () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const src = fs.readFileSync(path.join(here, "..", "src", "battle", "TypeChartPanel.tsx"), "utf8");
+  // Tailwind 여백(py-0.5)은 앞에 하이픈이 붙는다. 배율로 쓴 0.5 만 걸러낸다.
+  assert.ok(!/(?<!-)0\.5/.test(src), "TypeChartPanel 이 배율을 직접 적고 있다");
+  assert.ok(src.includes("getTypeMultiplier"), "전투가 쓰는 상성 함수를 부르지 않는다");
+  assert.ok(src.includes("ELEMENT_ORDER"), "속성 순서를 따로 적고 있다");
 });
 
 // ─── 위험 구간 ─────────────────────────────────────────────────────────────────
