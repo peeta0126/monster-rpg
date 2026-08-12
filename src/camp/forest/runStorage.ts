@@ -1,4 +1,4 @@
-import { parseRun, type ForestRun, type RunBagEntry, type SettleReason } from "./runStore";
+import { parseRun, runIsOver, type ForestRun, type RunBagEntry, type SettleReason } from "./runStore";
 import type { ForestAreaId } from "./areas";
 
 /**
@@ -136,7 +136,13 @@ export function loadForest(): LoadedForest {
   if (settled) return { kind: "settle", settlement: settled };
 
   const parsed = parseRun(b.run);
-  if (parsed.ok) return { kind: "run", run: parsed.run };
+  if (parsed.ok) {
+    if (runIsOver(parsed.run)) return { kind: "settle", settlement: {
+      areaId: parsed.run.areaId, reason: "forced", bag: parsed.run.bag,
+      caught: parsed.run.caught, alertPeak: parsed.run.alertPeak,
+    } };
+    return { kind: "run", run: parsed.run };
+  }
 
   const rescued = salvage(b.run);
   if (rescued) return { kind: "settle", settlement: rescued };

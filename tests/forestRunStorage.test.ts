@@ -30,6 +30,14 @@ const { loadForest, saveForestRun, saveForestSettlement, clearForest } =
 
 function reset() { fake.clear(); }
 
+test("위험도 100으로 저장된 원정은 forced 정산으로 복원한다", () => {
+  reset();
+  saveForestRun({ ...startRun("shallow", 0, 7), alert: 100, alertPeak: 100 });
+  const loaded = loadForest();
+  assert.equal(loaded.kind, "settle");
+  if (loaded.kind === "settle") assert.equal(loaded.settlement.reason, "forced");
+});
+
 test("걷다 만 원정은 걸음 안의 진행까지 그대로 돌아온다", () => {
   reset();
   const run = advanceStep(startRun("deep", 15, 4242), { entered: true, attempts: 1 });

@@ -87,6 +87,20 @@ test("같은 재료는 한 줄로 합쳐진다", () => {
   assert.equal(bag[0].count, 5);
 });
 
+test("위험도 100은 제한되고 다음 갈림길 없이 강제 퇴각한다", () => {
+  const oneUp: ForestRun = { ...run0(), alert: 99, current: "trace" };
+  const oneUpResult = resolveStep(oneUp, {});
+  assert.equal(oneUpResult.alert, 100);
+  assert.deepEqual(oneUpResult.phase, { type: "settling", reason: "forced" });
+  assert.equal(oneUpResult.paths, oneUp.paths);
+
+  const tenUp: ForestRun = { ...run0(), alert: 95, current: "encounter" };
+  const tenUpResult = resolveStep(tenUp, { escaped: true });
+  assert.equal(tenUpResult.alert, 100);
+  assert.deepEqual(tenUpResult.phase, { type: "settling", reason: "forced" });
+  assert.equal(tenUpResult.paths, tenUp.paths);
+});
+
 test("정산 — 자진 귀환은 전부, 강제 퇴각은 절반", () => {
   assert.equal(recoveryRate("voluntary"), 1);
   assert.equal(recoveryRate("warden"), 1);

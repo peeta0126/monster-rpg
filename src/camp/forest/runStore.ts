@@ -130,6 +130,13 @@ export function resolveStep(run: ForestRun, outcome: StepOutcome): ForestRun {
   const seed = nextSeed();
   const { encounter: _finishedEncounter, ...baseRun } = run;
   void _finishedEncounter;
+  if (isForcedRetreat(alert)) {
+    return { ...baseRun, depth, alert, alertPeak: Math.max(run.alertPeak, alert), bag,
+      caught: run.caught + (outcome.caught ? 1 : 0), seed, sceneSeed: seed,
+      paths: run.paths, current: run.current, fork: null, step: NEW_STEP,
+      completedEventIds: [...run.completedEventIds, eventId],
+      phase: { type: "settling", reason: "forced" } };
+  }
   return { ...baseRun, depth, alert, alertPeak: Math.max(run.alertPeak, alert), bag,
     caught: run.caught + (outcome.caught ? 1 : 0), seed, sceneSeed: seed,
     paths: generatePaths(alert, depth, seed), current: run.current, fork: null, step: NEW_STEP,

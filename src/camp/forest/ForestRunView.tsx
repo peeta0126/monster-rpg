@@ -5,7 +5,7 @@ import { usePlayerStore } from "../../shared/playerStore";
 import type { ForestArea } from "./areas";
 import { alertBand } from "./alert";
 import { hasCatch, rollStepRewards } from "./steps";
-import { bagTotal, choosePath, judgeAlert, makeRng, resolveStep, runIsOver, type ForestRun, type RunBagEntry, type SettleReason } from "./runStore";
+import { bagTotal, choosePath, judgeAlert, makeRng, resolveStep, type ForestRun, type RunBagEntry, type SettleReason } from "./runStore";
 import { depthMood, getForestSceneLayout, type Point } from "./sceneLayouts";
 import { saveForestRun } from "./runStorage";
 import { CatchMiniGame } from "./CatchMiniGame";
@@ -30,6 +30,11 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
 
   useEffect(() => () => timer.current.forEach(clearTimeout), []);
   useEffect(() => {
+    if (run.phase.type === "settling" && run.phase.reason === "forced") {
+      onSettle("forced", run.bag, run.caught, run.alertPeak);
+    }
+  }, [onSettle, run.alertPeak, run.bag, run.caught, run.phase]);
+  useEffect(() => {
     if (run.phase.type === "transition") {
       const id = window.setTimeout(() => { setPlayer(layout.entrance); setSelected(0); setRun((r) => r ? { ...r, phase: { type: "choosing" } } : r); }, 360);
       timer.current.push(id);
@@ -46,26 +51,25 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [area, run.current, run.depth, run.seed]);
 
-  const beginEvent = useCallback((eventId: string) => {
-    if (run.completedEventIds.includes(eventId)) return;
-    if (hasCatch(run.current)) {
+  const beginEvent = useCallback((eventRun: ForestRun, eventId: string) => {
+    if (eventRun.completedEventIds.includes(eventId)) return;
+    if (hasCatch(eventRun.current)) {
       const monster = pickMonster();
       addToDexSeen(monster.id);
-      const next = { ...run, phase: { type: "capture", eventId, monsterId: monster.id } as const,
-        step: { ...run.step, entered: true }, encounter: { eventId, monsterId: monster.id, level: monster.level, resolved: false } };
+      const next = { ...eventRun, phase: { type: "capture", eventId, monsterId: monster.id } as const,
+        step: { ...eventRun.step, entered: true }, encounter: { eventId, monsterId: monster.id, level: monster.level, resolved: false } };
       saveForestRun(next);
       setRun(next);
       return;
     }
-    const { rng } = makeRng(run.seed ^ (run.depth + 1));
-    const gained = rollStepRewards(area, run.current, judgeAlert(run), rng);
-    const next = resolveStep({ ...run, phase: { type: "event", eventId } }, { gained });
-    setNotice(run.current === "hideout" ? "잠시 쉬어 위험도가 낮아졌습니다." : gained.length ? `재료 ${gained.reduce((s, x) => s + x.count, 0)}개를 획득했습니다.` : "길을 살펴보았습니다.");
+    const { rng } = makeRng(eventRun.seed ^ (eventRun.depth + 1));
+    const gained = rollStepRewards(area, eventRun.current, judgeAlert(eventRun), rng);
+    const next = resolveStep({ ...eventRun, phase: { type: "event", eventId } }, { gained });
+    setNotice(eventRun.current === "hideout" ? "잠시 쉬어 위험도가 낮아졌습니다." : gained.length ? `재료 ${gained.reduce((s, x) => s + x.count, 0)}개를 획득했습니다.` : "길을 살펴보았습니다.");
     setRun(next);
     window.setTimeout(() => setNotice(null), 1500);
-    if (run.current === "warden") onSettle("warden", next.bag, next.caught, next.alertPeak);
-    else if (runIsOver(next)) onSettle("forced", next.bag, next.caught, next.alertPeak);
-  }, [addToDexSeen, area, onSettle, pickMonster, run, setRun]);
+    if (eventRun.current === "warden") onSettle("warden", next.bag, next.caught, next.alertPeak);
+  }, [addToDexSeen, area, onSettle, pickMonster, setRun]);
 
   const captureMonster = useMemo(() => {
     if (run.phase.type !== "capture" || !run.encounter) return null;
@@ -86,10 +90,11 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
     if (run.phase.type !== "choosing") return;
     const option = run.paths[index]; const path = layout.paths[index];
     if (!option || !path) return;
-    setRun(choosePath(run, option.id));
+    const selectedRun = choosePath(run, option.id);
+    setRun(selectedRun);
     const points = [...path.waypoints, path.exit];
     points.forEach((point, i) => timer.current.push(window.setTimeout(() => setPlayer(point), i * 230)));
-    timer.current.push(window.setTimeout(() => beginEvent(option.id), points.length * 230 + 80));
+    timer.current.push(window.setTimeout(() => beginEvent(selectedRun, option.id), points.length * 230 + 80));
   }, [beginEvent, layout.paths, run, setRun]);
 
   useEffect(() => {
