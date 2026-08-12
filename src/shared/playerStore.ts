@@ -9,6 +9,9 @@ import {
   rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats,
   getEquipmentMaxLevel, MAX_EQUIPMENT_ENHANCEMENT,
 } from "./craftingUtils";
+import {
+  chainKeyOf, imprintTier, essenceCostFor, MAX_IMPRINT_TIER, IMPRINT_ESSENCE_ID,
+} from "../monster/imprint";
 import type { RpsResult } from "./craftingUtils";
 import { ARTIFACT_RECIPES } from "../workshop/craftingRecipes";
 
@@ -165,6 +168,8 @@ export interface PersistedPlayerState {
   craftedArtifacts: ArtifactInstance[];
   craftedPotions: CraftedPotionStack[];
   equippedArtifacts: Record<string, ArtifactInstance[]>;
+  /** 각인 — 계열키 → 지금까지 먹인 중복 수. 등급이 아니라 **먹인 수**를 적는다 */
+  imprint: Record<string, number>;
 }
 
 /** 새 게임 시작 시(혹은 마이그레이션 실패 폴백 시) 사용하는 기본 상태 */
@@ -183,6 +188,7 @@ function createInitialState(): PersistedPlayerState {
     craftedArtifacts: [],
     craftedPotions: [],
     equippedArtifacts: {},
+    imprint: {},
   };
 }
 
@@ -211,7 +217,7 @@ function normalizeStringArray(raw: unknown, fallback: string[]): string[] {
  * 동일한 공식 — 저장된 수치를 신뢰하지 않고, 최신 monsters.ts의 base 스탯 위에
  * 이 증분을 (level-1)번 다시 쌓는다. 레벨 자체는 유지하되 수치는 항상 최신 밸런스를 따른다.
  */
-function recomputeStatsForLevel(base: Monster, level: number) {
+export function recomputeStatsForLevel(base: Monster, level: number) {
   const n = Math.max(0, level - 1);
   return {
     maxHp:   base.maxHp   + n * 10,
@@ -319,7 +325,21 @@ export function normalizeState(input: object): PersistedPlayerState {
     craftedPotions:    (Array.isArray(raw.craftedPotions) ? raw.craftedPotions : []) as PersistedPlayerState["craftedPotions"],
     equippedArtifacts: (raw.equippedArtifacts && typeof raw.equippedArtifacts === "object"
       ? raw.equippedArtifacts : {}) as PersistedPlayerState["equippedArtifacts"],
+    // 각인이 없던 옛 세이브는 여기서 빈 표를 받는다 — 등급은 먹인 수에서 계산되므로
+    // 그 이상 손댈 게 없다(비용표를 고쳐도 마이그레이션이 필요 없는 이유이기도 하다)
+    imprint: normalizeImprint(raw.imprint),
   };
+}
+
+/** 먹인 수는 음이 아닌 정수여야 한다. 손으로 고친 세이브가 소수·음수를 들고 오면 버린다 */
+function normalizeImprint(raw: unknown): Record<string, number> {
+  const src = normalizeRecord(raw);
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(src)) {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 1) continue;
+    out[key] = Math.floor(value);
+  }
+  return out;
 }
 
 /**
@@ -352,6 +372,15 @@ function migrate(persistedState: unknown, version: number): PersistedPlayerState
 
 // ─── Store ────────────────────────────────────────────────────────────────────────
 
+/**
+ * 각인 먹이기의 결과. 실패 사유가 그대로 화면 문구가 되므로 나누어 둔다.
+ * - in-party: 파티 멤버는 먼저 보관함으로 내려야 한다
+ * - last-one: 그 계열의 마지막 한 마리는 먹일 수 없다
+ * - no-essence: 등급이 오르는 그 한 마리에 드는 몬스터 정수가 모자란다
+ */
+export type ImprintFeedResult =
+  | "ok" | "not-found" | "in-party" | "last-one" | "maxed" | "no-essence";
+
 interface PlayerState {
   party: OwnedMonster[];
   storage: OwnedMonster[];
@@ -370,6 +399,9 @@ interface PlayerState {
 
   // ── 아티팩트 장착 ─────────────────────────────────────────────────────────────
   equippedArtifacts: Record<string, ArtifactInstance[]>; // monsterUid → 장착 목록
+
+  // ── 각인 ──────────────────────────────────────────────────────────────────────
+  imprint: Record<string, number>; // 계열키 → 먹인 중복 수
 
   addToDexSeen:   (id: string) => void;
   addToDexCaught: (id: string) => void;
@@ -413,6 +445,15 @@ interface PlayerState {
   // ── 아티팩트 장착/해제 ────────────────────────────────────────────────────────
   equipArtifact: (monsterUid: string, artifact: ArtifactInstance) => void;
   unequipArtifact: (monsterUid: string, instanceId: string) => void;
+
+  // ── 각인 ──────────────────────────────────────────────────────────────────────
+  /** 보관함의 한 마리를 그 계열 각인에 먹인다. 되돌릴 수 없다 */
+  feedImprint: (uid: string) => ImprintFeedResult;
+  /**
+   * 보관함에 자리가 없어 못 받은 포획을 그 자리에서 각인으로 흡수한다.
+   * 보관함을 거치지 않으므로 "마지막 한 마리" 검사는 없다.
+   */
+  absorbCapture: (monster: Monster) => ImprintFeedResult;
 
   // ── 버리기 / 놓아주기 ─────────────────────────────────────────────────────────
   discardMaterial: (id: string, amount: number) => void;
@@ -726,6 +767,56 @@ export const usePlayerStore = create<PlayerState>()(
             },
           };
         });
+      },
+
+      feedImprint: (uid) => {
+        const s = get();
+        if (s.party.some((m) => m.uid === uid)) return "in-party";
+        const target = s.storage.find((m) => m.uid === uid);
+        if (!target) return "not-found";
+
+        const key = chainKeyOf(target);
+        // 계열이 통째로 사라지는 건 막는다 — 각인이 붙을 몸이 하나는 남아야 한다
+        const owned = [...s.party, ...s.storage].filter((m) => chainKeyOf(m) === key).length;
+        if (owned <= 1) return "last-one";
+
+        const fed = s.imprint[key] ?? 0;
+        if (imprintTier(fed) >= MAX_IMPRINT_TIER) return "maxed";
+        const cost = essenceCostFor(fed);
+        if ((s.materials[IMPRINT_ESSENCE_ID] ?? 0) < cost) return "no-essence";
+
+        // 장착 중이던 아티팩트는 놓아주기와 똑같이 가방으로 회수한다
+        const equipped = s.equippedArtifacts[uid] ?? [];
+        const newEquipped = { ...s.equippedArtifacts };
+        delete newEquipped[uid];
+
+        set({
+          storage:   s.storage.filter((m) => m.uid !== uid),
+          imprint:   { ...s.imprint, [key]: fed + 1 },
+          materials: cost > 0
+            ? { ...s.materials, [IMPRINT_ESSENCE_ID]: (s.materials[IMPRINT_ESSENCE_ID] ?? 0) - cost }
+            : s.materials,
+          craftedArtifacts:  equipped.length > 0 ? [...s.craftedArtifacts, ...equipped] : s.craftedArtifacts,
+          equippedArtifacts: newEquipped,
+        });
+        return "ok";
+      },
+
+      absorbCapture: (monster) => {
+        const s = get();
+        const key = chainKeyOf(monster);
+        const fed = s.imprint[key] ?? 0;
+        if (imprintTier(fed) >= MAX_IMPRINT_TIER) return "maxed";
+        const cost = essenceCostFor(fed);
+        if ((s.materials[IMPRINT_ESSENCE_ID] ?? 0) < cost) return "no-essence";
+
+        set({
+          imprint:   { ...s.imprint, [key]: fed + 1 },
+          materials: cost > 0
+            ? { ...s.materials, [IMPRINT_ESSENCE_ID]: (s.materials[IMPRINT_ESSENCE_ID] ?? 0) - cost }
+            : s.materials,
+        });
+        return "ok";
       },
 
       discardMaterial: (id, amount) =>
