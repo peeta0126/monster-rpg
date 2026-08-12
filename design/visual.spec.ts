@@ -26,9 +26,9 @@ const SCREENS = [
   { name: "farm",     path: "/farm",     auth: true,  phaser: false },
   { name: "monsters", path: "/monsters", auth: true,  phaser: false },
   { name: "workshop", path: "/workshop", auth: true,  phaser: false },
-  // battle 기준 이미지는 2026-08-12 에 갱신했다. 아군과 적의 좌우를 맞바꿨고(아군 좌하단·
-  // 적 우상단, 전에는 둘이 등을 지고 있었다) 자동 진행이 기본으로 켜져 하단 토글이 "자동"으로
-  // 찍힌다. 두 변화 다 의도한 것이다.
+  // battle 기준 이미지를 2026-08-12 에 다시 갱신했다. 배경이 Graphics 로 그리던 벽돌방에서
+  // 층 구간 × 적 속성으로 고르는 이미지 한 장으로 바뀌었고, 배치도 아군 앞(왼쪽·아래·크게)·
+  // 적 뒤(오른쪽·위·작게)로 다시 잡았다. HP 패널은 각자 발밑, 로그 상자는 오른쪽 아래다.
   { name: "battle",   path: "/battle",   auth: true,  phaser: true  },
 ];
 

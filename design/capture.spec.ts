@@ -310,6 +310,27 @@ test("capture: battle-boss", async ({ page }) => {
 });
 
 /**
+ * 층 구간마다 방이 바뀌고, 켜지는 창이 적 속성을 따라가는지 본다.
+ * 구간과 속성이 둘 다 다른 층을 고른다 — 한 구간만 찍으면 매핑이 고정값이어도 모른다.
+ */
+for (const floor of [5, 25, 45]) {
+  test(`capture: battle-room-${floor}f`, async ({ page }) => {
+    await seedStorage(page, true);
+    await page.goto("/battle");
+    await expect(page.locator("#root")).not.toBeEmpty();
+    await page.evaluate((f) => {
+      history.replaceState({ ...(history.state ?? {}), usr: { floor: f } }, "");
+    }, floor);
+    await page.reload();
+
+    await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
+    await expect(page.getByText(`${floor}F`)).toBeVisible();
+    await waitForVisualSettle(page);
+    await page.screenshot({ path: path.join(OUT_DIR, `battle-room-${floor}f.png`), fullPage: false });
+  });
+}
+
+/**
  * Tab 메뉴는 우상단 버튼에 붙어 아래로 펼쳐진다. 닫힌 화면만 찍으면 펼친 목록이
  * 목표 배너·최근 제작 패널과 겹치는지를 알 수가 없어서 열린 상태로 한 장 더 남긴다.
  */

@@ -6,6 +6,8 @@ import { markSceneReady } from "../shared/phaser/sceneReady";
 import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
 import { PALETTE, HEX, hpToken, isHpDanger, elementChip } from "../shared/palette";
 import { STATUS_META, statusBadge } from "./statusInfo";
+import { towerBattleBg } from "../shared/assetPaths";
+import { getTowerZone } from "../shared/floorTable";
 import type { ElementType, StatusEffect } from "../shared/game";
 import type { BattleResultPayload, BattlePlayerSwitchPayload, BattleHitPayload } from "../shared/phaser/events";
 
@@ -19,59 +21,24 @@ export interface BattleSceneUpdatePayload {
 }
 
 // ─── 캔버스 / 레이아웃 상수 ────────────────────────────────────────────────────
+// 숫자는 battleLayout.ts 한 벌뿐이다. 겹침 테스트가 같은 표를 읽는다.
 
-const W = 960;
-const H = 540;
-const BATTLE_H = H;     // 전투 무대는 캔버스 전체를 쓴다.
-                        // 예전엔 400까지만 그리고 400~540을 로그 칸으로 비워 뒀는데,
-                        // 로그가 React 쪽 고정 줄로 옮겨가면서 그 띠가 빈 공간으로 남았다.
-const LOG_Y = 400;      // 하단 로그 패널 시작
-const FLOOR_Y = 318;    // 탑 바닥면
+import {
+  W, H, FLOOR_TOP,
+  PLAYER_X, PLAYER_CY, PLAYER_SIZE, PLAYER_FEET,
+  ENEMY_X, ENEMY_CY, ENEMY_SIZE, ENEMY_FEET,
+  PANEL_W, PANEL_H, P_PANEL_CX, P_PANEL_CY, E_PANEL_CX, E_PANEL_CY,
+  BAR_H, BAR_W_INNER, E_BAR_X, E_BAR_Y, P_BAR_X, P_BAR_Y,
+  LOG_BOX, LOG_PAD_X, LOG_PAD_Y,
+} from "./battleLayout";
 
-// 아군은 좌하단, 적은 우상단 — 대각선 배치로 시선이 흐르게 한다 (ART_DIRECTION 3-2).
-// 예전엔 같은 Y선에 좌우로 마주 보게 두어 원근이 없었다.
-// 좌우는 JRPG 관례를 따른다. 왼쪽→오른쪽으로 읽는 사람은 왼쪽에 선 쪽을 자기로 본다.
-// 스프라이트 원본은 대부분 왼쪽을 보고 있어서, 아군만 뒤집으면 둘이 마주 본다.
-const ENEMY_X  = 664;
-const ENEMY_Y  = 206;
-const PLAYER_X = 300;
-const PLAYER_Y = 268;
-const MONSTER_SIZE = 140;
+/** 이 전투에서 쓰는 배경 텍스처 키. 전투마다 게임이 새로 만들어지므로 한 벌이면 된다. */
+const BG_KEY = "tower-bg";
 
-// HP 패널 (몬스터 바로 위)
-// 몬스터 top = MONSTER_Y - MONSTER_SIZE/2 = 162
-// 패널 bottom = 158 (4px 여유)
-const PANEL_W = 210;
-const PANEL_H = 62;
-// HP 패널은 각자 몬스터 위에 붙는다
-const E_PANEL_CY = 108;
-const P_PANEL_CY = 396;
-
-// HP 바: 패널 안 하단
-const BAR_H = 10;
-// 패널 내부 바 좌표 (공통)
-const BAR_X_INNER = 10;        // 패널 내 왼쪽 여백
-const BAR_Y_IN_PANEL = PANEL_H - 22; // 패널 상단으로부터의 Y = 40
-const BAR_W_INNER = PANEL_W - 20;    // = 190
-// 절대 좌표 캐시
 // 로그 넘기기 키. 누르고 있으면 이 간격으로 계속 넘어간다 — 연타보다 빠르되
 // 무슨 일이 있었는지는 읽히는 속도.
 const ADVANCE_KEYS = ["Q", "SPACE"] as const;
 const HOLD_ADVANCE_MS = 110;
-
-const E_BAR_X = ENEMY_X - PANEL_W / 2 + BAR_X_INNER;
-const E_BAR_Y = E_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
-const P_BAR_X = PLAYER_X - PANEL_W / 2 + BAR_X_INNER;
-const P_BAR_Y = P_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
-
-// ─── 층별 횃불 색 ──────────────────────────────────────────────────────────────
-
-function torchPalette(floor: number, isBoss: boolean) {
-  if (isBoss) return { base: HEX.mist500, mid: HEX.mist300, tip: HEX.cream100, glow: HEX.mist500 };
-  if (floor <= 10)  return { base: HEX.ember600, mid: HEX.ember500, tip: HEX.cream100, glow: HEX.ember500 };
-  if (floor <= 20)  return { base: HEX.ember700, mid: HEX.ember600, tip: HEX.ember500, glow: HEX.ember600 };
-  return { base: HEX.ember700, mid: HEX.ember700, tip: HEX.ember600, glow: HEX.ember700 };
-}
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
 
@@ -153,6 +120,10 @@ export default class BattleScene extends Phaser.Scene {
   preload() {
     const d = getBattleInitData();
     if (!d) return;
+    // 이 전투에 쓸 배경 한 장만 받는다(약 38KB). 35장을 다 받으면 1.32MB 다.
+    // preload 에 두는 게 핵심이다 — create() 는 로딩이 끝난 뒤에 돌기 때문에
+    // "텍스처가 아직 없어서 한 프레임 검게 뜨는" 구간이 아예 생기지 않는다.
+    this.load.image(BG_KEY, towerBattleBg(getTowerZone(d.floor), d.enemyType ?? "normal"));
     this.load.image("enemy-mon", d.enemyImageUrl);
     // 파티 전체 이미지를 party-mon-{i} 키로 미리 로드 (교체 즉시 텍스처 전환 가능)
     (d.partyImageUrls ?? [d.playerImageUrl]).forEach((url, i) => {
@@ -191,12 +162,13 @@ export default class BattleScene extends Phaser.Scene {
       this.updateNames(d.playerName, d.playerLevel, d.enemyName, d.enemyLevel);
     }
 
-    // 보스층 뱃지
+    // 보스층 뱃지 — 적 패널 바로 위, 발끝(ENEMY_FEET)과 패널 사이 띠에 앉힌다
     if (isBoss) {
+      const badgeY = E_PANEL_CY - PANEL_H / 2 - 18;
       const bossBg = this.add.graphics().setDepth(20);
       bossBg.fillStyle(HEX.mist500, 0.85);
-      bossBg.fillRoundedRect(ENEMY_X - 36, E_PANEL_CY - PANEL_H / 2 - 22, 72, 18, 5);
-      this.add.text(ENEMY_X, E_PANEL_CY - PANEL_H / 2 - 13, "★  BOSS  ★", {
+      bossBg.fillRoundedRect(E_PANEL_CX - 36, badgeY, 72, 16, 5);
+      this.add.text(E_PANEL_CX, badgeY + 8, "★  BOSS  ★", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300, fontStyle: "bold",
       }).setOrigin(0.5, 0.5).setDepth(21);
     }
@@ -232,238 +204,67 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 배경: 따뜻한 모험의 탑 내부
+  // 배경: 층 구간 × 적 속성으로 고른 방 한 장
+  //
+  // 예전엔 벽돌·바닥 격자·원형 조명 2개·횃불 2개·하단 그라디언트를 Graphics 로 그렸다.
+  // 이제 그 전부가 이미지에 구워져 들어온다(안개·비네트·먼지·켜진 창·바닥에 떨어지는 빛까지).
+  // 위에 아무것도 덧대지 않는다 — 비네트가 두 겹이 되면 그냥 탁해진다.
   // ─────────────────────────────────────────────────────────────────────────────
 
   private buildBackground(floor: number, isBoss = false) {
-    const palette = torchPalette(floor, isBoss);
-
-    // ── 벽 기반색 (보스층: 어두운 보라, 일반: 따뜻한 갈색) ──
-    const wall = this.add.graphics().setDepth(0);
-    wall.fillStyle(isBoss ? HEX.shadow800 : HEX.stone600, 1);
-    wall.fillRect(0, 0, W, BATTLE_H);
-
-    // ── 돌 블록 그리드 ──
-    const bw = 44, bh = 28;
-    const rows = Math.ceil(FLOOR_Y / bh);
-    for (let row = 0; row < rows; row++) {
-      const y0 = row * bh;
-      const y1 = Math.min(y0 + bh, FLOOR_Y);
-      const offset = row % 2 === 0 ? 0 : bw / 2;
-
-      // 블록 내부 (약간 다른 명도 — 홀수 행 살짝 밝게)
-      if (row % 3 === 1) {
-        const hi = this.add.graphics().setDepth(0);
-        hi.fillStyle(HEX.earth500, 0.4);
-        hi.fillRect(0, y0, W, y1 - y0);
+    if (this.textures.exists(BG_KEY)) {
+      // 배경은 픽셀아트가 아니라 부드러운 일러스트다. 게임 전역 pixelArt:true 의
+      // NEAREST 를 이 텍스처만 되돌린다 (ART_DIRECTION 3-4).
+      this.smoothTexture(BG_KEY);
+      this.add.image(0, 0, BG_KEY).setOrigin(0, 0).setDisplaySize(W, H).setDepth(0);
+      // 보스층은 같은 방을 눌러 깐다. 별도 이미지는 없다.
+      //
+      // setTint 를 쓰지 않는다 — 이 게임은 WebGL 컨텍스트 소진을 피하려고 CANVAS 렌더러로
+      // 고정돼 있고(phaserConfig), Canvas 렌더러는 이미지 틴트를 그리지 않는다. 실제로
+      // 재 보니 보스층과 일반층의 벽 밝기가 30,33,40 대 29,31,38 로 사실상 같았다.
+      // 그래서 어둠을 한 겹 덮는다. 비네트를 덧대는 게 아니라 방 전체를 고르게 누른다.
+      if (isBoss) {
+        const dim = this.add.graphics().setDepth(1);
+        dim.fillStyle(HEX.shadow900, 0.4);
+        dim.fillRect(0, 0, W, H);
       }
-
-      // 세로 조인트
-      const joints = this.add.graphics().setDepth(1);
-      joints.lineStyle(1, HEX.shadow900, 1);
-      for (let x = offset; x <= W; x += bw) {
-        joints.beginPath();
-        joints.moveTo(x, y0);
-        joints.lineTo(x, y1);
-        joints.strokePath();
-      }
-      // 가로 조인트
-      joints.beginPath();
-      joints.moveTo(0, y0);
-      joints.lineTo(W, y0);
-      joints.strokePath();
+    } else {
+      // 파일을 못 받았을 때. 방이 없어도 전투는 굴러가야 한다.
+      const fallback = this.add.graphics().setDepth(0);
+      fallback.fillStyle(HEX.shadow900, 1);
+      fallback.fillRect(0, 0, W, H);
+      fallback.fillStyle(HEX.shadow800, 1);
+      fallback.fillRect(0, FLOOR_TOP, W, H - FLOOR_TOP);
     }
-
-    // ── 천장 (어두운 석조 아치 암시) ──
-    const ceiling = this.add.graphics().setDepth(2);
-    ceiling.fillStyle(HEX.shadow900, 1);
-    ceiling.fillRect(0, 0, W, 28);
-    ceiling.fillStyle(HEX.shadow800, 1);
-    ceiling.fillRect(0, 28, W, 12);
-
-    // ── 배경 중앙 아치/통로 (픽셀아트: 계단형 아치) ──
-    const arch = this.add.graphics().setDepth(1);
-    arch.fillStyle(HEX.shadow900, 1);
-    // 픽셀아트 계단형 아치 - 각 단계가 4px 블록 단위
-    arch.fillRect(W / 2 - 56, 40, 112, 260);  // 내부 통로
-    arch.fillRect(W / 2 - 72, 56, 144, 244);
-    arch.fillRect(W / 2 - 88, 72, 176, 228);
-    arch.fillRect(W / 2 - 76, 44, 152, 12);   // 아치 상단 가로
-    // 아치 내부 원근감 (더 밝은 원거리)
-    arch.fillStyle(HEX.shadow900, 1);
-    arch.fillRect(W / 2 - 80, 76, 160, 224);
-    // 아치 테두리 픽셀 강조
-    arch.lineStyle(3, HEX.earth400, 1);
-    arch.strokeRect(W / 2 - 56, 40, 112, 260);
-    arch.lineStyle(2, HEX.earth500, 0.7);
-    arch.strokeRect(W / 2 - 72, 56, 144, 244);
-
-    // ── 횃불 앰비언트 빛 (벽에 퍼지는 따뜻한 빛) ──
-    const ambLeft = this.add.graphics().setDepth(1);
-    ambLeft.fillStyle(palette.glow, 0.1);
-    ambLeft.fillCircle(115, FLOOR_Y - 50, 120);
-    ambLeft.fillStyle(palette.glow, 0.07);
-    ambLeft.fillCircle(115, FLOOR_Y - 50, 200);
-
-    const ambRight = this.add.graphics().setDepth(1);
-    ambRight.fillStyle(palette.glow, 0.1);
-    ambRight.fillCircle(845, FLOOR_Y - 50, 120);
-    ambRight.fillStyle(palette.glow, 0.07);
-    ambRight.fillCircle(845, FLOOR_Y - 50, 200);
-
-    // 앰비언트 빛도 깜빡임
-    this.tweens.add({ targets: ambLeft, alpha: { from: 0.75, to: 1 }, duration: 600, yoyo: true, repeat: -1, ease: "Sine.InOut" });
-    this.tweens.add({ targets: ambRight, alpha: { from: 0.75, to: 1 }, duration: 800, yoyo: true, repeat: -1, ease: "Sine.InOut", delay: 200 });
-
-    // ── 바닥 ──
-    const floorBg = this.add.graphics().setDepth(2);
-    floorBg.fillStyle(HEX.stone600, 1);
-    floorBg.fillRect(0, FLOOR_Y, W, BATTLE_H - FLOOR_Y);
-    // 바닥 타일 라인
-    floorBg.lineStyle(1, HEX.shadow900, 1);
-    for (let y = FLOOR_Y + 16; y < BATTLE_H; y += 16) {
-      floorBg.beginPath(); floorBg.moveTo(0, y); floorBg.lineTo(W, y); floorBg.strokePath();
-    }
-    for (let x = 0; x < W; x += 36) {
-      floorBg.beginPath(); floorBg.moveTo(x, FLOOR_Y); floorBg.lineTo(x, BATTLE_H); floorBg.strokePath();
-    }
-    // 바닥 경계선 강조
-    floorBg.lineStyle(2, HEX.earth400, 0.5);
-    floorBg.beginPath(); floorBg.moveTo(0, FLOOR_Y); floorBg.lineTo(W, FLOOR_Y); floorBg.strokePath();
-
-    // ── 양쪽 기둥 (픽셀아트 블록) ──
-    const pillar = this.add.graphics().setDepth(2);
-    // 좌기둥
-    pillar.fillStyle(HEX.shadow900, 1);
-    pillar.fillRect(0, 0, 24, BATTLE_H);
-    pillar.fillStyle(HEX.stone600, 1);
-    pillar.fillRect(0, 0, 8, BATTLE_H);
-    pillar.fillStyle(HEX.shadow900, 1);
-    pillar.fillRect(16, 0, 8, BATTLE_H);
-    // 우기둥
-    pillar.fillStyle(HEX.shadow900, 1);
-    pillar.fillRect(W - 24, 0, 24, BATTLE_H);
-    pillar.fillStyle(HEX.stone600, 1);
-    pillar.fillRect(W - 8, 0, 8, BATTLE_H);
-    pillar.fillStyle(HEX.shadow900, 1);
-    pillar.fillRect(W - 24, 0, 8, BATTLE_H);
-    // 기둥 경계선
-    pillar.lineStyle(2, HEX.earth500, 0.8);
-    pillar.strokeRect(0, 0, 24, BATTLE_H);
-    pillar.strokeRect(W - 24, 0, 24, BATTLE_H);
-    // 픽셀 블록 구분선 (수평)
-    pillar.lineStyle(1, HEX.shadow800, 0.5);
-    for (let y = 28; y < BATTLE_H; y += 28) {
-      pillar.beginPath(); pillar.moveTo(0, y); pillar.lineTo(24, y); pillar.strokePath();
-      pillar.beginPath(); pillar.moveTo(W - 24, y); pillar.lineTo(W, y); pillar.strokePath();
-    }
-
-    // ── 발판 그림자 (픽셀아트: 사각형) ──
-    const shadow = this.add.graphics().setDepth(3);
-    shadow.fillStyle(HEX.shadow900, 0.55);
-    shadow.fillRect(ENEMY_X - 58, ENEMY_Y + MONSTER_SIZE / 2 - 10, 116, 13);
-    shadow.fillRect(PLAYER_X - 58, PLAYER_Y + MONSTER_SIZE / 2 - 10, 116, 13);
-
-    // ── 횃불 ──
-    this.buildTorch(115, FLOOR_Y - 52, palette);
-    this.buildTorch(845, FLOOR_Y - 52, palette);
 
     // ── 층 번호 ──
     this.add.text(W - 30, 36, `${floor}F`, {
       fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand300,
     }).setOrigin(1, 0.5).setDepth(10).setAlpha(0.9);
 
-    // ── 로그 패널 배경 ──
-    // 예전엔 여기에 불투명한 로그 패널을 깔아 캔버스 아래 1/4을 덮었다. 로그가 React 쪽
-    // 고정 줄로 옮겨간 지금은 바닥이 그대로 보이는 게 맞다. 대신 아래로 갈수록 어두워지는
-    // 그라디언트만 남겨 하단 UI와 자연스럽게 이어붙인다.
-    const floorFade = this.add.graphics().setDepth(10);
-    for (let i = 0; i < 24; i++) {
-      floorFade.fillStyle(HEX.shadow900, (i / 24) * 0.85);
-      floorFade.fillRect(0, LOG_Y + i * ((H - LOG_Y) / 24), W, (H - LOG_Y) / 24 + 1);
+    this.buildFloorShadows();
+  }
+
+  /**
+   * 발밑 그림자. 바닥이 평행사변형이라 예전의 딱딱한 직사각형은 어디에도 안 맞았다.
+   * 타원 세 겹을 조금씩 키우며 겹쳐 가장자리를 흐린다(Graphics 에 블러가 없다).
+   * 뒤에 선 적이 더 옅다 — 멀수록 그림자가 약해 보이는 게 원근을 거든다.
+   */
+  private buildFloorShadows() {
+    const g = this.add.graphics().setDepth(3);
+    for (const [x, feet, size, alpha] of [
+      [ENEMY_X,  ENEMY_FEET,  ENEMY_SIZE,  0.36],
+      [PLAYER_X, PLAYER_FEET, PLAYER_SIZE, 0.44],
+    ] as const) {
+      const w = size * 0.52;
+      const h = w * 0.19;
+      for (const [scale, share] of [[1.34, 0.34], [1.16, 0.42], [1, 0.5]] as const) {
+        g.fillStyle(HEX.shadow900, alpha * share);
+        g.fillEllipse(x, feet, w * scale, h * scale);
+      }
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 횃불 (3레이어 자연스러운 불꽃)
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  private buildTorch(
-    x: number, y: number,
-    palette: { base: number; mid: number; tip: number; glow: number }
-  ) {
-    // 받침대
-    const holder = this.add.graphics().setDepth(4);
-    holder.fillStyle(HEX.earth500, 1);
-    holder.fillRect(x - 3, y + 12, 6, 20);
-    holder.fillRect(x - 9, y + 6, 18, 8);
-    holder.fillStyle(HEX.shadow800, 1);
-    holder.fillRect(x - 5, y - 2, 10, 14);
-
-    // 글로우 (배경 빛 — 크게)
-    const glow = this.add.graphics().setDepth(3);
-    glow.fillStyle(palette.glow, 0.14);
-    glow.fillCircle(x, y, 52);
-    glow.fillStyle(palette.glow, 0.22);
-    glow.fillCircle(x, y, 26);
-    this.tweens.add({
-      targets: glow, alpha: { from: 0.6, to: 1.0 },
-      duration: 380 + Math.random() * 160, yoyo: true, repeat: -1, ease: "Sine.InOut",
-    });
-
-    // ── 불꽃 레이어 1: 베이스 (넓고 짧음, 좌우 진동) ──
-    const base = this.add.graphics().setDepth(5);
-    base.setPosition(x, y - 4);
-    base.fillStyle(palette.base, 1);
-    base.fillRect(-6, -6, 12, 10);
-    base.fillStyle(palette.mid, 1);
-    base.fillTriangle(-6, -4, 6, -4, 0, -14);
-    this.tweens.add({
-      targets: base,
-      x: { from: x - 1.5, to: x + 1.5 },
-      scaleX: { from: 0.88, to: 1.18 },
-      scaleY: { from: 0.92, to: 1.06 },
-      duration: 140 + Math.random() * 60,
-      yoyo: true, repeat: -1, ease: "Sine.InOut",
-    });
-
-    // ── 불꽃 레이어 2: 중간 (중간 높이, 반대 방향 진동) ──
-    const mid = this.add.graphics().setDepth(6);
-    mid.setPosition(x, y - 4);
-    mid.fillStyle(palette.mid, 1);
-    mid.fillTriangle(-4, -8, 4, -8, 0, -20);
-    mid.fillStyle(palette.tip, 0.85);
-    mid.fillTriangle(-2, -14, 2, -14, 0, -22);
-    this.tweens.add({
-      targets: mid,
-      x: { from: x + 2, to: x - 2 },
-      y: { from: y - 4, to: y - 7 },
-      scaleX: { from: 0.9, to: 1.2 },
-      duration: 190 + Math.random() * 80,
-      yoyo: true, repeat: -1, ease: "Sine.InOut", delay: 50,
-    });
-
-    // ── 불꽃 레이어 3: 끝 (가장 불규칙) ──
-    const tip = this.add.graphics().setDepth(7);
-    tip.setPosition(x, y - 4);
-    tip.fillStyle(palette.tip, 1);
-    tip.fillTriangle(-2, -18, 2, -18, 0, -28);
-    tip.fillStyle(HEX.cream100, 0.65);
-    tip.fillRect(-1, -28, 2, 5);
-    this.tweens.add({
-      targets: tip,
-      x: { from: x - 2.5, to: x + 2.5 },
-      y: { from: y - 6, to: y - 2 },
-      scaleX: { from: 0.7, to: 1.3 },
-      scaleY: { from: 0.85, to: 1.15 },
-      duration: 160 + Math.random() * 70,
-      yoyo: true, repeat: -1, ease: "Sine.InOut", delay: 90,
-    });
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 몬스터 스프라이트 (아군 좌하단 · 적 우상단, 마주 보기)
-  // ─────────────────────────────────────────────────────────────────────────────
 
   private buildMonsterSprites() {
     // 몬스터 PNG는 픽셀아트가 아니라 매끄러운 일러스트다. 게임 전역 pixelArt:true가
@@ -471,31 +272,31 @@ export default class BattleScene extends Phaser.Scene {
     this.smoothTexture("enemy-mon");
     for (let i = 0; i < 6; i++) this.smoothTexture(`party-mon-${i}`);
 
-    // 적 (우상단) — 원본이 왼쪽을 보고 있어 뒤집지 않는다
+    // 적 — 뒤(오른쪽·위·작게). 원본이 왼쪽을 보고 있어 뒤집지 않는다
     if (this.textures.exists("enemy-mon")) {
-      this.enemySprite = this.add.image(ENEMY_X, ENEMY_Y, "enemy-mon")
-        .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setDepth(6);
+      this.enemySprite = this.add.image(ENEMY_X, ENEMY_CY, "enemy-mon")
+        .setDisplaySize(ENEMY_SIZE, ENEMY_SIZE).setDepth(6);
     } else {
-      this.enemySprite = this.makeFallback(ENEMY_X, ENEMY_Y, HEX.ember700, MONSTER_SIZE);
+      this.enemySprite = this.makeFallback(ENEMY_X, ENEMY_CY, HEX.ember700, ENEMY_SIZE);
     }
 
-    // 플레이어 (좌하단) — 파티 0번 슬롯 이미지 사용 (party-mon-0)
+    // 아군 — 앞(왼쪽·아래·크게). 파티 0번 슬롯 이미지 사용 (party-mon-0)
     if (this.textures.exists("party-mon-0")) {
-      this.playerSprite = this.add.image(PLAYER_X, PLAYER_Y, "party-mon-0")
+      this.playerSprite = this.add.image(PLAYER_X, PLAYER_CY, "party-mon-0")
         // 원본이 왼쪽을 보고 있으므로 뒤집어야 우측의 적을 바라본다
-        .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setFlipX(true).setDepth(6);
+        .setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setFlipX(true).setDepth(6);
     } else {
-      this.playerSprite = this.makeFallback(PLAYER_X, PLAYER_Y, HEX.mist500, MONSTER_SIZE);
+      this.playerSprite = this.makeFallback(PLAYER_X, PLAYER_CY, HEX.mist500, PLAYER_SIZE);
     }
 
     // 등장 애니메이션
-    this.enemySprite.setAlpha(0).setY(ENEMY_Y + 20);
-    this.playerSprite.setAlpha(0).setY(PLAYER_Y + 20);
-    this.tweens.add({ targets: this.enemySprite, alpha: 1, y: ENEMY_Y, duration: 500, delay: 200, ease: "Back.Out" });
-    this.tweens.add({ targets: this.playerSprite, alpha: 1, y: PLAYER_Y, duration: 500, delay: 420, ease: "Back.Out" });
+    this.enemySprite.setAlpha(0).setY(ENEMY_CY + 20);
+    this.playerSprite.setAlpha(0).setY(PLAYER_CY + 20);
+    this.tweens.add({ targets: this.enemySprite, alpha: 1, y: ENEMY_CY, duration: 500, delay: 200, ease: "Back.Out" });
+    this.tweens.add({ targets: this.playerSprite, alpha: 1, y: PLAYER_CY, duration: 500, delay: 420, ease: "Back.Out" });
     this.time.delayedCall(930, () => {
-      this.addFloat(this.enemySprite, ENEMY_Y, 6, 1750);
-      this.addFloat(this.playerSprite, PLAYER_Y, 5, 1950);
+      this.addFloat(this.enemySprite, ENEMY_CY, 6, 1750);
+      this.addFloat(this.playerSprite, PLAYER_CY, 5, 1950);
     });
   }
 
@@ -520,15 +321,18 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // HP 패널 (몬스터 바로 위, 각각 중앙 정렬)
+  // HP 패널 (각자 발밑)
+  //
+  // ⚠️ 패널 X 는 몬스터 X 에서 파생시키지 않는다. 예전엔 그렇게 뒀다가 패널이 몬스터를
+  // 따라다니며 겹쳤다 — 배치를 바꿀 때마다 겹침이 되살아난 원인이 이것이었다.
   // ─────────────────────────────────────────────────────────────────────────────
 
   private buildHudPanels() {
     this.buildOneHudPanel(
-      ENEMY_X, E_PANEL_CY, PANEL_W, PANEL_H, true,
+      E_PANEL_CX, E_PANEL_CY, PANEL_W, PANEL_H, true,
     );
     this.buildOneHudPanel(
-      PLAYER_X, P_PANEL_CY, PANEL_W, PANEL_H, false,
+      P_PANEL_CX, P_PANEL_CY, PANEL_W, PANEL_H, false,
     );
     this.buildDangerCues();
   }
@@ -565,17 +369,18 @@ export default class BattleScene extends Phaser.Scene {
       frame.lineStyle(2, HEX.ember700, 1);
       frame.strokeRect(barX - 3, barY - 3, BAR_W_INNER + 6, BAR_H + 6);
 
-      const sx = side === "enemy" ? ENEMY_X : PLAYER_X;
-      const sy = side === "enemy" ? ENEMY_Y : PLAYER_Y;
+      const sx   = side === "enemy" ? ENEMY_X  : PLAYER_X;
+      const sy   = side === "enemy" ? ENEMY_CY : PLAYER_CY;
+      const size = side === "enemy" ? ENEMY_SIZE : PLAYER_SIZE;
       // 일러스트를 틴트로 물들이면 그림이 상한다. 뒤에 아우라를 깔아 몬스터째로 위험해 보이게 한다.
       // 번짐만 깔았더니 횃불 불빛과 구별이 안 됐다 — 테두리 원을 하나 둘러 형태를 준다.
       const aura = this.add.graphics().setDepth(5).setVisible(false);
       aura.fillStyle(HEX.ember700, 0.5);
-      aura.fillCircle(sx, sy, MONSTER_SIZE * 0.42);
+      aura.fillCircle(sx, sy, size * 0.42);
       aura.fillStyle(HEX.ember700, 0.28);
-      aura.fillCircle(sx, sy, MONSTER_SIZE * 0.62);
+      aura.fillCircle(sx, sy, size * 0.62);
       aura.lineStyle(3, HEX.ember700, 0.9);
-      aura.strokeCircle(sx, sy, MONSTER_SIZE * 0.62);
+      aura.strokeCircle(sx, sy, size * 0.62);
 
       this.dangerFrame[side] = frame;
       this.dangerAura[side]  = aura;
@@ -672,22 +477,22 @@ export default class BattleScene extends Phaser.Scene {
     // 알림 박스 (기본 숨김)
     this.notifBox = this.add.graphics().setDepth(20);
     this.notifBox.fillStyle(HEX.shadow800, 0.96);
-    this.notifBox.fillRect(20, LOG_Y + 14, W - 40, 104);
+    this.notifBox.fillRect(LOG_BOX.x, LOG_BOX.y, LOG_BOX.w, LOG_BOX.h);
     this.notifBox.lineStyle(2, HEX.earth500, 0.9);
-    this.notifBox.strokeRect(20, LOG_Y + 14, W - 40, 104);
+    this.notifBox.strokeRect(LOG_BOX.x, LOG_BOX.y, LOG_BOX.w, LOG_BOX.h);
     this.notifBox.setVisible(false);
 
-    this.notifText = this.add.text(48, LOG_Y + 34, "", {
+    this.notifText = this.add.text(LOG_BOX.x + LOG_PAD_X, LOG_BOX.y + LOG_PAD_Y, "", {
       fontSize: "16px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.cream100,
-      wordWrap: { width: W - 110 },
+      wordWrap: { width: LOG_BOX.w - LOG_PAD_X * 2 },
     }).setDepth(21).setVisible(false);
 
-    this.notifHint = this.add.text(W - 44, LOG_Y + 100, "Q ▶", {
+    this.notifHint = this.add.text(LOG_BOX.x + LOG_BOX.w - 14, LOG_BOX.y + LOG_BOX.h - 8, "Q ▶", {
       fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand300,
     }).setOrigin(1, 1).setDepth(21).setVisible(false);
 
     // 아이들 (기술 선택 안내)
-    this.idleText = this.add.text(W / 2, LOG_Y + 60, "기술을 선택하세요", {
+    this.idleText = this.add.text(LOG_BOX.x + LOG_BOX.w / 2, LOG_BOX.y + LOG_BOX.h / 2, "기술을 선택하세요", {
       fontSize: "16px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.earth400,
     }).setOrigin(0.5, 0.5).setDepth(11);
   }
@@ -699,10 +504,11 @@ export default class BattleScene extends Phaser.Scene {
   private buildResultOverlay() {
     this.resultVeil = this.add.graphics().setDepth(30);
     this.resultVeil.fillStyle(HEX.shadow900, 0.62);
-    this.resultVeil.fillRect(0, 0, W, BATTLE_H);
+    this.resultVeil.fillRect(0, 0, W, H);
     this.resultVeil.setVisible(false);
 
-    this.resultTitle = this.add.text(W / 2, ENEMY_Y - 10, "", {
+    // 화면 한가운데. 예전엔 적 스프라이트 Y 를 참조해서 배치를 옮길 때마다 같이 흔들렸다.
+    this.resultTitle = this.add.text(W / 2, 250, "", {
       fontSize: "36px", fontFamily: PIXEL_FONT, resolution: textResolution(), fontStyle: "bold",
       stroke: PALETTE.shadow900, strokeThickness: 6,
     }).setOrigin(0.5, 0.5).setDepth(31).setVisible(false);
@@ -734,7 +540,9 @@ export default class BattleScene extends Phaser.Scene {
 
     // 로그 박스 영역(하단) 클릭 또는 "showing" 상태면 어디 클릭해도 진행
     this.input.on("pointerdown", safeHandler(this, (p: Phaser.Input.Pointer) => {
-      if (p.y > LOG_Y || this.logState === "showing") this.onAdvance();
+      // 로그 상자 안이거나, 로그가 떠 있으면 어디를 눌러도 넘어간다
+      const inLogBox = p.x >= LOG_BOX.x && p.y >= LOG_BOX.y;
+      if (inLogBox || this.logState === "showing") this.onAdvance();
     }));
   }
 
@@ -870,8 +678,8 @@ export default class BattleScene extends Phaser.Scene {
         // setTexture 후 반드시 origin + displaySize 재설정
         // (Phaser가 새 텍스처의 natural size로 리셋하기 때문)
         this.playerSprite.setOrigin(0.5, 0.5);
-        this.playerSprite.setDisplaySize(MONSTER_SIZE, MONSTER_SIZE);
-        this.playerSprite.setY(PLAYER_Y);
+        this.playerSprite.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE);
+        this.playerSprite.setY(PLAYER_CY);
 
         this.tweens.add({
           targets: this.playerSprite,
@@ -880,8 +688,8 @@ export default class BattleScene extends Phaser.Scene {
           ease: "Power2.Out",
           onComplete: () => {
             // fade-in 완료 후에도 한 번 더 고정 (tween이 scale 건드릴 경우 대비)
-            this.playerSprite.setDisplaySize(MONSTER_SIZE, MONSTER_SIZE);
-            this.addFloat(this.playerSprite, PLAYER_Y, 5, 1950);
+            this.playerSprite.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE);
+            this.addFloat(this.playerSprite, PLAYER_CY, 5, 1950);
           },
         });
       },
@@ -1055,7 +863,7 @@ export default class BattleScene extends Phaser.Scene {
   /** 쓰러짐 — 페이드아웃 + 살짝 가라앉기 */
   private playFaint(target: "enemy" | "player") {
     const sprite = target === "enemy" ? this.enemySprite : this.playerSprite;
-    const baseY  = target === "enemy" ? ENEMY_Y : PLAYER_Y;
+    const baseY  = target === "enemy" ? ENEMY_CY : PLAYER_CY;
     if (!sprite) return;
     this.fx({
       targets: sprite, alpha: 0, y: baseY + 18,
