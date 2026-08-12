@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
 import { MONSTER_IMAGE_MAP } from "./monsterImages";
 import { getFullLearnset } from "./learnset";
 import { monsters } from "./monsters";
+import {
+  withImprint, imprintStatus, imprintStars, chainKeyOf, MAX_IMPRINT_TIER,
+} from "./imprint";
+import { ImprintModal } from "./ImprintModal";
 import type { ArtifactInstance } from "../shared/crafting";
 import {
   ARTIFACT_SLOT_MAP, ARTIFACT_SLOT_LABEL, ALL_ARTIFACT_SLOTS,
@@ -74,7 +78,7 @@ function ReleaseBtn({ disabled, onRelease }: { disabled: boolean; onRelease: () 
 
   if (disabled) {
     return (
-      <button disabled className="text-pixel-sm font-bold px-2 py-0.5 rounded"
+      <button disabled className="text-pixel-sm font-bold px-2 py-0.5 rounded whitespace-nowrap"
         style={{ background: "rgba(13, 18, 35, .2)", border: "1px solid rgba(132, 75, 63, .35)", color: "rgba(172, 123, 98, .4)" }}>
         놓아주기
       </button>
@@ -94,7 +98,7 @@ function ReleaseBtn({ disabled, onRelease }: { disabled: boolean; onRelease: () 
 
   return (
     <button onClick={handleClick}
-      className="text-pixel-sm font-bold px-2 py-0.5 rounded transition"
+      className="text-pixel-sm font-bold px-2 py-0.5 rounded transition whitespace-nowrap"
       style={{
         background: pending ? "rgba(168, 61, 31, .317)" : "rgba(13, 18, 35, .25)",
         border: pending ? "1px solid rgba(168, 61, 31, .897)" : "1px solid rgba(132, 75, 63, .239)",
@@ -275,8 +279,12 @@ function EquipModal({
 
 // ─── MonsterStatusPanel ──────────────────────────────────────────────────────────
 // 파티/보관함에서 클릭한 몬스터의 정보를 보여주는 상시 패널(모달 아님).
-function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
+function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS, imprint = {}, inParty = false, onOpenImprint }: {
   monster: OwnedMonster | null; equipBonus?: EquipStatBonus;
+  imprint?: Record<string, number>;
+  /** 파티 멤버는 먼저 보관함으로 내려야 먹일 수 있다 — 버튼 대신 안내를 띄운다 */
+  inParty?: boolean;
+  onOpenImprint?: (chainKey: string) => void;
 }) {
   if (!monster) {
     return (
@@ -353,6 +361,59 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS }: {
             ))}
           </div>
         </div>
+
+        {/* 각인 — 계열 단위라 이 몬스터 한 마리가 아니라 계열 전원에 붙는다 */}
+        {(() => {
+          const status = imprintStatus(chainKeyOf(monster), imprint);
+          return (
+            <div>
+              <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
+                각인
+              </p>
+              <div className="rounded-xl px-3 py-2.5"
+                data-testid="imprint-status"
+                style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(132, 75, 63, .105)" }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-pixel-sm font-black" style={{ color: PALETTE.ember500 }}>
+                    {imprintStars(status.tier)}
+                  </span>
+                  <span className="text-pixel-sm font-bold text-sand-200">
+                    {status.tier} / {MAX_IMPRINT_TIER}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-pixel-sm" style={{ color: "rgba(205, 178, 126, .698)" }}>
+                  {status.label} 전원 능력치{" "}
+                  <span className="font-bold text-sand-200">+{status.tier * 5}%</span>
+                </p>
+                <p className="mt-1 text-pixel-sm" style={{ color: "rgba(132, 75, 63, .891)" }}>
+                  {status.maxed
+                    ? "더 올릴 등급이 없다."
+                    : `다음 등급까지 중복 ${status.needFed}마리${status.needEssence > 0 ? ` · 정수 ${status.needEssence}개` : ""}`}
+                </p>
+                {onOpenImprint && (
+                  inParty ? (
+                    <p className="mt-2 text-pixel-sm" style={{ color: "rgba(132, 75, 63, .891)" }}>
+                      먹이려면 보관함으로 내려야 한다.
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onOpenImprint(status.key)}
+                      data-testid="imprint-open-status"
+                      className="mt-2 w-full rounded-lg py-1.5 text-pixel-sm font-black transition hover:brightness-125"
+                      style={{
+                        background: rgba("moss500", 0.25),
+                        border: `1px solid ${rgba("moss500", 0.7)}`,
+                        color: PALETTE.sand200,
+                      }}>
+                      각인하기
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 성장 — 다음 레벨까지, 다음에 배울 기술, 진화 예정 */}
         {(() => {
@@ -552,10 +613,15 @@ type SortKey = "level" | "hp" | "type";
 export default function MonstersPage() {
   const navigate = useNavigate();
   const {
-    party, storage, bestFloor, dexCaught,
+    party: rawParty, storage: rawStorage, bestFloor, dexCaught, imprint,
     moveToStorage, swapWithStorage, moveToParty, swapPartySlots, restorePartyHp,
     equippedArtifacts, craftedArtifacts, equipArtifact, unequipArtifact, releaseMonster,
   } = usePlayerStore();
+
+  // 각인은 저장된 능력치에 손대지 않는다 — 화면에 보이는 값만 파생시킨다.
+  // 순서는 그대로라 파티 인덱스·uid 로 도는 조작은 전부 원본과 맞물린다.
+  const party   = useMemo(() => rawParty.map((m) => withImprint(m, imprint)), [rawParty, imprint]);
+  const storage = useMemo(() => rawStorage.map((m) => withImprint(m, imprint)), [rawStorage, imprint]);
 
   // 오름(최종 보스)은 포획 대상이 아니라 도감 분모에서 뺀다
   const catchableTotal = monsters.filter((m) => m.id !== "ormr").length;
@@ -566,6 +632,9 @@ export default function MonstersPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortBy,     setSortBy]     = useState<SortKey>("level");
   const [restoreAnim, setRestoreAnim] = useState(false);
+
+  // 각인 모달 — 계열 단위라 uid 가 아니라 계열키를 들고 연다
+  const [imprintKey, setImprintKey] = useState<string | null>(null);
 
   // 장비 모달
   const [equipModalUid, setEquipModalUid] = useState<string | null>(null);
@@ -582,12 +651,13 @@ export default function MonstersPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (imprintKey) { setImprintKey(null); return; }
       if (equipModalUid) { setEquipModalUid(null); return; }
       navigate("/", { state: { openMenu: true } });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [equipModalUid, navigate]);
+  }, [equipModalUid, imprintKey, navigate]);
 
   // 몬스터 클릭 시: 다른 몬스터가 이미 선택된 상태라면 파티 교체를 수행하고,
   // 아무것도 선택되지 않은 상태라면 선택 표시와 함께 상세 정보를 띄운다.
@@ -829,6 +899,9 @@ export default function MonstersPage() {
         <MonsterStatusPanel
           monster={detailMonster}
           equipBonus={detailMonster ? getEquipBonus(detailMonster.uid) : undefined}
+          imprint={imprint}
+          inParty={detailMonster ? party.some((m) => m.uid === detailMonster.uid) : false}
+          onOpenImprint={setImprintKey}
         />
 
         {/* 보관함 */}
@@ -887,7 +960,11 @@ export default function MonstersPage() {
                 <p className="text-pixel-sm text-earth-400">{TYPE_KO[typeFilter]} 속성 몬스터가 없습니다.</p>
               </div>
             ) : (
-              <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}>
+              <div className="grid gap-2" style={{
+                // 100px 이던 시절엔 카드 아래 액션이 둘뿐이었다. 각인이 붙어 셋이 되면서
+                // 글자가 "각/인" 으로 끊겼다 — 셋이 한 줄에 서는 최소 폭으로 넓힌다
+                gridTemplateColumns: "repeat(auto-fill, minmax(124px, 1fr))",
+              }}>
                 {filteredStorage.map((m, i) => (
                   <div key={m.uid} className="flex flex-col gap-1" style={{ animation: `monIn .3s ease ${i * .04}s both` }}>
                     <MonsterCard monster={m} size="sm"
@@ -897,13 +974,25 @@ export default function MonstersPage() {
                     <div className="flex items-center justify-center gap-1 px-0.5">
                       <button
                         onClick={(e) => { e.stopPropagation(); setEquipModalUid(m.uid); }}
-                        className="text-pixel-sm font-bold px-1.5 py-0.5 rounded transition hover:brightness-125"
+                        className="text-pixel-sm font-bold px-1.5 py-0.5 rounded transition hover:brightness-125 whitespace-nowrap"
                         style={{
                           background: "rgba(24, 59, 79, .531)",
                           border: "1px solid rgba(92, 147, 150, .29)",
                           color: "rgba(174, 226, 213, .57)",
                         }}>
                         장착
+                      </button>
+                      {/* 각인은 보관함에서만 — 파티 카드에는 이 버튼이 없다 */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setImprintKey(chainKeyOf(m)); }}
+                        data-testid={`imprint-open-${m.uid}`}
+                        className="text-pixel-sm font-bold px-1.5 py-0.5 rounded transition hover:brightness-125 whitespace-nowrap"
+                        style={{
+                          background: rgba("moss500", 0.25),
+                          border: `1px solid ${rgba("moss500", 0.6)}`,
+                          color: PALETTE.sand200,
+                        }}>
+                        각인
                       </button>
                       <ReleaseBtn
                         disabled={false}
@@ -917,6 +1006,9 @@ export default function MonstersPage() {
           </div>
         </div>
       </div>
+
+      {/* ── 각인 모달 ── */}
+      {imprintKey && <ImprintModal chainKey={imprintKey} onClose={() => setImprintKey(null)} />}
 
       {/* ── 장비 모달 ── */}
       {equipModalUid && equipModalMonster && (

@@ -6,18 +6,48 @@ import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
 import { rollBattleDrop } from "../shared/dropTables";
 import type { Move, ElementType } from "../shared/game";
-import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
+import { usePlayerStore, recomputeStatsForLevel, type OwnedMonster } from "../shared/playerStore";
+import { monsters } from "../monster/monsters";
+import { withImprint } from "../monster/imprint";
 import { isAnomalyMove } from "../monster/learnset";
 import { applyLevelGrowth } from "../monster/growth";
 import { sumEquippedStatBonuses, sumEquippedBonusStats } from "../shared/craftingUtils";
 
-/** OwnedMonster → 배틀 진입용 OwnedMonster. 장착 장비의 HP 보너스를 max/currentHp에 미리 반영한다.
- *  (공/방/속/치명/속성 보너스와 달리 HP는 전투 내내 상태로 유지해야 하는 값이라 별도 처리) */
-function withOwnedHpBonus(m: OwnedMonster): OwnedMonster {
-  const equipped = usePlayerStore.getState().equippedArtifacts[m.uid] ?? [];
-  const hpBonus = sumEquippedStatBonuses(equipped).hp;
-  if (!hpBonus) return m;
-  return { ...m, maxHp: m.maxHp + hpBonus, currentHp: m.currentHp + hpBonus };
+/**
+ * OwnedMonster → 배틀 진입용 OwnedMonster.
+ *
+ * 각인 배수를 먼저 얹고(계열 전체에 붙는 %), 그 위에 장착 장비의 HP 보너스를 더한다.
+ * 공/방/속은 각인만 여기서 반영된다 — 장비 쪽 공/방/속·치명·속성 보너스는 데미지 계산
+ * 시점에만 임시로 더한다(HP만 전투 내내 상태로 들고 있어야 하는 값이라 예외).
+ */
+function toBattleEntry(m: OwnedMonster): OwnedMonster {
+  const { equippedArtifacts, imprint } = usePlayerStore.getState();
+  const imprinted = withImprint(m, imprint);
+  const hpBonus = sumEquippedStatBonuses(equippedArtifacts[m.uid] ?? []).hp;
+  if (!hpBonus) return imprinted;
+  return { ...imprinted, maxHp: imprinted.maxHp + hpBonus, currentHp: imprinted.currentHp + hpBonus };
+}
+
+/**
+ * 전투가 부풀린 값을 걷어낸 **저장용** 몬스터.
+ *
+ * 각인 배수도 장비 HP 보너스도 세이브에 새어들면 안 된다 — 한 번 새면 다음 전투에서
+ * 그 위에 또 곱해져 배수가 겹친다. 능력치는 종족 기본값 + 레벨 증분으로 다시 계산한다
+ * (세이브를 읽을 때 playerStore 가 쓰는 규칙과 같은 것이라, 진화·레벨업이 끼어 있어도
+ * 어긋나지 않는다). 현재 HP 는 비율만 지킨다.
+ */
+function toPersisted(m: OwnedMonster): OwnedMonster {
+  const base = monsters.find((b) => b.id === m.id);
+  if (!base) return m;
+  const stats = recomputeStatsForLevel(base, m.level);
+  const ratio = m.maxHp > 0 ? m.currentHp / m.maxHp : 0;
+  return {
+    ...m,
+    ...stats,
+    currentHp: m.currentHp <= 0
+      ? 0
+      : Math.max(1, Math.min(stats.maxHp, Math.round(stats.maxHp * ratio))),
+  };
 }
 
 import {
@@ -38,6 +68,7 @@ import {
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { createBattleGame } from "../shared/phaser/phaserConfig";
 import { setBattleInitData } from "./battleInitStore";
+import { CaptureOverflowPrompt } from "../monster/CaptureOverflowPrompt";
 import { StatBar } from "../shared/ui";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { BattleCommandMenu } from "./BattleCommandMenu";
@@ -69,13 +100,12 @@ export default function BattlePage() {
   const gameRef = useRef<HTMLDivElement | null>(null);
   const { autoAdvance, logSpeed, toggleAuto, cycleSpeed } = useBattleSettings();
 
-  const { updateBestFloor, updatePartyMember, addCapturedMonster,
+  const { updateBestFloor, updatePartyMember, addCapturedMonster, absorbCapture,
           addToDexSeen, addToDexCaught, usePotion: consumePotion,
           addMaterial, setStoryFlag, dexCaught, restorePartyHp } = usePlayerStore();
 
-  // 장착 장비의 HP 보너스를 미리 반영한 파티 스냅샷 (공/방/속/치명/속성은 여기서 반영하지 않고
-  // 데미지 계산 시점에만 임시로 더한다 — HP만 전투 내내 상태로 들고 있어야 하는 값이라 예외)
-  const [initialParty] = useState(() => usePlayerStore.getState().party.map(withOwnedHpBonus));
+  // 각인 배수와 장착 장비 HP 보너스를 미리 반영한 파티 스냅샷
+  const [initialParty] = useState(() => usePlayerStore.getState().party.map(toBattleEntry));
   const [activePartyIndex, setActivePartyIndex] = useState(0);
 
   const [partyHp, setPartyHp] = useState<Record<string, number>>(() => {
@@ -106,6 +136,8 @@ export default function BattlePage() {
   /** 결과 화면에서 회복을 눌렀는지 (중복 클릭 방지 겸 피드백) */
   const [healed,        setHealed]        = useState(false);
   const [showLog,       setShowLog]       = useState(false);
+  /** 보관함이 가득 차서 자리를 못 준 포획 — 각인으로 흡수할지 물어본다 */
+  const [overflowCapture, setOverflowCapture] = useState<BattleMonster | null>(null);
   /** 기술 칸이 찼을 때 띄우는 "무엇을 잊을까" 선택 창 */
   const [forgetPrompt, setForgetPrompt] = useState<
     { current: Move[]; incoming: Move; resolve: (idx: number | null) => void } | null
@@ -243,7 +275,7 @@ export default function BattlePage() {
     for (let i = 0; i < initialParty.length; i++) {
       const m = initialParty[i];
       const hp = i === activePartyIndex ? player.currentHp : (partyHp[m.uid] ?? m.currentHp);
-      updatePartyMember({ ...m, currentHp: Math.max(0, hp) });
+      updatePartyMember(toPersisted({ ...m, currentHp: Math.max(0, hp) }));
     }
     navigate("/");
   }, [isProcessing, battleOutcome, floor, initialParty, activePartyIndex, player,
@@ -464,14 +496,7 @@ export default function BattlePage() {
 
       const owned = initialParty[activePartyIndex];
       if (owned) {
-        // np.maxHp/currentHp는 장비 HP 보너스가 반영된 값이므로, 저장 전에 그 비율만큼
-        // 빼내어 "장비 없는 기본 스탯" 기준으로 되돌린다(세이브에 보너스가 새어들지 않도록).
-        const hpBonus = playerBonus.hp;
-        const persistedMaxHp = np.maxHp - hpBonus;
-        const persistedCurrentHp = hpBonus > 0
-          ? Math.max(1, Math.min(persistedMaxHp, Math.round((np.currentHp * persistedMaxHp) / np.maxHp)))
-          : np.currentHp;
-        updatePartyMember({ ...owned, ...np, uid: owned.uid, maxHp: persistedMaxHp, currentHp: persistedCurrentHp });
+        updatePartyMember(toPersisted({ ...owned, ...np, uid: owned.uid }));
       }
 
       // 출전하지 않은 파티원에게도 경험치를 나눠준다.
@@ -493,7 +518,7 @@ export default function BattlePage() {
           grownMate = g.monster;
           if (g.evolvedFrom) { addToDexSeen(grownMate.id); addToDexCaught(grownMate.id); }
         }
-        updatePartyMember({ ...mate, ...grownMate, uid: mate.uid });
+        updatePartyMember(toPersisted({ ...mate, ...grownMate, uid: mate.uid }));
       }
 
       updateBestFloor(floor);
@@ -650,7 +675,9 @@ export default function BattlePage() {
       const captureResult = addCapturedMonster(enemyState);
       addToDexCaught(enemyState.id);
       if (captureResult === "storage") setStoryFlag("first_capture");
-      await sendLogAndWait(captureResult === "storage" ? "보관함에 저장되었다!" : "보관함이 가득 차서 놓아줬다...");
+      await sendLogAndWait(captureResult === "storage" ? "보관함에 저장되었다!" : "보관함이 가득 찼다...");
+      // 자리가 없다고 그냥 없애지 않는다 — 각인으로 흡수할 길이 생겼다
+      if (captureResult === "full") setOverflowCapture(enemyState);
       finishBattle("win"); setIsProcessing(false); return;
     }
 
@@ -869,6 +896,19 @@ export default function BattlePage() {
           <p className="py-2 text-center text-pixel-sm text-earth-400">잠시 후 선택 화면이 표시됩니다...</p>
         )}
       </div>
+
+      {/* 보관함이 꽉 찬 채로 잡았을 때 — 사라지기 전에 한 번 묻는다 */}
+      {overflowCapture && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-shadow-900/75 px-4">
+          <CaptureOverflowPrompt
+            monster={overflowCapture}
+            onAbsorb={() => {
+              if (absorbCapture(overflowCapture) === "ok") setOverflowCapture(null);
+            }}
+            onRelease={() => setOverflowCapture(null)}
+          />
+        </div>
+      )}
 
       {/* 기술 교체 선택 — 4칸이 찼을 때만 뜬다 */}
       {forgetPrompt && (

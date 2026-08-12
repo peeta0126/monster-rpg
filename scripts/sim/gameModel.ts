@@ -27,6 +27,7 @@ import {
 } from "../../src/battle/battleUtils";
 import { monsters } from "../../src/monster/monsters";
 import { applyLevelGrowth } from "../../src/monster/growth";
+import { withImprint } from "../../src/monster/imprint";
 import type { Monster, Move, ElementType } from "../../src/shared/game";
 import type { ArtifactInstance, ArtifactStatBonus, ItemQuality } from "../../src/shared/crafting";
 import {
@@ -65,6 +66,8 @@ export interface OwnedMon extends Monster {
 
 export interface SimState {
   party: OwnedMon[];
+  /** 각인 — 계열키 → 먹인 중복 수 (playerStore.imprint 와 같은 표) */
+  imprint: Record<string, number>;
   materials: Record<string, number>;
   potions: Record<string, number>;
   artifacts: ArtifactInstance[];                    // 가방
@@ -78,6 +81,7 @@ export function createInitialSim(): SimState {
   const flameling = monsters.find((m) => m.id === "flameling")!;
   return {
     party: [{ ...flameling, uid: "p0", currentHp: flameling.maxHp }],
+    imprint: {},
     materials: {},
     potions: {},
     artifacts: [],
@@ -123,6 +127,13 @@ export interface BattleOutcome {
   drops: { id: string; count: number }[];
 }
 
+/** 종족 기본값 + 레벨로 다시 계산한 저장용 능력치. scaleToLevel 이 그 규칙의 단일 출처다 */
+function statsForLevel(id: string, level: number) {
+  const base = monsters.find((m) => m.id === id)!;
+  const s = scaleToLevel(base, level);
+  return { maxHp: s.maxHp, attack: s.attack, defense: s.defense, speed: s.speed };
+}
+
 function toBattleMon(m: OwnedMon, hpBonus: number): BattleMonster {
   return {
     ...createBattleMonster(m),
@@ -164,7 +175,9 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
   // 플레이어는 가장 잘 키운 몬스터를 선봉에 세운다
   let activeIdx = s.party.reduce((best, m, i) => (m.level > s.party[best].level ? i : best), 0);
   const bonuses = s.party.map((m) => equipBonus(s, m.uid));
-  const battlers = s.party.map((m, i) => toBattleMon(m, bonuses[i].hp));
+  // 각인 배수는 전투에 들어갈 때만 얹는다(BattlePage.toBattleEntry 와 같은 순서) —
+  // 저장 쪽 스탯에 누적하면 전투마다 배수가 겹친다
+  const battlers = s.party.map((m, i) => toBattleMon(withImprint(m, s.imprint), bonuses[i].hp));
   const enemy0 = getFloorEnemy(floor, s.party[activeIdx].id);
   let ne = createBattleMonster(enemy0);
 
@@ -248,15 +261,17 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       let grown = gainExp(np, earned).updatedMonster;
       if (grown.level > prevLevel) grown = (await applyLevelGrowth(grown, prevLevel)).monster;
       const owned = s.party[activeIdx];
-      const persistedMax = grown.maxHp - bonus.hp;
+      // 전투가 부풀린 값(각인 배수·장비 HP)을 걷어낸다 — 종족 기본값 + 레벨로 다시 계산한다
+      // (BattlePage.toPersisted 와 같은 규칙)
+      const persisted = statsForLevel(grown.id, grown.level);
       owned.level = grown.level;
       owned.exp = grown.exp;
       owned.expToNextLevel = grown.expToNextLevel;
-      owned.maxHp = persistedMax;
-      owned.attack = grown.attack - 0;
-      owned.defense = grown.defense;
-      owned.speed = grown.speed;
-      owned.currentHp = Math.min(persistedMax, grown.currentHp - bonus.hp);
+      owned.maxHp = persisted.maxHp;
+      owned.attack = persisted.attack;
+      owned.defense = persisted.defense;
+      owned.speed = persisted.speed;
+      owned.currentHp = Math.max(1, Math.round(persisted.maxHp * (grown.currentHp / grown.maxHp)));
       owned.id = grown.id;
       owned.name = grown.name;
       owned.type = grown.type;
@@ -268,7 +283,8 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       for (let i = 0; i < s.party.length; i++) {
         if (i === activeIdx) continue;
         const mate = s.party[i];
-        mate.currentHp = Math.max(0, battlers[i].currentHp - bonuses[i].hp);
+        // 대기 파티원의 HP도 각인 배수를 벗겨 되돌린다 (전투 상한 대비 비율만 지킨다)
+        mate.currentHp = Math.max(0, Math.round(mate.maxHp * (battlers[i].currentHp / battlers[i].maxHp)));
         if (mate.currentHp <= 0) continue;
         const share = Math.max(1, Math.floor(earned * benchExpShare(mate.level, grown.level)));
         const bm = createBattleMonster(mate);
@@ -276,8 +292,10 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
         const res = gainExp(bm, share);
         let g = res.updatedMonster;
         if (res.leveledUp) g = (await applyLevelGrowth(g, prevLv)).monster;
+        const mateStats = statsForLevel(g.id, g.level);
         mate.level = g.level; mate.exp = g.exp; mate.expToNextLevel = g.expToNextLevel;
-        mate.maxHp = g.maxHp; mate.attack = g.attack; mate.defense = g.defense; mate.speed = g.speed;
+        mate.maxHp = mateStats.maxHp; mate.attack = mateStats.attack;
+        mate.defense = mateStats.defense; mate.speed = mateStats.speed;
         mate.id = g.id; mate.name = g.name; mate.type = g.type; mate.moves = g.moves;
         mate.rewardExp = g.rewardExp; mate.evolvesTo = g.evolvesTo; mate.evolvesAtLevel = g.evolvesAtLevel;
         mate.currentHp = Math.min(mate.maxHp, Math.max(1, mate.currentHp));
@@ -293,7 +311,8 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       battlers[activeIdx] = { ...np, currentHp: 0 };
       if (!alive()) {
         for (let i = 0; i < s.party.length; i++) {
-          s.party[i].currentHp = Math.max(0, battlers[i].currentHp - bonuses[i].hp);
+          s.party[i].currentHp = Math.max(0,
+            Math.round(s.party[i].maxHp * (battlers[i].currentHp / battlers[i].maxHp)));
         }
         return { win: false, turns, potionsUsed, drops: [] };
       }
