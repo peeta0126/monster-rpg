@@ -1,6 +1,12 @@
 /** 속성 종류 (ice 포함 6종) */
 export type ElementType = "fire" | "water" | "grass" | "electric" | "ice" | "normal" | "poison";
 
+/** 속성 한글 이름. 화면에 속성을 적는 자리가 여럿이라 여기 한 벌만 둔다 */
+export const ELEMENT_KO: Record<ElementType, string> = {
+  fire: "불꽃", water: "물", grass: "풀",
+  electric: "전기", ice: "얼음", normal: "노말", poison: "독",
+};
+
 export interface Move {
   id: string;
   name: string;

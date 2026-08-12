@@ -5,8 +5,10 @@ import { RpsIcon } from "../../workshop/RpsIcon";
 import { RPS_KO, type RpsChoice } from "../../workshop/rps";
 import type { Monster } from "../../shared/game";
 import { alertBand } from "./alert";
-import { CATCH_ATTEMPTS, CATCH_RATE, catchChance, getRpsResult, type RpsResult } from "./catchRules";
-import { makeRng } from "./runStore";
+import {
+  CATCH_ATTEMPTS, CATCH_RATE, attemptRng, catchChance, getRpsResult, type RpsResult,
+} from "./catchRules";
+import { rollHand, tellTypeOf } from "./catchTells";
 
 /**
  * 포획 미니게임.
@@ -37,21 +39,6 @@ const REVEAL_MS = 900;
 
 type Stage = "select" | "reveal" | "result";
 
-/**
- * 이 시도의 굴림.
- *
- * 시도 번호마다 갈래가 다르되 같은 번호는 늘 같은 수를 낸다. 새로고침 뒤에 결과
- * 화면을 다시 그릴 때도 여기서 상대의 수를 되찾는다 — 그래서 저장할 것은 내가 낸
- * 수 하나뿐이다.
- */
-function attemptRng(seed: number, attempt: number) {
-  return makeRng((seed ^ (attempt * 0x9E3779B9)) >>> 0).rng;
-}
-
-function compHand(rng: () => number): RpsChoice {
-  return (["rock", "paper", "scissors"] as RpsChoice[])[Math.floor(rng() * 3)];
-}
-
 export function CatchMiniGame({
   monster, alert, seed, attempts, pending, onReveal, onResult, onDone,
 }: {
@@ -81,14 +68,18 @@ export function CatchMiniGame({
   /** caught=false 이고 시도가 남지 않았으면 놓친 것이다 */
   onDone: (result: { caught: boolean }) => void;
 }) {
+  // 버릇은 속성이 정한다. 무속성이면 노말과 같이 균등이다
+  const type = tellTypeOf(monster);
   // 마운트 시점의 pending 으로 결과 화면을 복원한다. 상대의 수는 시드에서 다시 나온다
   const [stage, setStage] = useState<Stage>(() => pending ? "result" : "select");
   const triesLeft = Math.max(0, CATCH_ATTEMPTS - attempts);
   const [picked, setPicked] = useState<RpsChoice | null>(() => pending?.hand ?? null);
   const [computer, setComputer] = useState<RpsChoice | null>(
-    () => pending ? compHand(attemptRng(seed, Math.max(0, attempts - 1))) : null);
+    () => pending ? rollHand(type, attemptRng(seed, Math.max(0, attempts - 1))) : null);
   const [result, setResult] = useState<RpsResult | null>(
-    () => pending ? getRpsResult(pending.hand, compHand(attemptRng(seed, Math.max(0, attempts - 1)))) : null);
+    () => pending
+      ? getRpsResult(pending.hand, rollHand(type, attemptRng(seed, Math.max(0, attempts - 1))))
+      : null);
   const [caught, setCaught] = useState(() => pending?.caught ?? false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -99,7 +90,7 @@ export function CatchMiniGame({
 
   const choose = (choice: RpsChoice) => {
     const rng = attemptRng(seed, attempts);
-    const comp = compHand(rng);
+    const comp = rollHand(type, rng);
     const res = getRpsResult(choice, comp);
     setPicked(choice); setComputer(comp); setResult(res); setStage("reveal");
     // 시도는 결과가 아니라 **공개**에 태운다. 상대의 수를 본 뒤 새로고침해도 그 수는
