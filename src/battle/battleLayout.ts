@@ -1,0 +1,78 @@
+/**
+ * 전투 화면의 배치 표.
+ *
+ * 배경 이미지(960x540)가 이 좌표에 맞춰 그려져 있다. 벽은 y 0~248, 바닥 평행사변형이
+ * y 248~486 이고 **발끝은 반드시 그 사이**에 둔다.
+ *
+ * 씬이 아니라 여기 있는 이유: 겹침 테스트가 이 숫자를 읽어야 하는데 BattleScene 은
+ * Phaser 를 import 해서 node 테스트에서 못 불러온다. 씬에 숫자를 다시 적으면 표가
+ * 두 벌이 되고, 그러면 테스트는 통과하는데 화면만 겹치는 상태가 만들어진다.
+ */
+
+export const W = 960;
+export const H = 540;
+
+/** 배경 이미지 안의 바닥 범위. 발끝이 이 밖으로 나가면 공중에 뜬 것처럼 보인다 */
+export const FLOOR_TOP = 248;
+export const FLOOR_BOTTOM = 486;
+
+// ── 몬스터 ────────────────────────────────────────────────────────────────────
+// 아군이 앞(왼쪽·아래·크게), 적이 뒤(오른쪽·위·작게). 플레이어가 탑을 올라와
+// 적에게 도전하는 그림이다. 크기 차이가 곧 거리 차이라 원근이 생긴다.
+export const PLAYER_X = 250;
+export const PLAYER_FEET = 440;
+export const PLAYER_SIZE = 170;
+
+export const ENEMY_X = 700;
+export const ENEMY_FEET = 330;
+export const ENEMY_SIZE = 140;
+
+/** 스프라이트 원점은 한가운데다. 기준은 발끝이므로 중심 Y 는 파생값으로만 쓴다. */
+export const PLAYER_CY = PLAYER_FEET - PLAYER_SIZE / 2;
+export const ENEMY_CY  = ENEMY_FEET  - ENEMY_SIZE  / 2;
+
+// ── HP 패널 ───────────────────────────────────────────────────────────────────
+// ⚠️ 패널 X 를 몬스터 X 에서 파생시키지 않는다. 예전에 그렇게 뒀다가 패널이 몬스터를
+// 따라다니며 겹쳤다. 각자 자기 발밑에 놓인 별도 상수다.
+export const PANEL_W = 220;
+export const PANEL_H = 64;
+export const P_PANEL_CX = 250;
+export const P_PANEL_CY = 478;
+export const E_PANEL_CX = 700;
+export const E_PANEL_CY = 378;
+
+// 패널 안쪽 HP 바
+export const BAR_H = 10;
+export const BAR_X_INNER = 10;
+export const BAR_Y_IN_PANEL = PANEL_H - 22;
+export const BAR_W_INNER = PANEL_W - 20;
+
+export const E_BAR_X = E_PANEL_CX - PANEL_W / 2 + BAR_X_INNER;
+export const E_BAR_Y = E_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
+export const P_BAR_X = P_PANEL_CX - PANEL_W / 2 + BAR_X_INNER;
+export const P_BAR_Y = P_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
+
+// ── 로그 알림 박스 ────────────────────────────────────────────────────────────
+// 화면을 가로지르던 것을 오른쪽 아래로 몰았다. 아군 HP 패널이 왼쪽 아래에 있어서
+// 예전 자리(20,414~940,518)와 정면으로 겹쳤다.
+export const LOG_BOX = { x: 372, y: 420, w: 568, h: 104 } as const;
+/** 로그 상자 안쪽 여백 — 텍스트 시작점과 wordWrap 폭이 같은 값에서 나온다 */
+export const LOG_PAD_X = 28;
+export const LOG_PAD_Y = 20;
+
+// ── 겹침 검사용 상자 ──────────────────────────────────────────────────────────
+
+export interface Box { x: number; y: number; w: number; h: number }
+
+const centered = (cx: number, cy: number, w: number, h: number): Box =>
+  ({ x: cx - w / 2, y: cy - h / 2, w, h });
+
+export const PLAYER_SPRITE_BOX: Box = centered(PLAYER_X, PLAYER_CY, PLAYER_SIZE, PLAYER_SIZE);
+export const ENEMY_SPRITE_BOX:  Box = centered(ENEMY_X,  ENEMY_CY,  ENEMY_SIZE,  ENEMY_SIZE);
+export const PLAYER_PANEL_BOX:  Box = centered(P_PANEL_CX, P_PANEL_CY, PANEL_W, PANEL_H);
+export const ENEMY_PANEL_BOX:   Box = centered(E_PANEL_CX, E_PANEL_CY, PANEL_W, PANEL_H);
+export const LOG_BOX_RECT:      Box = { x: LOG_BOX.x, y: LOG_BOX.y, w: LOG_BOX.w, h: LOG_BOX.h };
+
+export function overlaps(a: Box, b: Box): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
