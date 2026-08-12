@@ -34,6 +34,7 @@ const ENEMY_Y  = 206;
 const PLAYER_X = 664;
 const PLAYER_Y = 268;
 const MONSTER_SIZE = 140;
+const FINAL_BOSS_SIZE = 210;
 
 // HP 패널 (몬스터 바로 위)
 // 몬스터 top = MONSTER_Y - MONSTER_SIZE/2 = 162
@@ -454,12 +455,17 @@ export default class BattleScene extends Phaser.Scene {
     this.smoothTexture("enemy-mon");
     for (let i = 0; i < 6; i++) this.smoothTexture(`party-mon-${i}`);
 
+    const battleData = getBattleInitData();
+    const isOrmrFinalBoss = battleData?.floor === 50
+      && battleData.enemyImageUrl.endsWith("/dragon.webp");
+    const enemySize = isOrmrFinalBoss ? FINAL_BOSS_SIZE : MONSTER_SIZE;
+
     // 적 (우, flipX)
     if (this.textures.exists("enemy-mon")) {
       this.enemySprite = this.add.image(ENEMY_X, ENEMY_Y, "enemy-mon")
-        .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setDepth(6);
+        .setDisplaySize(enemySize, enemySize).setDepth(6);
     } else {
-      this.enemySprite = this.makeFallback(ENEMY_X, ENEMY_Y, HEX.ember700, MONSTER_SIZE);
+      this.enemySprite = this.makeFallback(ENEMY_X, ENEMY_Y, HEX.ember700, enemySize);
     }
 
     // 플레이어 — 파티 0번 슬롯 이미지 사용 (party-mon-0)

@@ -1,269 +1,116 @@
-import { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
-import { rgba } from "../../shared/palette";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useNavigate } from "react-router-dom";
 import { scaleToLevel } from "../../shared/floorTable";
 import { monsters } from "../../monster/monsters";
-import type { Monster } from "../../shared/game";
 import { usePlayerStore } from "../../shared/playerStore";
 import type { ForestArea } from "./areas";
-import { alertBand, stepAlertDelta } from "./alert";
-import {
-  STEP_DEFS, hasCatch, scoutStep, rollStepRewards, type ForestStepKind,
-} from "./steps";
-import {
-  makeRng, resolveStep, judgeAlert, bagTotal, runIsOver, chooseFork, advanceStep,
-  type ForestRun, type RunBagEntry, type SettleReason, type StepProgress,
-} from "./runStore";
-import { AlertGauge, AlertBandSummary } from "./AlertGauge";
-import { StepEventPanel, NestPanel } from "./StepEventPanel";
-import { CatchMiniGame } from "./CatchMiniGame";
-import { ForkChoice } from "./ForkChoice";
-import { catchChance } from "./catchRules";
+import { alertBand } from "./alert";
+import { hasCatch, rollStepRewards } from "./steps";
+import { bagTotal, choosePath, judgeAlert, makeRng, resolveStep, runIsOver, type ForestRun, type RunBagEntry, type SettleReason } from "./runStore";
+import { depthMood, getForestSceneLayout, type Point } from "./sceneLayouts";
+import { saveForestRun } from "./runStorage";
 
-/**
- * 탐험 화면.
- *
- * 배경 원화가 무대고, 그 위에 상단 바 · 사건 패널 · 하단 바만 얹힌다. 노드 맵을
- * 걷어낸 이유가 여기 있다 — 지도는 여러 걸음 앞을 계획하게 하려고 그리는 UI 인데
- * 우리는 한 걸음씩만 고른다. 볼 것은 지금 눈앞의 사건 하나뿐이다.
- */
-
-/** 걸음 안에서의 진행 단계. run.step 에서 파생된다 — 따로 들고 있지 않는다 */
-type StepPhase = "event" | "nest" | "catch" | "resolved";
-
-/** 이번 걸음의 굴림. 시드에서 다시 나오므로 저장하지 않는다 */
-interface StepDraft {
-  gained: RunBagEntry[];
-  monster: Monster | null;
-  /** 둥지에서 고를 수 있는 후보 */
-  choices: Monster[];
-}
-
-function pickMonsterFor(area: ForestArea, kind: ForestStepKind, rng: () => number): Monster {
-  // 강한 사건일수록 풀 후반부에서, 레벨 하한도 위로
-  const strong = kind === "champion" || kind === "warden" || kind === "anomaly";
-  const pool = strong ? area.monsterPool.slice(-2) : area.monsterPool;
-  // id 를 먼저 뽑아 둔다 — find 안에서 rng() 를 부르면 술어가 원소마다 실행되면서
-  // 매번 다른 id 와 비교하게 되어 대개 아무것도 못 찾는다
-  const id = pool[Math.floor(rng() * pool.length)];
-  const base = monsters.find((m) => m.id === id)!;
-  const lvMin = strong ? Math.floor((area.levelRange[0] + area.levelRange[1]) / 2) : area.levelRange[0];
-  const level = lvMin + Math.floor(rng() * (area.levelRange[1] - lvMin + 1));
-  return scaleToLevel(base, level);
-}
+const ICONS: Record<string, string> = { trace: "🍃", encounter: "🐾", nest: "🪺", hideout: "⛺", anomaly: "🌀", champion: "✦", warden: "𐂂" };
+const RISK = { low: "낮음", medium: "보통", high: "높음", unknown: "???" };
 
 export function ForestRunView({ area, run, setRun, onSettle }: {
-  area: ForestArea;
-  run: ForestRun;
-  /**
-   * 런 갱신. 함수형도 받는다 — 포획 결과는 900ms 뒤에 도착해서, 그때 닫아 둔 런으로
-   * 덮어쓰면 그 사이에 태운 시도가 되살아난다(그게 곧 리롤이다).
-   */
-  setRun: Dispatch<SetStateAction<ForestRun | null>>;
+  area: ForestArea; run: ForestRun; setRun: Dispatch<SetStateAction<ForestRun | null>>;
   onSettle: (reason: SettleReason, bag: RunBagEntry[], caught: number, alertPeak: number) => void;
 }) {
-  const addCapturedMonster = usePlayerStore((s) => s.addCapturedMonster);
+  const navigate = useNavigate();
   const addToDexSeen = usePlayerStore((s) => s.addToDexSeen);
-  const addToDexCaught = usePlayerStore((s) => s.addToDexCaught);
+  const [selected, setSelected] = useState(0);
+  const [player, setPlayer] = useState<Point>({ x: 50, y: 88 });
+  const [notice, setNotice] = useState<string | null>(null);
+  const timer = useRef<number[]>([]);
+  const layout = getForestSceneLayout(area.id, run.paths.length as 2 | 3 | 4);
+  const mood = depthMood(area.id, run.depth);
+  const scout = alertBand(run.alert).scout;
 
-  const kind = run.current;
-  const def = STEP_DEFS[kind];
-  const band = alertBand(run.alert);
-  // 이 걸음의 수확·포획은 소란이 오르기 전 값으로 굴린다 (주인만 깨우는 순간 먼저 오른다)
-  const alertForJudge = judgeAlert(run);
-  const step = run.step;
-
-  /**
-   * 이번 걸음의 굴림.
-   *
-   * 시드가 (seed, depth) 로 고정돼 있어 몇 번을 다시 계산해도 같은 결과가 나온다.
-   * 그래서 수확 목록도 상대 몬스터도 저장하지 않는다 — 새로고침하면 여기서 그대로
-   * 다시 나온다. 저장하는 건 "어디까지 했는가"(run.step) 뿐이다.
-   */
-  const draft = useMemo<StepDraft | null>(() => {
-    if (!step.entered) return null;
-    const { rng } = makeRng(run.seed ^ (run.depth + 1));
-    const gained = rollStepRewards(area, kind, alertForJudge, rng);
-
-    if (kind === "nest") {
-      const count = 2 + (rng() < 0.5 ? 1 : 0);
-      const choices = Array.from({ length: count }, () => pickMonsterFor(area, kind, rng));
-      return { gained, choices, monster: step.pick === null ? null : choices[step.pick] ?? null };
-    }
-    if (hasCatch(kind)) {
-      return { gained, choices: [], monster: pickMonsterFor(area, kind, rng) };
-    }
-    return { gained, choices: [], monster: null };
-  }, [area, kind, alertForJudge, run.seed, run.depth, step.entered, step.pick]);
-
-  // 본 것은 도감에 남는다. 굴림이 순수해야 복원이 성립하므로 기록은 굴림 밖에서 한다
+  useEffect(() => () => timer.current.forEach(clearTimeout), []);
   useEffect(() => {
-    if (!draft) return;
-    for (const m of draft.choices) addToDexSeen(m.id);
-    if (draft.monster) addToDexSeen(draft.monster.id);
-  }, [draft, addToDexSeen]);
-
-  /** 걸음 안에서 한 칸 나아간다. 이 갱신 하나하나가 그대로 저장된다 */
-  const patchStep = useCallback((patch: Partial<StepProgress>) => {
-    setRun((prev) => prev ? advanceStep(prev, patch) : prev);
-  }, [setRun]);
-
-  const phase: StepPhase =
-    !step.entered ? "event"
-    : step.done ? "resolved"
-    : kind === "nest" && step.pick === null ? "nest"
-    : hasCatch(kind) ? "catch"
-    : "resolved";
-
-  /** 판정이 끝난 걸음을 런에 반영하고 다음 걸음으로 */
-  const commitStep = useCallback(() => {
-    if (!draft) return;
-    const next = resolveStep(run, {
-      gained: draft.gained,
-      caught: step.done?.caught,
-      escaped: step.done?.escaped,
-    });
-
-    // 주인은 만나면 거기서 끝난다
-    if (kind === "warden") { onSettle("warden", next.bag, next.caught, next.alertPeak); return; }
-    if (runIsOver(next)) { onSettle("forced", next.bag, next.caught, next.alertPeak); return; }
-    setRun(next);
-  }, [draft, run, step.done, kind, onSettle, setRun]);
-
-  const onCatchDone = useCallback((result: { caught: boolean }, monster: Monster) => {
-    if (result.caught) {
-      // 몬스터는 즉시 확정이다. 정산 대상이 아니라서 퇴각해도 잃지 않는다
-      addToDexCaught(monster.id);
-      addCapturedMonster(monster);
+    if (run.phase.type === "transition") {
+      const id = window.setTimeout(() => { setPlayer(layout.entrance); setSelected(0); setRun((r) => r ? { ...r, phase: { type: "choosing" } } : r); }, 360);
+      timer.current.push(id);
     }
-    patchStep({ pending: null, done: { caught: result.caught, escaped: !result.caught } });
-  }, [patchStep, addToDexCaught, addCapturedMonster]);
+  }, [run.phase.type, layout.entrance, setRun]);
 
-  /** 지금 돌아가면 확정될 것 */
-  const banked = useMemo(() => {
-    const mats = bagTotal(run.bag);
-    const parts: string[] = [];
-    if (mats > 0) parts.push(`재료 ${mats}개`);
-    if (run.caught > 0) parts.push(`몬스터 ${run.caught}마리`);
-    return parts.length > 0 ? parts.join(" · ") : "아직 빈손이다";
-  }, [run.bag, run.caught]);
+  const pickMonster = useCallback(() => {
+    const { rng } = makeRng(run.seed ^ (run.depth + 1));
+    const strong = run.current === "champion" || run.current === "warden";
+    const pool = strong ? area.monsterPool.slice(-2) : area.monsterPool;
+    const base = monsters.find((m) => m.id === pool[Math.floor(rng() * pool.length)])!;
+    const min = strong ? Math.floor((area.levelRange[0] + area.levelRange[1]) / 2) : area.levelRange[0];
+    return scaleToLevel(base, min + Math.floor(rng() * (area.levelRange[1] - min + 1)));
+  }, [area, run.current, run.depth, run.seed]); // eslint-disable-line react-hooks/preserve-manual-memoization
 
-  const goHome = () => onSettle("voluntary", run.bag, run.caught, run.alertPeak);
+  const beginEvent = useCallback((eventId: string) => {
+    if (run.completedEventIds.includes(eventId)) return;
+    if (hasCatch(run.current)) {
+      const monster = pickMonster();
+      const encounterId = `${run.seed}-${eventId}`;
+      addToDexSeen(monster.id);
+      const next = { ...run, phase: { type: "battle", encounterId, monsterId: monster.id } as const,
+        encounter: { id: encounterId, monsterId: monster.id, level: monster.level, resolved: false, captureResolved: false } };
+      saveForestRun(next);
+      navigate("/battle", { state: { from: "forest", forestEncounter: true, encounterId, enemy: monster, floor: monster.level } });
+      return;
+    }
+    const { rng } = makeRng(run.seed ^ (run.depth + 1));
+    const gained = rollStepRewards(area, run.current, judgeAlert(run), rng);
+    const next = resolveStep({ ...run, phase: { type: "event", eventId } }, { gained });
+    setNotice(run.current === "hideout" ? "잠시 쉬어 위험도가 낮아졌습니다." : gained.length ? `재료 ${gained.reduce((s, x) => s + x.count, 0)}개를 획득했습니다.` : "길을 살펴보았습니다.");
+    setRun(next);
+    window.setTimeout(() => setNotice(null), 1500);
+    if (run.current === "warden") onSettle("warden", next.bag, next.caught, next.alertPeak);
+    else if (runIsOver(next)) onSettle("forced", next.bag, next.caught, next.alertPeak);
+  }, [addToDexSeen, area, navigate, onSettle, pickMonster, run, setRun]);
 
-  // 정찰은 "다음 걸음"이 아니라 지금 눈앞의 사건에 대해 말한다 — 아직 안 들어갔으니 예고다
-  const scout = scoutStep(kind, run.depth, band.scout);
-  const delta = stepAlertDelta(kind, run.depth);
+  const move = useCallback((index: number) => {
+    if (run.phase.type !== "choosing") return;
+    const option = run.paths[index]; const path = layout.paths[index];
+    if (!option || !path) return;
+    setRun(choosePath(run, option.id));
+    const points = [...path.waypoints, path.exit];
+    points.forEach((point, i) => timer.current.push(window.setTimeout(() => setPlayer(point), i * 230)));
+    timer.current.push(window.setTimeout(() => beginEvent(option.id), points.length * 230 + 80));
+  }, [beginEvent, layout.paths, run, setRun]);
 
-  return (
-    <div className="relative z-10 flex h-full w-full flex-col">
-      {/* ── 상단 바 — 판 없이 원화 위에 바로 놓이므로 글자마다 그림자를 깐다 ── */}
-      <div className="flex items-start justify-between px-6 pt-4"
-        style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
-        <div>
-          <h1 className="text-title-sm font-black text-cream-100">{area.name}</h1>
-          <p className="text-pixel-sm text-sand-300" data-testid="forest-depth" data-depth={run.depth}>
-            깊이 {run.depth}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <AlertGauge value={run.alert}/>
-          {/* 채집망은 STEP 3 에서 상한이 붙는다. 지금은 자리와 개수만 */}
-          <div className="rounded-lg px-2.5 py-1 text-center"
-            style={{ border: `1px solid ${rgba("stone600", 0.9)}`, background: rgba("shadow900", 0.75) }}>
-            <p className="text-pixel-sm text-earth-400">채집망</p>
-            <p className="font-mono text-pixel-sm font-bold text-sand-200">{bagTotal(run.bag)}</p>
-          </div>
-        </div>
-      </div>
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (run.phase.type !== "choosing") return;
+      if (["ArrowLeft", "a", "A"].includes(e.key)) { e.preventDefault(); setSelected((v) => (v - 1 + run.paths.length) % run.paths.length); }
+      else if (["ArrowRight", "d", "D"].includes(e.key)) { e.preventDefault(); setSelected((v) => (v + 1) % run.paths.length); }
+      else if (["Enter", "e", "E"].includes(e.key)) { e.preventDefault(); move(selected); }
+      else if (e.key === "Escape") setSelected(0);
+    };
+    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
+  }, [move, run.paths.length, run.phase.type, selected]);
 
-      {/* ── 중앙 — 갈림길이면 두 갈래, 아니면 사건 하나 ── */}
-      <div className="flex flex-1 items-center justify-center px-6">
-        {phase === "event" && run.fork && (
-          <ForkChoice
-            kinds={run.fork.kinds}
-            names={run.fork.names}
-            depth={run.depth}
-            scout={band.scout}
-            onChoose={(k) => setRun(chooseFork(run, k))}
-          />
-        )}
+  const revealed = (index: number) => scout === "detail" || scout === "type" || index === selected;
+  const sprite = useMemo(() => player.x < 48 ? "player-left" : player.x > 52 ? "player-right" : "player-up", [player.x]);
+  return <div className="forest-world relative z-10 h-full w-full overflow-hidden" data-phase={run.phase.type}>
+    <img className="absolute inset-0 h-full w-full object-cover [image-rendering:pixelated]" src={layout.image} alt="" onError={(e) => { e.currentTarget.src = area.backgroundImage; }}/>
+    <div className="forest-color absolute inset-0 pointer-events-none" style={{ background: mood.overlayColor, opacity: .12, mixBlendMode: "multiply" }}/>
+    <div className="forest-vignette absolute inset-0 pointer-events-none" style={{ boxShadow: `inset 0 0 22vw rgba(3,10,18,${mood.vignette})` }}/>{/* palette-ok: forest depth overlay */}
+    <div className="forest-fog absolute inset-0 pointer-events-none" style={{ opacity: mood.fogOpacity }}/>
+    <div className="absolute inset-0 pointer-events-none" style={{ backdropFilter: `brightness(${mood.brightness}) saturate(${mood.saturation})` }}/>
 
-        {phase === "event" && !run.fork && (
-          <StepEventPanel
-            kind={kind}
-            actionLabel={
-              kind === "hideout" ? "몸을 숨긴다"
-              : hasCatch(kind)   ? "조우한다"
-              : "살펴본다"
-            }
-            onAction={() => patchStep({ entered: true })}
-          />
-        )}
+    {run.paths.map((option, i) => { const pos = layout.paths[i].marker; const active = selected === i; return <button key={option.id}
+      data-testid={`forest-path-${i}`} aria-label={`${option.title}, ${option.preview}`} onFocus={() => setSelected(i)} onMouseEnter={() => setSelected(i)} onClick={() => move(i)}
+      disabled={run.phase.type !== "choosing"} className={`forest-path absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full ${active ? "is-selected" : ""}`}
+      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}>
+      <span className="forest-event-icon">{ICONS[option.eventKind]}</span>
+      {active && <span className="forest-tooltip"><strong>{revealed(i) ? option.title : "???"}</strong><small>{revealed(i) ? option.preview : "알 수 없는 길"} · 위험 {revealed(i) ? RISK[option.risk] : "???"}</small></span>}
+    </button>; })}
 
-        {phase === "nest" && draft && (
-          <NestPanel monsters={draft.choices} onPick={(i) => patchStep({ pick: i })}/>
-        )}
-
-        {phase === "catch" && draft?.monster && (
-          <CatchMiniGame
-            monster={draft.monster}
-            alert={alertForJudge}
-            seed={(run.seed ^ (run.depth + 1)) >>> 0}
-            attempts={step.attempts}
-            pending={step.pending}
-            onReveal={() => patchStep({ attempts: step.attempts + 1, pending: null })}
-            onResult={(r) => patchStep({ pending: r })}
-            onDone={(r) => onCatchDone(r, draft.monster!)}
-          />
-        )}
-
-        {phase === "resolved" && draft && (
-          <StepEventPanel
-            kind={kind}
-            monster={draft.monster}
-            gained={draft.gained}
-            alertAfter={kind === "hideout" ? Math.max(0, run.alert + delta) : undefined}
-            catchRate={draft.monster && !step.done
-              ? catchChance("draw", alertForJudge) : undefined}
-            actionLabel="계속 걷는다"
-            onAction={commitStep}
-          />
-        )}
-      </div>
-
-      {/* ── 하단 바 ── */}
-      <div className="px-6 pb-5 pt-3"
-        style={{ background: `linear-gradient(to top, ${rgba("shadow900", 0.92)}, transparent)` }}>
-        <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <p className="text-pixel-sm text-sand-300" data-testid="forest-scout">
-            <span className="text-earth-400">정찰 · </span>
-            {run.fork
-              ? "두 갈래가 보인다 — 어느 쪽이든 지나면 되돌아올 수 없다"
-              : `${scout.title}${scout.detail !== "???" ? ` — ${scout.detail}` : ""}`}
-          </p>
-          <AlertBandSummary value={run.alert}/>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={goHome}
-            data-testid="forest-go-home"
-            className="rounded-xl px-5 py-2.5 text-left text-pixel-sm font-bold transition active:scale-95"
-            style={{ background: rgba("shadow900", 0.85), border: `1px solid ${rgba("stone600", 0.9)}`, color: "var(--color-sand-200)" }}>
-            돌아간다
-            <span className="ml-2 text-pixel-sm text-earth-400">수확 100% 회수</span>
-          </button>
-
-          {/* 뱅킹 결정에 정보가 있어야 한다 — 지금 확정될 것을 늘 적어 둔다 */}
-          <p className="text-pixel-sm text-sand-300" data-testid="forest-banked">
-            지금 돌아가면 <span className="font-bold text-cream-100">{banked}</span> 확정으로 가져간다
-          </p>
-
-          <p className="ml-auto text-pixel-sm text-earth-400">
-            {run.fork ? "고른 쪽의 소란이 붙는다"
-              : def.tier === "warden" ? "여기서 원정이 끝난다"
-              : `이번 걸음 ${scout.alertText}`}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+    <img src={`/assets/player/${sprite}.png`} alt="플레이어" className="forest-player absolute z-10 -translate-x-1/2 -translate-y-1/2 [image-rendering:pixelated]" style={{ left: `${player.x}%`, top: `${player.y}%` }}/>
+    <header className="forest-hud forest-title"><strong>{area.name} · 깊이 <span data-testid="forest-depth" data-depth={run.depth}>{run.depth}</span></strong></header>
+    <aside className="forest-hud forest-stats"><span data-testid="forest-alert" data-alert={run.alert}>위험도 {run.alert}</span><span>획득 재료 {bagTotal(run.bag)}개</span></aside>
+    <div className="forest-hud forest-help">WASD / 방향키 경로 선택 · E 이동</div>
+    <button data-testid="forest-go-home" className="forest-hud forest-home" onClick={() => onSettle("voluntary", run.bag, run.caught, run.alertPeak)}>돌아가기 · 수확 100% 회수</button>
+    <div className="forest-hud forest-menu">메뉴 (Tab)</div>
+    {notice && <div className="forest-notice">{notice}</div>}
+    {run.phase.type === "transition" && <div className="forest-transition"/>}
+  </div>;
 }

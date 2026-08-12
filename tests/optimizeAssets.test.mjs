@@ -69,7 +69,12 @@ test("숲 배경 3종은 돌려도 바이트가 그대로다", () => {
   const names = fs.readdirSync(dir).filter((f) => /\.webp$/i.test(f));
   assert.deepEqual(
     names.sort(),
-    ["forest_ancient.webp", "forest_deep.webp", "forest_shallow.webp"],
+    [
+      "forest-ancient-2way.webp", "forest-ancient-3way.webp", "forest-ancient-4way.webp",
+      "forest-deep-2way.webp", "forest-deep-3way.webp", "forest-deep-4way.webp",
+      "forest-shallow-2way.webp", "forest-shallow-3way.webp", "forest-shallow-4way.webp",
+      "forest_ancient.webp", "forest_deep.webp", "forest_shallow.webp",
+    ],
     "숲 배경 3종이 public/assets/forest/ 에 없다",
   );
 

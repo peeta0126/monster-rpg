@@ -5,7 +5,7 @@ import { getFloorEnemy, getFloorEnemySkill, isBossFloor, MAX_TOWER_FLOOR, getTow
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
 import { rollBattleDrop } from "../shared/dropTables";
-import type { Move, ElementType } from "../shared/game";
+import type { Move, ElementType, Monster } from "../shared/game";
 import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
 import { isAnomalyMove } from "../monster/learnset";
 import { applyLevelGrowth } from "../monster/growth";
@@ -42,6 +42,8 @@ import { StatBar } from "../shared/ui";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { BattleCommandMenu } from "./BattleCommandMenu";
 import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
+import { loadForest, saveForestRun, saveForestSettlement } from "../camp/forest/runStorage";
+import { resolveStep } from "../camp/forest/runStore";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
 
@@ -50,6 +52,9 @@ type BattleRouteState = {
   portalId?: string;
   isCatchZone?: boolean;
   floor?: number;
+  forestEncounter?: boolean;
+  encounterId?: string;
+  enemy?: Monster;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -65,6 +70,7 @@ export default function BattlePage() {
 
   const isCatchZone = routeState?.isCatchZone ?? false;
   const floor       = routeState?.floor ?? 1;
+  const isForestEncounter = routeState?.forestEncounter === true;
 
   const gameRef = useRef<HTMLDivElement | null>(null);
   const { autoAdvance, logSpeed, toggleAuto, cycleSpeed } = useBattleSettings();
@@ -91,7 +97,7 @@ export default function BattlePage() {
   );
 
   const initialPlayer = initialParty[0] ?? usePlayerStore.getState().party[0];
-  const initialEnemy  = getFloorEnemy(floor, initialPlayer.id);
+  const initialEnemy  = routeState?.enemy ?? getFloorEnemy(floor, initialPlayer.id);
 
   const [player,       setPlayer]       = useState<BattleMonster>(() => createBattleMonsterFromOwned(initialPlayer));
   const [enemyState,   setEnemyState]   = useState<BattleMonster>(() => createBattleMonster(initialEnemy));
@@ -105,6 +111,7 @@ export default function BattlePage() {
   const [logHistory,    setLogHistory]    = useState<string[]>([]);
   /** 결과 화면에서 회복을 눌렀는지 (중복 클릭 방지 겸 피드백) */
   const [healed,        setHealed]        = useState(false);
+  const [forestCaptureDone, setForestCaptureDone] = useState(false);
   const [showLog,       setShowLog]       = useState(false);
   /** 기술 칸이 찼을 때 띄우는 "무엇을 잊을까" 선택 창 */
   const [forgetPrompt, setForgetPrompt] = useState<
@@ -146,6 +153,39 @@ export default function BattlePage() {
     const t = setTimeout(() => setShowResultUI(true), 500);
     return () => clearTimeout(t);
   }, [battleOutcome]);
+
+  useEffect(() => {
+    if (!isForestEncounter || battleOutcome !== "win") return;
+    const loaded = loadForest();
+    if (loaded.kind !== "run" || loaded.run.encounter?.id !== routeState?.encounterId) return;
+    const encounter = loaded.run.encounter;
+    if (!encounter || encounter.resolved) return;
+    saveForestRun({ ...loaded.run, phase: { type: "capture", encounterId: encounter.id, monsterId: enemyState.id }, encounter: { ...encounter, resolved: true } });
+  }, [battleOutcome, enemyState.id, isForestEncounter, routeState?.encounterId]);
+
+  const finishForestCapture = useCallback((capture: boolean) => {
+    if (forestCaptureDone) return;
+    const loaded = loadForest();
+    if (loaded.kind !== "run" || loaded.run.encounter?.id !== routeState?.encounterId) { navigate("/forest", { replace: true }); return; }
+    const encounter = loaded.run.encounter;
+    if (!encounter || encounter.captureResolved) { navigate("/forest", { replace: true }); return; }
+    if (capture) {
+      const result = addCapturedMonster(enemyState);
+      addToDexCaught(enemyState.id);
+      if (result === "storage") setStoryFlag("first_capture");
+    }
+    const marked = { ...loaded.run, encounter: { ...encounter, captureResolved: true } };
+    const resumed = resolveStep({ ...marked, phase: { type: "event", eventId: loaded.run.paths.find((p) => p.eventKind === loaded.run.current)?.id ?? `${loaded.run.depth}` } }, { caught: capture });
+    saveForestRun(resumed);
+    setForestCaptureDone(true);
+    navigate("/forest", { replace: true });
+  }, [addCapturedMonster, addToDexCaught, enemyState, forestCaptureDone, navigate, routeState?.encounterId, setStoryFlag]);
+
+  const leaveForestAfterDefeat = useCallback(() => {
+    const loaded = loadForest();
+    if (loaded.kind === "run") saveForestSettlement({ areaId: loaded.run.areaId, reason: "forced", bag: loaded.run.bag, caught: loaded.run.caught, alertPeak: loaded.run.alertPeak });
+    navigate("/forest", { replace: true });
+  }, [navigate]);
 
   // ─── Phaser 동기화 ─────────────────────────────────────────────────────────────
   const syncHpToPhaser = useCallback((p: BattleMonster, e: BattleMonster) => {
@@ -942,6 +982,13 @@ export default function BattlePage() {
             )}
 
             <div className="flex flex-col gap-2">
+              {isForestEncounter ? <>
+                <p className="text-pixel-sm text-sand-300">전투에서 쓰러뜨렸다. 이제 포획할 수 있다.</p>
+                <button data-testid="forest-capture-confirm" onClick={() => finishForestCapture(true)}
+                  className="w-full border-2 border-moss-500 bg-moss-500/25 py-3 text-pixel-sm font-bold text-moss-500">포획한다</button>
+                <button data-testid="forest-capture-skip" onClick={() => finishForestCapture(false)}
+                  className="w-full border-2 border-stone-600 bg-shadow-700/80 py-3 text-pixel-sm font-semibold text-sand-200">그냥 지나간다</button>
+              </> : <>
               {/* 회복 — 예전에는 이걸 하려고 탑에서 나가 /monsters까지 갔다가
                   베이스캠프에서 탑까지 다시 걸어와야 했다. 결과 화면에서 바로 처리한다. */}
               <button onClick={() => { restorePartyHp(); setHealed(true); }} disabled={healed}
@@ -963,6 +1010,7 @@ export default function BattlePage() {
                 className="w-full border-2 border-stone-600 bg-shadow-700/80 py-3 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600/80 transition active:scale-95">
                 &gt; 베이스캠프
               </button>
+              </>}
             </div>
           </div>
         </div>
@@ -976,6 +1024,8 @@ export default function BattlePage() {
             <p className="text-title-md font-bold text-ember-500 mb-4">LOSE...</p>
             <p className="text-pixel-sm text-sand-300 mb-6 leading-relaxed">{floor}층 재도전?</p>
             <div className="flex flex-col gap-2">
+              {isForestEncounter ? <button data-testid="forest-defeat-return" onClick={leaveForestAfterDefeat}
+                className="w-full border-2 border-stone-600 bg-shadow-700/80 py-3 text-pixel-sm font-semibold text-sand-200">숲에서 철수한다</button> : <>
               {/* 회복 — 예전에는 이걸 하려고 탑에서 나가 /monsters까지 갔다가
                   베이스캠프에서 탑까지 다시 걸어와야 했다. 결과 화면에서 바로 처리한다. */}
               <button onClick={() => { restorePartyHp(); setHealed(true); }} disabled={healed}
@@ -990,6 +1040,7 @@ export default function BattlePage() {
                 className="w-full border-2 border-stone-600 bg-shadow-700/80 py-3 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600/80 transition active:scale-95">
                 &gt; 베이스캠프
               </button>
+              </>}
             </div>
           </div>
         </div>
