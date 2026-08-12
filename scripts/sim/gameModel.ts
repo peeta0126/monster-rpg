@@ -19,7 +19,11 @@ import {
   appliesAlertOnArrival, stepAlertDelta,
 } from "../../src/camp/forest/alert";
 import { makeRng } from "../../src/camp/forest/runStore";
-import { CATCH_ATTEMPTS, catchChance } from "../../src/camp/forest/catchRules";
+import {
+  CATCH_ATTEMPTS, attemptAlert, catchChance, getRpsResult,
+} from "../../src/camp/forest/catchRules";
+import { counterTo, rollHand, tellOf, tellTypeOf } from "../../src/camp/forest/catchTells";
+import type { RpsChoice } from "../../src/workshop/rps";
 import {
   applyDamage, applyStatusEffect, calculateDamage, checkStatusEffects,
   benchExpShare, createBattleMonster, gainExp, getAIAction, getTypeMultiplier, isFainted,
@@ -362,7 +366,50 @@ export interface ForestRunResult {
   escapes: number;
   /** 포획에 성공한 수 — 몬스터는 즉시 확정이라 정산에 안 걸린다 */
   caught: number;
+  /** 스스로 물러선 횟수. 놓침과 달리 escapeAlert 가 안 붙는다 */
+  retreats: number;
+  /** 실제로 건 포획 시도의 총합. 3 에서 얼마나 내려갔는지가 이 작업의 지표다 */
+  attempts: number;
+  /** 포획 기회가 있던 걸음 수 (attempts / catchSteps = 조우당 평균 시도) */
+  catchSteps: number;
+  /** 시도 비용으로 태운 소란의 총합 */
+  attemptAlertSpent: number;
 }
+
+/** 포획을 어떻게 두느냐. 버릇을 아는가 · 언제 물러서는가 */
+export interface CatchPolicy {
+  /**
+   * 상대의 버릇을 읽는가.
+   *
+   * 도감이 찬 플레이어(또는 소란을 낮게 유지한 플레이어)를 흉내 낸다. 모르는 쪽은
+   * 예전과 같이 아무 수나 낸다 — 어떤 편향에서도 기대값이 정확히 균등값이다.
+   */
+  knowsTell: boolean;
+  /**
+   * 다음 시도의 소란 비용이 이 값을 넘으면 물러선다.
+   *
+   * "늘 3번 쓴다"를 깨는 건 비용이지만, 그 비용을 실제로 피하는 판단이 없으면
+   * 시뮬이 게임보다 손해를 크게 잰다. Infinity 면 예전처럼 끝까지 쓴다.
+   */
+  retreatCostOver: number;
+  /**
+   * 소란이 이 값 위면 재도전을 아예 안 한다.
+   *
+   * 소란 예산이 얼마 안 남았을 때 물러서기가 3번째 시도보다 나아지는 자리를 만든다.
+   */
+  retreatAlertOver: number;
+  /**
+   * 시도 비용에 곱하는 배수 — **비교 전용 다이얼**이다.
+   *
+   * 0 이면 재도전이 공짜였던 예전 규칙이 된다. 게임에는 이런 다이얼이 없다.
+   * 비용을 붙이기 전후를 같은 코드로 재려고만 둔다(밸런스 표를 사본으로 만들지 않는다).
+   */
+  costScale: number;
+}
+
+export const CATCH_ALWAYS_THREE: CatchPolicy = {
+  knowsTell: false, retreatCostOver: Infinity, retreatAlertOver: Infinity, costScale: 1,
+};
 
 /**
  * 원정 1회. 게임과 같은 표(steps.ts)로 사건을 뽑고 같은 순서로 판정한다.
@@ -384,6 +431,8 @@ export function runForest(
    * 파라미터로 두고 여러 기준을 훑는다. 기본값은 "쫓겨날 때까지" 다.
    */
   bankAlert = Infinity,
+  /** 포획을 어떻게 두는가. 기본은 예전 행동(버릇 모름 · 3번 다 씀) */
+  policy: CatchPolicy = CATCH_ALWAYS_THREE,
 ): ForestRunResult {
   const drops: { id: string; count: number }[] = [];
   const encounters: Monster[] = [];
@@ -393,6 +442,10 @@ export function runForest(
   let depth = 0;
   let escapes = 0;
   let caught = 0;
+  let retreats = 0;
+  let attempts = 0;
+  let catchSteps = 0;
+  let attemptAlertSpent = 0;
   let forcedRetreat = false;
   let metWarden = false;
 
@@ -423,14 +476,43 @@ export function runForest(
     // 수확 배수는 그렇게 정해진 소란도로 계산한다(게임과 같은 순서)
     drops.push(...rollStepRewards(area, kind, alert, rng));
     if (hasCatch(kind)) {
-      encounters.push(pickForestMonster(area, kind === "champion" || kind === "warden"));
-      // 시도 3회를 다 쓰면 놓친다. 승/무/패는 균등이라 시도당 성공률은 평균값이다
-      const per = (catchChance("win", alert) + catchChance("draw", alert) + catchChance("lose", alert)) / 3;
-      if (Math.pow(1 - per, CATCH_ATTEMPTS) > rng()) {
+      const target = pickForestMonster(area, kind === "champion" || kind === "warden");
+      encounters.push(target);
+      catchSteps++;
+
+      // 시도를 하나씩 실제로 굴린다. 예전엔 3회를 한 덩어리로 접었는데, 시도마다
+      // 소란이 붙고 도중에 물러설 수 있는 지금은 몇 번째에 끝났는지가 곧 비용이다
+      const type = tellTypeOf(target);
+      const tell = tellOf(type);
+      let spent = 0;
+      let got = false;
+      let quit = false;
+
+      for (let a = 0; a < CATCH_ATTEMPTS; a++) {
+        const cost = Math.round(attemptAlert(a) * policy.costScale);
+        // 물러서기 — 놓치는 건 같지만 escapeAlert 도 이번 시도 비용도 안 낸다
+        if (a > 0 && (cost > policy.retreatCostOver || alert + spent > policy.retreatAlertOver)) {
+          quit = true;
+          break;
+        }
+        spent += cost;
+        attempts++;
+
+        // 버릇을 알면 카운터를, 모르면 아무 수나. 상대 손은 게임과 같은 표에서 나온다
+        const player: RpsChoice = policy.knowsTell && tell
+          ? counterTo(tell)
+          : (["rock", "paper", "scissors"] as RpsChoice[])[Math.floor(rng() * 3)];
+        const comp = rollHand(type, rng);
+        if (rng() < catchChance(getRpsResult(player, comp), alert)) { got = true; break; }
+      }
+
+      attemptAlertSpent += spent;
+      alert = clampAlert(alert + spent);
+      if (got) caught++;
+      else if (quit) retreats++;
+      else {
         escapes++;
         alert = clampAlert(alert + escapeAlert(kind));
-      } else {
-        caught++;
       }
     }
 
@@ -446,7 +528,10 @@ export function runForest(
     if (alert >= bankAlert) break;   // 자진 귀환
   }
 
-  return { drops, encounters, steps: depth, alert, alertPeak, forcedRetreat, metWarden, escapes, caught };
+  return {
+    drops, encounters, steps: depth, alert, alertPeak, forcedRetreat, metWarden,
+    escapes, caught, retreats, attempts, catchSteps, attemptAlertSpent,
+  };
 }
 
 /**

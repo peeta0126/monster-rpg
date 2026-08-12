@@ -159,26 +159,48 @@ test("capture: workshop-rps", async ({ page }) => {
 /**
  * 숲 포획 화면은 걸어서 닿으려면 조우가 나올 때까지 굴려야 한다. 저장된 원정을 직접
  * 심어 조우 한가운데로 들어간다 — 세이브 형식이 곧 게임 상태라 이게 가장 짧은 길이다.
+ *
+ * 소란 20 은 정찰 "detail" 구간이라 버릇이 글자로 명시된다. 이 화면에서 확인할 것은
+ * 남은 시도 · 다음 시도의 소란 값 · 버릇 힌트 · 물러서기가 **한 화면에 다 보이는가**다.
  */
+const catchRun = (step: Record<string, unknown>) => JSON.stringify({
+  run: {
+    runVersion: 1, areaId: "shallow", depth: 3, alert: 20, alertPeak: 20,
+    bag: [{ id: "herb", count: 2 }], caught: 0,
+    current: "encounter", fork: null,
+    step: { entered: true, pick: null, attempts: 0, pending: null, done: null, ...step },
+    seed: 4242,
+  },
+});
+
 test("capture: forest-rps", async ({ page }) => {
   await seedStorage(page, true);
   await page.addInitScript(({ k, v }) => localStorage.setItem(k as string, v as string), {
     k: "monster-rpg-forest-run",
-    v: JSON.stringify({
-      run: {
-        runVersion: 1, areaId: "shallow", depth: 3, alert: 30, alertPeak: 30,
-        bag: [{ id: "herb", count: 2 }], caught: 0,
-        current: "encounter", fork: null,
-        step: { entered: true, pick: null, attempts: 0, pending: null, done: null },
-        seed: 4242,
-      },
-    }),
+    v: catchRun({}),
   });
   await page.goto("/forest");
 
   await expect(page.locator('[data-testid="forest-rps-rock"]')).toBeVisible({ timeout: 20_000 });
   await waitForVisualSettle(page);
   await page.screenshot({ path: path.join(OUT_DIR, "forest-rps.png"), fullPage: false });
+});
+
+/**
+ * 한 번 놓친 뒤의 화면. 여기서만 "다시 시도에 값이 붙었다"가 보인다 —
+ * 비용이 버튼에 안 적혀 있으면 물러설지 말지를 저울에 못 올린다.
+ */
+test("capture: forest-rps-retry", async ({ page }) => {
+  await seedStorage(page, true);
+  await page.addInitScript(({ k, v }) => localStorage.setItem(k as string, v as string), {
+    k: "monster-rpg-forest-run",
+    v: catchRun({ attempts: 1, pending: { hand: "rock", caught: false } }),
+  });
+  await page.goto("/forest");
+
+  await expect(page.locator('[data-testid="forest-rps-retry"]')).toBeVisible({ timeout: 20_000 });
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "forest-rps-retry.png"), fullPage: false });
 });
 
 /**
