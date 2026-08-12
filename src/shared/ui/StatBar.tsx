@@ -1,4 +1,4 @@
-import { PALETTE, hpToken } from "../palette";
+import { PALETTE, hpToken, isHpDanger } from "../palette";
 
 type StatBarVariant = "hp" | "mp" | "exp";
 
@@ -26,8 +26,9 @@ export function StatBar({
   className?: string;
 }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
-  // 20% 이하에서 깜빡여 "위험"을 색이 아닌 움직임으로도 알린다
-  const critical = variant === "hp" && pct <= 20 && pct > 0;
+  // 위험 구간에서 느리게 맥박쳐 "위험"을 색이 아닌 움직임으로도 알린다.
+  // 경계는 palette 한 곳에서 온다 — 전투 캔버스의 몬스터 경고와 같은 순간에 켜져야 한다.
+  const critical = variant === "hp" && isHpDanger(pct);
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

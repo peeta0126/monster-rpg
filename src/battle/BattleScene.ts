@@ -4,8 +4,9 @@ import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandle
 import { getBattleInitData } from "./battleInitStore";
 import { markSceneReady } from "../shared/phaser/sceneReady";
 import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
-import { PALETTE, HEX, hpToken } from "../shared/palette";
-import type { StatusEffect } from "../shared/game";
+import { PALETTE, HEX, hpToken, isHpDanger, elementChip } from "../shared/palette";
+import { STATUS_META, statusBadge } from "./statusInfo";
+import type { ElementType, StatusEffect } from "../shared/game";
 import type { BattleResultPayload, BattlePlayerSwitchPayload, BattleHitPayload } from "../shared/phaser/events";
 
 export interface BattleSceneUpdatePayload {
@@ -91,6 +92,13 @@ export default class BattleScene extends Phaser.Scene {
   private playerNameText!: Phaser.GameObjects.Text;
   private enemyStatusBadge!: Phaser.GameObjects.Text;
   private playerStatusBadge!: Phaser.GameObjects.Text;
+
+  // ── 위험(HP 25% 이하) 경고 ──
+  // 바 테두리와 몬스터 뒤 아우라가 같은 순간에 같은 박자로 뛴다. 숫자만 빨개지면 안 본다.
+  private dangerFrame = {} as Record<"enemy" | "player", Phaser.GameObjects.Graphics>;
+  private dangerAura  = {} as Record<"enemy" | "player", Phaser.GameObjects.Graphics>;
+  private dangerTween = {} as Record<"enemy" | "player", Phaser.Tweens.Tween | undefined>;
+  private dangerOn    = { enemy: false, player: false };
 
   // ── 로그 알림 ──
   private logState: LogState = "idle";
@@ -522,6 +530,78 @@ export default class BattleScene extends Phaser.Scene {
     this.buildOneHudPanel(
       PLAYER_X, P_PANEL_CY, PANEL_W, PANEL_H, false,
     );
+    this.buildDangerCues();
+  }
+
+  /**
+   * 속성 칩. 상대가 무엇인지 모르면 교체를 판단할 수 없는데, 지금까지는 기술 셀의
+   * 배율에서 거꾸로 추측해야 했다.
+   *
+   * 이름 반대쪽(오른쪽 끝)에 붙인다 — "고대의 프리로 Lv.31" 처럼 이름이 길어지는 적이
+   * 있어서, 이름 뒤에 이어 붙이면 언젠가 겹친다.
+   * 생김새는 React 쪽 ELEMENT_CHIP_CLASS 와 같게 맞춘다(속성색 28% 바탕 + 테두리).
+   */
+  private buildTypeChip(rightX: number, topY: number, type: ElementType | null) {
+    const { label, color: token, ink } = elementChip(type);
+
+    const text = this.add.text(rightX - 5, topY + 2, label, {
+      fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE[ink],
+    }).setOrigin(1, 0).setDepth(10);
+
+    const w = text.width + 10;
+    const h = text.height + 4;
+    const box = this.add.graphics().setDepth(9);
+    box.fillStyle(HEX[token], 0.28);
+    box.fillRect(rightX - w, topY, w, h);
+    box.lineStyle(1, HEX[token], 1);
+    box.strokeRect(rightX - w, topY, w, h);
+  }
+
+  private buildDangerCues() {
+    for (const side of ["enemy", "player"] as const) {
+      const barX = side === "enemy" ? E_BAR_X : P_BAR_X;
+      const barY = side === "enemy" ? E_BAR_Y : P_BAR_Y;
+      const frame = this.add.graphics().setDepth(11).setVisible(false);
+      frame.lineStyle(2, HEX.ember700, 1);
+      frame.strokeRect(barX - 3, barY - 3, BAR_W_INNER + 6, BAR_H + 6);
+
+      const sx = side === "enemy" ? ENEMY_X : PLAYER_X;
+      const sy = side === "enemy" ? ENEMY_Y : PLAYER_Y;
+      // 일러스트를 틴트로 물들이면 그림이 상한다. 뒤에 아우라를 깔아 몬스터째로 위험해 보이게 한다.
+      // 번짐만 깔았더니 횃불 불빛과 구별이 안 됐다 — 테두리 원을 하나 둘러 형태를 준다.
+      const aura = this.add.graphics().setDepth(5).setVisible(false);
+      aura.fillStyle(HEX.ember700, 0.5);
+      aura.fillCircle(sx, sy, MONSTER_SIZE * 0.42);
+      aura.fillStyle(HEX.ember700, 0.28);
+      aura.fillCircle(sx, sy, MONSTER_SIZE * 0.62);
+      aura.lineStyle(3, HEX.ember700, 0.9);
+      aura.strokeCircle(sx, sy, MONSTER_SIZE * 0.62);
+
+      this.dangerFrame[side] = frame;
+      this.dangerAura[side]  = aura;
+    }
+  }
+
+  /** 위험 구간 진입/이탈. 같은 상태면 아무것도 하지 않는다(매 갱신마다 트윈이 쌓이면 안 된다) */
+  private setDanger(side: "enemy" | "player", on: boolean) {
+    if (this.dangerOn[side] === on) return;
+    this.dangerOn[side] = on;
+
+    const targets = [this.dangerFrame[side], this.dangerAura[side]];
+    this.dangerTween[side]?.remove();
+    this.dangerTween[side] = undefined;
+    for (const t of targets) t.setVisible(on).setAlpha(1);
+    if (!on) return;
+
+    // 움직임을 줄여 달라고 한 사람에겐 맥박 없이 켜 둔 채로 둔다 — 경고 자체는 지우지 않는다
+    if (this.reduceMotion) {
+      for (const t of targets) t.setAlpha(0.8);
+      return;
+    }
+    this.dangerTween[side] = this.tweens.add({
+      targets, alpha: { from: 0.35, to: 1 },
+      duration: 900, yoyo: true, repeat: -1, ease: "Sine.InOut",
+    });
   }
 
   private buildOneHudPanel(cx: number, cy: number, pw: number, ph: number, isEnemy: boolean) {
@@ -541,16 +621,18 @@ export default class BattleScene extends Phaser.Scene {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand200,
       }).setDepth(9);
 
-      this.enemyStatusBadge = this.add.text(px + pw - 8, py + 7, "", {
-        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
-        backgroundColor: PALETTE.shadow900, padding: { x: 2, y: 1 },
-      }).setOrigin(1, 0).setDepth(9);
+      this.buildTypeChip(px + pw - 8, py + 5, getBattleInitData()?.enemyType ?? null);
 
       // HP 바 레이아웃
       const barX = px + 10;
       const barY = py + ph - 22;
       const barW = pw - 20;
       this.add.text(barX, barY - 13, "HP", { fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand300 }).setDepth(9);
+      // 상태이상은 HP 줄 가운데로 내렸다. 이름 줄은 속성 칩이 쓴다.
+      this.enemyStatusBadge = this.add.text(barX + 26, barY - 14, "", {
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
+        backgroundColor: PALETTE.shadow900, padding: { x: 2, y: 1 },
+      }).setOrigin(0, 0).setDepth(10);
       this.enemyHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.enemyHpBar, barX, barY, barW, BAR_H, 1);
       // HP 수치는 "몇 대 더 때려야 하나"를 판단하는 핵심 정보라 캔버스가 축소돼도 읽히도록
@@ -564,15 +646,15 @@ export default class BattleScene extends Phaser.Scene {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300,
       }).setDepth(9);
 
-      this.playerStatusBadge = this.add.text(px + pw - 8, py + 7, "", {
-        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
-        backgroundColor: PALETTE.shadow800, padding: { x: 2, y: 1 },
-      }).setOrigin(1, 0).setDepth(9);
-
       const barX = px + 10;
       const barY = py + ph - 22;
       const barW = pw - 20;
       this.add.text(barX, barY - 13, "HP", { fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300 }).setDepth(9);
+      // 적 패널과 같은 자리에 둔다 — 눈이 두 패널을 오갈 때 같은 것이 같은 곳에 있어야 한다
+      this.playerStatusBadge = this.add.text(barX + 26, barY - 14, "", {
+        fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
+        backgroundColor: PALETTE.shadow800, padding: { x: 2, y: 1 },
+      }).setOrigin(0, 0).setDepth(10);
       this.playerHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.playerHpBar, barX, barY, barW, BAR_H, 1);
       this.playerHpText = this.add.text(barX + barW, barY - 2, "", {
@@ -726,10 +808,13 @@ export default class BattleScene extends Phaser.Scene {
     this.animateBar("player", p.playerHp / p.playerMaxHp);
     this.playerHpText.setText(`${p.playerHp}/${p.playerMaxHp}`);
 
-    this.enemyStatusBadge.setText(this.statusLabel(p.enemyStatus));
-    this.playerStatusBadge.setText(this.statusLabel(p.playerStatus));
-    if (p.enemyStatus) this.enemyStatusBadge.setColor(this.statusColor(p.enemyStatus));
-    if (p.playerStatus) this.playerStatusBadge.setColor(this.statusColor(p.playerStatus));
+    this.setDanger("enemy",  isHpDanger((p.enemyHp  / p.enemyMaxHp)  * 100));
+    this.setDanger("player", isHpDanger((p.playerHp / p.playerMaxHp) * 100));
+
+    this.enemyStatusBadge.setText(statusBadge(p.enemyStatus));
+    this.playerStatusBadge.setText(statusBadge(p.playerStatus));
+    if (p.enemyStatus) this.enemyStatusBadge.setColor(PALETTE[STATUS_META[p.enemyStatus].color]);
+    if (p.playerStatus) this.playerStatusBadge.setColor(PALETTE[STATUS_META[p.playerStatus].color]);
 
     // 흔들림·플래시는 BATTLE_HIT 이 담당한다(데미지 크기와 치명타 여부를 알아야 해서).
     // 여기서는 쓰러짐만 본다.
@@ -842,15 +927,6 @@ export default class BattleScene extends Phaser.Scene {
     }
     g.lineStyle(1, HEX.earth500, 0.8);
     g.strokeRect(x, y, w, h);
-  }
-
-  private statusLabel(s: StatusEffect): string {
-    if (!s) return "";
-    return { paralysis: "⚡마비", poison: "☠독", freeze: "❄빙결", burn: "🔥화상" }[s] ?? s;
-  }
-
-  private statusColor(s: NonNullable<StatusEffect>): string {
-    return { paralysis: PALETTE.ember500, poison: PALETTE.earth500, freeze: PALETTE.mist300, burn: PALETTE.ember600 }[s] ?? PALETTE.cream100;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

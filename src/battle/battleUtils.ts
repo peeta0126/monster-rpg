@@ -176,6 +176,12 @@ export function isFainted(monster: BattleMonster): boolean {
 // ─── 상태이상 ───────────────────────────────────────────────────────────────────
 
 /**
+ * 매 턴 최대 HP 의 몇 할을 깎는가. 화면이 "매 턴 -6%"를 적으려면 같은 값이 필요해서
+ * 상수로 뽑았다(statusInfo.ts). 값을 여기서 고치면 표시도 같이 바뀐다.
+ */
+export const STATUS_TICK_RATIO = { poison: 0.06, burn: 0.08 } as const;
+
+/**
  * 몬스터에게 상태이상 적용
  * 이미 다른 상태이상이 걸려 있으면 적용하지 않는다
  */
@@ -221,7 +227,7 @@ export function checkStatusEffects(monster: BattleMonster): {
     case "poison":
       // 독: 매 턴 최대HP의 6% 감소
       {
-        const poisonDmg = Math.max(1, Math.floor(monster.maxHp * 0.06));
+        const poisonDmg = Math.max(1, Math.floor(monster.maxHp * STATUS_TICK_RATIO.poison));
         updated.currentHp = Math.max(0, updated.currentHp - poisonDmg);
         logs.push(`${monster.name}은(는) 독 피해를 ${poisonDmg} 받았다.`);
       }
@@ -237,7 +243,7 @@ export function checkStatusEffects(monster: BattleMonster): {
     case "burn":
       // 화상: 매 턴 최대HP의 8% 감소
       {
-        const burnDmg = Math.max(1, Math.floor(monster.maxHp * 0.08));
+        const burnDmg = Math.max(1, Math.floor(monster.maxHp * STATUS_TICK_RATIO.burn));
         updated.currentHp = Math.max(0, updated.currentHp - burnDmg);
         logs.push(`${monster.name}은(는) 화상으로 ${burnDmg}의 피해를 받았다.`);
       }

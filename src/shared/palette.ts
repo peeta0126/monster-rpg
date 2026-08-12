@@ -69,6 +69,15 @@ export const ELEMENT_KO: Record<keyof typeof ELEMENT_COLOR, string> = {
  * moss-500/earth-500 은 본문 글자로 쓰기엔 너무 어두워서(2.7~3.4:1) sand-200 으로 뺐다.
  * 색을 못 보는 사람에게도 테두리 밝기 차이로 구분이 남는다.
  */
+/**
+ * 속성 칩의 글자색 토큰. 바로 위 ELEMENT_CHIP_CLASS 의 text-* 와 같은 값이어야 한다 —
+ * Phaser 는 Tailwind 클래스를 못 읽어서(palette.ts 머리말 참고) 씬이 이 표를 쓴다.
+ */
+export const ELEMENT_CHIP_INK: Record<keyof typeof ELEMENT_COLOR, PaletteName> = {
+  fire: "sand200", electric: "ember500", water: "sand200", ice: "mist300",
+  grass: "sand200", poison: "sand200", normal: "sand300",
+};
+
 export const ELEMENT_CHIP_CLASS: Record<keyof typeof ELEMENT_COLOR, string> = {
   fire:     "bg-ember-600/25 text-sand-200 border-ember-600",
   electric: "bg-ember-500/20 text-ember-500 border-ember-500",
@@ -80,14 +89,40 @@ export const ELEMENT_CHIP_CLASS: Record<keyof typeof ELEMENT_COLOR, string> = {
 };
 
 /**
- * HP 잔량(%) → 색 토큰. ART_DIRECTION 3-2 규칙: 100~50% moss / 50~20% ember-500 /
- * 20% 이하 ember-700. 전투 캔버스·전투 UI·몬스터 화면이 전부 이 함수를 쓴다 —
+ * 위험 구간의 경계(%). 색만이 아니라 맥박 연출도 이 값 하나를 본다 — 바는 빨간데
+ * 몬스터는 멀쩡하거나, 그 반대인 상태를 만들지 않으려면 경계가 한 벌이어야 한다.
+ * 20 이었는데 25 로 올렸다: 20% 면 대개 한 대 더 맞으면 죽는 시점이라, 경고를 보고
+ * 손쓸 여지가 없었다.
+ */
+export const HP_DANGER_PCT = 25;
+
+/**
+ * 속성 칩 한 개의 재료(이름·바탕색·글자색).
+ *
+ * `null` 은 무속성(오름)이다. 약점도 저항도 없다는 뜻이라 속성 이름을 지어내면 안 되고,
+ * 자리를 비워도 안 된다 — 비우면 "아직 안 불러왔나"로 읽힌다. 그래서 "?" 로 적는다.
+ */
+export function elementChip(type: keyof typeof ELEMENT_COLOR | null): {
+  label: string; color: PaletteName; ink: PaletteName;
+} {
+  if (!type) return { label: "?", color: "sand300", ink: "sand300" };
+  return { label: ELEMENT_KO[type], color: ELEMENT_COLOR[type], ink: ELEMENT_CHIP_INK[type] };
+}
+
+/**
+ * HP 잔량(%) → 색 토큰. ART_DIRECTION 3-2 규칙: 100~50% moss / 50~25% ember-500 /
+ * 25% 이하 ember-700. 전투 캔버스·전투 UI·몬스터 화면이 전부 이 함수를 쓴다 —
  * 세 곳이 각자 경계값을 들고 있으면 같은 HP 인데 화면마다 색이 달라진다.
  */
 export function hpToken(pct: number): PaletteName {
   if (pct > 50) return "moss500";
-  if (pct > 20) return "ember500";
+  if (pct > HP_DANGER_PCT) return "ember500";
   return "ember700";
+}
+
+/** 위험 구간인가. 0 이하(기절)는 경고할 대상이 아니다. */
+export function isHpDanger(pct: number): boolean {
+  return pct > 0 && pct <= HP_DANGER_PCT;
 }
 
 /** `rgba(r, g, b, a)` 문자열. 그림자·오버레이는 검정 대신 shadow-800/900 을 쓴다. */

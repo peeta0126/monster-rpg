@@ -73,6 +73,7 @@ import { StatBar } from "../shared/ui";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { BattleCommandMenu } from "./BattleCommandMenu";
 import { previewMove } from "./damagePreview";
+import { statusDetail, statusLabel } from "./statusInfo";
 import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
@@ -84,9 +85,6 @@ type BattleRouteState = {
   floor?: number;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  paralysis: "⚡마비", poison: "☠독", freeze: "❄빙결", burn: "🔥화상",
-};
 
 // ─── 컴포넌트 ────────────────────────────────────────────────────────────────────
 
@@ -228,6 +226,7 @@ export default function BattlePage() {
       enemyImageUrl:  MONSTER_IMAGE_MAP[initialEnemy.id] ?? "",
       enemyName:      initialEnemy.name,
       enemyLevel:     initialEnemy.level,
+      enemyType:      initialEnemy.type,
       floor, isBoss: isBossFloor(floor),
       partyImageUrls: initialParty.map(m => MONSTER_IMAGE_MAP[m.id] ?? ""),
       partyNames:     initialParty.map(m => m.name),
@@ -395,7 +394,7 @@ export default function BattlePage() {
       const before = next.status;
       next = applyStatusEffect(next, move.statusEffect);
       if (before === null && next.status !== null) {
-        await sendLogAndWait(`${next.name}에게 ${STATUS_LABELS[next.status] ?? next.status} 상태이상이 걸렸다!`);
+        await sendLogAndWait(`${next.name}에게 ${statusLabel(next.status)} 상태이상이 걸렸다!`);
       }
     }
 
@@ -622,7 +621,7 @@ export default function BattlePage() {
       np = { ...np, currentHp: np.maxHp };
     } else if (eff.type === "cure_status") {
       if (np.status) {
-        await sendLogAndWait(`${np.name}의 ${STATUS_LABELS[np.status] ?? np.status} 상태가 치료됐다!`);
+        await sendLogAndWait(`${np.name}의 ${statusLabel(np.status)} 상태가 치료됐다!`);
         np = { ...np, status: null };
       } else {
         await sendLogAndWait("상태이상이 없다...");
@@ -755,8 +754,9 @@ export default function BattlePage() {
             <span className="text-earth-400">Lv.{player.level}</span>
             <StatBar value={player.currentHp} max={player.maxHp} showNumbers className="w-64" />
             {player.status && (
+              /* 자리가 있는 쪽이라 매 턴 깎이는 양까지 적는다 — "버틸까 지금 지를까"의 근거다 */
               <span className="rounded bg-ember-700/18 px-1 py-0.5 text-ember-500 text-pixel-sm">
-                {STATUS_LABELS[player.status]}
+                {statusDetail(player.status)}
               </span>
             )}
             {player.attackBuffTurns > 0 && (
