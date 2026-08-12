@@ -143,7 +143,7 @@ test("스크림 — 선택 화면은 원화 그대로, 탐험 중에는 덮는�
 
   await card(page, "shallow").click();
   await expect(
-    page.locator('[data-testid="forest-step-panel"], [data-testid="forest-fork"]').first(),
+    page.locator('[data-testid="forest-scene"]').first(),
   ).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(500);
 
@@ -176,7 +176,7 @@ test("얕은 숲 진입 · 상단 UI 가 바뀐다", async ({ page }) => {
 
   await card(page, "shallow").click();
   await expect(
-    page.locator('[data-testid="forest-step-panel"], [data-testid="forest-fork"]').first(),
+    page.locator('[data-testid="forest-scene"]').first(),
   ).toBeVisible({ timeout: 20_000 });
 
   /**
@@ -187,5 +187,6 @@ test("얕은 숲 진입 · 상단 UI 가 바뀐다", async ({ page }) => {
    */
   await expect(page.locator('[data-testid="forest-alert"]')).toBeVisible();
   await expect(page.getByText("깊이 0")).toBeVisible();
-  await expect(page.getByText("채집망")).toBeVisible();
+  await expect(page.getByText(/획득 재료 \d+개/)).toBeVisible();
+  await page.screenshot({ path: "e2e/artifacts/forest-scene-final.png", fullPage: true });
 });

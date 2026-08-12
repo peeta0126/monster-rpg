@@ -11,8 +11,8 @@ export type ForestPhase =
   | { type: "choosing" }
   | { type: "moving"; pathId: string }
   | { type: "event"; eventId: string }
-  | { type: "battle"; encounterId: string; monsterId: string }
-  | { type: "capture"; encounterId: string; monsterId: string }
+  | { type: "capture"; eventId: string; monsterId: string }
+  | { type: "result"; eventId: string }
   | { type: "transition"; nextDepth: number }
   | { type: "settling"; reason: SettleReason };
 
@@ -51,7 +51,7 @@ export interface ForestRun {
   paths: ForestPathOption[];
   phase: ForestPhase;
   completedEventIds: string[];
-  encounter?: { id: string; monsterId: string; level: number; resolved: boolean; captureResolved: boolean };
+  encounter?: { eventId: string; monsterId: string; level: number; resolved: boolean };
 }
 
 export function makeRng(seed: number): { rng: Rng; nextSeed: () => number } {
@@ -169,7 +169,23 @@ export function parseRun(raw: unknown): { ok: true; run: ForestRun } | { ok: fal
   const alert = clampAlert(typeof r.alert === "number" ? r.alert : 0);
   const paths = Array.isArray(r.paths) && r.paths.length >= 2 ? r.paths as ForestPathOption[] : generatePaths(alert, r.depth, r.seed);
   const current = typeof r.current === "string" ? r.current as ForestStepKind : paths[0].eventKind;
-  const phase = r.phase && typeof r.phase === "object" && typeof (r.phase as { type?: unknown }).type === "string" ? r.phase as ForestPhase : { type: "choosing" } as ForestPhase;
+  const rawPhase = r.phase && typeof r.phase === "object" ? r.phase as Record<string, unknown> : null;
+  const rawEncounter = r.encounter && typeof r.encounter === "object" ? r.encounter as Record<string, unknown> : null;
+  const fallbackEventId = typeof rawEncounter?.eventId === "string"
+    ? rawEncounter.eventId
+    : paths.find((path) => path.eventKind === current)?.id ?? `${r.depth}`;
+  // v2의 전투 브리지 저장값은 전투 페이지 대신 동일 조우의 포획 단계에서 안전하게 재개한다.
+  const phase: ForestPhase = rawPhase?.type === "battle"
+    ? { type: "capture", eventId: fallbackEventId, monsterId: String(rawEncounter?.monsterId ?? rawEncounter?.id ?? "") }
+    : rawPhase && typeof rawPhase.type === "string" ? rawPhase as unknown as ForestPhase : { type: "choosing" };
+  const encounter: ForestRun["encounter"] = rawEncounter && typeof (rawEncounter.monsterId ?? rawEncounter.id) === "string"
+    ? {
+        eventId: fallbackEventId,
+        monsterId: String(rawEncounter.monsterId ?? rawEncounter.id),
+        level: typeof rawEncounter.level === "number" ? rawEncounter.level : 1,
+        resolved: rawEncounter.resolved === true,
+      }
+    : undefined;
   const rawStep = r.step as Partial<StepProgress> | undefined;
   const step: StepProgress = rawStep && typeof rawStep === "object" ? {
     entered: typeof rawStep.entered === "boolean" ? rawStep.entered : false,
@@ -183,5 +199,5 @@ export function parseRun(raw: unknown): { ok: true; run: ForestRun } | { ok: fal
     caught: typeof r.caught === "number" ? r.caught : 0, current, fork: r.runVersion === RUN_VERSION ? r.fork as ForestRun["fork"] ?? null : null, step, seed: r.seed >>> 0,
     sceneSeed: typeof r.sceneSeed === "number" ? r.sceneSeed : r.seed >>> 0, paths, phase,
     completedEventIds: Array.isArray(r.completedEventIds) ? r.completedEventIds.filter((x): x is string => typeof x === "string") : [],
-    ...(Object.prototype.hasOwnProperty.call(r, "encounter") ? { encounter: r.encounter as ForestRun["encounter"] } : {}) } };
+    ...(encounter ? { encounter } : {}) } };
 }
