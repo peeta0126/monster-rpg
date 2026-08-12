@@ -50,8 +50,13 @@ export const FOREST_BACKGROUND_ASPECT_RATIO = 2603 / 1464;
  * 위에 조명이나 그라디언트를 덧대지 말 것 — 비네트가 두 겹이 되면 그냥 탁해진다.
  * 켜지는 창은 적 속성에 따라 달라진다(왼쪽부터 불·전기·물·얼음·풀·독·노말).
  *
- * 35개를 상수로 나열하지 않는 이유: 이름이 규칙이라 나열하면 그 규칙이 두 벌이 된다.
+ * 나열하지 않는 이유: 이름이 규칙이라 나열하면 그 규칙이 두 벌이 된다.
+ *
+ * z50(탑 정상)만 normal 한 장뿐이다. 그 층의 적은 오름 하나이고 type 이 null 이라
+ * 언제나 normal 로 떨어지지만, 층을 라우트 state 로 넘기는 구조라 이론상 다른 속성의
+ * 적과 50층이 만날 수는 있다. 그때 없는 파일을 요청해 방이 통째로 비는 대신 고정한다.
  */
 export function towerBattleBg(zone: TowerZone, element: ElementType): string {
-  return `/assets/tower/${zone}_${element}.webp`;
+  const el = zone === "z50" ? "normal" : element;
+  return `/assets/tower/${zone}_${el}.webp`;
 }
