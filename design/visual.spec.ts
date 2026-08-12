@@ -26,6 +26,9 @@ const SCREENS = [
   { name: "farm",     path: "/farm",     auth: true,  phaser: false },
   { name: "monsters", path: "/monsters", auth: true,  phaser: false },
   { name: "workshop", path: "/workshop", auth: true,  phaser: false },
+  // battle 기준 이미지는 2026-08-12 에 갱신했다. 아군과 적의 좌우를 맞바꿨고(아군 좌하단·
+  // 적 우상단, 전에는 둘이 등을 지고 있었다) 자동 진행이 기본으로 켜져 하단 토글이 "자동"으로
+  // 찍힌다. 두 변화 다 의도한 것이다.
   { name: "battle",   path: "/battle",   auth: true,  phaser: true  },
 ];
 

@@ -27,11 +27,13 @@ const BATTLE_H = H;     // 전투 무대는 캔버스 전체를 쓴다.
 const LOG_Y = 400;      // 하단 로그 패널 시작
 const FLOOR_Y = 318;    // 탑 바닥면
 
-// 적은 좌상단, 아군은 우하단 — 대각선 배치로 시선이 흐르게 한다 (ART_DIRECTION 3-2).
+// 아군은 좌하단, 적은 우상단 — 대각선 배치로 시선이 흐르게 한다 (ART_DIRECTION 3-2).
 // 예전엔 같은 Y선에 좌우로 마주 보게 두어 원근이 없었다.
-const ENEMY_X  = 300;
+// 좌우는 JRPG 관례를 따른다. 왼쪽→오른쪽으로 읽는 사람은 왼쪽에 선 쪽을 자기로 본다.
+// 스프라이트 원본은 대부분 왼쪽을 보고 있어서, 아군만 뒤집으면 둘이 마주 본다.
+const ENEMY_X  = 664;
 const ENEMY_Y  = 206;
-const PLAYER_X = 664;
+const PLAYER_X = 300;
 const PLAYER_Y = 268;
 const MONSTER_SIZE = 140;
 
@@ -445,7 +447,7 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 몬스터 스프라이트 (같은 Y, 마주 보기)
+  // 몬스터 스프라이트 (아군 좌하단 · 적 우상단, 마주 보기)
   // ─────────────────────────────────────────────────────────────────────────────
 
   private buildMonsterSprites() {
@@ -454,7 +456,7 @@ export default class BattleScene extends Phaser.Scene {
     this.smoothTexture("enemy-mon");
     for (let i = 0; i < 6; i++) this.smoothTexture(`party-mon-${i}`);
 
-    // 적 (우, flipX)
+    // 적 (우상단) — 원본이 왼쪽을 보고 있어 뒤집지 않는다
     if (this.textures.exists("enemy-mon")) {
       this.enemySprite = this.add.image(ENEMY_X, ENEMY_Y, "enemy-mon")
         .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setDepth(6);
@@ -462,10 +464,10 @@ export default class BattleScene extends Phaser.Scene {
       this.enemySprite = this.makeFallback(ENEMY_X, ENEMY_Y, HEX.ember700, MONSTER_SIZE);
     }
 
-    // 플레이어 — 파티 0번 슬롯 이미지 사용 (party-mon-0)
+    // 플레이어 (좌하단) — 파티 0번 슬롯 이미지 사용 (party-mon-0)
     if (this.textures.exists("party-mon-0")) {
       this.playerSprite = this.add.image(PLAYER_X, PLAYER_Y, "party-mon-0")
-        // 아군이 우측으로 옮겨갔으니 좌측의 적을 바라보게 뒤집는다
+        // 원본이 왼쪽을 보고 있으므로 뒤집어야 우측의 적을 바라본다
         .setDisplaySize(MONSTER_SIZE, MONSTER_SIZE).setFlipX(true).setDepth(6);
     } else {
       this.playerSprite = this.makeFallback(PLAYER_X, PLAYER_Y, HEX.mist500, MONSTER_SIZE);
