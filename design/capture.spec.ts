@@ -182,6 +182,90 @@ test("capture: forest-rps", async ({ page }) => {
 });
 
 /**
+ * 각인은 "같은 몬스터가 여러 마리" 라야 화면이 성립한다 — 신규 세이브로는 후보 목록도
+ * 배지도 빈 채로 찍혀 아무것도 확인할 수 없다. 그래서 여기서만 세이브를 심는다.
+ */
+const IMPRINT_SAVE = JSON.stringify({
+  state: {
+    party: [
+      { id: "flameling", name: "플레미", type: "fire", maxHp: 120, attack: 30, defense: 20, speed: 25,
+        moves: [], level: 1, exp: 0, expToNextLevel: 100, rewardExp: 40, uid: "p0", currentHp: 120 },
+      { id: "mossy", name: "모시", type: "electric", maxHp: 131, attack: 17, defense: 32, speed: 15,
+        moves: [], level: 6, exp: 0, expToNextLevel: 100, rewardExp: 44, uid: "p1", currentHp: 131,
+        evolutionChainId: "mossy", evolutionStage: 1, evolvesTo: "mossevo", evolvesAtLevel: 20 },
+    ],
+    storage: [1, 2, 3].map((n) => ({
+      id: "mossy", name: "모시", type: "electric", maxHp: 131, attack: 17, defense: 32, speed: 15,
+      moves: [], level: n + 2, exp: 0, expToNextLevel: 100, rewardExp: 44,
+      uid: `s${n}`, currentHp: 131,
+      evolutionChainId: "mossy", evolutionStage: 1, evolvesTo: "mossevo", evolvesAtLevel: 20,
+    })),
+    dexSeen: ["flameling", "mossy"], dexCaught: ["flameling", "mossy"],
+    materials: { monster_essence: 4 }, potions: {}, bestFloor: 12,
+    storyFlags: {}, questStatus: {},
+    craftedItems: [], craftedArtifacts: [], craftedPotions: [], equippedArtifacts: {},
+    imprint: { mossy: 5 },
+  },
+  version: 1,
+});
+
+async function seedImprintSave(page: Page) {
+  await seedStorage(page, true);
+  await page.addInitScript(({ k, v }) => localStorage.setItem(k as string, v as string),
+    { k: PLAYER_STORAGE_KEY, v: IMPRINT_SAVE });
+}
+
+test("capture: monsters-imprint", async ({ page }) => {
+  await seedImprintSave(page);
+  await page.goto("/monsters");
+  await expect(page.locator('[data-testid="imprint-open-s1"]')).toBeVisible({ timeout: 20_000 });
+  // 보관함 카드를 하나 골라 상태창에 각인 블록이 서게 한다
+  await page.locator('[data-testid="imprint-open-s1"]').locator("xpath=../..").locator("button").first().click();
+  await expect(page.locator('[data-testid="imprint-status"]')).toBeVisible();
+  await page.mouse.move(40, 600);
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "monsters-imprint.png"), fullPage: false });
+});
+
+test("capture: imprint-modal", async ({ page }) => {
+  await seedImprintSave(page);
+  await page.goto("/monsters");
+  await page.locator('[data-testid="imprint-open-s1"]').click();
+  await expect(page.locator('[data-testid="imprint-modal"]')).toBeVisible();
+  await page.mouse.move(40, 600);
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "imprint-modal.png"), fullPage: false });
+});
+
+/**
+ * 둥지는 배지가 붙고 나서야 "고를 만한 화면"이 된다. 굴림이 보유 스냅샷을 보므로
+ * 저장된 원정에 그 스냅샷까지 심어 들어간다.
+ */
+test("capture: forest-nest", async ({ page }) => {
+  await seedImprintSave(page);
+  await page.addInitScript(({ k, v }) => localStorage.setItem(k as string, v as string), {
+    k: "monster-rpg-forest-run",
+    v: JSON.stringify({
+      run: {
+        runVersion: 1, areaId: "shallow", depth: 2, alert: 20, alertPeak: 20,
+        bag: [{ id: "herb", count: 3 }], caught: 0,
+        current: "nest", fork: null,
+        step: {
+          entered: true, pick: null, attempts: 0, pending: null, done: null,
+          ownedChains: ["flameling", "mossy"], overflow: null,
+        },
+        seed: 1234,
+      },
+    }),
+  });
+  await page.goto("/forest");
+
+  await expect(page.locator('[data-testid="forest-nest-pick-0"]')).toBeVisible({ timeout: 20_000 });
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "forest-nest.png"), fullPage: false });
+});
+
+/**
  * Tab 메뉴는 우상단 버튼에 붙어 아래로 펼쳐진다. 닫힌 화면만 찍으면 펼친 목록이
  * 목표 배너·최근 제작 패널과 겹치는지를 알 수가 없어서 열린 상태로 한 장 더 남긴다.
  */
