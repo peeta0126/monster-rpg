@@ -1,6 +1,8 @@
 import { ELEMENT_KO, type ElementType, type Monster } from "../../shared/game";
+import { chainKeyOf, chainMembers } from "../../monster/imprint";
 import { RPS_KO, type RpsChoice } from "../../workshop/rps";
 import type { Rng } from "./steps";
+import type { ScoutLevel } from "./alert";
 
 /**
  * 상대의 버릇 — 야생 몬스터가 어느 수를 즐겨 내는가.
@@ -101,4 +103,54 @@ export function tellText(type: ElementType): string {
 /** 속성 칩에 적는 글자 */
 export function typeText(type: ElementType): string {
   return ELEMENT_KO[type];
+}
+
+// ── 무엇까지 보여 줄 것인가 ──────────────────────────────────────────────────
+
+/**
+ * 버릇을 얼마나 열어 줄지.
+ *
+ * 항상 보여 주면 가위바위보가 정답 맞히기가 된다. 그래서 이 정보는 **사는 것**이다 —
+ * 낮은 소란도(정찰)와 도감이 그 값을 치른다. 처음 보는 몬스터의 버릇을 못 읽는 건
+ * 불친절이 아니라 규칙이다. 친절해 보이려고 임의로 열지 말 것.
+ */
+export type TellReveal =
+  /** 버릇을 글자로 명시한다 */
+  | "hand"
+  /** 속성만 보여 준다 — 표는 플레이어가 외워야 한다 */
+  | "type"
+  /** 아무것도 */
+  | "none";
+
+export function tellReveal({ dexCaught, revealTypes, scout }: {
+  /** 이 **계열**을 잡아 본 적이 있는가 */
+  dexCaught: boolean;
+  /** 구역이 속성을 드러내는가 (고대 숲만 false) */
+  revealTypes: boolean;
+  scout: ScoutLevel;
+}): TellReveal {
+  // 도감이 먼저다. 잡아 본 계열이면 고대 숲에서도, 소란이 아무리 높아도 보인다 —
+  // 도감을 목록에서 기능으로 바꾸는 자리이자 "고대 숲은 아는 놈만 상대한다"는 규칙이다
+  if (dexCaught) return "hand";
+  // 고대 숲은 속성을 가린다. 속성이 안 보이면 버릇도 못 읽는 게 맞다
+  if (!revealTypes) return "none";
+  if (scout === "detail") return "hand";
+  if (scout === "type") return "type";
+  return "none";
+}
+
+/**
+ * 도감에 이 **계열**을 잡은 기록이 있는가.
+ *
+ * 종이 아니라 계열로 세는 건 각인과 같은 이유다 — 진화시키는 순간 알던 버릇을
+ * 다시 모르게 되면 진화가 손해가 된다.
+ */
+export function chainInDex(
+  m: Pick<Monster, "id" | "evolutionChainId">,
+  dexCaught: readonly string[],
+): boolean {
+  const key = chainKeyOf(m);
+  const members = chainMembers(key);
+  if (members.length === 0) return dexCaught.includes(m.id);
+  return members.some((x) => dexCaught.includes(x.id));
 }

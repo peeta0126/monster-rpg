@@ -21,6 +21,7 @@ import { StepEventPanel, NestPanel } from "./StepEventPanel";
 import { CatchMiniGame } from "./CatchMiniGame";
 import { ForkChoice } from "./ForkChoice";
 import { catchChance } from "./catchRules";
+import { chainInDex, tellReveal } from "./catchTells";
 
 /**
  * 탐험 화면.
@@ -71,6 +72,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
   const party = usePlayerStore((s) => s.party);
   const storage = usePlayerStore((s) => s.storage);
   const imprint = usePlayerStore((s) => s.imprint);
+  const dexCaught = usePlayerStore((s) => s.dexCaught);
 
   /** 지금 보유한 계열. 배지는 이걸 보고, 굴림은 아래 스냅샷을 본다 */
   const ownedChains = useMemo(
@@ -241,6 +243,13 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
             seed={(run.seed ^ (run.depth + 1)) >>> 0}
             attempts={step.attempts}
             pending={step.pending}
+            /* 정찰 등급은 이 조우를 실제로 판정하는 소란도로 본다 — 주인을 깨우면
+               그 +30 이 붙은 뒤라, 깨우는 순간 읽히던 것도 안 읽히게 된다 */
+            reveal={tellReveal({
+              dexCaught: chainInDex(draft.monster, dexCaught),
+              revealTypes: area.revealTypes,
+              scout: alertBand(alertForJudge).scout,
+            })}
             onReveal={() => patchStep({ attempts: step.attempts + 1, pending: null })}
             onResult={(r) => patchStep({ pending: r })}
             onDone={(r) => onCatchDone(r, draft.monster!)}

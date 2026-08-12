@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { PALETTE, rgba } from "../../shared/palette";
+import { PALETTE, rgba, type PaletteName } from "../../shared/palette";
 import { MONSTER_IMAGE_MAP } from "../../monster/monsterImages";
 import { RpsIcon } from "../../workshop/RpsIcon";
 import { RPS_KO, type RpsChoice } from "../../workshop/rps";
-import type { Monster } from "../../shared/game";
+import type { ElementType, Monster } from "../../shared/game";
 import { alertBand } from "./alert";
 import {
   CATCH_ATTEMPTS, CATCH_RATE, attemptRng, catchChance, getRpsResult, type RpsResult,
 } from "./catchRules";
-import { rollHand, tellTypeOf } from "./catchTells";
+import { rollHand, tellText, tellTypeOf, typeText, type TellReveal } from "./catchTells";
 
 /**
  * 포획 미니게임.
@@ -40,7 +40,7 @@ const REVEAL_MS = 900;
 type Stage = "select" | "reveal" | "result";
 
 export function CatchMiniGame({
-  monster, alert, seed, attempts, pending, onReveal, onResult, onDone,
+  monster, alert, seed, attempts, pending, reveal, onReveal, onResult, onDone,
 }: {
   monster: Monster;
   alert: number;
@@ -61,6 +61,11 @@ export function CatchMiniGame({
   attempts: number;
   /** 아직 안 넘긴 시도의 결과. 새로고침으로 돌아왔으면 이 화면부터 다시 그린다 */
   pending: { hand: RpsChoice; caught: boolean } | null;
+  /**
+   * 이 상대의 버릇을 얼마나 열어 줄지. 도감과 정찰 등급이 정한다(catchTells.tellReveal).
+   * 처음 보는 몬스터를 못 읽는 게 정상이다 — 여기서 임의로 열지 말 것.
+   */
+  reveal: TellReveal;
   /** 상대의 수가 공개되는 순간 부른다. 결과를 보기 전에 시도를 먼저 태운다 */
   onReveal: () => void;
   /** 굴림이 끝난 순간 부른다. 플레이어가 화면을 넘기기 전에 결과를 런에 적어 둔다 */
@@ -126,6 +131,8 @@ export function CatchMiniGame({
           </div>
         </div>
 
+        <TellLine reveal={reveal} type={type}/>
+
         <div className="mt-4 flex gap-3">
           {(["scissors", "rock", "paper"] as RpsChoice[]).map((c) => (
             <button key={c} type="button" onClick={() => choose(c)}
@@ -170,6 +177,8 @@ export function CatchMiniGame({
             <p className="mt-3 text-pixel-sm text-sand-200">놓쳤다 — 아직 근처에 있다</p>
           )}
 
+          {!caught && !outOfTries && <TellLine reveal={reveal} type={type}/>}
+
           <div className="mt-4 flex gap-3">
             {!caught && !outOfTries && (
               <button type="button" onClick={retry}
@@ -191,6 +200,40 @@ export function CatchMiniGame({
         </div>
       )}
     </Shell>
+  );
+}
+
+/**
+ * 상대에 대해 지금 읽히는 것.
+ *
+ * "none" 일 때도 자리를 비우지 않고 **못 읽는다고 적는다.** 정보가 없는 것과 정보가
+ * 막힌 것은 다르고, 막혔다는 걸 알아야 소란을 낮출(또는 도감을 채울) 이유가 생긴다.
+ */
+function TellLine({ reveal, type }: { reveal: TellReveal; type: ElementType }) {
+  if (reveal === "none") {
+    return (
+      <p className="mt-3 text-pixel-sm text-earth-400" data-testid="forest-rps-tell" data-reveal="none">
+        버릇을 읽을 수 없다
+      </p>
+    );
+  }
+
+  const hand = reveal === "hand";
+  const tone: PaletteName = hand ? "moss500" : "mist300";
+  return (
+    <div className="mt-3 flex items-center gap-2" data-testid="forest-rps-tell" data-reveal={reveal}>
+      <span className="rounded-full px-2 py-0.5 text-pixel-sm font-bold"
+        style={{
+          background: rgba(tone, 0.22),
+          border: `1px solid ${rgba(tone, 0.9)}`,
+          color: PALETTE.sand200,
+        }}>
+        {typeText(type)}
+      </span>
+      <span className="text-pixel-sm text-sand-300">
+        {hand ? tellText(type) : "속성만 읽힌다 — 버릇은 속성이 안다"}
+      </span>
+    </div>
   );
 }
 
