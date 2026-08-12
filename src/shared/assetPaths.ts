@@ -11,6 +11,9 @@
  * 실행되지 않는다. 아무도 받지 않는 파일이 저장소만 3.4MB 불리고 있었고, 게다가 폴백
  * 해상도가 원본의 절반이라 만에 하나 쓰이면 반쪽짜리가 나가는 구조였다.
  */
+import type { TowerZone } from "./floorTable";
+import type { ElementType } from "./game";
+
 export const LOGIN_BACKGROUND_IMAGE = "/start-loading.webp";
 export const LOGIN_BACKGROUND_ASPECT_RATIO = 2624 / 1632;
 
@@ -39,3 +42,16 @@ export const FOREST_BG_SHALLOW = "/assets/forest/forest_shallow.webp";
 export const FOREST_BG_DEEP    = "/assets/forest/forest_deep.webp";
 export const FOREST_BG_ANCIENT = "/assets/forest/forest_ancient.webp";
 export const FOREST_BACKGROUND_ASPECT_RATIO = 2603 / 1464;
+
+/**
+ * 무한의 탑 전투 배경 (960x540, 35장 = 구간 5 × 속성 7).
+ *
+ * 벽·바닥·안개·비네트·먼지·켜진 창·바닥에 떨어지는 빛까지 전부 구워진 최종본이다.
+ * 위에 조명이나 그라디언트를 덧대지 말 것 — 비네트가 두 겹이 되면 그냥 탁해진다.
+ * 켜지는 창은 적 속성에 따라 달라진다(왼쪽부터 불·전기·물·얼음·풀·독·노말).
+ *
+ * 35개를 상수로 나열하지 않는 이유: 이름이 규칙이라 나열하면 그 규칙이 두 벌이 된다.
+ */
+export function towerBattleBg(zone: TowerZone, element: ElementType): string {
+  return `/assets/tower/${zone}_${element}.webp`;
+}

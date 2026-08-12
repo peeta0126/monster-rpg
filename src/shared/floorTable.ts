@@ -204,6 +204,24 @@ export function isBossFloor(floor: number): boolean {
 /** 무한의 탑 최상층. 50층 오름(Ormr)이 탑의 끝 — 51층 이상은 존재하지 않는다. */
 export const MAX_TOWER_FLOOR = 50;
 
+// ─── 층 → 배경 구간 ──────────────────────────────────────────────────────────────
+
+/** 전투 배경이 바뀌는 10층 단위 구간. 파일 이름의 접두사이기도 하다. */
+export type TowerZone = "z01" | "z11" | "z21" | "z31" | "z41";
+
+/**
+ * 10층마다 방이 바뀐다. 매핑은 여기 한 곳뿐 — 씬이나 경로 헬퍼에 다시 적지 말 것.
+ * 범위 밖(0 이하·51 이상)은 양 끝으로 접는다. 층은 라우트 state 로 들어와서
+ * 이론상 아무 숫자나 올 수 있고, 그때 배경이 없는 것보다 첫 방이 나오는 게 낫다.
+ */
+export function getTowerZone(floor: number): TowerZone {
+  if (floor <= 10) return "z01";
+  if (floor <= 20) return "z11";
+  if (floor <= 30) return "z21";
+  if (floor <= 40) return "z31";
+  return "z41";
+}
+
 // ─── 탑의 비밀 — 스토리 보스 전용 이상 기술 연출 ───────────────────────────────────
 /**
  * 10/20/30/40층 보스(분노한 모시·격노한 모치·고대의 프리로·전설의 모왕)는
