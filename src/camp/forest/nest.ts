@@ -1,4 +1,5 @@
 import { monsters } from "../../monster/monsters";
+import { PALETTE, type PaletteName } from "../../shared/palette";
 import { chainKeyOf } from "../../monster/imprint";
 import { scaleToLevel } from "../../shared/floorTable";
 import type { Monster } from "../../shared/game";
@@ -64,6 +65,18 @@ export interface NestBadge {
   text: string;
   tone: NestBadgeTone;
 }
+
+/**
+ * 배지 색. 12px 글자에 강조색을 그대로 쓰면 대비가 4.2:1 까지 떨어지므로,
+ * 색은 배경·테두리로만 쓰고 글자는 sand 계열로 둔다(속성 칩과 같은 규칙).
+ *
+ * 둥지 카드와 포획 화면이 같은 배지를 쓰므로 표는 여기 한 벌만 둔다.
+ */
+export const BADGE_TONE: Record<NestBadgeTone, { border: PaletteName; text: string }> = {
+  new:      { border: "mist300",  text: PALETTE.sand200 },
+  progress: { border: "ember500", text: PALETTE.sand200 },
+  done:     { border: "stone600", text: PALETTE.earth400 },
+};
 
 /**
  * 카드에 붙는 판단 근거. **굴림 밖**에서 지금 보유 상태로 만든다 —

@@ -62,3 +62,24 @@ export function expectedCatchChance(player: RpsChoice, type: ElementType, alert:
   return (Object.keys(w) as RpsChoice[])
     .reduce((sum, hand) => sum + w[hand] * catchChance(getRpsResult(player, hand), alert), 0);
 }
+
+/**
+ * 시도마다 붙는 소란. 첫 시도는 공짜다 — 조우에 들어선 값은 걸음이 이미 치렀다.
+ *
+ * 예전엔 3번을 다 쓰고 놓친 뒤에야 escapeAlert 가 한 번 붙었다. 그러니 항상 3번을 다
+ * 썼다 — 안 쓸 이유가 없으면 그건 선택이 아니라 절차다. 값이 붙어야 "여기서 그만둔다"가
+ * 저울에 올라간다. 완전히 놓쳤을 때의 escapeAlert 는 그대로 따로 붙는다.
+ */
+export const ATTEMPT_ALERT: number[] = [0, 5, 10];
+
+/** attempt 번째(0부터) 시도를 걸 때 붙는 소란 */
+export function attemptAlert(attempt: number): number {
+  return ATTEMPT_ALERT[Math.min(Math.max(0, attempt), ATTEMPT_ALERT.length - 1)];
+}
+
+/** 시도를 n 번 걸었을 때까지 쌓인 소란 */
+export function attemptAlertTotal(attempts: number): number {
+  let sum = 0;
+  for (let i = 0; i < attempts; i++) sum += attemptAlert(i);
+  return sum;
+}

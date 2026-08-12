@@ -20,7 +20,7 @@ import { AlertGauge, AlertBandSummary } from "./AlertGauge";
 import { StepEventPanel, NestPanel } from "./StepEventPanel";
 import { CatchMiniGame } from "./CatchMiniGame";
 import { ForkChoice } from "./ForkChoice";
-import { catchChance } from "./catchRules";
+import { attemptAlertTotal, catchChance } from "./catchRules";
 import { chainInDex, tellReveal } from "./catchTells";
 
 /**
@@ -147,15 +147,20 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
       // 보관함이 넘쳐 흡수·방생으로 끝난 포획은 데려온 게 아니다 — 정산에서 세지 않는다
       caught: step.done?.caught && step.overflow === null,
       escaped: step.done?.escaped,
+      // 시도 비용은 걸음이 끝날 때 한 번에 붙는다. 물러섰어도 건 만큼은 치른다
+      attemptAlert: attemptAlertTotal(step.attempts),
     });
 
     // 주인은 만나면 거기서 끝난다
     if (kind === "warden") { onSettle("warden", next.bag, next.caught, next.alertPeak); return; }
     if (runIsOver(next)) { onSettle("forced", next.bag, next.caught, next.alertPeak); return; }
     setRun(next);
-  }, [draft, run, step.done, step.overflow, kind, onSettle, setRun]);
+  }, [draft, run, step.done, step.overflow, step.attempts, kind, onSettle, setRun]);
 
-  const onCatchDone = useCallback((result: { caught: boolean }, monster: Monster) => {
+  const onCatchDone = useCallback((
+    result: { caught: boolean; retreated: boolean },
+    monster: Monster,
+  ) => {
     let overflow: StepProgress["overflow"] = null;
     if (result.caught) {
       // 몬스터는 즉시 확정이다. 정산 대상이 아니라서 퇴각해도 잃지 않는다
@@ -163,7 +168,9 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
       // 자리가 없으면 예전엔 아무 말 없이 사라졌다. 이제는 사라지기 전에 한 번 묻는다
       if (addCapturedMonster(monster) === "full") overflow = "pending";
     }
-    patchStep({ pending: null, done: { caught: result.caught, escaped: !result.caught }, overflow });
+    // 스스로 물러선 것은 놓친 게 아니다 — escapeAlert 도 짐 흘림도 붙지 않는다
+    const escaped = !result.caught && !result.retreated;
+    patchStep({ pending: null, done: { caught: result.caught, escaped }, overflow });
   }, [patchStep, addToDexCaught, addCapturedMonster]);
 
   /** 지금 돌아가면 확정될 것 */
@@ -250,6 +257,8 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
               revealTypes: area.revealTypes,
               scout: alertBand(alertForJudge).scout,
             })}
+            badge={nestBadge(draft.monster, ownedChains,
+              tierOf(draft.monster, imprint), MAX_IMPRINT_TIER)}
             onReveal={() => patchStep({ attempts: step.attempts + 1, pending: null })}
             onResult={(r) => patchStep({ pending: r })}
             onDone={(r) => onCatchDone(r, draft.monster!)}

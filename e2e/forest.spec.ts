@@ -65,6 +65,7 @@ async function walkOneStep(page: Page): Promise<void> {
     if (await clickIfVisible(page, "forest-nest-pick-0")) continue;    // 둥지에서 한 마리 고른다
     if (await clickIfVisible(page, "forest-rps-rock")) continue;       // 포획 시도
     if (await clickIfVisible(page, "forest-rps-done")) continue;       // 결과 확인
+    if (await clickIfVisible(page, "forest-rps-retreat")) continue;    // 놓친 채로 물러선다
     await page.waitForTimeout(200);
   }
   // 막히면 무엇이 떠 있었는지까지 남긴다 — 빈 화면이면 크래시고, 버튼이 있으면 흐름 문제다

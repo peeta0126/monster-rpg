@@ -1,10 +1,10 @@
-import { rgba, PALETTE, type PaletteName } from "../../shared/palette";
+import { rgba } from "../../shared/palette";
 import { getMaterial } from "../../shared/items";
 import { MONSTER_IMAGE_MAP } from "../../monster/monsterImages";
 import type { Monster } from "../../shared/game";
 import { STEP_DEFS, TIER_COLOR, type ForestStepKind } from "./steps";
 import type { RunBagEntry } from "./runStore";
-import type { NestBadge, NestBadgeTone } from "./nest";
+import { BADGE_TONE, type NestBadge } from "./nest";
 
 /**
  * 이번 걸음의 사건 패널. 배경(원화) 위에 놓이는 반투명 판 하나다.
@@ -134,16 +134,6 @@ export function StepEventPanel({
  * 더 뒤질수록 좋은 개체가 나오지만 습격 위험이 오른다는 규칙은 STEP 3 이후에 붙는다.
  * 지금은 고르는 것까지가 이 화면의 일이다.
  */
-/**
- * 배지 색. 12px 글자에 강조색을 그대로 쓰면 대비가 4.2:1 까지 떨어지므로,
- * 색은 배경·테두리로만 쓰고 글자는 sand 계열로 둔다(속성 칩과 같은 규칙).
- */
-const BADGE_TONE: Record<NestBadgeTone, { border: PaletteName; text: string }> = {
-  new:      { border: "mist300",  text: PALETTE.sand200 },
-  progress: { border: "ember500", text: PALETTE.sand200 },
-  done:     { border: "stone600", text: PALETTE.earth400 },
-};
-
 export function NestPanel({ monsters, badges, onPick }: {
   monsters: Monster[];
   /** 카드마다의 판단 근거. 없으면 안 그린다 */

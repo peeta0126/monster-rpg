@@ -184,6 +184,14 @@ export interface StepOutcome {
   caught?: boolean;
   /** 놓쳤는가 — 소란이 크게 오르고 가방에서 두 칸이 떨어진다 */
   escaped?: boolean;
+  /**
+   * 이번 걸음에서 건 포획 시도가 쌓은 소란 (catchRules.attemptAlertTotal).
+   *
+   * 조우 도중에 올리지 않고 걸음이 끝날 때 한 번에 붙인다 — 판정 중에 소란이 오르면
+   * 그 걸음의 수확 배수와 남은 시도의 포획 확률이 같이 움직인다. 물러서면 여기까지가
+   * 값이고 escaped 는 안 붙는다.
+   */
+  attemptAlert?: number;
 }
 
 /**
@@ -202,6 +210,9 @@ export function resolveStep(run: ForestRun, outcome: StepOutcome): ForestRun {
   if (!appliesAlertOnArrival(run.current)) {
     alert = clampAlert(alert + stepAlertDelta(run.current, run.depth));
   }
+
+  // 재도전은 공짜가 아니다. 물러섰든 놓쳤든 건 만큼은 치른다
+  if (outcome.attemptAlert) alert = clampAlert(alert + outcome.attemptAlert);
 
   // 놓침은 전투 패배가 아니다. 런은 계속되고, 대신 짐을 흘린다
   if (outcome.escaped) {

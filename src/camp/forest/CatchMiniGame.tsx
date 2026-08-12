@@ -6,9 +6,11 @@ import { RPS_KO, type RpsChoice } from "../../workshop/rps";
 import type { ElementType, Monster } from "../../shared/game";
 import { alertBand } from "./alert";
 import {
-  CATCH_ATTEMPTS, CATCH_RATE, attemptRng, catchChance, getRpsResult, type RpsResult,
+  CATCH_ATTEMPTS, CATCH_RATE, attemptAlert, attemptRng, catchChance, getRpsResult,
+  type RpsResult,
 } from "./catchRules";
 import { rollHand, tellText, tellTypeOf, typeText, type TellReveal } from "./catchTells";
+import { BADGE_TONE, type NestBadge } from "./nest";
 
 /**
  * 포획 미니게임.
@@ -40,7 +42,7 @@ const REVEAL_MS = 900;
 type Stage = "select" | "reveal" | "result";
 
 export function CatchMiniGame({
-  monster, alert, seed, attempts, pending, reveal, onReveal, onResult, onDone,
+  monster, alert, seed, attempts, pending, reveal, badge, onReveal, onResult, onDone,
 }: {
   monster: Monster;
   alert: number;
@@ -66,18 +68,27 @@ export function CatchMiniGame({
    * 처음 보는 몬스터를 못 읽는 게 정상이다 — 여기서 임의로 열지 말 것.
    */
   reveal: TellReveal;
+  /** 각인 진행도. 3번째 시도를 지를 이유가 되므로 카드에 같이 적는다 */
+  badge?: NestBadge | null;
   /** 상대의 수가 공개되는 순간 부른다. 결과를 보기 전에 시도를 먼저 태운다 */
   onReveal: () => void;
   /** 굴림이 끝난 순간 부른다. 플레이어가 화면을 넘기기 전에 결과를 런에 적어 둔다 */
   onResult: (r: { hand: RpsChoice; caught: boolean }) => void;
-  /** caught=false 이고 시도가 남지 않았으면 놓친 것이다 */
-  onDone: (result: { caught: boolean }) => void;
+  /**
+   * 이 걸음의 포획을 끝낸다.
+   *
+   * `retreated` 는 **스스로 물러선 것**이라 놓친 것과 다르다 — escapeAlert 도 짐 흘림도
+   * 없다. 이미 건 시도의 소란만 치른다. 시도를 다 쓰고 놓친 것과 값이 같으면
+   * "물러선다"는 선택지가 아니라 버튼일 뿐이다.
+   */
+  onDone: (result: { caught: boolean; retreated: boolean }) => void;
 }) {
-  // 버릇은 속성이 정한다. 무속성이면 노말과 같이 균등이다
   const type = tellTypeOf(monster);
   // 마운트 시점의 pending 으로 결과 화면을 복원한다. 상대의 수는 시드에서 다시 나온다
   const [stage, setStage] = useState<Stage>(() => pending ? "result" : "select");
   const triesLeft = Math.max(0, CATCH_ATTEMPTS - attempts);
+  /** 다음 시도가 부를 소란. 안 보이면 저울질을 할 수 없다 */
+  const nextCost = attemptAlert(attempts);
   const [picked, setPicked] = useState<RpsChoice | null>(() => pending?.hand ?? null);
   const [computer, setComputer] = useState<RpsChoice | null>(
     () => pending ? rollHand(type, attemptRng(seed, Math.max(0, attempts - 1))) : null);
@@ -120,8 +131,17 @@ export function CatchMiniGame({
         <div className="flex items-center gap-3">
           <img src={MONSTER_IMAGE_MAP[monster.id]} alt={monster.name} className="h-12 w-12 object-contain"/>
           <div className="min-w-0">
-            <p className="text-pixel-sm font-bold text-cream-100">{monster.name}</p>
-            <p className="text-pixel-sm text-sand-300">남은 시도 {triesLeft}회</p>
+            <div className="flex items-center gap-2">
+              <p className="text-pixel-sm font-bold text-cream-100">{monster.name}</p>
+              {badge && <Badge badge={badge}/>}
+            </div>
+            <p className="text-pixel-sm text-sand-300" data-testid="forest-rps-cost">
+              남은 시도 {triesLeft}회
+              <span className="text-earth-400"> · 다음 시도 </span>
+              {nextCost > 0
+                ? <span className="font-bold text-ember-500">소란 +{nextCost}</span>
+                : <span className="font-bold text-moss-500">소란 없음</span>}
+            </p>
           </div>
           <div className="ml-auto flex flex-col items-end gap-0.5 text-pixel-sm text-earth-400">
             <span>이기면 <span className="font-bold text-moss-500">{pct("win")}%</span></span>
@@ -144,6 +164,8 @@ export function CatchMiniGame({
             </button>
           ))}
         </div>
+
+        <RetreatButton onClick={() => onDone({ caught: false, retreated: true })}/>
       </Shell>
     );
   }
@@ -180,22 +202,32 @@ export function CatchMiniGame({
           {!caught && !outOfTries && <TellLine reveal={reveal} type={type}/>}
 
           <div className="mt-4 flex gap-3">
-            {!caught && !outOfTries && (
-              <button type="button" onClick={retry}
-                data-testid="forest-rps-retry"
-                className="flex-1 rounded-xl py-2.5 text-pixel-sm font-bold transition active:scale-95"
-                style={{ background: rgba("moss500", 0.18), border: `1px solid ${rgba("moss500", 0.5)}`, color: PALETTE.moss500 }}>
-                다시 시도 ({triesLeft})
+            {!caught && !outOfTries ? (
+              <>
+                {/* 재도전에 값이 붙었으므로 버튼에 그 값을 적는다. 안 적으면 저울이 안 선다 */}
+                <button type="button" onClick={retry}
+                  data-testid="forest-rps-retry"
+                  className="flex-1 rounded-xl py-2.5 text-pixel-sm font-bold transition active:scale-95"
+                  style={{ background: rgba("moss500", 0.18), border: `1px solid ${rgba("moss500", 0.5)}`, color: PALETTE.moss500 }}>
+                  다시 시도 ({triesLeft}) · 소란 +{nextCost}
+                </button>
+                <button type="button" onClick={() => onDone({ caught: false, retreated: true })}
+                  data-testid="forest-rps-retreat"
+                  className="flex-1 rounded-xl py-2.5 text-pixel-sm font-black transition active:scale-95"
+                  style={{ background: rgba("shadow900", 0.6), border: `1px solid ${rgba("stone600", 0.9)}`, color: PALETTE.sand200 }}>
+                  물러선다 · 소란 없음
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => onDone({ caught, retreated: false })}
+                data-testid="forest-rps-done"
+                className="flex-1 rounded-xl py-2.5 text-pixel-sm font-black transition active:scale-95"
+                style={{ background: caught ? PALETTE.moss500 : rgba("shadow900", 0.6),
+                         border: `1px solid ${caught ? PALETTE.moss500 : rgba("stone600", 0.9)}`,
+                         color: caught ? rgba("shadow900", 1) : PALETTE.sand200 }}>
+                계속 걷는다
               </button>
             )}
-            <button type="button" onClick={() => onDone({ caught })}
-              data-testid="forest-rps-done"
-              className="flex-1 rounded-xl py-2.5 text-pixel-sm font-black transition active:scale-95"
-              style={{ background: caught ? PALETTE.moss500 : rgba("shadow900", 0.6),
-                       border: `1px solid ${caught ? PALETTE.moss500 : rgba("stone600", 0.9)}`,
-                       color: caught ? rgba("shadow900", 1) : PALETTE.sand200 }}>
-              {caught || outOfTries ? "계속 걷는다" : "포기하고 걷는다"}
-            </button>
           </div>
         </div>
       )}
@@ -234,6 +266,40 @@ function TellLine({ reveal, type }: { reveal: TellReveal; type: ElementType }) {
         {hand ? tellText(type) : "속성만 읽힌다 — 버릇은 속성이 안다"}
       </span>
     </div>
+  );
+}
+
+/** 각인 진행도. 둥지 카드와 같은 배지를 쓴다 — 3번째 시도를 지를 이유가 여기 있다 */
+function Badge({ badge }: { badge: NestBadge }) {
+  const tone = BADGE_TONE[badge.tone];
+  return (
+    <span className="rounded-full px-2 py-0.5 text-pixel-sm font-bold"
+      data-testid="forest-rps-badge"
+      style={{
+        background: rgba(tone.border, 0.22),
+        border: `1px solid ${rgba(tone.border, 0.9)}`,
+        color: tone.text,
+      }}>
+      {badge.text}
+    </span>
+  );
+}
+
+/**
+ * 물러서기 — 몬스터는 놓치되 소란은 안 오른다(escapeAlert 도 안 붙는다).
+ *
+ * 이게 이 화면의 진짜 선택지다. 3번째 시도의 값이 +10 이라, 소란 예산이 얼마 안 남은
+ * 자리에서는 물러서는 쪽이 실제로 낫다.
+ */
+function RetreatButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      data-testid="forest-rps-retreat"
+      className="mt-3 w-full rounded-xl py-2 text-pixel-sm font-bold transition active:scale-95"
+      style={{ background: rgba("shadow900", 0.6), border: `1px solid ${rgba("stone600", 0.9)}`, color: PALETTE.sand200 }}>
+      물러선다
+      <span className="ml-2 text-earth-400">놓치지만 소란은 오르지 않는다</span>
+    </button>
   );
 }
 
