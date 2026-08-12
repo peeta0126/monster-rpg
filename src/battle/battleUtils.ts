@@ -255,11 +255,34 @@ export function checkStatusEffects(monster: BattleMonster): {
 
 // ─── 포획 ───────────────────────────────────────────────────────────────────────
 
+/** 기본 포획률. HP 문턱을 넘긴 뒤에는 이 값이 바닥이다 */
+export const CATCH_BASE_RATE = 0.4;
+/** 상태이상이 걸려 있을 때의 배수 */
+export const CATCH_STATUS_MULT = 1.5;
+/** 아무리 겹쳐도 여기까지 */
+export const CATCH_MAX_RATE = 0.95;
+/** 이 비율 이하로 깎아야 시도할 수 있다 */
+export const CATCH_HP_THRESHOLD = 0.3;
+
+/**
+ * 지금 던지면 잡힐 확률(0~1). 굴림이 없어 화면에서 몇 번을 불러도 안전하다.
+ *
+ * checkCatchCondition 에서 떼어낸 것이라 판정과 표시가 같은 값을 본다 — 버튼에 적힌
+ * 숫자와 실제 확률이 어긋나는 것만큼 사람을 속이는 UI 도 없다.
+ *
+ * ⚠️ HP 는 확률에 들어가지 않는다. 30% 이하라는 **문을 여는 조건**일 뿐이고, 29% 든
+ * 1% 든 확률은 같다. 화면에서 "더 깎으면 잘 잡힌다"고 말하면 거짓말이 된다.
+ */
+export function catchChance(target: BattleMonster): number {
+  const statusMultiplier = target.status !== null ? CATCH_STATUS_MULT : 1;
+  return Math.min(CATCH_MAX_RATE, CATCH_BASE_RATE * statusMultiplier);
+}
+
 /**
  * 포획 가능 여부 및 성공 여부 판단
  * - isCatchZone 플래그가 false면 포획 불가
  * - 대상 HP가 30% 초과면 포획 시도 불가
- * - 기본 포획률 40%, 상태이상 적용 시 1.5배 (최대 95%)
+ * - 확률은 catchChance 가 정한다
  */
 export function checkCatchCondition(
   target: BattleMonster,
@@ -283,7 +306,7 @@ export function checkCatchCondition(
 
   // HP 30% 초과 시 포획 시도 불가
   const hpRatio = target.currentHp / target.maxHp;
-  if (hpRatio > 0.3) {
+  if (hpRatio > CATCH_HP_THRESHOLD) {
     return {
       canAttempt: false,
       success: false,
@@ -291,11 +314,7 @@ export function checkCatchCondition(
     };
   }
 
-  const baseCatchRate = 0.4;
-  const statusMultiplier = target.status !== null ? 1.5 : 1;
-  const catchRate = Math.min(0.95, baseCatchRate * statusMultiplier);
-
-  const success = Math.random() < catchRate;
+  const success = Math.random() < catchChance(target);
   const message = success
     ? `${target.name} 포획 성공!`
     : `${target.name}이(가) 탈출했다!`;

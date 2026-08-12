@@ -60,6 +60,11 @@ import {
   createBattleMonsterFromOwned,
   gainExp,
   benchExpShare,
+  catchChance,
+  CATCH_BASE_RATE,
+  CATCH_HP_THRESHOLD,
+  CATCH_MAX_RATE,
+  CATCH_STATUS_MULT,
   getAIAction,
   isFainted,
   type BattleMonster,
@@ -75,6 +80,8 @@ import { BattleCommandMenu } from "./BattleCommandMenu";
 import { previewMove } from "./damagePreview";
 import { statusDetail, statusLabel } from "./statusInfo";
 import { TypeChartPanel } from "./TypeChartPanel";
+import { ExpGainOverlay } from "./ExpGainOverlay";
+import { buildExpTimeline, type ExpSegment } from "./expTimeline";
 import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
@@ -140,6 +147,10 @@ export default function BattlePage() {
   const [showTypeChart, setShowTypeChart] = useState(false);
   /** 보관함이 가득 차서 자리를 못 준 포획 — 각인으로 흡수할지 물어본다 */
   const [overflowCapture, setOverflowCapture] = useState<BattleMonster | null>(null);
+  /** 승리 직후 경험치 바가 차오르는 연출. 끝나야 다음 로그로 넘어간다 */
+  const [expAnim, setExpAnim] = useState<
+    { name: string; gained: number; segments: ExpSegment[]; resolve: () => void } | null
+  >(null);
   /** 기술 칸이 찼을 때 띄우는 "무엇을 잊을까" 선택 창 */
   const [forgetPrompt, setForgetPrompt] = useState<
     { current: Move[]; incoming: Move; resolve: (idx: number | null) => void } | null
@@ -278,6 +289,24 @@ export default function BattlePage() {
 
   const answerForget = useCallback((idx: number | null) => {
     setForgetPrompt((p) => { p?.resolve(idx); return null; });
+  }, []);
+
+  /**
+   * 경험치 연출을 띄우고 끝날 때까지 기다린다. 로그 한 줄과 같은 자리를 차지하는 대신
+   * 바가 차오르고, 레벨이 오르면 거기서 멈춰 오른 스탯을 보여준다.
+   * 기록 패널에는 예전과 같은 한 줄을 남긴다 — 연출은 지나가고 기록은 남아야 한다.
+   */
+  const playExpGain = useCallback((before: BattleMonster, gained: number): Promise<void> => {
+    setLogHistory((prev) => [...prev.slice(-49), `경험치 ${gained}를 획득했다!`]);
+    const { segments } = buildExpTimeline(before, gained);
+    if (cancelledRef.current || segments.length === 0) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      setExpAnim({ name: before.name, gained, segments, resolve });
+    });
+  }, []);
+
+  const finishExpGain = useCallback(() => {
+    setExpAnim((a) => { a?.resolve(); return null; });
   }, []);
 
   /**
@@ -472,13 +501,15 @@ export default function BattlePage() {
     if (playerWon) {
       const earnedExp = Math.floor(ne.rewardExp * (1 + playerBonus.expBonus / 100));
       const prevLevel = np.level;
+      const beforeExp = np;
       const expResult = gainExp(np, earnedExp);
       np = expResult.updatedMonster;
-      await sendLogAndWait(`경험치 ${earnedExp}를 획득했다!`);
       if (expResult.leveledUp) {
         gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "player");
-        await sendLogAndWait(`레벨이 ${np.level}(으)로 올랐다!`);
+        setLogHistory((prev) => [...prev.slice(-49), `레벨이 ${np.level}(으)로 올랐다!`]);
       }
+      // 로그 한 줄 대신 바가 차오르는 걸 보여준다. 레벨업이면 여기서 멈춰 오른 스탯을 띄운다.
+      await playExpGain(beforeExp, earnedExp);
 
       // 레벨업에 딸린 성장(기술 습득·진화)을 적용한다
       if (expResult.leveledUp) {
@@ -558,7 +589,7 @@ export default function BattlePage() {
   }, [
     isProcessing, battleOutcome, mustSwitch, player, enemyState, floor,
     activePartyIndex, initialParty, resolveAttack, syncHpToPhaser,
-    sendLogAndWait, finishBattle, hasAlivePartyMember, getEquipCombatBonus,
+    sendLogAndWait, finishBattle, hasAlivePartyMember, getEquipCombatBonus, playExpGain,
     addMaterial, addToDexCaught, askWhichToForget, partyHp,
     updatePartyMember, updateBestFloor, addToDexSeen,
   ]);
@@ -723,9 +754,16 @@ export default function BattlePage() {
   ]);
 
   // ─── 렌더 헬퍼 ──────────────────────────────────────────────────────────────────
-  const canShowCatch = isCatchZone && enemyState.id !== "ormr"
-    && enemyState.currentHp / enemyState.maxHp <= 0.3
-    && !isProcessing && battleOutcome === null && !mustSwitch;
+  // 포획 칸을 언제 보여줄지. HP 가 아직 높아도 자리를 비우지 않는다 — 예전엔 30% 를
+  // 넘으면 버튼 자체가 없어서, 이 전투가 포획 가능한 전투인지조차 알 수 없었다.
+  const catchZone = isCatchZone && enemyState.id !== "ormr"
+    && battleOutcome === null && !mustSwitch;
+  const enemyHpRatio = enemyState.currentHp / enemyState.maxHp;
+  const catchReady = enemyHpRatio <= CATCH_HP_THRESHOLD;
+  const catchPercent = Math.round(catchChance(enemyState) * 100);
+  const catchBoostPercent = Math.round(
+    Math.min(CATCH_MAX_RATE, CATCH_BASE_RATE * CATCH_STATUS_MULT) * 100,
+  );
   const activeBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid);
   const speedFirst = (player.speed + activeBonus.speed) >= enemyState.speed;
   /**
@@ -924,12 +962,24 @@ export default function BattlePage() {
                     onFlee={handleFlee}
                   />
 
-                  {canShowCatch && (
-                    <button onClick={handleCatch} disabled={isProcessing}
-                      data-testid="cmd-catch"
-                      className="w-full rounded-lg border border-mist-500 bg-mist-500/15 py-1.5 text-pixel-sm font-semibold text-mist-300 transition hover:bg-mist-500/25 disabled:opacity-30">
-                      포획 시도 {enemyState.status ? "(상태이상 보너스)" : ""}
-                    </button>
+                  {catchZone && (
+                    <div className="flex flex-col gap-0.5">
+                      <button onClick={handleCatch} disabled={isProcessing || !catchReady}
+                        data-testid="cmd-catch"
+                        className="w-full rounded-lg border border-mist-500 bg-mist-500/15 py-1.5 text-pixel-sm font-semibold text-mist-300 transition hover:bg-mist-500/25 disabled:opacity-30">
+                        {catchReady
+                          ? <>포획 시도 <span className="font-bold text-cream-100">{catchPercent}%</span></>
+                          : <>포획 시도 — HP {Math.round(CATCH_HP_THRESHOLD * 100)}% 이하부터</>}
+                      </button>
+                      {/* 힌트지 강요가 아니다. 올릴 수 있는 조건이 남아 있을 때만 적는다. */}
+                      <p data-testid="catch-hint" className="text-center text-pixel-sm text-earth-400">
+                        {!catchReady
+                          ? `지금 ${Math.round(enemyHpRatio * 100)}% — 더 깎으면 시도할 수 있다`
+                          : enemyState.status
+                            ? `${statusLabel(enemyState.status)} 보너스 ×${CATCH_STATUS_MULT} 적용 중`
+                            : `상태이상을 걸면 ${catchBoostPercent}% 로 오른다`}
+                      </p>
+                    </div>
                   )}
                 </>
               )}
@@ -953,6 +1003,17 @@ export default function BattlePage() {
             onRelease={() => setOverflowCapture(null)}
           />
         </div>
+      )}
+
+      {/* 경험치 연출 — 승리 직후, 결과 화면보다 먼저 */}
+      {expAnim && (
+        <ExpGainOverlay
+          key={expAnim.name + expAnim.gained}
+          name={expAnim.name}
+          gained={expAnim.gained}
+          segments={expAnim.segments}
+          onDone={finishExpGain}
+        />
       )}
 
       {/* 기술 교체 선택 — 4칸이 찼을 때만 뜬다 */}

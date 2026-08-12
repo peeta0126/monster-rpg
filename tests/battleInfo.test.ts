@@ -6,7 +6,11 @@ import { fileURLToPath } from "node:url";
 
 import { elementChip, hpToken, isHpDanger, HP_DANGER_PCT, ELEMENT_CHIP_INK, ELEMENT_COLOR } from "../src/shared/palette";
 import { STATUS_META, statusBadge, statusDetail, statusLabel } from "../src/battle/statusInfo";
-import { STATUS_TICK_RATIO, checkStatusEffects, createBattleMonster } from "../src/battle/battleUtils";
+import {
+  STATUS_TICK_RATIO, checkStatusEffects, createBattleMonster,
+  catchChance, checkCatchCondition,
+  CATCH_BASE_RATE, CATCH_STATUS_MULT, CATCH_MAX_RATE, CATCH_HP_THRESHOLD,
+} from "../src/battle/battleUtils";
 import { typeChart, ELEMENT_ORDER } from "../src/battle/typeChart";
 import type { ElementType } from "../src/shared/game";
 
@@ -99,6 +103,58 @@ test("상성표 화면이 배율을 직접 적고 있지 않다", () => {
   assert.ok(!/(?<!-)0\.5/.test(src), "TypeChartPanel 이 배율을 직접 적고 있다");
   assert.ok(src.includes("getTypeMultiplier"), "전투가 쓰는 상성 함수를 부르지 않는다");
   assert.ok(src.includes("ELEMENT_ORDER"), "속성 순서를 따로 적고 있다");
+});
+
+// ─── 포획 확률 ─────────────────────────────────────────────────────────────────
+
+const catchTarget = (over: Partial<Parameters<typeof checkCatchCondition>[0]> = {}) => ({
+  ...createBattleMonster({
+    id: "aqubi", name: "아쿠비", type: "water", maxHp: 100, attack: 10, defense: 10, speed: 10,
+    moves: [], level: 5, exp: 0, expToNextLevel: 100, rewardExp: 10,
+  }),
+  currentHp: 20,
+  ...over,
+});
+
+test("표시하는 포획률이 실제 판정이 쓰는 값과 같다", () => {
+  for (const target of [catchTarget(), catchTarget({ status: "paralysis" })]) {
+    const shown = catchChance(target);
+    const orig = Math.random;
+    try {
+      // 확률 바로 아래는 성공, 바로 위는 실패여야 표시가 곧 판정이다
+      Math.random = () => shown - 1e-9;
+      assert.equal(checkCatchCondition(target, true).success, true, `${shown} 바로 아래에서 실패했다`);
+      Math.random = () => shown;
+      assert.equal(checkCatchCondition(target, true).success, false, `${shown} 에서 성공했다`);
+    } finally {
+      Math.random = orig;
+    }
+  }
+});
+
+test("상태이상이 확률을 1.5배로 올린다", () => {
+  assert.equal(catchChance(catchTarget()), CATCH_BASE_RATE);
+  assert.equal(catchChance(catchTarget({ status: "poison" })), CATCH_BASE_RATE * CATCH_STATUS_MULT);
+  assert.ok(catchChance(catchTarget({ status: "poison" })) <= CATCH_MAX_RATE);
+});
+
+/**
+ * HP 는 문을 여는 조건일 뿐 확률에 들어가지 않는다. 화면이 "더 깎으면 잘 잡힌다"고
+ * 말하면 거짓말이 되므로, 그 성질을 여기서 못 박는다.
+ */
+test("HP 는 문턱일 뿐 확률을 바꾸지 않는다", () => {
+  const threshold = catchTarget({ currentHp: 30 });   // 정확히 30%
+  const nearDeath = catchTarget({ currentHp: 1 });
+  assert.equal(catchChance(threshold), catchChance(nearDeath));
+
+  assert.equal(checkCatchCondition(threshold, true).canAttempt, true);
+  assert.equal(checkCatchCondition(catchTarget({ currentHp: 31 }), true).canAttempt, false);
+  assert.equal(CATCH_HP_THRESHOLD, 0.3);
+});
+
+test("포획 칸 밖과 오름은 시도 자체가 막힌다", () => {
+  assert.equal(checkCatchCondition(catchTarget(), false).canAttempt, false);
+  assert.equal(checkCatchCondition(catchTarget({ id: "ormr" }), true).canAttempt, false);
 });
 
 // ─── 위험 구간 ─────────────────────────────────────────────────────────────────
