@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import type { ElementType, Move } from "../shared/game";
-import { getTypeMultiplier } from "./battleUtils";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import type { Move } from "../shared/game";
+import { formatDamageRange, type MovePreview } from "./damagePreview";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 
 /**
@@ -32,7 +32,8 @@ export interface PotionEntry {
 
 interface Props {
   moves: Move[];
-  enemyType: ElementType;
+  /** 기술 하나의 예상 결과. 계산은 battleUtils 가 하고 여기서는 그리기만 한다. */
+  getPreview: (move: Move) => MovePreview;
   potions: PotionEntry[];
   /** 애니메이션 중·상대 턴·결과 표시 중. 연타로 턴이 두 번 소비되면 안 된다. */
   disabled: boolean;
@@ -46,16 +47,29 @@ interface Props {
 interface Cell {
   key: string;
   label: string;
-  sub?: string;
-  hint?: string;
+  sub?: ReactNode;
+  /** 둘째 줄을 얼마나 눌러 둘지. 기본은 곁가지 취급(흐리게) */
+  subClass?: string;
+  hint?: ReactNode;
   chipClass?: string;
   disabled?: boolean;
   testId: string;
   onSelect: () => void;
 }
 
+/**
+ * "이 기술로 이번 턴에 끝낼 수 있나" — 이 한 줄이 셀에서 가장 중요한 정보다.
+ * 확정은 채운 배지, 치명타가 떠야 닿으면 테두리만. 색이 아니라 형태로도 갈린다.
+ */
+function KoBadge({ ko }: { ko: MovePreview["ko"] }) {
+  if (!ko) return null;
+  return ko === "sure"
+    ? <span data-ko="sure" className="bg-moss-500 px-1 font-bold text-shadow-900">쓰러뜨린다</span>
+    : <span data-ko="maybe" className="border border-moss-500 px-1 text-sand-200">쓰러뜨릴 수도</span>;
+}
+
 export function BattleCommandMenu({
-  moves, enemyType, potions, disabled, canFlee, fleeBlockedReason,
+  moves, getPreview, potions, disabled, canFlee, fleeBlockedReason,
   onUseMove, onUsePotion, onFlee,
 }: Props) {
   const [menu, setMenu] = useState<MenuState>({ level: "root" });
@@ -79,12 +93,28 @@ export function BattleCommandMenu({
 
   // ── 셀 구성 ────────────────────────────────────────────────────────────────
   const moveCell = (m: Move): Cell => {
-    const mult = getTypeMultiplier(m.type, enemyType);
+    const p = getPreview(m);
     return {
       key: m.id,
       label: m.name,
-      sub: `위력 ${m.power} · 명중 ${m.accuracy}`,
-      hint: mult >= 2 ? "▲ 효과 굉장!" : mult === 0 ? "✕ 효과 없음" : mult < 1 ? "▼ 효과 미미" : undefined,
+      // 한 줄에 다 넣는다. 예상 데미지가 굵고, 나머지는 눌러 둔다 — 셀에서 제일 먼저
+      // 읽혀야 하는 건 "몇 대미지"이고 배율·명중은 그 이유를 대는 곁가지다.
+      sub: (
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
+          {p.isStatus
+            ? <span className="opacity-60">보조 기술</span>
+            : <span className="font-bold">예상 {formatDamageRange(p)}</span>}
+          {p.multiplier !== 1 && (
+            <span className="font-bold">{p.multiplier >= 2 ? "▲" : "▼"}×{p.multiplier}</span>
+          )}
+          {p.accuracy < 100 && <span className="opacity-60">명중 {p.accuracy}</span>}
+          {p.critChance > 0 && !p.isStatus && <span className="opacity-60">치명 {Math.round(p.critChance)}%</span>}
+        </span>
+      ),
+      // 예상 데미지가 들어오면서 둘째 줄이 곁가지가 아니라 판단 근거가 됐다.
+      // 통째로 흐리게 두면(다른 셀의 기본값 opacity-50) 정작 숫자가 안 읽힌다.
+      subClass: "",
+      hint: <KoBadge ko={p.ko} />,
       chipClass: ELEMENT_CHIP_CLASS[m.type as keyof typeof ELEMENT_CHIP_CLASS] ?? ELEMENT_CHIP_CLASS.normal,
       testId: `move-${m.id}`,
       // 턴을 쓰고 나면 1단으로 돌아간다 (JRPG 관례이자, 다음 턴에 커서가 어디 있을지 예측 가능해진다)
@@ -123,7 +153,7 @@ export function BattleCommandMenu({
       key: p.id,
       label: `${p.emoji} ${p.name}`,
       sub: p.effectLabel,
-      hint: `×${p.count}`,
+      hint: <span className="opacity-70">×{p.count}</span>,
       disabled: p.count <= 0,
       testId: `potion-${p.id}`,
       onSelect: () => { onUsePotion(p.id); goRoot(); },
@@ -240,9 +270,11 @@ export function BattleCommandMenu({
                   <span className={selected ? "mr-1" : "mr-1 invisible"}>▶</span>
                   {cell.label}
                 </span>
-                {cell.hint && <span className="shrink-0 text-pixel-sm opacity-70">{cell.hint}</span>}
+                {cell.hint && <span className="shrink-0 text-pixel-sm">{cell.hint}</span>}
               </div>
-              {cell.sub && <div className="mt-0.5 text-pixel-sm opacity-50">{cell.sub}</div>}
+              {cell.sub && (
+                <div className={`mt-0.5 text-pixel-sm ${cell.subClass ?? "opacity-50"}`}>{cell.sub}</div>
+              )}
             </button>
           );
         })}

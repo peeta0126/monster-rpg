@@ -59,6 +59,58 @@ export function getTypeMultiplier(
 /** 치명타 발생 시 데미지 배율 (장비 critRate로만 발동 — 몬스터 기본 치명타율은 0) */
 const CRIT_DAMAGE_MULTIPLIER = 1.5;
 
+/** 데미지 계산에 얹히는 장비 보너스. 굴림과 무관한 값만 모았다. */
+export interface DamageModifiers {
+  /** 자속 보정(%) */
+  elementPowerBonus?: number;
+  /** 기술 속성별 데미지 증가(%) */
+  elementalDamageBonus?: Partial<Record<ElementType, number>>;
+  /** 치명타가 떴다고 보고 계산할지 */
+  isCrit?: boolean;
+  /** 치명타 배율 가산(%) */
+  critDamageBonus?: number;
+}
+
+/**
+ * 명중·치명타 **굴림을 뺀** 데미지 본체. 공식은 아래 calculateDamage 주석 참고.
+ *
+ * calculateDamage 에서 떼어낸 이유는 하나다. 기술 선택 화면이 "이 기술로 몇 대미지가
+ * 들어가는가"를 보여주려면 같은 계산이 필요한데, 거기서 식을 베껴 적으면 나중에 식을
+ * 고쳐도 표시는 옛 값을 계속 보여준다(이 저장소에서 이미 겪은 사고다).
+ * 굴림이 없어 부작용도 없으므로 화면에서 몇 번을 불러도 안전하다.
+ */
+export function computeDamage(
+  attacker: BattleMonster,
+  defender: BattleMonster,
+  move: Move,
+  mods: DamageModifiers = {},
+): number {
+  // 상태기(power = 0)는 데미지 없음
+  if (move.power === 0) return 0;
+
+  const { elementPowerBonus = 0, elementalDamageBonus = {}, isCrit = false, critDamageBonus = 0 } = mods;
+  const multiplier = getTypeMultiplier(move.type, defender.type);
+
+  // 명세 공식 적용 (공격 버프 반영)
+  const effectiveAttack = attacker.attack * (attacker.attackBuffMult ?? 1.0);
+  let baseDamage = (effectiveAttack * move.power) / defender.defense;
+
+  // 속성 능력(자속 보정): 사용 기술이 자신의 속성과 같을 때만 적용
+  if (elementPowerBonus > 0 && move.type === attacker.type) {
+    baseDamage *= 1 + elementPowerBonus / 100;
+  }
+
+  // 부가 능력치: 기술 속성별 데미지 증가 (자속 여부와 무관)
+  const typeDamageBonus = elementalDamageBonus[move.type] ?? 0;
+  if (typeDamageBonus > 0) {
+    baseDamage *= 1 + typeDamageBonus / 100;
+  }
+
+  if (isCrit) baseDamage *= CRIT_DAMAGE_MULTIPLIER + critDamageBonus / 100;
+
+  return Math.max(1, Math.floor(baseDamage * multiplier));
+}
+
 /**
  * 데미지 계산
  * 공식: finalDamage = (attacker.attack * skill.power / defender.defense)
@@ -97,26 +149,12 @@ export function calculateDamage(
     return { damage: 0, isHit: true, multiplier, isCrit: false };
   }
 
-  // 명세 공식 적용 (공격 버프 반영)
-  const effectiveAttack = attacker.attack * (attacker.attackBuffMult ?? 1.0);
-  let baseDamage = (effectiveAttack * move.power) / defender.defense;
-
-  // 속성 능력(자속 보정): 사용 기술이 자신의 속성과 같을 때만 적용
-  if (elementPowerBonus > 0 && move.type === attacker.type) {
-    baseDamage *= 1 + elementPowerBonus / 100;
-  }
-
-  // 부가 능력치: 기술 속성별 데미지 증가 (자속 여부와 무관)
-  const typeDamageBonus = elementalDamageBonus[move.type] ?? 0;
-  if (typeDamageBonus > 0) {
-    baseDamage *= 1 + typeDamageBonus / 100;
-  }
-
   // 치명타
   const isCrit = critRateBonus > 0 && Math.random() * 100 < critRateBonus;
-  if (isCrit) baseDamage *= CRIT_DAMAGE_MULTIPLIER + critDamageBonus / 100;
 
-  const damage = Math.max(1, Math.floor(baseDamage * multiplier));
+  const damage = computeDamage(attacker, defender, move, {
+    elementPowerBonus, elementalDamageBonus, isCrit, critDamageBonus,
+  });
 
   return { damage, isHit: true, multiplier, isCrit };
 }

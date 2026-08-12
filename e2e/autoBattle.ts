@@ -82,9 +82,10 @@ interface MoveOption {
   /** 어느 1단 항목 아래에 있는지 */
   group: (typeof MOVE_GROUPS)[number];
   testId: string;
-  power: number;
-  superEffective: boolean;
-  noEffect: boolean;
+  /** 셀에 적힌 예상 데미지(범위면 최소값). 상성 배율이 이미 반영된 값이다 */
+  damage: number;
+  /** 이 기술로 적을 쓰러뜨릴 수 있다고 셀이 말하는가 */
+  ko: boolean;
 }
 
 /** 공격·스킬 두 그룹을 차례로 열어 기술을 전부 훑고 1단으로 돌아온다 */
@@ -105,9 +106,8 @@ async function readMoves(page: Page): Promise<MoveOption[]> {
       options.push({
         group,
         testId,
-        power: Number(text.match(/위력 (\d+)/)?.[1] ?? 0),
-        superEffective: text.includes("효과 굉장"),
-        noEffect: text.includes("효과 없음"),
+        damage: Number(text.match(/예상 (\d+)/)?.[1] ?? 0),
+        ko: text.includes("쓰러뜨린다"),
       });
     }
     await page.getByTestId("cmd-back").click();
@@ -121,15 +121,15 @@ async function selectMove(page: Page, choice: MoveOption): Promise<void> {
   await page.getByTestId(choice.testId).first().click();
 }
 
-/** 상성 우위 > 위력 순으로 최선의 기술을 고른다 */
+/**
+ * 예상 데미지가 가장 큰 기술을 고른다. 셀이 상성 배율까지 반영한 값을 적어 주므로
+ * 예전처럼 "위력 × 상성 우위"로 따로 점수를 매길 필요가 없다.
+ */
 function pickMove(options: MoveOption[]): MoveOption | null {
-  const usable = options.filter((o) => !o.noEffect && o.power > 0);
+  const usable = options.filter((o) => o.damage > 0);
   const pool = usable.length > 0 ? usable : options;
   if (pool.length === 0) return null;
-  return pool.reduce((best, o) => {
-    const score = (x: MoveOption) => x.power * (x.superEffective ? 2 : 1);
-    return score(o) > score(best) ? o : best;
-  });
+  return pool.reduce((best, o) => (o.damage > best.damage ? o : best));
 }
 
 /** 상단 상태바의 "현재HP/최대HP"를 읽어 비율을 반환 */

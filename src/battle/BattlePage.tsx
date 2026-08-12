@@ -72,6 +72,7 @@ import { CaptureOverflowPrompt } from "../monster/CaptureOverflowPrompt";
 import { StatBar } from "../shared/ui";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { BattleCommandMenu } from "./BattleCommandMenu";
+import { previewMove } from "./damagePreview";
 import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
@@ -711,7 +712,21 @@ export default function BattlePage() {
   const canShowCatch = isCatchZone && enemyState.id !== "ormr"
     && enemyState.currentHp / enemyState.maxHp <= 0.3
     && !isProcessing && battleOutcome === null && !mustSwitch;
-  const speedFirst = (player.speed + getEquipCombatBonus(initialParty[activePartyIndex]?.uid).speed) >= enemyState.speed;
+  const activeBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid);
+  const speedFirst = (player.speed + activeBonus.speed) >= enemyState.speed;
+  /**
+   * 기술 셀에 들어갈 예상 결과. 전투가 실제로 쓰는 계산 함수를 그대로 부른다
+   * (damagePreview → battleUtils.computeDamage). 보너스도 resolveAttack 에 넘기는 것과
+   * 같은 것을 넘긴다 — 여기서 하나라도 빠지면 표시와 실제가 어긋난다.
+   */
+  const getMovePreview = (move: Move) =>
+    previewMove(player, enemyState, move, {
+      attack: activeBonus.attack,
+      critRate: activeBonus.critRate,
+      elementPower: activeBonus.elementPower,
+      critDamage: activeBonus.critDamage,
+      elementalDamage: activeBonus.elementalDamage,
+    });
   // 메뉴에 넘길 물약 목록. 효과 설명은 여기서 한 번만 만든다.
   const potionEntries = POTIONS.map((p) => {
     const e = p.effect;
@@ -869,7 +884,7 @@ export default function BattlePage() {
                 <>
                   <BattleCommandMenu
                     moves={player.moves}
-                    enemyType={enemyState.type ?? "normal"}
+                    getPreview={getMovePreview}
                     potions={potionEntries}
                     disabled={isProcessing}
                     canFlee={!isBossFloor(floor)}
