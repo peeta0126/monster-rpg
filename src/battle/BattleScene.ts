@@ -26,10 +26,10 @@ export interface BattleSceneUpdatePayload {
 import {
   W, H, FLOOR_TOP,
   PLAYER_X, PLAYER_CY, PLAYER_SIZE, PLAYER_FEET,
-  ENEMY_X, ENEMY_CY, ENEMY_SIZE, ENEMY_FEET,
-  PANEL_W, PANEL_H, P_PANEL_CX, P_PANEL_CY, E_PANEL_CX, E_PANEL_CY,
-  BAR_H, BAR_W_INNER, E_BAR_X, E_BAR_Y, P_BAR_X, P_BAR_Y,
+  PANEL_W, PANEL_H, P_PANEL_CX, P_PANEL_CY,
+  BAR_H, BAR_W_INNER, P_BAR_X, P_BAR_Y,
   LOG_BOX, LOG_PAD_X, LOG_PAD_Y,
+  getEnemyLayout, type EnemyLayout,
 } from "./battleLayout";
 
 /** 이 전투에서 쓰는 배경 텍스처 키. 전투마다 게임이 새로 만들어지므로 한 벌이면 된다. */
@@ -46,6 +46,9 @@ const HOLD_ADVANCE_MS = 110;
 type LogState = "idle" | "showing" | "result";
 
 export default class BattleScene extends Phaser.Scene {
+  /** 이 층의 적 배치(자리·크기·패널). 50층 오름만 다른 값이 온다. */
+  private enemy!: EnemyLayout;
+
   // ── 스프라이트 ──
   private playerSprite!: Phaser.GameObjects.Image;
   private enemySprite!: Phaser.GameObjects.Image;
@@ -149,6 +152,8 @@ export default class BattleScene extends Phaser.Scene {
     const d = getBattleInitData();
     const floor = d?.floor ?? 1;
     const isBoss = d?.isBoss ?? false;
+    // 배경·그림자·패널·트윈이 전부 이걸 본다. 무엇보다 먼저 정한다.
+    this.enemy = getEnemyLayout(floor);
 
     this.buildBackground(floor, isBoss);
     this.buildMonsterSprites();
@@ -164,11 +169,11 @@ export default class BattleScene extends Phaser.Scene {
 
     // 보스층 뱃지 — 적 패널 바로 위, 발끝(ENEMY_FEET)과 패널 사이 띠에 앉힌다
     if (isBoss) {
-      const badgeY = E_PANEL_CY - PANEL_H / 2 - 18;
+      const badgeY = this.enemy.panelCy - PANEL_H / 2 - 18;
       const bossBg = this.add.graphics().setDepth(20);
       bossBg.fillStyle(HEX.mist500, 0.85);
-      bossBg.fillRoundedRect(E_PANEL_CX - 36, badgeY, 72, 16, 5);
-      this.add.text(E_PANEL_CX, badgeY + 8, "★  BOSS  ★", {
+      bossBg.fillRoundedRect(this.enemy.panelCx - 36, badgeY, 72, 16, 5);
+      this.add.text(this.enemy.panelCx, badgeY + 8, "★  BOSS  ★", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300, fontStyle: "bold",
       }).setOrigin(0.5, 0.5).setDepth(21);
     }
@@ -217,13 +222,14 @@ export default class BattleScene extends Phaser.Scene {
       // NEAREST 를 이 텍스처만 되돌린다 (ART_DIRECTION 3-4).
       this.smoothTexture(BG_KEY);
       this.add.image(0, 0, BG_KEY).setOrigin(0, 0).setDisplaySize(W, H).setDepth(0);
-      // 보스층은 같은 방을 눌러 깐다. 별도 이미지는 없다.
+      // 보스층은 같은 방을 눌러 깐다(10·20·30·40층). 50층은 예외다 — z50 은 처음부터
+      // 최종 보스방으로 어둡게 완성된 전용 그림이라, 위에 또 덮으면 아무것도 안 보인다.
       //
       // setTint 를 쓰지 않는다 — 이 게임은 WebGL 컨텍스트 소진을 피하려고 CANVAS 렌더러로
       // 고정돼 있고(phaserConfig), Canvas 렌더러는 이미지 틴트를 그리지 않는다. 실제로
       // 재 보니 보스층과 일반층의 벽 밝기가 30,33,40 대 29,31,38 로 사실상 같았다.
       // 그래서 어둠을 한 겹 덮는다. 비네트를 덧대는 게 아니라 방 전체를 고르게 누른다.
-      if (isBoss) {
+      if (isBoss && getTowerZone(floor) !== "z50") {
         const dim = this.add.graphics().setDepth(1);
         dim.fillStyle(HEX.shadow900, 0.4);
         dim.fillRect(0, 0, W, H);
@@ -253,7 +259,7 @@ export default class BattleScene extends Phaser.Scene {
   private buildFloorShadows() {
     const g = this.add.graphics().setDepth(3);
     for (const [x, feet, size, alpha] of [
-      [ENEMY_X,  ENEMY_FEET,  ENEMY_SIZE,  0.36],
+      [this.enemy.x, this.enemy.feet, this.enemy.size, 0.36],
       [PLAYER_X, PLAYER_FEET, PLAYER_SIZE, 0.44],
     ] as const) {
       const w = size * 0.52;
@@ -274,10 +280,10 @@ export default class BattleScene extends Phaser.Scene {
 
     // 적 — 뒤(오른쪽·위·작게). 원본이 왼쪽을 보고 있어 뒤집지 않는다
     if (this.textures.exists("enemy-mon")) {
-      this.enemySprite = this.add.image(ENEMY_X, ENEMY_CY, "enemy-mon")
-        .setDisplaySize(ENEMY_SIZE, ENEMY_SIZE).setDepth(6);
+      this.enemySprite = this.add.image(this.enemy.x, this.enemy.cy, "enemy-mon")
+        .setDisplaySize(this.enemy.size, this.enemy.size).setDepth(6);
     } else {
-      this.enemySprite = this.makeFallback(ENEMY_X, ENEMY_CY, HEX.ember700, ENEMY_SIZE);
+      this.enemySprite = this.makeFallback(this.enemy.x, this.enemy.cy, HEX.ember700, this.enemy.size);
     }
 
     // 아군 — 앞(왼쪽·아래·크게). 파티 0번 슬롯 이미지 사용 (party-mon-0)
@@ -290,12 +296,12 @@ export default class BattleScene extends Phaser.Scene {
     }
 
     // 등장 애니메이션
-    this.enemySprite.setAlpha(0).setY(ENEMY_CY + 20);
+    this.enemySprite.setAlpha(0).setY(this.enemy.cy + 20);
     this.playerSprite.setAlpha(0).setY(PLAYER_CY + 20);
-    this.tweens.add({ targets: this.enemySprite, alpha: 1, y: ENEMY_CY, duration: 500, delay: 200, ease: "Back.Out" });
+    this.tweens.add({ targets: this.enemySprite, alpha: 1, y: this.enemy.cy, duration: 500, delay: 200, ease: "Back.Out" });
     this.tweens.add({ targets: this.playerSprite, alpha: 1, y: PLAYER_CY, duration: 500, delay: 420, ease: "Back.Out" });
     this.time.delayedCall(930, () => {
-      this.addFloat(this.enemySprite, ENEMY_CY, 6, 1750);
+      this.addFloat(this.enemySprite, this.enemy.cy, 6, 1750);
       this.addFloat(this.playerSprite, PLAYER_CY, 5, 1950);
     });
   }
@@ -329,7 +335,7 @@ export default class BattleScene extends Phaser.Scene {
 
   private buildHudPanels() {
     this.buildOneHudPanel(
-      E_PANEL_CX, E_PANEL_CY, PANEL_W, PANEL_H, true,
+      this.enemy.panelCx, this.enemy.panelCy, PANEL_W, PANEL_H, true,
     );
     this.buildOneHudPanel(
       P_PANEL_CX, P_PANEL_CY, PANEL_W, PANEL_H, false,
@@ -363,15 +369,15 @@ export default class BattleScene extends Phaser.Scene {
 
   private buildDangerCues() {
     for (const side of ["enemy", "player"] as const) {
-      const barX = side === "enemy" ? E_BAR_X : P_BAR_X;
-      const barY = side === "enemy" ? E_BAR_Y : P_BAR_Y;
+      const barX = side === "enemy" ? this.enemy.barX : P_BAR_X;
+      const barY = side === "enemy" ? this.enemy.barY : P_BAR_Y;
       const frame = this.add.graphics().setDepth(11).setVisible(false);
       frame.lineStyle(2, HEX.ember700, 1);
       frame.strokeRect(barX - 3, barY - 3, BAR_W_INNER + 6, BAR_H + 6);
 
-      const sx   = side === "enemy" ? ENEMY_X  : PLAYER_X;
-      const sy   = side === "enemy" ? ENEMY_CY : PLAYER_CY;
-      const size = side === "enemy" ? ENEMY_SIZE : PLAYER_SIZE;
+      const sx   = side === "enemy" ? this.enemy.x  : PLAYER_X;
+      const sy   = side === "enemy" ? this.enemy.cy : PLAYER_CY;
+      const size = side === "enemy" ? this.enemy.size : PLAYER_SIZE;
       // 일러스트를 틴트로 물들이면 그림이 상한다. 뒤에 아우라를 깔아 몬스터째로 위험해 보이게 한다.
       // 번짐만 깔았더니 횃불 불빛과 구별이 안 됐다 — 테두리 원을 하나 둘러 형태를 준다.
       const aura = this.add.graphics().setDepth(5).setVisible(false);
@@ -770,7 +776,7 @@ export default class BattleScene extends Phaser.Scene {
     this.fxTweens.clear();
     this.enemySprite?.clearTint();
     this.playerSprite?.clearTint();
-    this.enemySprite?.setX(ENEMY_X);
+    this.enemySprite?.setX(this.enemy.x);
     this.playerSprite?.setX(PLAYER_X);
     // 남은 데미지 숫자는 즉시 정리
     for (const obj of this.children.list.slice()) {
@@ -792,7 +798,7 @@ export default class BattleScene extends Phaser.Scene {
     // 공격 모션 — 물리는 대상 쪽으로 파고들고, 특수는 뒤로 당겼다 앞으로
     const towardVictim = Math.sign(victim.x - attacker.x) || 1;
     const lunge = p.category === "special" ? -14 : 22;
-    const ax = p.target === "enemy" ? PLAYER_X : ENEMY_X;
+    const ax = p.target === "enemy" ? PLAYER_X : this.enemy.x;
     this.fx({
       targets: attacker, x: ax + towardVictim * lunge,
       duration: 90, yoyo: true, ease: "Quad.Out",
@@ -811,7 +817,7 @@ export default class BattleScene extends Phaser.Scene {
       victim.setTintFill(HEX.cream100);
       this.time.delayedCall(80, () => victim.clearTint());
 
-      const vx = p.target === "enemy" ? ENEMY_X : PLAYER_X;
+      const vx = p.target === "enemy" ? this.enemy.x : PLAYER_X;
       if (!this.reduceMotion) {
         this.fx({
           targets: victim, x: vx + 6,
@@ -863,7 +869,7 @@ export default class BattleScene extends Phaser.Scene {
   /** 쓰러짐 — 페이드아웃 + 살짝 가라앉기 */
   private playFaint(target: "enemy" | "player") {
     const sprite = target === "enemy" ? this.enemySprite : this.playerSprite;
-    const baseY  = target === "enemy" ? ENEMY_CY : PLAYER_CY;
+    const baseY  = target === "enemy" ? this.enemy.cy : PLAYER_CY;
     if (!sprite) return;
     this.fx({
       targets: sprite, alpha: 0, y: baseY + 18,
@@ -872,7 +878,7 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   private redrawBars() {
-    this.drawBar(this.enemyHpBar,  E_BAR_X, E_BAR_Y, BAR_W_INNER, BAR_H,
+    this.drawBar(this.enemyHpBar,  this.enemy.barX, this.enemy.barY, BAR_W_INNER, BAR_H,
       this.hpAnim.enemy.cur, this.hpAnim.enemy.ghost);
     this.drawBar(this.playerHpBar, P_BAR_X, P_BAR_Y, BAR_W_INNER, BAR_H,
       this.hpAnim.player.cur, this.hpAnim.player.ghost);

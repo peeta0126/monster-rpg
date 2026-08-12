@@ -9,6 +9,8 @@
  * 두 벌이 되고, 그러면 테스트는 통과하는데 화면만 겹치는 상태가 만들어진다.
  */
 
+import { MAX_TOWER_FLOOR } from "../shared/floorTable";
+
 export const W = 960;
 export const H = 540;
 
@@ -26,6 +28,13 @@ export const PLAYER_SIZE = 170;
 export const ENEMY_X = 700;
 export const ENEMY_FEET = 330;
 export const ENEMY_SIZE = 140;
+
+// 탑 정상의 오름만 다른 자리에 다른 크기로 선다. 최종보스가 잡몹과 같은 크기면
+// 50층까지 올라온 것이 화면에서 아무 일도 아니게 된다.
+export const ORMR_X = 655;
+export const ORMR_FEET = 340;
+export const ORMR_SIZE = 256;
+export const ORMR_PANEL_CY = 386;
 
 /** 스프라이트 원점은 한가운데다. 기준은 발끝이므로 중심 Y 는 파생값으로만 쓴다. */
 export const PLAYER_CY = PLAYER_FEET - PLAYER_SIZE / 2;
@@ -47,10 +56,37 @@ export const BAR_X_INNER = 10;
 export const BAR_Y_IN_PANEL = PANEL_H - 22;
 export const BAR_W_INNER = PANEL_W - 20;
 
-export const E_BAR_X = E_PANEL_CX - PANEL_W / 2 + BAR_X_INNER;
-export const E_BAR_Y = E_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
 export const P_BAR_X = P_PANEL_CX - PANEL_W / 2 + BAR_X_INNER;
 export const P_BAR_Y = P_PANEL_CY - PANEL_H / 2 + BAR_Y_IN_PANEL;
+
+// ── 층별 적 배치 ──────────────────────────────────────────────────────────────
+
+export interface EnemyLayout {
+  x: number; feet: number; size: number; cy: number;
+  panelCx: number; panelCy: number;
+  barX: number; barY: number;
+}
+
+/**
+ * 그 층의 적이 어디에 얼마만 하게 서는가. **층으로 갈리는 배치값은 여기서만 갈린다** —
+ * 씬 여기저기에 `if (floor === 50)` 을 흩뿌리면 등장 트윈은 고쳤는데 교체 트윈은
+ * 안 고친 식으로 반드시 어긋난다(setDisplaySize 호출부가 셋이다).
+ */
+export function getEnemyLayout(floor: number): EnemyLayout {
+  const isOrmr = floor >= MAX_TOWER_FLOOR;
+  const x    = isOrmr ? ORMR_X : ENEMY_X;
+  const feet = isOrmr ? ORMR_FEET : ENEMY_FEET;
+  const size = isOrmr ? ORMR_SIZE : ENEMY_SIZE;
+  const panelCx = E_PANEL_CX;                      // 패널 X 는 오름도 같다
+  const panelCy = isOrmr ? ORMR_PANEL_CY : E_PANEL_CY;
+  return {
+    x, feet, size,
+    cy: feet - size / 2,
+    panelCx, panelCy,
+    barX: panelCx - PANEL_W / 2 + BAR_X_INNER,
+    barY: panelCy - PANEL_H / 2 + BAR_Y_IN_PANEL,
+  };
+}
 
 // ── 로그 알림 박스 ────────────────────────────────────────────────────────────
 // 화면을 가로지르던 것을 오른쪽 아래로 몰았다. 아군 HP 패널이 왼쪽 아래에 있어서
@@ -68,10 +104,18 @@ const centered = (cx: number, cy: number, w: number, h: number): Box =>
   ({ x: cx - w / 2, y: cy - h / 2, w, h });
 
 export const PLAYER_SPRITE_BOX: Box = centered(PLAYER_X, PLAYER_CY, PLAYER_SIZE, PLAYER_SIZE);
-export const ENEMY_SPRITE_BOX:  Box = centered(ENEMY_X,  ENEMY_CY,  ENEMY_SIZE,  ENEMY_SIZE);
 export const PLAYER_PANEL_BOX:  Box = centered(P_PANEL_CX, P_PANEL_CY, PANEL_W, PANEL_H);
-export const ENEMY_PANEL_BOX:   Box = centered(E_PANEL_CX, E_PANEL_CY, PANEL_W, PANEL_H);
 export const LOG_BOX_RECT:      Box = { x: LOG_BOX.x, y: LOG_BOX.y, w: LOG_BOX.w, h: LOG_BOX.h };
+
+export function enemySpriteBox(floor: number): Box {
+  const e = getEnemyLayout(floor);
+  return centered(e.x, e.cy, e.size, e.size);
+}
+
+export function enemyPanelBox(floor: number): Box {
+  const e = getEnemyLayout(floor);
+  return centered(e.panelCx, e.panelCy, PANEL_W, PANEL_H);
+}
 
 export function overlaps(a: Box, b: Box): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
