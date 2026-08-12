@@ -288,6 +288,28 @@ test("capture: forest-nest", async ({ page }) => {
 });
 
 /**
+ * 50층 오름 — 탑의 마지막 적이자 유일하게 여기서만 나오는 일러스트다.
+ * dragon.webp 는 알파가 없어 어두운 무대 위에 흰 네모로 떠 있었는데, 1층만 찍으면
+ * 그게 안 보인다. 층은 라우트 state 로만 정해지므로 history 에 심고 다시 읽힌다
+ * (react-router 는 초기 location.state 를 window.history.state.usr 에서 가져온다).
+ */
+test("capture: battle-boss", async ({ page }) => {
+  await seedStorage(page, true);
+  await page.goto("/battle");
+  await expect(page.locator("#root")).not.toBeEmpty();
+  await page.evaluate(() => {
+    history.replaceState({ ...(history.state ?? {}), usr: { floor: 50 } }, "");
+  });
+  await page.reload();
+
+  await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
+  // 층이 실제로 50 으로 들어갔는지 — 폴백(1층)으로 찍히면 확인할 게 없다
+  await expect(page.getByText("50F")).toBeVisible();
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "battle-boss.png"), fullPage: false });
+});
+
+/**
  * Tab 메뉴는 우상단 버튼에 붙어 아래로 펼쳐진다. 닫힌 화면만 찍으면 펼친 목록이
  * 목표 배너·최근 제작 패널과 겹치는지를 알 수가 없어서 열린 상태로 한 장 더 남긴다.
  */
