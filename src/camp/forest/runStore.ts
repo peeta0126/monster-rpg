@@ -51,11 +51,26 @@ export interface StepProgress {
   pending: { hand: RpsChoice; caught: boolean } | null;
   /** 판정이 끝났으면 그 결과. 포획이 없는 사건은 끝나도 null 이다 */
   done: { caught: boolean; escaped: boolean } | null;
+  /**
+   * 둥지에 들어선 시점의 보유 계열 스냅샷. 둥지가 아니면 null.
+   *
+   * 후보 굴림이 보유 여부를 보기 때문에 필요하다 — 지금 보유 상태를 그대로 읽으면
+   * 런 도중 한 마리 잡는 순간 이미 굴린 후보가 바뀐다. 그건 곧 새로고침 리롤이다.
+   */
+  ownedChains: string[] | null;
+  /**
+   * 보관함이 가득 차서 못 받은 포획을 어떻게 했는가.
+   *
+   * 화면 상태로 두면 안 된다 — 결정하기 전에 새로고침하면 흡수를 두 번 태울 수 있다.
+   * pending 동안에는 아무것도 지급되지 않았으므로 다시 물어도 손해가 없다.
+   */
+  overflow: "pending" | "absorbed" | "released" | null;
 }
 
 /** 아직 아무것도 안 한 걸음 */
 export const NEW_STEP: StepProgress = {
   entered: false, pick: null, attempts: 0, pending: null, done: null,
+  ownedChains: null, overflow: null,
 };
 
 export interface ForestRun {
@@ -315,12 +330,21 @@ function parseStep(raw: unknown): StepProgress {
     ? { hand: p.hand as RpsChoice, caught: !!p.caught }
     : null;
 
+  const overflow = s.overflow === "pending" || s.overflow === "absorbed" || s.overflow === "released"
+    ? s.overflow
+    : null;
+
   return {
     entered: !!s.entered,
     pick: typeof s.pick === "number" ? s.pick : null,
     attempts: typeof s.attempts === "number" ? Math.max(0, Math.floor(s.attempts)) : 0,
     pending,
     done,
+    // 스냅샷이 없는 옛 런은 빈 목록처럼 다뤄진다 — 대비 없이 중복만 걸러진 후보가 나온다
+    ownedChains: Array.isArray(s.ownedChains)
+      ? s.ownedChains.filter((x): x is string => typeof x === "string")
+      : null,
+    overflow,
   };
 }
 

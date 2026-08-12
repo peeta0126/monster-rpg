@@ -1,9 +1,10 @@
-import { rgba } from "../../shared/palette";
+import { rgba, PALETTE, type PaletteName } from "../../shared/palette";
 import { getMaterial } from "../../shared/items";
 import { MONSTER_IMAGE_MAP } from "../../monster/monsterImages";
 import type { Monster } from "../../shared/game";
 import { STEP_DEFS, TIER_COLOR, type ForestStepKind } from "./steps";
 import type { RunBagEntry } from "./runStore";
+import type { NestBadge, NestBadgeTone } from "./nest";
 
 /**
  * 이번 걸음의 사건 패널. 배경(원화) 위에 놓이는 반투명 판 하나다.
@@ -133,8 +134,20 @@ export function StepEventPanel({
  * 더 뒤질수록 좋은 개체가 나오지만 습격 위험이 오른다는 규칙은 STEP 3 이후에 붙는다.
  * 지금은 고르는 것까지가 이 화면의 일이다.
  */
-export function NestPanel({ monsters, onPick }: {
+/**
+ * 배지 색. 12px 글자에 강조색을 그대로 쓰면 대비가 4.2:1 까지 떨어지므로,
+ * 색은 배경·테두리로만 쓰고 글자는 sand 계열로 둔다(속성 칩과 같은 규칙).
+ */
+const BADGE_TONE: Record<NestBadgeTone, { border: PaletteName; text: string }> = {
+  new:      { border: "mist300",  text: PALETTE.sand200 },
+  progress: { border: "ember500", text: PALETTE.sand200 },
+  done:     { border: "stone600", text: PALETTE.earth400 },
+};
+
+export function NestPanel({ monsters, badges, onPick }: {
   monsters: Monster[];
+  /** 카드마다의 판단 근거. 없으면 안 그린다 */
+  badges?: NestBadge[];
   /** 고른 몬스터가 아니라 **몇 번째**를 넘긴다 — 후보는 시드에서 다시 나오므로
    *  저장해 둘 것은 번호 하나면 된다 */
   onPick: (index: number) => void;
@@ -156,6 +169,21 @@ export function NestPanel({ monsters, onPick }: {
             <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.name} className="h-16 w-16 object-contain"/>
             <span className="text-pixel-sm font-bold text-cream-100">{m.name}</span>
             <span className="text-pixel-sm text-sand-300">Lv.{m.level}</span>
+            {/* 레벨만 적혀 있으면 높은 쪽이 무조건 정답이라 고를 게 없다.
+                각인 진행도가 그 옆에 서야 저울이 성립한다 */}
+            {badges?.[i] && (
+              <span
+                className="rounded-full px-2 py-0.5 text-pixel-sm font-bold"
+                data-testid={`forest-nest-badge-${i}`}
+                style={{
+                  background: rgba(BADGE_TONE[badges[i].tone].border, 0.22),
+                  border: `1px solid ${rgba(BADGE_TONE[badges[i].tone].border, 0.9)}`,
+                  color: BADGE_TONE[badges[i].tone].text,
+                }}
+              >
+                {badges[i].text}
+              </span>
+            )}
           </button>
         ))}
       </div>

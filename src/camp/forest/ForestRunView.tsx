@@ -4,6 +4,9 @@ import { scaleToLevel } from "../../shared/floorTable";
 import { monsters } from "../../monster/monsters";
 import type { Monster } from "../../shared/game";
 import { usePlayerStore } from "../../shared/playerStore";
+import { chainKeyOf, tierOf, MAX_IMPRINT_TIER } from "../../monster/imprint";
+import { CaptureOverflowPrompt } from "../../monster/CaptureOverflowPrompt";
+import { rollNestChoices, nestBadge } from "./nest";
 import type { ForestArea } from "./areas";
 import { alertBand, stepAlertDelta } from "./alert";
 import {
@@ -64,6 +67,16 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
   const addCapturedMonster = usePlayerStore((s) => s.addCapturedMonster);
   const addToDexSeen = usePlayerStore((s) => s.addToDexSeen);
   const addToDexCaught = usePlayerStore((s) => s.addToDexCaught);
+  const absorbCapture = usePlayerStore((s) => s.absorbCapture);
+  const party = usePlayerStore((s) => s.party);
+  const storage = usePlayerStore((s) => s.storage);
+  const imprint = usePlayerStore((s) => s.imprint);
+
+  /** 지금 보유한 계열. 배지는 이걸 보고, 굴림은 아래 스냅샷을 본다 */
+  const ownedChains = useMemo(
+    () => new Set([...party, ...storage].map(chainKeyOf)),
+    [party, storage],
+  );
 
   const kind = run.current;
   const def = STEP_DEFS[kind];
@@ -86,14 +99,14 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
 
     if (kind === "nest") {
       const count = 2 + (rng() < 0.5 ? 1 : 0);
-      const choices = Array.from({ length: count }, () => pickMonsterFor(area, kind, rng));
+      const choices = rollNestChoices(area, count, step.ownedChains ?? [], rng);
       return { gained, choices, monster: step.pick === null ? null : choices[step.pick] ?? null };
     }
     if (hasCatch(kind)) {
       return { gained, choices: [], monster: pickMonsterFor(area, kind, rng) };
     }
     return { gained, choices: [], monster: null };
-  }, [area, kind, alertForJudge, run.seed, run.depth, step.entered, step.pick]);
+  }, [area, kind, alertForJudge, run.seed, run.depth, step.entered, step.pick, step.ownedChains]);
 
   // 본 것은 도감에 남는다. 굴림이 순수해야 복원이 성립하므로 기록은 굴림 밖에서 한다
   useEffect(() => {
@@ -107,6 +120,16 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
     setRun((prev) => prev ? advanceStep(prev, patch) : prev);
   }, [setRun]);
 
+  /**
+   * 사건에 들어선다. 둥지라면 지금의 보유 계열을 함께 적어 둔다 —
+   * 후보 굴림이 그걸 보기 때문에, 굳혀 두지 않으면 런 도중 보유가 바뀔 때 후보도 바뀐다.
+   */
+  const enterStep = useCallback(() => {
+    patchStep(kind === "nest"
+      ? { entered: true, ownedChains: [...ownedChains] }
+      : { entered: true });
+  }, [patchStep, kind, ownedChains]);
+
   const phase: StepPhase =
     !step.entered ? "event"
     : step.done ? "resolved"
@@ -119,7 +142,8 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
     if (!draft) return;
     const next = resolveStep(run, {
       gained: draft.gained,
-      caught: step.done?.caught,
+      // 보관함이 넘쳐 흡수·방생으로 끝난 포획은 데려온 게 아니다 — 정산에서 세지 않는다
+      caught: step.done?.caught && step.overflow === null,
       escaped: step.done?.escaped,
     });
 
@@ -127,15 +151,17 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
     if (kind === "warden") { onSettle("warden", next.bag, next.caught, next.alertPeak); return; }
     if (runIsOver(next)) { onSettle("forced", next.bag, next.caught, next.alertPeak); return; }
     setRun(next);
-  }, [draft, run, step.done, kind, onSettle, setRun]);
+  }, [draft, run, step.done, step.overflow, kind, onSettle, setRun]);
 
   const onCatchDone = useCallback((result: { caught: boolean }, monster: Monster) => {
+    let overflow: StepProgress["overflow"] = null;
     if (result.caught) {
       // 몬스터는 즉시 확정이다. 정산 대상이 아니라서 퇴각해도 잃지 않는다
       addToDexCaught(monster.id);
-      addCapturedMonster(monster);
+      // 자리가 없으면 예전엔 아무 말 없이 사라졌다. 이제는 사라지기 전에 한 번 묻는다
+      if (addCapturedMonster(monster) === "full") overflow = "pending";
     }
-    patchStep({ pending: null, done: { caught: result.caught, escaped: !result.caught } });
+    patchStep({ pending: null, done: { caught: result.caught, escaped: !result.caught }, overflow });
   }, [patchStep, addToDexCaught, addCapturedMonster]);
 
   /** 지금 돌아가면 확정될 것 */
@@ -195,12 +221,17 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
               : hasCatch(kind)   ? "조우한다"
               : "살펴본다"
             }
-            onAction={() => patchStep({ entered: true })}
+            onAction={enterStep}
           />
         )}
 
         {phase === "nest" && draft && (
-          <NestPanel monsters={draft.choices} onPick={(i) => patchStep({ pick: i })}/>
+          <NestPanel
+            monsters={draft.choices}
+            badges={draft.choices.map((m) =>
+              nestBadge(m, ownedChains, tierOf(m, imprint), MAX_IMPRINT_TIER))}
+            onPick={(i) => patchStep({ pick: i })}
+          />
         )}
 
         {phase === "catch" && draft?.monster && (
@@ -216,7 +247,17 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
           />
         )}
 
-        {phase === "resolved" && draft && (
+        {phase === "resolved" && step.overflow === "pending" && draft?.monster && (
+          <CaptureOverflowPrompt
+            monster={draft.monster}
+            onAbsorb={() => {
+              if (absorbCapture(draft.monster!) === "ok") patchStep({ overflow: "absorbed" });
+            }}
+            onRelease={() => patchStep({ overflow: "released" })}
+          />
+        )}
+
+        {phase === "resolved" && step.overflow !== "pending" && draft && (
           <StepEventPanel
             kind={kind}
             monster={draft.monster}
