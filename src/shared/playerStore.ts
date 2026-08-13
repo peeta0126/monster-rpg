@@ -4,6 +4,7 @@ import type { Monster } from "./game";
 import type { CraftingRecipe, CraftedItem, ArtifactInstance, CraftedPotionStack, ItemQuality } from "./crafting";
 import { monsters } from "../monster/monsters";
 import { MAX_TOWER_FLOOR } from "./floorTable";
+import { expToNext } from "../battle/battleUtils";
 import { POTIONS } from "./items";
 import {
   rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats,
@@ -283,6 +284,10 @@ function normalizeOwnedMonster(raw: unknown): OwnedMonster | null {
     moves: (Array.isArray(r.moves) && r.moves.length > 0 ? r.moves : base.moves) as OwnedMonster["moves"],
     level,
     ...recomputed,
+    // 요구 경험치도 레벨에서 다시 계산한다. 잡은 몬스터는 scaleToLevel 이 만든 값을 그대로
+    // 물려받았는데, 그게 한때 1.2ⁿ 곡선이라 Lv40 개체가 122,480 을 요구했다(직접 키운 개체는 461).
+    // 저장된 값을 믿지 않는 이 파일의 규칙이 여기에도 적용돼야 한다.
+    expToNextLevel: expToNext(level),
     // 재계산으로 maxHp가 줄었을 수 있으니 현재 HP는 새 상한을 넘지 않게 clamp
     currentHp: Math.min(rawCurrentHp, recomputed.maxHp),
   } as OwnedMonster;

@@ -476,19 +476,60 @@ export function getAIAction(
 
 // ─── 경험치 / 레벨업 ────────────────────────────────────────────────────────────
 
-/** 경험치 획득 처리. 레벨업 시 스탯 자동 증가 및 HP 전회복 */
 /**
  * 레벨업 시 다음 레벨에 필요한 경험치가 불어나는 배율.
  *
  * 이 값이 1.2였을 때는 요구 경험치가 지수로 늘어나는데(100 × 1.2^(레벨-1)) 적이 주는 경험치는
- * 층수에 비례해 선형으로만 늘어나서(rewardExp × (1 + 0.30n)), 층이 오를수록 격차가 벌어졌다.
- * 40층 무렵엔 한 레벨에 100전투가 넘게 필요해 사실상 진행이 멈춘다.
+ * 층수에 비례해 선형으로만 늘어나서, 층이 오를수록 격차가 벌어졌다. 40층 무렵엔 한 레벨에
+ * 100전투가 넘게 필요해 사실상 진행이 멈췄다. 그래서 요구치는 거의 눕혀 뒀는데, 이번엔
+ * 반대쪽으로 넘어갔다 — 40층 한 판이 **10.8레벨**을 줬다(보상 1778 vs 요구 683).
  *
- * 그래서 요구치는 거의 눕혀 두고, 성장 속도는 층별 보상(scaleToLevel 의 rewardExp 계수)
- * 쪽에서 잡는다. 1.10 만 돼도 판이 두 배 가까이 길어진다 —
- * scripts/sim/run.ts 20판: 1.04 → 104전투 / 598턴,  1.10 → 185전투 / 1281턴.
+ * 지금은 **천장을 컷오프가 잡는다**(expLevelGapMultiplier). 그래서 이 값의 역할이 바뀌었다 —
+ * 예전엔 "얼마나 높이 갈 수 있는가"를 정했지만, 이제는 "천장까지 얼마나 빨리 붙는가"만 정한다.
+ * 너무 짜면 파티가 층을 못 따라가 관문이 통째로 불가능해진다:
+ * 1.06 으로 재 봤더니 50층 도달 시 **적보다 10레벨 아래**였다(측정: scripts/sim/run.ts).
+ * 1.04 면 층을 두어 레벨 앞서서 도착하고, 그 위는 컷오프가 막는다.
  */
 export const EXP_GROWTH_RATE = 1.04;
+
+/** 레벨 1 몬스터가 다음 레벨에 필요한 경험치 */
+export const BASE_EXP_TO_NEXT = 100;
+
+/**
+ * 그 레벨에서 다음 레벨까지 필요한 경험치.
+ *
+ * ⚠️ **이 함수가 유일한 출처여야 한다.** 예전엔 `gainExp` 가 `× EXP_GROWTH_RATE` 로 굴리고
+ * `scaleToLevel` 은 `base.expToNextLevel × 1.2ⁿ` 으로 따로 계산했다. 그래서 **잡은 몬스터**가
+ * 1.2 곡선을 물려받아, Lv40 아쿠사가 다음 레벨에 122,480 경험치를 요구했다(직접 키운 개체는 461).
+ * 경험치가 넘쳐흐르던 시절엔 안 보였지만, 레벨차 컷오프가 들어가면 "잡은 몬스터는 영원히
+ * 안 큰다"가 된다 — 수집 게임에서 그건 치명적이다.
+ */
+export function expToNext(level: number): number {
+  return Math.floor(BASE_EXP_TO_NEXT * Math.pow(EXP_GROWTH_RATE, Math.max(0, level - 1)));
+}
+
+/**
+ * 레벨차에 따른 경험치 배수. gap = 받는 쪽 레벨 - 적 레벨.
+ *
+ * **이 게임에서 레벨은 재화가 아니었다.** 40층 한 판이 10레벨을 주고, 낮은 층을 갈아도
+ * 요구치가 거의 안 늘어서, 무장비 파티가 레벨만으로 50층을 뚫었다. 성장 축이 셋(레벨·기술·장비)
+ * 인데 하나가 무한하면 나머지 둘은 장식이 된다.
+ *
+ * 그래서 **자기보다 낮은 층에서는 배울 게 없다**로 바꾼다.
+ *   +1 .69 · +2 .44 · +3 .25 · +4 .11 · +5 .03 · +6 이상 0
+ *
+ * 비율식(적레벨/내레벨)^k 이 아니라 **하드 컷오프**인 이유: 비율식은 Lv50 이 40층을 갈면
+ * 41% 라 여전히 통한다. "탑은 갈아서 못 넘는다"를 참으로 만들려면 0 이 필요하다.
+ */
+export const EXP_GAP_CUTOFF = 6;
+
+export function expLevelGapMultiplier(enemyLevel: number, learnerLevel: number): number {
+  const gap = learnerLevel - enemyLevel;
+  if (gap <= 0) return 1;
+  if (gap >= EXP_GAP_CUTOFF) return 0;
+  const t = 1 - gap / EXP_GAP_CUTOFF;
+  return t * t;
+}
 
 /**
  * 출전하지 않은 파티원이 받는 경험치 비율.
@@ -510,11 +551,24 @@ export const EXP_GROWTH_RATE = 1.04;
  *
  * 재도전은 0.5만 아니면 다 비슷하게 떨어진다(11.7~12.8, 노이즈 범위). 갈리는 건 격차 쪽이고,
  * 거기서 따라잡기가 이긴다. 단순히 다 같이 빨리 크는 게 아니라 뒤처진 쪽만 당기기 때문이다.
+ *
+ * 레벨차 컷오프(expLevelGapMultiplier)가 들어오면서 계수를 낮췄다. 이제 뒤처진 몬스터는
+ * **레벨차 배수에서도** 이득을 보므로(적 레벨과 가까우니 배수가 크다) 여기서까지 크게 당기면
+ * 이중 보정이 된다.
  */
 export function benchExpShare(benchLevel: number, leadLevel: number): number {
   const gap = Math.max(0, leadLevel - benchLevel);
-  return Math.min(1, 0.5 + gap * 0.05);
+  return Math.min(1, 0.45 + gap * 0.03);
 }
+
+/**
+ * 경험치 획득 처리. 레벨업 시 스탯이 오르고 HP 를 **일부** 회복한다.
+ *
+ * 예전엔 전회복이었다. 그게 탑에서 소모라는 개념을 지워 버렸다 — 레벨이 흔했던 시절엔
+ * 몇 층에 한 번씩 공짜 완전 회복이 딸려 왔고, 무패 완주가 가능했던 실제 원인이 그것이다.
+ * 레벨업은 여전히 보상이되, 회복은 최대 HP 의 4분의 1 까지만이다.
+ */
+export const LEVEL_UP_HEAL_RATIO = 0.25;
 
 export function gainExp(monster: BattleMonster, gainedExp: number) {
   let nextMonster: BattleMonster = {
@@ -525,18 +579,23 @@ export function gainExp(monster: BattleMonster, gainedExp: number) {
   let leveledUp = false;
 
   while (nextMonster.exp >= nextMonster.expToNextLevel) {
+    const healed = Math.min(
+      nextMonster.maxHp + 10,
+      nextMonster.currentHp + Math.floor((nextMonster.maxHp + 10) * LEVEL_UP_HEAL_RATIO),
+    );
     nextMonster = {
       ...nextMonster,
       exp: nextMonster.exp - nextMonster.expToNextLevel,
       level: nextMonster.level + 1,
-      expToNextLevel: Math.floor(nextMonster.expToNextLevel * EXP_GROWTH_RATE),
+      expToNextLevel: expToNext(nextMonster.level + 1),
       maxHp: nextMonster.maxHp + 10,
       attack: nextMonster.attack + 3,
       defense: nextMonster.defense + 2,
       speed: nextMonster.speed + 2,
     };
 
-    nextMonster.currentHp = nextMonster.maxHp;
+    // 기절한 채로 레벨이 올라도 일어나지는 않는다 — 그건 회복이 아니라 부활이다
+    nextMonster.currentHp = monster.currentHp > 0 ? Math.max(1, healed) : 0;
     leveledUp = true;
   }
 
