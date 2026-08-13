@@ -9,12 +9,16 @@
  * 실행: npx tsx scripts/sim/run.ts [횟수]
  */
 import {
-  installSeededRandom, createInitialSim, restorePartyHp, fightFloor, runForest, tryCatch,
+  installSeededRandom, createInitialSim, restorePartyHp, fightFloor, runForest,
   canCraft, craft, equip, levelUpArtifact, enhanceArtifact, synthesize, disassemble, addMaterial,
   FOREST_AREAS, MAX_TOWER_FLOOR, ALL_RECIPES,
   type SimState, type OwnedMon,
 } from "./gameModel";
 import { monsters } from "../../src/monster/monsters";
+import { settleBag } from "../../src/camp/forest/runStore";
+import {
+  chainKeyOf, essenceCostFor, imprintTier, IMPRINT_ESSENCE_ID, MAX_IMPRINT_TIER,
+} from "../../src/monster/imprint";
 import { getFloorEnemy } from "../../src/shared/floorTable";
 import {
   ARTIFACT_SLOT_MAP, MAX_EQUIPMENT_ENHANCEMENT, canSynthesizeArtifacts,
@@ -60,6 +64,12 @@ interface RunStats {
   bossParty: Record<number, { name: string; level: number; atk: number; hp: number; pow: number }[]>;
   /** 보스층을 깨기까지 실제로 몇 번 죽었나 (그 층에서 소모한 재도전 사이클) */
   bossRetries: Record<number, number>;
+  /** 각인에 먹인 중복 수 */
+  imprintFed: number;
+  /** 소란 100 에 걸려 쫓겨난 숲 원정 수 (재료 절반) */
+  forcedRetreats: number;
+  /** 캠프로 내려가 회복한 횟수 — 이게 0 이면 소모 관리가 없다는 뜻이다 */
+  campReturns: number;
 }
 
 /**
@@ -90,28 +100,77 @@ async function simulateRun(seed: number): Promise<RunStats> {
     finalLevels: [], finalParty: [], materialsLeft: {}, blockedRecipes: {},
     lossByFloor: {}, battlesByFloor: {}, leadLevelAtFloor: {},
     bossParty: {}, bossRetries: {},
+    imprintFed: 0, forcedRetreats: 0, campReturns: 0,
   };
+
+  /** 보관함 — 각인 재료가 된다. 전투에는 안 나오므로 능력치는 필요 없다 */
+  const storage: OwnedMon[] = [];
 
   let uid = 1;
 
   // ── 숲 1회 ───────────────────────────────────────────────────────────────
+  //
+  // 예전 이 함수는 게임보다 후하게 쳐 줬다. `settleBag`(강제 퇴각 50% 회수)을 안 걸고
+  // `bankAlert=Infinity` 로 쫓겨날 때까지 걸어서 원재료를 그대로 적립했고(약 1.85배 과대),
+  // 포획은 `runForest` 가 이미 굴린 결과를 버리고 `tryCatch()` 로 다시 굴렸다.
+  // 지금은 **소란 85 에서 자진 귀환하고 버릇을 읽는** 사람을 흉내 낸다.
+  const CATCH_POLICY = { knowsTell: true, retreatCostOver: 10, retreatAlertOver: 70, costScale: 1 };
+
   const doForest = () => {
     const area = [...FOREST_AREAS].reverse().find((a) => s.bestFloor >= a.unlockFloor) ?? FOREST_AREAS[0];
-    const res = runForest(area);
+    const res = runForest(area, "avoid", 85, CATCH_POLICY);
     st.forestRuns++;
-    for (const d of res.drops) addMaterial(s, d.id, d.count);
 
-    for (const wild of res.encounters) {
-      if (!tryCatch()) continue;
+    // 가방을 한 번 합친 뒤 정산한다 — 쫓겨났으면 지목한 한 종류만 온전히 남는다
+    const bag = new Map<string, number>();
+    for (const d of res.drops) bag.set(d.id, (bag.get(d.id) ?? 0) + d.count);
+    const entries = [...bag].map(([id, count]) => ({ id, count }));
+    const keep = entries.reduce<{ id: string; count: number } | null>(
+      (best, e) => (best && best.count >= e.count ? best : e), null);
+    const reason = res.forcedRetreat ? "forced" : res.metWarden ? "warden" : "voluntary";
+    for (const b of settleBag(entries, reason, keep?.id)) addMaterial(s, b.id, b.count);
+    if (res.forcedRetreat) st.forcedRetreats++;
+
+    // 잡아 온 것: 파티가 비면 채우고, 더 좋으면 갈아타고, 나머지는 각인 재료로 남긴다
+    for (const wild of res.caughtMonsters) {
       const caught: OwnedMon = { ...wild, uid: `c${uid++}`, currentHp: wild.maxHp };
       if (partySlots(s) < 3) { s.party.push(caught); continue; }
-      // 파티가 찼으면 가장 약한 쪽과 비교해 교체 (보관함은 전투에 영향이 없으므로 생략)
       const weakest = s.party.reduce((a, b) => (power(a) <= power(b) ? a : b));
       // 키워둔 몬스터를 레벨이 훨씬 낮은 신규 포획으로 갈아타지는 않는다.
       // (종족 잠재력이 좋아도 레벨 차이를 메우는 비용이 더 크다)
       const levelOk = caught.level >= weakest.level * 0.8;
       if (levelOk && power(caught) > power(weakest) * 1.15) {
+        const dropped = s.party[s.party.indexOf(weakest)];
         s.party[s.party.indexOf(weakest)] = caught;
+        storage.push(dropped);
+      } else {
+        storage.push(caught);
+      }
+    }
+    doImprint();
+  };
+
+  /**
+   * 각인 — 보관함의 중복을 계열에 먹인다 (playerStore.feedImprint 와 같은 규칙).
+   *
+   * 예전 시뮬은 각인을 **한 번도 쓰지 않았다**(`imprint: {}` 고정). 각인은 능력치 전부에
+   * 최대 +25% 라, 그걸 빼고 "시스템을 다 쓰는 플레이어"를 잰다고 할 수 없다.
+   */
+  const doImprint = () => {
+    for (const mon of s.party) {
+      const key = chainKeyOf(mon);
+      for (;;) {
+        const fed = s.imprint[key] ?? 0;
+        if (imprintTier(fed) >= MAX_IMPRINT_TIER) break;
+        // 같은 계열의 여분이 있어야 먹인다 (파티에 있는 개체는 못 먹인다)
+        const idx = storage.findIndex((m) => chainKeyOf(m) === key);
+        if (idx < 0) break;
+        const cost = essenceCostFor(fed);
+        if ((s.materials[IMPRINT_ESSENCE_ID] ?? 0) < cost) break;
+        if (cost > 0) s.materials[IMPRINT_ESSENCE_ID] -= cost;
+        storage.splice(idx, 1);
+        s.imprint[key] = fed + 1;
+        st.imprintFed++;
       }
     }
   };
@@ -193,8 +252,20 @@ async function simulateRun(seed: number): Promise<RunStats> {
   let floor = 1;
   let stuck = 0;
 
-  while (floor <= MAX_TOWER_FLOOR) {
+  /** 캠프까지 내려가 쉰다. 무료지만 공짜는 아니다 — 내려간 만큼 다시 올라와야 한다 */
+  const goHomeAndRest = () => {
     restorePartyHp(s);
+    st.campReturns++;
+  };
+
+  while (floor <= MAX_TOWER_FLOOR) {
+    // 층마다 공짜 전회복을 넣지 않는다. 예전엔 여기서 매 층 회복시켜 놓고
+    // "소모가 없다"고 진단했는데, 그 소모를 지운 게 이 줄이었다.
+    // 사람이 하듯 위험할 때만 내려간다.
+    const hurt = s.party.filter((m) => m.currentHp > 0).length === 0
+      || s.party.reduce((sum, m) => sum + m.currentHp / m.maxHp, 0) / s.party.length < 0.5;
+    if (hurt) goHomeAndRest();
+
     if (st.leadLevelAtFloor[floor] === undefined) {
       st.leadLevelAtFloor[floor] = Math.max(...s.party.map((m) => m.level));
       if (floor % 10 === 0) {
@@ -226,12 +297,13 @@ async function simulateRun(seed: number): Promise<RunStats> {
     stuck++;
     if (stuck > STUCK_LIMIT || st.towerBattles > BATTLE_BUDGET) { st.wallFloor = floor; break; }
 
+    goHomeAndRest();
     doForest();
     doCrafting();
     doAnvil();
     const farmFloor = Math.max(1, s.bestFloor);
     for (let i = 0; i < 3; i++) {
-      restorePartyHp(s);
+      if (s.party.reduce((sum, m) => sum + m.currentHp / m.maxHp, 0) / s.party.length < 0.5) goHomeAndRest();
       const fr = await fightFloor(s, farmFloor);
       st.towerBattles++;
       st.battlesByFloor[farmFloor] = (st.battlesByFloor[farmFloor] ?? 0) + 1;
@@ -282,7 +354,9 @@ if (walls.length) {
 }
 console.log(`탑 전투 수      : ${avg((r) => r.towerBattles).toFixed(1)}`);
 console.log(`패배 수         : ${avg((r) => r.towerLosses).toFixed(1)}`);
-console.log(`숲 탐험 수      : ${avg((r) => r.forestRuns).toFixed(1)}`);
+console.log(`숲 탐험 수      : ${avg((r) => r.forestRuns).toFixed(1)} (강제 퇴각 ${avg((r) => r.forcedRetreats).toFixed(1)})`);
+console.log(`각인에 먹인 수  : ${avg((r) => r.imprintFed).toFixed(1)}`);
+console.log(`캠프 복귀       : ${avg((r) => r.campReturns).toFixed(1)}`);
 console.log(`총 전투 턴      : ${avg((r) => r.totalTurns).toFixed(0)}`);
 console.log(`제작 물약       : ${avg((r) => r.potionsCrafted).toFixed(1)}`);
 console.log(`사용 물약       : ${avg((r) => r.potionsUsed).toFixed(1)}`);

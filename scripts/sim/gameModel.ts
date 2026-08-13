@@ -7,7 +7,7 @@
  * 원본과 1:1로 옮겨 적는다. 옮겨 적은 곳에는 출처를 주석으로 남긴다.
  */
 import {
-  getFloorEnemy, getFloorEnemySkill, MAX_TOWER_FLOOR, scaleToLevel,
+  getFloorEnemy, getFloorEnemySkill, isHardFloor, MAX_TOWER_FLOOR, scaleToLevel,
 } from "../../src/shared/floorTable";
 import { rollBattleDrop } from "../../src/shared/dropTables";
 import { FOREST_AREAS, type ForestArea } from "../../src/camp/forest/areas";
@@ -27,6 +27,7 @@ import type { RpsChoice } from "../../src/workshop/rps";
 import {
   applyDamage, applyStatusEffect, calculateDamage, checkStatusEffects,
   benchExpShare, createBattleMonster, gainExp, getAIAction, getTypeMultiplier, isFainted,
+  expLevelGapMultiplier,
   tickSpeedGauge,
   type BattleMonster,
 } from "../../src/battle/battleUtils";
@@ -173,6 +174,34 @@ function pickHealPotion(s: SimState, missing: number): string | null {
 }
 
 /**
+ * 이번 턴에 마실 물약. 회복만 보던 걸 **가방 전체**를 쓰게 넓혔다.
+ *
+ * 예전엔 회복 물약만 골랐다. 그래서 "시스템을 다 쓰는 플레이어" 를 잰다면서 정작
+ * 게임에서 제일 큰 배수(강한 집중의 물약 = 공격 ×2.0 · 5턴)를 한 번도 안 마셨다.
+ * 관문 난이도를 그 상태로 재면 관문이 실제보다 어려워 보인다.
+ */
+function pickPotionAction(
+  s: SimState, mon: BattleMonster, turn: number, hardFloor: boolean,
+): string | null {
+  const hpRatio = mon.currentHp / mon.maxHp;
+
+  // 1) 위험하면 회복이 최우선
+  if (hpRatio < 0.4) {
+    const heal = pickHealPotion(s, mon.maxHp - mon.currentHp);
+    if (heal) return heal;
+  }
+  // 2) 상태이상은 오래 끄는 싸움에서만 푼다(잡몹은 그냥 맞고 이긴다)
+  if (hardFloor && mon.status && (s.potions.antidote ?? 0) > 0) return "antidote";
+  // 3) 관문·보스는 첫 턴에 공격 버프부터 건다 — 사람도 그렇게 한다
+  if (hardFloor && turn === 1 && mon.attackBuffTurns <= 0) {
+    for (const id of ["strong_attack_buff", "attack_buff"]) {
+      if ((s.potions[id] ?? 0) > 0) return id;
+    }
+  }
+  return null;
+}
+
+/**
  * 탑 한 층 전투. 실제 BattlePage와 같은 순서로 진행한다:
  * 선공 판정 → 상태이상 → 공격 → 반격 → 기절 시 교체 → 승리 시 경험치·드랍.
  */
@@ -202,9 +231,8 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
     let np = battlers[activeIdx];
     const bonus = bonuses[activeIdx];
 
-    // ── 행동 선택: 위험하면 회복, 아니면 공격 ──
-    const missing = np.maxHp - np.currentHp;
-    const potionId = np.currentHp / np.maxHp < 0.4 ? pickHealPotion(s, missing) : null;
+    // ── 행동 선택: 물약(회복·해독·버프)이 먼저, 없으면 공격 ──
+    const potionId = pickPotionAction(s, np, turns, isHardFloor(floor));
     const move = pickBestMove(np, ne);
     const playerSpeed = np.speed + bonus.speed;
     const playerFirst = playerSpeed >= ne.speed;
@@ -243,13 +271,24 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
     };
 
     const doPlayerTurn = (): boolean => {
+      // 공격 버프는 턴을 먹으므로 먼저 깎는다 (BattlePage.tickBuff 와 같은 순서)
+      if (np.attackBuffTurns > 0) {
+        const left = np.attackBuffTurns - 1;
+        np = { ...np, attackBuffTurns: left, attackBuffMult: left > 0 ? np.attackBuffMult : 1.0 };
+        battlers[activeIdx] = np;
+      }
       if (potionId) {
         const potion = POTIONS.find((p) => p.id === potionId)!;
         s.potions[potionId] = (s.potions[potionId] ?? 0) - 1;
         potionsUsed++;
-        if (potion.effect.type === "full_heal") np = { ...np, currentHp: np.maxHp };
-        else if (potion.effect.type === "heal") {
-          np = { ...np, currentHp: Math.min(np.maxHp, np.currentHp + potion.effect.amount) };
+        const eff = potion.effect;
+        if (eff.type === "full_heal") np = { ...np, currentHp: np.maxHp };
+        else if (eff.type === "heal") {
+          np = { ...np, currentHp: Math.min(np.maxHp, np.currentHp + eff.amount) };
+        } else if (eff.type === "cure_status") {
+          np = { ...np, status: null, statusTurns: 0 };
+        } else if (eff.type === "buff_attack") {
+          np = { ...np, attackBuffMult: eff.multiplier, attackBuffTurns: eff.turns };
         }
         battlers[activeIdx] = np;
         return false;
@@ -289,7 +328,8 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
 
     if (playerWon) {
       // 경험치는 마지막에 싸운 몬스터만 받는다 (BattlePage와 동일)
-      const earned = Math.floor(ne.rewardExp * (1 + bonus.expBonus / 100));
+      const baseExp = ne.rewardExp * (1 + bonus.expBonus / 100);
+      const earned = Math.floor(baseExp * expLevelGapMultiplier(ne.level, np.level));
       const prevLevel = np.level;
       let grown = gainExp(np, earned).updatedMonster;
       if (grown.level > prevLevel) grown = (await applyLevelGrowth(grown, prevLevel)).monster;
@@ -319,7 +359,10 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
         // 대기 파티원의 HP도 각인 배수를 벗겨 되돌린다 (전투 상한 대비 비율만 지킨다)
         mate.currentHp = Math.max(0, Math.round(mate.maxHp * (battlers[i].currentHp / battlers[i].maxHp)));
         if (mate.currentHp <= 0) continue;
-        const share = Math.max(1, Math.floor(earned * benchExpShare(mate.level, grown.level)));
+        const share = Math.floor(
+          baseExp * expLevelGapMultiplier(ne.level, mate.level) * benchExpShare(mate.level, grown.level),
+        );
+        if (share <= 0) continue;
         const bm = createBattleMonster(mate);
         const prevLv = bm.level;
         const res = gainExp(bm, share);
@@ -398,6 +441,8 @@ export interface ForestRunResult {
   escapes: number;
   /** 포획에 성공한 수 — 몬스터는 즉시 확정이라 정산에 안 걸린다 */
   caught: number;
+  /** 실제로 데려온 몬스터. 각인 재료가 되므로 마릿수만으로는 부족하다 */
+  caughtMonsters: Monster[];
   /** 스스로 물러선 횟수. 놓침과 달리 escapeAlert 가 안 붙는다 */
   retreats: number;
   /** 실제로 건 포획 시도의 총합. 3 에서 얼마나 내려갔는지가 이 작업의 지표다 */
@@ -468,6 +513,7 @@ export function runForest(
 ): ForestRunResult {
   const drops: { id: string; count: number }[] = [];
   const encounters: Monster[] = [];
+  const caughtMonsters: Monster[] = [];
 
   let alert = clampAlert(area.startingAlert);
   let alertPeak = alert;
@@ -540,7 +586,7 @@ export function runForest(
 
       attemptAlertSpent += spent;
       alert = clampAlert(alert + spent);
-      if (got) caught++;
+      if (got) { caught++; caughtMonsters.push(target); }
       else if (quit) retreats++;
       else {
         escapes++;
@@ -561,7 +607,7 @@ export function runForest(
   }
 
   return {
-    drops, encounters, steps: depth, alert, alertPeak, forcedRetreat, metWarden,
+    drops, encounters, caughtMonsters, steps: depth, alert, alertPeak, forcedRetreat, metWarden,
     escapes, caught, retreats, attempts, catchSteps, attemptAlertSpent,
   };
 }
