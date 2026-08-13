@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 import { elementChip, hpToken, isHpDanger, HP_DANGER_PCT, ELEMENT_CHIP_INK, ELEMENT_COLOR } from "../src/shared/palette";
 import { STATUS_META, statusBadge, statusDetail, statusLabel } from "../src/battle/statusInfo";
 import {
-  STATUS_TICK_RATIO, checkStatusEffects, createBattleMonster,
+  STATUS_TICK_RATIO, STATUS_DURATION, checkStatusEffects, createBattleMonster,
+  applyStatusEffect, isFainted,
   catchChance, checkCatchCondition,
   CATCH_BASE_RATE, CATCH_STATUS_MULT, CATCH_MAX_RATE, CATCH_HP_THRESHOLD,
 } from "../src/battle/battleUtils";
@@ -57,32 +58,56 @@ test("표시한 피해율이 실제로 깎이는 양과 맞는다", () => {
   }
 });
 
+const dummy = () => createBattleMonster({
+  id: "m", name: "시험체", type: "fire", maxHp: 200, attack: 10, defense: 10, speed: 10,
+  moves: [], level: 1, exp: 0, expToNextLevel: 100, rewardExp: 1,
+});
+
 /**
- * 남은 턴 개념이 이 게임에 없다는 것을 못 박는다. 빙결만 스스로 풀리고 나머지는 안 풀린다 —
- * 나중에 지속 턴이 생기면 이 테스트가 깨지고, 그때 표시도 같이 고치라는 신호가 된다.
+ * 상태이상은 전부 정해진 턴 뒤에 스스로 풀린다. 예전엔 빙결만 풀리고 화상·독·마비는
+ * 전투가 끝날 때까지 갔다 — 화상 하나면 12턴에 최대 HP 전부가 날아갔다.
  */
-test("빙결만 스스로 풀린다 — 남은 턴이 있는 상태이상은 없다", () => {
-  const base = createBattleMonster({
-    id: "m", name: "시험체", type: "fire", maxHp: 200, attack: 10, defense: 10, speed: 10,
-    moves: [], level: 1, exp: 0, expToNextLevel: 100, rewardExp: 1,
-  });
+test("상태이상은 STATUS_DURATION 턴을 채우면 풀린다", () => {
+  for (const status of ["paralysis", "poison", "burn", "freeze"] as const) {
+    let mon = applyStatusEffect(dummy(), status);
+    assert.equal(mon.statusTurns, STATUS_DURATION[status], `${status}: 지속 턴이 안 박혔다`);
 
-  assert.equal(checkStatusEffects({ ...base, status: "freeze" }).monster.status, null);
-  assert.equal(STATUS_META.freeze.duration, "1턴");
+    for (let i = 0; i < STATUS_DURATION[status]; i++) {
+      assert.equal(mon.status, status, `${status}: ${i}턴째에 벌써 풀렸다`);
+      mon = checkStatusEffects(mon).monster;
+    }
+    assert.equal(mon.status, null, `${status}: 지속 턴이 지나도 안 풀린다`);
+  }
+});
 
-  for (const status of ["paralysis", "poison", "burn"] as const) {
-    assert.equal(checkStatusEffects({ ...base, status }).monster.status, status);
-    assert.equal(STATUS_META[status].duration, "지속");
+test("화면에 적히는 지속 턴이 전투가 쓰는 값과 같다", () => {
+  for (const status of ["paralysis", "poison", "burn", "freeze"] as const) {
+    assert.equal(STATUS_META[status].duration, `${STATUS_DURATION[status]}턴`);
   }
 });
 
 test("상태이상 표시는 좁은 곳·넓은 곳이 같은 표를 쓴다", () => {
   assert.equal(statusLabel("poison"), "☠독");
-  assert.equal(statusBadge("poison"), "☠독 지속");
-  assert.equal(statusDetail("poison"), "☠독 지속 · 매 턴 -6%");
+  assert.equal(statusBadge("poison", 3), "☠독 3턴");
+  assert.equal(statusDetail("poison", 3), "☠독 3턴 · 매 턴 -6%");
+  // 남은 턴을 모르는 자리에서는 걸렸을 때의 총 지속을 적는다
+  assert.equal(statusBadge("poison"), `☠독 ${STATUS_DURATION.poison}턴`);
   // 깎이지 않는 상태이상에는 피해율을 붙이지 않는다
-  assert.equal(statusDetail("paralysis"), "⚡마비 지속");
+  assert.equal(statusDetail("paralysis", 2), "⚡마비 2턴");
   assert.equal(statusLabel(null), "");
+});
+
+/**
+ * 상태이상 피해로 HP 가 0 이 되면 그 자리에서 쓰러져야 한다. 전투 흐름은 React 안에
+ * 있어 여기서 못 부르지만, 적어도 "HP 가 0 인데 isFainted 가 false"인 구멍은 없어야 한다.
+ */
+test("상태이상 피해만으로도 HP 가 0 이 되고 기절로 잡힌다", () => {
+  const burning = { ...applyStatusEffect(dummy(), "burn"), currentHp: 5 };
+  const after = checkStatusEffects(burning).monster;
+  assert.equal(after.currentHp, 0);
+  assert.equal(isFainted(after), true);
+  // 쓰러진 몬스터에게 "상태가 풀렸다"를 띄우지 않는다 — 되살아난 것처럼 읽힌다
+  assert.ok(!checkStatusEffects(burning).logs.some((l) => l.includes("풀렸다")));
 });
 
 // ─── 상성표 ────────────────────────────────────────────────────────────────────

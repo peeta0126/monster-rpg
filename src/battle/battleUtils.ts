@@ -8,8 +8,8 @@ export interface BattleMonster extends Monster {
   currentHp: number;
   /** 현재 적용된 상태이상. null이면 정상 상태 */
   status: StatusEffect;
-  /** 이번 턴에 행동을 건너뛸지 여부 (빙결/마비 처리 후 설정) */
-  skipNextTurn: boolean;
+  /** 상태이상이 몇 턴 더 남았는가. 0 이면 상태이상이 없다 (STATUS_DURATION 참고) */
+  statusTurns: number;
   /** 공격 버프 배율 (1.0 = 없음) */
   attackBuffMult: number;
   /** 공격 버프 남은 턴 (0 = 없음) */
@@ -22,7 +22,7 @@ export function createBattleMonster(monster: Monster): BattleMonster {
     ...monster,
     currentHp: monster.maxHp,
     status: null,
-    skipNextTurn: false,
+    statusTurns: 0,
     attackBuffMult: 1.0,
     attackBuffTurns: 0,
   };
@@ -33,7 +33,7 @@ export function createBattleMonsterFromOwned(monster: Monster & { currentHp: num
   return {
     ...monster,
     status: null,
-    skipNextTurn: false,
+    statusTurns: 0,
     attackBuffMult: 1.0,
     attackBuffTurns: 0,
   };
@@ -182,8 +182,30 @@ export function isFainted(monster: BattleMonster): boolean {
 export const STATUS_TICK_RATIO = { poison: 0.06, burn: 0.08 } as const;
 
 /**
+ * 상태이상이 몇 턴 만에 저절로 풀리는가. **여기 한 곳에서만 정한다** —
+ * 화면(statusInfo)도 전투도 시뮬도 이 표를 읽는다.
+ *
+ * 예전엔 자동 해제가 빙결(1턴)뿐이었다. 화상 8%/턴 이면 12턴에 최대 HP 전부가
+ * 날아가는데 그게 전투 끝까지 갔으니, 한 번 걸리면 그 전투는 이미 진 것이었다.
+ * 반대로 너무 짧으면 상태기를 쓰는 턴이 아깝다 — 걸어도 의미가 없으면 안 된다.
+ *
+ * 그래서 "아프지만 버틸 수 있는" 총량으로 잡았다.
+ *   화상 4턴 × 8% = 최대 HP 의 32%
+ *   독   5턴 × 6% = 30% (덜 아픈 대신 오래 간다 — 둘의 성격이 갈린다)
+ *   마비 4턴 × 30% 스킵 = 기대 1.2턴 상실
+ *   빙결 1턴 (확정 행동 불가라 짧다 — 예전 그대로)
+ */
+export const STATUS_DURATION: Record<NonNullable<StatusEffect>, number> = {
+  burn: 4,
+  poison: 5,
+  paralysis: 4,
+  freeze: 1,
+};
+
+/**
  * 몬스터에게 상태이상 적용
- * 이미 다른 상태이상이 걸려 있으면 적용하지 않는다
+ * 이미 다른 상태이상이 걸려 있으면 적용하지 않는다(그 사실은 호출부가
+ * status 가 그대로인 것으로 알 수 있다 — 화면은 "효과가 없었다"를 띄운다)
  */
 export function applyStatusEffect(
   monster: BattleMonster,
@@ -191,7 +213,7 @@ export function applyStatusEffect(
 ): BattleMonster {
   // 이미 상태이상 존재 시 중복 적용 불가
   if (monster.status !== null) return monster;
-  return { ...monster, status: effect };
+  return { ...monster, status: effect, statusTurns: STATUS_DURATION[effect] };
 }
 
 /**
@@ -234,9 +256,8 @@ export function checkStatusEffects(monster: BattleMonster): {
       break;
 
     case "freeze":
-      // 빙결: 1턴 행동 불가 후 자동 해제
+      // 빙결: 행동 불가
       skipTurn = true;
-      updated.status = null;
       logs.push(`${monster.name}은(는) 빙결 상태라 움직일 수 없다!`);
       break;
 
@@ -250,8 +271,27 @@ export function checkStatusEffects(monster: BattleMonster): {
       break;
   }
 
+  // 남은 턴을 깎는다. 다 쓰면 풀린다 — 기절한 몬스터에게는 해제 로그를 띄우지 않는다
+  // (그 줄이 "쓰러졌다" 뒤에 붙으면 되살아난 것처럼 읽힌다).
+  updated.statusTurns = Math.max(0, updated.statusTurns - 1);
+  if (updated.statusTurns === 0) {
+    const cured = updated.status;
+    updated.status = null;
+    if (updated.currentHp > 0) {
+      logs.push(`${monster.name}의 ${STATUS_NAME[cured!]} 상태가 풀렸다.`);
+    }
+  }
+
   return { monster: updated, skipTurn, logs };
 }
+
+/**
+ * 로그에 적을 상태이상 이름. 화면 표시용 표(statusInfo)는 아이콘까지 들고 있지만
+ * 그쪽이 이 파일을 import 하고 있어서, 로그 한 줄을 위해 반대로 부르면 순환이 된다.
+ */
+const STATUS_NAME: Record<NonNullable<StatusEffect>, string> = {
+  burn: "화상", poison: "독", paralysis: "마비", freeze: "빙결",
+};
 
 // ─── 포획 ───────────────────────────────────────────────────────────────────────
 

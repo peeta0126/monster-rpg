@@ -15,9 +15,12 @@ export interface BattleSceneUpdatePayload {
   playerHp: number;
   playerMaxHp: number;
   playerStatus: StatusEffect;
+  /** 상태이상이 몇 턴 남았는가. 배지에 그대로 적힌다 */
+  playerStatusTurns?: number;
   enemyHp: number;
   enemyMaxHp: number;
   enemyStatus: StatusEffect;
+  enemyStatusTurns?: number;
 }
 
 // ─── 캔버스 / 레이아웃 상수 ────────────────────────────────────────────────────
@@ -625,8 +628,8 @@ export default class BattleScene extends Phaser.Scene {
     this.setDanger("enemy",  isHpDanger((p.enemyHp  / p.enemyMaxHp)  * 100));
     this.setDanger("player", isHpDanger((p.playerHp / p.playerMaxHp) * 100));
 
-    this.enemyStatusBadge.setText(statusBadge(p.enemyStatus));
-    this.playerStatusBadge.setText(statusBadge(p.playerStatus));
+    this.enemyStatusBadge.setText(statusBadge(p.enemyStatus, p.enemyStatusTurns));
+    this.playerStatusBadge.setText(statusBadge(p.playerStatus, p.playerStatusTurns));
     if (p.enemyStatus) this.enemyStatusBadge.setColor(PALETTE[STATUS_META[p.enemyStatus].color]);
     if (p.playerStatus) this.playerStatusBadge.setColor(PALETTE[STATUS_META[p.playerStatus].color]);
 

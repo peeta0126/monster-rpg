@@ -207,8 +207,10 @@ export default function BattlePage() {
   // ─── Phaser 동기화 ─────────────────────────────────────────────────────────────
   const syncHpToPhaser = useCallback((p: BattleMonster, e: BattleMonster) => {
     gameEvents.emit(GAME_EVENT.BATTLE_STATE_UPDATE, {
-      playerHp: p.currentHp, playerMaxHp: p.maxHp, playerStatus: p.status,
-      enemyHp:  e.currentHp, enemyMaxHp:  e.maxHp, enemyStatus:  e.status,
+      playerHp: p.currentHp, playerMaxHp: p.maxHp,
+      playerStatus: p.status, playerStatusTurns: p.statusTurns,
+      enemyHp:  e.currentHp, enemyMaxHp:  e.maxHp,
+      enemyStatus:  e.status, enemyStatusTurns: e.statusTurns,
     });
   }, []);
   useEffect(() => { syncHpToPhaser(player, enemyState); }, [player, enemyState, syncHpToPhaser]);
@@ -434,7 +436,11 @@ export default function BattlePage() {
     if (res.multiplier >= 2)    await sendLogAndWait("효과가 굉장했다!");
     else if (res.multiplier < 1) await sendLogAndWait("효과가 별로인 듯하다...");
 
-    if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
+    // 이미 상태이상이 걸린 상대에게 상태기를 쓰면 그 턴은 통째로 날아간다. 예전엔 아무
+    // 반응도 없이 다음 줄로 넘어가서, 안 걸린 건지 원래 그런 건지 알 수가 없었다.
+    if (move.power === 0 && move.statusEffect && next.status !== null) {
+      await sendLogAndWait(`${next.name}은(는) 이미 ${statusLabel(next.status)} 상태다. 효과가 없었다...`);
+    } else if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
       const before = next.status;
       next = applyStatusEffect(next, move.statusEffect);
       if (before === null && next.status !== null) {
@@ -668,7 +674,7 @@ export default function BattlePage() {
     } else if (eff.type === "cure_status") {
       if (np.status) {
         await sendLogAndWait(`${np.name}의 ${statusLabel(np.status)} 상태가 치료됐다!`);
-        np = { ...np, status: null };
+        np = { ...np, status: null, statusTurns: 0 };
       } else {
         await sendLogAndWait("상태이상이 없다...");
       }
@@ -815,9 +821,9 @@ export default function BattlePage() {
             <span className="text-earth-400">Lv.{player.level}</span>
             <StatBar value={player.currentHp} max={player.maxHp} showNumbers className="w-64" />
             {player.status && (
-              /* 자리가 있는 쪽이라 매 턴 깎이는 양까지 적는다 — "버틸까 지금 지를까"의 근거다 */
+              /* 자리가 있는 쪽이라 남은 턴과 매 턴 깎이는 양까지 적는다 — "버틸까 지금 지를까"의 근거다 */
               <span className="rounded bg-ember-700/18 px-1 py-0.5 text-ember-500 text-pixel-sm">
-                {statusDetail(player.status)}
+                {statusDetail(player.status, player.statusTurns)}
               </span>
             )}
             {player.attackBuffTurns > 0 && (
