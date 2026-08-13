@@ -151,7 +151,8 @@ test("상태이상 피해로 HP 가 0 이 되면 그 자리에서 쓰러진다",
 // ─── 3. 치명타 · 속도 ───────────────────────────────────────────────────────────
 
 test("치명타가 장비 없이도 뜬다 (기본 치명타율)", async ({ page }) => {
-  await seed(page, { species: "mossyfinal", level: 60,
+  // 오래 살아남아야 표본이 쌓인다 — 관문이 세진 지금은 레벨을 넉넉히 준다
+  await seed(page, { species: "mossyfinal", level: 150, potions: { max_potion: 30 },
     moves: [{ id: "spark", name: "전기불꽃", type: "electric", power: 1, accuracy: 100, category: "physical" }] });
   await enterFloor(page, 30);
 
@@ -197,10 +198,40 @@ test("50층 오름의 기술 순서가 고정 순환이 아니다", async ({ pag
   expect(new Set(seq).size).toBeGreaterThan(1);
 });
 
-test("속도 차이를 화면이 미리 알려준다", async ({ page }) => {
+test("턴 바가 이번 라운드 순서를 미리 보여준다", async ({ page }) => {
   await seed(page, { species: "mossyfinal", level: 40 });   // 속도 158 — 1층 적보다 훨씬 빠르다
   await enterFloor(page, 1);
-  const info = await page.getByTestId("speed-info").innerText();
-  expect(info).toContain("선공");
-  expect(info).toMatch(/연속 \d+턴/);
+  const info = (await page.getByTestId("turn-order").innerText()).replace(/\s+/g, " ");
+  // 빠른 쪽(모왕)이 먼저 선다
+  expect(info).toMatch(/순서 모왕/);
+  // 속도 차가 크면 연속 행동 예고가 붙는다
+  expect(info).toMatch(/연속/);
+});
+
+test("방어 커맨드가 있고, 눌러도 전투가 이어진다", async ({ page }) => {
+  await seed(page, { species: "flameling", level: 20 });
+  await enterFloor(page, 3);
+  await expect(page.getByTestId("cmd-guard")).toBeEnabled();
+  await page.getByTestId("cmd-guard").click();
+  await advanceLogs(page);
+  expect(await logLines(page)).toContain("몸을 웅크렸다");
+});
+
+test("키보드만으로 기술을 고를 수 있다", async ({ page }) => {
+  await seed(page, { species: "mossy", level: 8 });
+  await enterFloor(page, 1);
+  // 1 = 첫 칸(기술) → 목록 → 1 = 첫 기술
+  await page.keyboard.press("1");
+  await expect(page.locator('[data-testid^="move-"]').first()).toBeVisible();
+  await page.keyboard.press("1");
+  await advanceLogs(page);
+  expect(await logLines(page)).toMatch(/모시의/);
+});
+
+test("커맨드에서 왼쪽 화살표로 파티 구역에 들어간다", async ({ page }) => {
+  await seed(page, { species: "mossy", level: 8 });
+  await enterFloor(page, 1);
+  await page.keyboard.press("ArrowLeft");
+  // 파티 구역이 포커스를 받으면 그 칸에 커서 표시(▶)가 붙는다
+  await expect(page.getByTestId("party-0")).toContainText("▶");
 });

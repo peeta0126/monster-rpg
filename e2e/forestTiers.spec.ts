@@ -42,8 +42,9 @@ const card = (page: Page, id: string) => page.locator(`[data-testid="forest-tier
 /** 기본 선택은 갈 수 있는 가장 높은 구역이다. 이미 뚫어 놓은 곳을 다시 찾게 하지 않는다. */
 const DEFAULT_TIER: [number, string][] = [
   [0,  "shallow"],
-  [10, "shallow"],
-  [11, "deep"],
+  [5,  "shallow"],
+  // 깊은 숲이 6층에 열린다 — 10층 관문을 넘을 장비의 재료가 그 관문 **앞에** 있어야 한다
+  [6,  "deep"],
   [20, "deep"],
   [21, "ancient"],
   [99, "ancient"],
@@ -74,7 +75,7 @@ test("잠긴 구역 — 눌러도 안 들어가고 해금 조건을 정확히 �
   // 죽은 버튼을 남기지 않는다 — 해금 조건이 그 자리를 대신한다
   await expect(ancient).not.toContainText("탐험하기");
 
-  await expect(card(page, "deep")).toContainText("무한의 탑 11층 도달 시 해금");
+  await expect(card(page, "deep")).toContainText("무한의 탑 6층 도달 시 해금");
 
   // 화면을 벗어나지 않았다
   await expect(page).toHaveURL(/\/forest$/);

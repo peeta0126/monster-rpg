@@ -76,18 +76,18 @@ test("fx: 전투 HUD 경고", async ({ page }) => {
  * 포획 버튼과 경험치 연출. 둘 다 실제로 그 상황을 만들어야 보인다.
  * 강한 파티로 1층 포획 전투에 들어가면 한 대에 정리되므로 두 장면을 이어서 찍을 수 있다.
  */
-test("fx: 포획률과 경험치 연출", async ({ page }) => {
+test("fx: 경험치 연출", async ({ page }) => {
   fs.mkdirSync(OUT, { recursive: true });
   await page.addInitScript(() => {
     localStorage.setItem("monster-rpg-auth", JSON.stringify({
       state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
     localStorage.setItem("monster-rpg-player", JSON.stringify({
       state: {
-        // 다음 레벨까지 5 만 남겨 둔다 — 한 판 이기면 반드시 레벨업 카드가 뜬다.
-        // 기술은 위력 20 짜리 하나. 한 대에 적이 21% 로 떨어져(죽지는 않아) 포획 가능
-        // 상태를 찍을 수 있고, 한 대 더 때리면 쓰러져 경험치 연출로 이어진다.
+        // 다음 레벨까지 1 만 남겨 둔다 — 한 판 이기면 반드시 레벨업 카드가 뜬다.
+        // ⚠️ 레벨은 층과 가까워야 한다. 레벨차가 6 이상이면 경험치가 0 이라(컷오프)
+        //    연출 자체가 안 뜬다 — 그게 정상 동작이라 여기서 잡으려는 것과 다르다.
         party: [{
-          id: "flameling", level: 20, uid: "catch-0", exp: 205, expToNextLevel: 210,
+          id: "flameling", level: 5, uid: "fx-0", exp: 115, expToNextLevel: 116,
           moves: [{ id: "tap", name: "톡", type: "normal", power: 20, accuracy: 100, category: "physical" }],
         }],
         storage: [], dexSeen: [], dexCaught: [], materials: {}, potions: {},
@@ -100,19 +100,18 @@ test("fx: 포획률과 경험치 연출", async ({ page }) => {
     localStorage.setItem("monster-rpg-battle-settings", JSON.stringify({
       state: { autoAdvance: false, logSpeed: "normal" }, version: 0 }));
   });
-  // 포획 칸으로 들어가야 버튼이 뜬다 (라우트 state)
   await page.goto("/battle");
   await expect(page.locator("#root")).not.toBeEmpty();
   await page.evaluate(() => {
-    history.replaceState({ ...(history.state ?? {}), usr: { floor: 1, isCatchZone: true } }, "");
+    history.replaceState({ ...(history.state ?? {}), usr: { floor: 1 } }, "");
   });
   await page.reload();
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // HP 가 아직 높다 — 버튼은 자리를 지키되 무엇이 모자란지 말해야 한다
-  await expect(page.getByTestId("cmd-catch")).toBeDisabled();
-  await page.screenshot({ path: path.join(OUT, "_catch-locked.png") });
+  // 상대 카드가 상성을 미리 말해 준다 — 예전엔 T 를 눌러 7×7 표를 봐야 알았다
+  await expect(page.getByTestId("enemy-card")).toBeVisible();
+  await page.screenshot({ path: path.join(OUT, "_enemy-card.png") });
 
   const swing = async () => {
     await page.getByTestId("cmd-moves").click();
@@ -125,13 +124,16 @@ test("fx: 포획률과 경험치 연출", async ({ page }) => {
     }
   };
 
-  // 한 대 → 30% 아래. 확률이 숫자로 뜬다
+  // 한 대 → 적 HP 가 줄고 상대 카드가 그걸 그대로 말한다
   await swing();
-  await expect(page.getByTestId("cmd-catch")).toBeEnabled({ timeout: 20_000 });
-  await page.screenshot({ path: path.join(OUT, "_catch-ready.png") });
+  await expect(page.getByTestId("enemy-card")).toContainText("HP");
+  await page.screenshot({ path: path.join(OUT, "_enemy-card-hurt.png") });
 
-  // 한 대 더 → 쓰러진다
-  await swing();
+  // 쓰러질 때까지 때린다
+  for (let i = 0; i < 6; i++) {
+    if (await page.getByTestId("exp-gain").count()) break;
+    await swing();
+  }
 
   // 그대로 쓰러지면 경험치 연출이 뜬다. 수동이라 레벨업 카드에서 멈춰 선다.
   const exp = page.getByTestId("exp-gain");

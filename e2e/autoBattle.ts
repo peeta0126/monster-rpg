@@ -125,11 +125,19 @@ function pickMove(options: MoveOption[]): MoveOption | null {
   return pool.reduce((best, o) => (o.damage > best.damage ? o : best));
 }
 
-/** 상단 상태바의 "현재HP/최대HP"를 읽어 비율을 반환 */
+/**
+ * **출전 중인** 몬스터의 HP 비율.
+ *
+ * 예전엔 패널 전체 텍스트에서 첫 `숫자/숫자` 를 집었는데, 새 배치에서 그 첫 자리는
+ * 파티 칸 1번이다 — 출전 중인 몬스터가 2번이면 엉뚱한 HP 를 보고 물약을 안 마신다.
+ * 출전 표시(data-active)를 달아 둔 칸에서만 읽는다.
+ */
 async function playerHpRatio(page: Page): Promise<number> {
-  // 클래스가 아니라 data-testid 로 잡는다 — 디자인이 바뀌어도 안 깨진다
-  const panel = await page.getByTestId("battle-panel").first().innerText();
-  const m = panel.match(/(\d+)\/(\d+)/);
+  const active = page.locator('[data-testid^="party-"][data-active="1"]');
+  const text = (await active.count()) > 0
+    ? await active.first().innerText()
+    : await page.getByTestId("battle-panel").first().innerText();
+  const m = text.match(/(\d+)\/(\d+)/);
   if (!m) return 1;
   const [, cur, max] = m;
   return Number(max) > 0 ? Number(cur) / Number(max) : 1;
@@ -153,15 +161,12 @@ async function tryUseHealingPotion(page: Page): Promise<boolean> {
   return false;
 }
 
-/** 기절 시 강제 교체 — 벤치에서 선택 가능한 몬스터를 고른다 */
+/** 기절 시 강제 교체 — 파티 구역에서 고를 수 있는 몬스터를 누른다 */
 async function switchToHealthyMember(page: Page): Promise<void> {
-  const bench = page.locator("button").filter({ hasText: "Lv." });
-  const count = await bench.count();
-  for (let i = 0; i < count; i++) {
-    const button = bench.nth(i);
-    const text = await button.innerText();
-    if (text.includes("선택") && (await button.isEnabled())) {
-      await button.click();
+  for (let i = 0; i < 3; i++) {
+    const slot = page.getByTestId(`party-${i}`);
+    if ((await slot.count()) > 0 && (await slot.first().isEnabled())) {
+      await slot.first().click();
       await advanceLogs(page);
       return;
     }
