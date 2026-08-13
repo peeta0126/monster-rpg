@@ -57,7 +57,9 @@ export const FOREST_AREAS: ForestArea[] = [
     id: "deep", name: "깊은 숲", subtitle: "DEEP FOREST",
     description: "빛이 닿지 않는 울창한 구역. 강한 몬스터와 희귀 재료가 기다립니다.",
     monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb", "toxadon"],
-    levelRange: [8, 18], unlockFloor: 11, encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
+    // 해금이 11층이었다. 그런데 10층 관문을 넘으려면 여기 재료(철 조각·마법 가루·정수)로
+    // 만든 장비가 있어야 한다 — 관문 뒤에 그 관문의 답을 두면 답이 아니다. 6층으로 당겼다.
+    levelRange: [8, 18], unlockFloor: 6, encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
     startingAlert: 15,
     exploreTime: 1500,
     particleType: "firefly",

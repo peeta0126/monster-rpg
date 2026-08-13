@@ -162,13 +162,15 @@ export const ARTIFACT_BONUS_POOL: Record<string, ArtifactBonusStatDef[]> = {
     { type: "maxHpFlat",    value: 50, label: "최대 HP +50" },
     { type: "waterDamage",  value: 5,  label: "수류 데미지 +5%" },
     { type: "earthDamage",  value: 5,  label: "대지 데미지 +5%" },
-    { type: "expBonus",     value: 5,  label: "경험치 획득 +5%" },
+    // 경험치 +5% 자리였다. 레벨차 컷오프(battleUtils.expLevelGapMultiplier)가 들어가면서
+    // 경험치는 "층을 올라가면 붙는 것"이 됐고, 곱해 봐야 컷오프를 못 넘는다 — 죽은 굴림이었다.
+    { type: "maxHpFlat",    value: 40, label: "최대 HP +40" },
     { type: "critDamage",   value: 6,  label: "치명타 데미지 +6%" },
   ],
   spirit_amulet: [
     { type: "maxHpFlat",    value: 60, label: "최대 HP +60" },
     { type: "windDamage",   value: 6,  label: "풍속 데미지 +6%" },
-    { type: "expBonus",     value: 8,  label: "경험치 획득 +8%" },
+    { type: "critDamage",   value: 10, label: "치명타 데미지 +10%" },
     { type: "critDamage",   value: 6,  label: "치명타 데미지 +6%" },
     { type: "fireDamage",   value: 5,  label: "화염 데미지 +5%" },
   ],
@@ -255,10 +257,13 @@ export function getEquipmentMaxLevel(quality: ItemQuality): number {
  * Normal×1 / Rare×2 / Elite×3 배율, 레벨이 높을수록 더 필요
  */
 export function getEquipmentLevelUpCost(quality: ItemQuality, currentLevel: number): number {
-  const mult = ({ normal: 1, rare: 2, elite: 3 } as const)[quality];
-  // 예전 계수(레벨/3)로는 Rare 하나를 만렙까지 올리는 데 강화석 약 550개가 필요했고,
-  // 분해로만 강화석이 나오던 구조와 겹쳐 사실상 아무도 만렙을 못 봤다.
-  return Math.ceil(currentLevel / 6) * mult;
+  const mult = ({ normal: 1, rare: 1, elite: 2 } as const)[quality];
+  // 계수를 6 → 12, 등급 배율을 {1,2,3} → {1,1,2} 로 낮췄다.
+  //
+  // 장비가 **필수**가 된 지금(관문은 장비 없이는 못 넘는다) 예전 비용은 그대로 벽이었다.
+  // 파티 3마리 × 슬롯 3개를 레어 30레벨까지 올리는 데 강화석 1,530개, 고대 숲으로 환산하면
+  // 백 번이 넘는다. 지금은 459개다 — 숲 대여섯 번이면 닿는다.
+  return Math.ceil(currentLevel / 12) * mult;
 }
 
 /**

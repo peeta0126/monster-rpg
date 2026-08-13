@@ -42,8 +42,10 @@ test("해금 층수는 올라가고, 안내 문구도 그 값을 그대로 말�
 test("기본 선택은 갈 수 있는 가장 높은 구역", () => {
   const at = (floor: number) => highestUnlockedArea(floor).id;
   assert.equal(at(0), "shallow");
-  assert.equal(at(10), "shallow");
-  assert.equal(at(11), "deep");
+  assert.equal(at(5), "shallow");
+  // 깊은 숲이 6층에 열린다. 10층 관문을 장비로 넘으려면 그 재료(철 조각·마법 가루·정수)가
+  // 관문 **앞에** 있어야 한다 — 예전엔 11층이라 답이 문 뒤에 있었다
+  assert.equal(at(6), "deep");
   assert.equal(at(20), "deep");
   assert.equal(at(21), "ancient");
   assert.equal(at(999), "ancient");

@@ -506,7 +506,9 @@ function DisassemblePanel({
         <p className="text-title-md font-black" style={{ color: C.gold }}>🪨 ×{stones}</p>
         <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>강화석</p>
         <div className="mt-3 space-y-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
-          <p>기본 ({QUALITY_LABEL[artifact.quality]}): +{({ normal: 3, rare: 8, elite: 18 })[artifact.quality]}</p>
+          {/* 값을 여기 다시 적으면 규칙을 고친 날 화면만 옛말을 한다 — 실제로 3/8/18 로
+              굳어 있어서, 아래 항목을 더해도 위에 적힌 합계와 안 맞았다 */}
+          <p>기본 ({QUALITY_LABEL[artifact.quality]}): +{getDisassembleStones(artifact.quality, 1, 0) - Math.floor(1 / 5)}</p>
           <p>레벨 보너스 (Lv.{lv}): +{Math.floor(lv / 5)}</p>
           <p>강화 보너스 (+{enh}): +{enh * 2}</p>
         </div>
@@ -582,8 +584,6 @@ function SynthesizePanel({
     (a) => a.quality === primary.quality && a.instanceId !== primary.instanceId,
   );
   const secondary = allArtifacts.find((a) => a.instanceId === secondaryId) ?? null;
-  const svLv      = secondary ? artifactLevel(secondary) : 0;
-  const svEnh     = secondary ? artifactEnh(secondary) : 0;
 
   const canSynth = secondary !== null && canSynthesizeArtifacts(primary, secondary);
 
@@ -593,8 +593,10 @@ function SynthesizePanel({
     { label: `Elite 미만 등급`, ok: primary.quality !== "elite" },
     { label: `첫 번째: 최대 레벨 (Lv.${pvLv}/${maxLv})`, ok: pvLv >= maxLv },
     { label: `첫 번째: 최대 강화 (+${pvEnh})`, ok: pvEnh >= MAX_EQUIPMENT_ENHANCEMENT },
-    { label: secondary ? `두 번째: 최대 레벨 (Lv.${svLv}/${maxLv})` : "두 번째: 미선택", ok: secondary ? svLv >= maxLv : false },
-    { label: secondary ? `두 번째: 최대 강화 (+${svEnh})` : "", ok: secondary ? svEnh >= MAX_EQUIPMENT_ENHANCEMENT : false },
+    // 두 번째는 **등급만 맞으면 된다**(craftingUtils.canSynthesizeArtifacts). 화면이 최대
+    // 레벨·최대 강화까지 요구하는 것처럼 적어서, 실제보다 훨씬 비싼 줄 알고 안 쓰게 돼 있었다.
+    { label: secondary ? `두 번째: 등급 일치 (${QUALITY_LABEL[secondary.quality]})` : "두 번째: 미선택",
+      ok: secondary ? secondary.quality === primary.quality : false },
   ].filter((c) => c.label !== "");
 
   return (
@@ -604,7 +606,7 @@ function SynthesizePanel({
           ✦ 장비 합성 ✦
         </p>
         <p className="mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
-          최대 레벨+최대 강화 달성 시 등급 상승
+          첫 번째가 최대 레벨·최대 강화면, 같은 등급 하나를 재료로 등급이 오른다
         </p>
       </div>
 
