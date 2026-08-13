@@ -56,8 +56,26 @@ export function getTypeMultiplier(
 
 // ─── 데미지 계산 ────────────────────────────────────────────────────────────────
 
-/** 치명타 발생 시 데미지 배율 (장비 critRate로만 발동 — 몬스터 기본 치명타율은 0) */
+/** 치명타 발생 시 데미지 배율 */
 const CRIT_DAMAGE_MULTIPLIER = 1.5;
+
+/**
+ * 누구에게나 붙는 기본 치명타율(%).
+ *
+ * 예전엔 장비에서 온 값이 전부였다. 장비가 없으면 0 이고 적은 인자를 아예 안 넘겨서,
+ * 적의 치명타는 게임을 통틀어 한 번도 뜨지 않았다 — 화면에는 치명타 전용 연출이
+ * 이미 있는데도. 그러면서 "쓰러뜨릴 수도" 표시까지 장비가 있어야만 나왔다.
+ *
+ * 6% 는 한 전투에서 한 번쯤 보라고 정한 값이다. 전투 하나가 대개 5~15턴이고 양쪽이
+ * 번갈아 때리니 스무 번 남짓 굴리는데, 6% 면 기대값이 1.2회다. 두 자리로 올리면
+ * 누가 이기는지를 굴림이 정하기 시작하고, 3% 면 연출을 못 보고 끝나는 전투가 절반이다.
+ */
+export const BASE_CRIT_RATE = 6;
+
+/** 실제로 굴리는 치명타율(%). 장비 보너스는 기본값 **위에** 더해진다. */
+export function critChanceOf(critRateBonus = 0): number {
+  return BASE_CRIT_RATE + critRateBonus;
+}
 
 /** 데미지 계산에 얹히는 장비 보너스. 굴림과 무관한 값만 모았다. */
 export interface DamageModifiers {
@@ -119,7 +137,8 @@ export function computeDamage(
  *                      * (치명타 시 1.5 + critDamageBonus/100) * typeMultiplier
  * power가 0인 상태기 스킬은 데미지 없음
  * critRateBonus/elementPowerBonus/critDamageBonus/elementalDamageBonus: 장착 장비의 능력치
- * 합산치(%). 몬스터 기본값은 0이다.
+ * 합산치(%). 몬스터 기본값은 0이다. 단 치명타율만은 기본값이 있다 —
+ * 실제로 굴리는 값은 BASE_CRIT_RATE + critRateBonus 다(장비가 없는 적에게도 붙는다).
  * - elementPower는 사용 기술의 속성이 공격자 자신의 속성과 같을 때만 적용된다(자속 보정).
  * - elementalDamageBonus는 자속 여부와 무관하게 해당 속성 기술이면 항상 적용된다(부가 능력치
  *   fireDamage/waterDamage 등). 이 게임에 존재하지 않는 속성(풍속/대지)은 애초에 어떤 기술도
@@ -149,8 +168,8 @@ export function calculateDamage(
     return { damage: 0, isHit: true, multiplier, isCrit: false };
   }
 
-  // 치명타
-  const isCrit = critRateBonus > 0 && Math.random() * 100 < critRateBonus;
+  // 치명타 — 기본율 위에 장비 보너스가 얹힌다
+  const isCrit = Math.random() * 100 < critChanceOf(critRateBonus);
 
   const damage = computeDamage(attacker, defender, move, {
     elementPowerBonus, elementalDamageBonus, isCrit, critDamageBonus,

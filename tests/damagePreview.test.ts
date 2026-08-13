@@ -37,14 +37,14 @@ test("예상 데미지가 실제 계산 함수(calculateDamage)가 내는 값과
   const p = previewMove(attacker, defender, mv);
 
   // 난수를 훑어 실제 함수가 내는 비치명타 데미지를 모은다.
-  // (치명타 보너스를 0으로 주므로 치명타는 발생하지 않는다)
+  // (치명타는 이제 장비가 없어도 기본율로 뜬다 — 굴림 결과를 보고 걸러낸다)
   const real = new Set<number>();
   const origRandom = Math.random;
   try {
     for (let i = 0; i <= 100; i++) {
       Math.random = () => i / 100;
       const r = calculateDamage(attacker, defender, mv);
-      if (r.isHit) real.add(r.damage);
+      if (r.isHit && !r.isCrit) real.add(r.damage);
     }
   } finally {
     Math.random = origRandom;
@@ -97,23 +97,29 @@ test('"쓰러뜨린다"는 최소 데미지가 잔여 HP 이상일 때만 뜬다
 
   const dmg = previewMove(attacker, defender, mv).minDamage;
 
+  const p = previewMove(attacker, defender, mv);
   assert.equal(previewMove(attacker, { ...defender, currentHp: dmg }, mv).ko, "sure");
   assert.equal(previewMove(attacker, { ...defender, currentHp: dmg - 1 }, mv).ko, "sure");
-  assert.equal(previewMove(attacker, { ...defender, currentHp: dmg + 1 }, mv).ko, null);
+  // 치명타로도 못 닿는 HP 라야 아무 표시가 없다 (치명타는 기본율이 있어 늘 가능성이 있다)
+  assert.equal(previewMove(attacker, { ...defender, currentHp: (p.critDamage ?? dmg) + 1 }, mv).ko, null);
 });
 
 test("치명타가 떠야 닿는 경우에만 \"쓰러뜨릴 수도\"가 된다", () => {
   const attacker = mon({ attack: 60 });
   const defender = mon({ id: "e", type: "normal", defense: 40, maxHp: 200 });
   const mv = move({ type: "normal", power: 40 });
-  const bonus = { critRate: 10 };
 
-  const p = previewMove(attacker, defender, mv, bonus);
+  // 장비가 없어도 치명타율은 0 이 아니다(BASE_CRIT_RATE) — 그래서 예측에 치명타 데미지가 있다
+  const p = previewMove(attacker, defender, mv);
+  assert.ok(p.critChance > 0, "기본 치명타율이 예측에 반영되지 않았다");
+  assert.ok((p.critDamage ?? 0) > p.minDamage);
+
   const between = Math.floor((p.minDamage + (p.critDamage ?? 0)) / 2);
+  assert.equal(previewMove(attacker, { ...defender, currentHp: between }, mv).ko, "maybe");
 
-  assert.equal(previewMove(attacker, { ...defender, currentHp: between }, mv, bonus).ko, "maybe");
-  // 치명타율이 0이면 같은 HP 에서 아무 표시도 뜨지 않는다 — 없는 가능성을 팔지 않는다
-  assert.equal(previewMove(attacker, { ...defender, currentHp: between }, mv).ko, null);
+  // 장비 치명타율은 기본값 위에 더해진다
+  const withGear = previewMove(attacker, defender, mv, { critRate: 10 });
+  assert.equal(withGear.critChance, p.critChance + 10);
 });
 
 test("보조 기술은 데미지도 쓰러뜨림 표시도 없다", () => {

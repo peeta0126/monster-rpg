@@ -1,5 +1,5 @@
 import type { ElementType, Move } from "../shared/game";
-import { computeDamage, getTypeMultiplier, type BattleMonster } from "./battleUtils";
+import { computeDamage, critChanceOf, getTypeMultiplier, type BattleMonster } from "./battleUtils";
 
 /**
  * 기술을 고르기 **전에** 결과를 보여주기 위한 예측.
@@ -62,7 +62,10 @@ export function previewMove(
   const minDamage = damage;
   const maxDamage = damage;
 
-  const crit = !isStatus && critRate > 0
+  // 치명타율은 장비가 없어도 0 이 아니다(battleUtils.BASE_CRIT_RATE). 여기서 그 값을
+  // 다시 적지 않고 전투가 쓰는 함수를 부른다 — 기본율을 고치면 표시도 같이 바뀐다.
+  const critChance = critChanceOf(critRate);
+  const crit = !isStatus && critChance > 0
     ? computeDamage(eff, defender, move, { ...mods, isCrit: true, critDamageBonus: critDamage })
     : null;
 
@@ -76,7 +79,7 @@ export function previewMove(
   return {
     minDamage, maxDamage,
     critDamage: crit,
-    critChance: critRate,
+    critChance,
     accuracy: move.accuracy,
     multiplier: getTypeMultiplier(move.type, defender.type),
     isStatus,
