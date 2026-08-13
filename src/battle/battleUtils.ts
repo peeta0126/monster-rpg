@@ -222,6 +222,10 @@ export function applyStatusEffect(
  *  - monster: 상태이상 효과가 반영된 갱신 상태
  *  - skipTurn: true면 이 턴 행동 불가
  *  - logs: 화면에 출력할 로그 메시지 배열
+ *
+ * ⚠️ 이 함수는 HP 를 깎기만 하고 기절 판정은 하지 않는다. 호출부가 반드시
+ *    isFainted 를 확인할 것 — 예전엔 아무도 안 봐서 화상으로 HP 가 0 이 된
+ *    몬스터가 그 턴에 멀쩡히 공격하고 다음에 맞을 때까지 계속 싸웠다.
  */
 export function checkStatusEffects(monster: BattleMonster): {
   monster: BattleMonster;

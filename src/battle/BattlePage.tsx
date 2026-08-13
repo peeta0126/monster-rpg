@@ -453,6 +453,166 @@ export default function BattlePage() {
     return { updated: next, fainted };
   }, [sendLogAndWait, syncHpToPhaser, dexCaught, floor]);
 
+  /**
+   * 턴 머리의 상태이상 처리.
+   *
+   * ⚠️ 여기서 기절 판정을 하는 게 이 함수의 존재 이유다. 예전엔 checkStatusEffects 가
+   * HP 만 깎고 아무도 확인하지 않아서, 화상으로 HP 가 0 이 된 몬스터가 그 턴에 멀쩡히
+   * 공격하고 다음에 **맞을 때까지** 계속 싸웠다. 쓰러졌으면 그 턴의 공격은 나가지 않는다.
+   */
+  const runStatusPhase = useCallback(async (
+    mon: BattleMonster, other: BattleMonster, isPlayer: boolean,
+  ): Promise<{ mon: BattleMonster; skip: boolean; fainted: boolean }> => {
+    const s = checkStatusEffects(mon);
+    const updated = s.monster;
+    for (const log of s.logs) {
+      if (isPlayer) syncHpToPhaser(updated, other);
+      else          syncHpToPhaser(other, updated);
+      await sendLogAndWait(log);
+    }
+    const fainted = isFainted(updated);
+    if (fainted) await sendLogAndWait(`${updated.name}이(가) 쓰러졌다!`);
+    return { mon: updated, skip: s.skipTurn || fainted, fainted };
+  }, [sendLogAndWait, syncHpToPhaser]);
+
+  /** 이번에 적이 낼 기술. 고정 순서가 있는 층이면 그것을, 아니면 AI 가 고른다 */
+  const nextEnemyMove = useCallback((e: BattleMonster, p: BattleMonster): Move => {
+    const idx = enemyTurnRef.current;
+    enemyTurnRef.current += 1;
+    const last = lastEnemyMoveRef.current;
+    const move = getFloorEnemySkill(floor, idx, e.moves, last) ?? getAIAction(e, p, floor, last);
+    lastEnemyMoveRef.current = move.id;
+    return move;
+  }, [floor]);
+
+  /**
+   * 승리 정산 — 경험치·성장·드랍·저장까지.
+   *
+   * 예전엔 이 60줄이 handleMoveClick 안에만 있었다. 그런데 이제 적은 공격을 맞고서만
+   * 쓰러지는 게 아니다(화상·독으로 죽고, 물약 턴이나 교체 턴에도 죽는다). 그때마다
+   * 정산을 베껴 두면 어느 한 길에서만 경험치가 안 들어오는 사고가 난다.
+   *
+   * activeIdx 를 인자로 받는 이유는 교체 턴 때문이다 — 그 순간의 setState 는 아직
+   * 반영 전이라 activePartyIndex 를 읽으면 교체 전 몬스터에게 경험치가 들어간다.
+   */
+  const resolveVictory = useCallback(async (
+    won: BattleMonster, ne: BattleMonster, activeIdx: number,
+  ) => {
+    let np = won;
+    const bonus = getEquipCombatBonus(initialParty[activeIdx]?.uid);
+    const earnedExp = Math.floor(ne.rewardExp * (1 + bonus.expBonus / 100));
+    const prevLevel = np.level;
+    const beforeExp = np;
+    const expResult = gainExp(np, earnedExp);
+    np = expResult.updatedMonster;
+    if (expResult.leveledUp) {
+      gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "player");
+      setLogHistory((prev) => [...prev.slice(-49), `레벨이 ${np.level}(으)로 올랐다!`]);
+    }
+    // 로그 한 줄 대신 바가 차오르는 걸 보여준다. 레벨업이면 여기서 멈춰 오른 스탯을 띄운다.
+    await playExpGain(beforeExp, earnedExp);
+
+    // 레벨업에 딸린 성장(기술 습득·진화)을 적용한다
+    if (expResult.leveledUp) {
+      const growth = await applyLevelGrowth(np, prevLevel, askWhichToForget);
+      np = growth.monster;
+      for (const mv of growth.forgotten) {
+        await sendLogAndWait(`${np.name}은(는) ${mv.name}을(를) 잊어버렸다...`);
+      }
+      for (const mv of growth.learned) {
+        await sendLogAndWait(`${np.name}은(는) ${mv.name}을(를) 배웠다!`);
+      }
+      if (growth.evolvedFrom) {
+        await sendLogAndWait(`…어라? ${growth.evolvedFrom}의 모습이 변하고 있다!`);
+        await sendLogAndWait(`${growth.evolvedFrom}은(는) ${np.name}(으)로 진화했다!`);
+        addToDexSeen(np.id);
+        addToDexCaught(np.id);
+      }
+    }
+
+    // 재료 드랍
+    const battleDrops = rollBattleDrop(floor);
+    if (ne.id === "ormr") battleDrops.push({ id: "ormr_essence", count: 1 });
+    for (const drop of battleDrops) {
+      addMaterial(drop.id, drop.count);
+    }
+    if (battleDrops.some((d) => d.id === "ormr_essence")) {
+      await sendLogAndWait("…이게 뭐지? 처음 보는 물건이다.");
+      await sendLogAndWait("촌장님이라면 아실지도 모른다. 가져가 봐야겠다.");
+    }
+
+    const owned = initialParty[activeIdx];
+    if (owned) {
+      updatePartyMember(toPersisted({ ...owned, ...np, uid: owned.uid }));
+    }
+
+    // 출전하지 않은 파티원에게도 경험치를 나눠준다.
+    // 예전에는 마지막에 싸운 한 마리만 경험치를 받아서, 탑을 오를수록 나머지 둘이 방치되고
+    // 사실상 1마리로 50층을 가야 했다(교체는 곧 레벨 20짜리를 레벨 40 적 앞에 내놓는 일).
+    for (let i = 0; i < initialParty.length; i++) {
+      if (i === activeIdx) continue;
+      const mate = initialParty[i];
+      const hp = partyHp[mate.uid] ?? mate.currentHp;
+      if (hp <= 0) continue;   // 기절한 몬스터는 분배 대상에서 제외
+      const share = Math.max(1, Math.floor(earnedExp * benchExpShare(mate.level, np.level)));
+      const bm = createBattleMonsterFromOwned({ ...mate, currentHp: hp });
+      const prev = bm.level;
+      const res = gainExp(bm, share);
+      let grownMate = res.updatedMonster;
+      if (res.leveledUp) {
+        // 대기 파티원까지 매번 물으면 승리 화면이 선택 창으로 도배된다 → 자동 판단
+        const g = await applyLevelGrowth(grownMate, prev);
+        grownMate = g.monster;
+        if (g.evolvedFrom) { addToDexSeen(grownMate.id); addToDexCaught(grownMate.id); }
+      }
+      updatePartyMember(toPersisted({ ...mate, ...grownMate, uid: mate.uid }));
+    }
+
+    updateBestFloor(floor);
+    addToDexSeen(ne.id);
+    setPlayer(np); setEnemyState(ne);
+    setBattleDrops(battleDrops);
+    finishBattle("win");
+  }, [
+    floor, initialParty, partyHp, getEquipCombatBonus, playExpGain, askWhichToForget,
+    sendLogAndWait, addMaterial, addToDexSeen, addToDexCaught,
+    updatePartyMember, updateBestFloor, finishBattle,
+  ]);
+
+  /**
+   * 플레이어가 공격 말고 다른 걸 한 턴(물약·교체·포획)의 적 차례.
+   * 상태이상 → 공격 → (속도 게이지가 찼으면) 한 번 더. 어느 단계에서든 기절하면 거기서 멈춘다.
+   */
+  const runEnemyTurn = useCallback(async (
+    startPlayer: BattleMonster, startEnemy: BattleMonster, defBonus: number, playerSpeed: number,
+  ): Promise<{ player: BattleMonster; enemy: BattleMonster; playerFainted: boolean; enemyFainted: boolean }> => {
+    let p = startPlayer;
+    let e = startEnemy;
+
+    const st = await runStatusPhase(e, p, false);
+    e = st.mon;
+    if (st.fainted) return { player: p, enemy: e, playerFainted: false, enemyFainted: true };
+
+    const tick = tickSpeedGauge(enemyGaugeRef.current, e.speed, playerSpeed);
+    enemyGaugeRef.current = tick.gauge.charge;
+
+    if (!st.skip) {
+      const res = await resolveAttack(e, p, nextEnemyMove(e, p), p, e, false, 0, defBonus);
+      p = res.updated;
+      if (res.fainted) return { player: p, enemy: e, playerFainted: true, enemyFainted: false };
+    }
+
+    if (tick.extra) {
+      await sendLogAndWait(`${e.name}이(가) 한 번 더 움직인다!`);
+      const res = await resolveAttack(e, p, nextEnemyMove(e, p), p, e, false, 0, defBonus);
+      p = res.updated;
+      if (res.fainted) return { player: p, enemy: e, playerFainted: true, enemyFainted: false };
+    }
+
+    syncGauges();
+    return { player: p, enemy: e, playerFainted: false, enemyFainted: false };
+  }, [runStatusPhase, resolveAttack, nextEnemyMove, sendLogAndWait, syncGauges]);
+
   // ─── 스킬 선택 ──────────────────────────────────────────────────────────────────
   const handleMoveClick = useCallback(async (move: Move) => {
     if (isProcessing || battleOutcome !== null || mustSwitch) return;
@@ -462,19 +622,16 @@ export default function BattlePage() {
     let ne = enemyState;
 
     const playerBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid);
-    const eTurnIdx = enemyTurnRef.current;
-    const eMove    = getFloorEnemySkill(floor, eTurnIdx, ne.moves) ?? getAIAction(ne, np);
-    const playerFirst = (np.speed + playerBonus.speed) >= ne.speed;
+    const playerSpeed = np.speed + playerBonus.speed;
+    const playerFirst = playerSpeed >= ne.speed;
 
-    const doPlayerTurn = async (): Promise<boolean> => {
-      np = tickBuff(np);
-      if (np.attackBuffTurns === 0 && player.attackBuffTurns > 0) {
-        await sendLogAndWait(`${np.name}의 공격 강화가 풀렸다.`);
-      }
-      const ps = checkStatusEffects(np);
-      np = ps.monster;
-      for (const log of ps.logs) { syncHpToPhaser(np, ne); await sendLogAndWait(log); }
-      if (ps.skipTurn) return false;
+    // 속도 게이지는 한 턴에 한 번만 찬다. 차 있는 쪽이 그 턴에 한 번 더 움직인다.
+    const pTick = tickSpeedGauge(playerGaugeRef.current, playerSpeed, ne.speed);
+    const eTick = tickSpeedGauge(enemyGaugeRef.current, ne.speed, playerSpeed);
+    playerGaugeRef.current = pTick.gauge.charge;
+    enemyGaugeRef.current  = eTick.gauge.charge;
+
+    const playerAttack = async (): Promise<boolean> => {
       const res = await resolveAttack(
         np, ne, move, np, ne, true,
         playerBonus.attack, 0, playerBonus.critRate, playerBonus.elementPower,
@@ -484,100 +641,58 @@ export default function BattlePage() {
       return res.fainted;
     };
 
-    const doEnemyTurn = async (): Promise<boolean> => {
-      const es = checkStatusEffects(ne);
-      ne = es.monster;
-      for (const log of es.logs) { syncHpToPhaser(np, ne); await sendLogAndWait(log); }
-      if (es.skipTurn) return false;
-      const res = await resolveAttack(ne, np, eMove, np, ne, false, 0, playerBonus.defense);
+    const enemyAttack = async (): Promise<boolean> => {
+      const res = await resolveAttack(ne, np, nextEnemyMove(ne, np), np, ne, false, 0, playerBonus.defense);
       np = res.updated;
       return res.fainted;
     };
 
+    /**
+     * 반환값은 둘 다 "이 차례의 주인 기준"이다 — [상대를 쓰러뜨렸나, 내가 쓰러졌나].
+     * 뒤엣것은 상태이상 피해로 자기 턴에 죽는 경우다.
+     */
+    const doPlayerTurn = async (): Promise<[boolean, boolean]> => {
+      np = tickBuff(np);
+      if (np.attackBuffTurns === 0 && player.attackBuffTurns > 0) {
+        await sendLogAndWait(`${np.name}의 공격 강화가 풀렸다.`);
+      }
+      const ps = await runStatusPhase(np, ne, true);
+      np = ps.mon;
+      if (ps.fainted) return [false, true];      // 화상·독으로 여기서 죽으면 공격은 안 나간다
+      if (ps.skip) return [false, false];
+      return [await playerAttack(), false];
+    };
+
+    const doEnemyTurn = async (): Promise<[boolean, boolean]> => {
+      const es = await runStatusPhase(ne, np, false);
+      ne = es.mon;
+      if (es.fainted) return [false, true];
+      if (es.skip) return [false, false];
+      return [await enemyAttack(), false];
+    };
+
     let playerWon = false, enemyWon = false;
     if (playerFirst) {
-      playerWon = await doPlayerTurn();
-      if (!playerWon) enemyWon = await doEnemyTurn();
+      [playerWon, enemyWon] = await doPlayerTurn();
+      if (!playerWon && !enemyWon) [enemyWon, playerWon] = await doEnemyTurn();
     } else {
-      enemyWon = await doEnemyTurn();
-      if (!enemyWon) playerWon = await doPlayerTurn();
+      [enemyWon, playerWon] = await doEnemyTurn();
+      if (!playerWon && !enemyWon) [playerWon, enemyWon] = await doPlayerTurn();
     }
-    enemyTurnRef.current += 1;
+
+    // 속도 차가 쌓인 쪽의 추가 행동. 상태이상 처리는 턴에 한 번뿐이라 여기서는 때리기만 한다.
+    if (!playerWon && !enemyWon && pTick.extra) {
+      await sendLogAndWait(`${np.name}이(가) 한 번 더 움직인다!`);
+      playerWon = await playerAttack();
+    } else if (!playerWon && !enemyWon && eTick.extra) {
+      await sendLogAndWait(`${ne.name}이(가) 한 번 더 움직인다!`);
+      enemyWon = await enemyAttack();
+    }
+    syncGauges();
 
     if (playerWon) {
-      const earnedExp = Math.floor(ne.rewardExp * (1 + playerBonus.expBonus / 100));
-      const prevLevel = np.level;
-      const beforeExp = np;
-      const expResult = gainExp(np, earnedExp);
-      np = expResult.updatedMonster;
-      if (expResult.leveledUp) {
-        gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "player");
-        setLogHistory((prev) => [...prev.slice(-49), `레벨이 ${np.level}(으)로 올랐다!`]);
-      }
-      // 로그 한 줄 대신 바가 차오르는 걸 보여준다. 레벨업이면 여기서 멈춰 오른 스탯을 띄운다.
-      await playExpGain(beforeExp, earnedExp);
-
-      // 레벨업에 딸린 성장(기술 습득·진화)을 적용한다
-      if (expResult.leveledUp) {
-        const growth = await applyLevelGrowth(np, prevLevel, askWhichToForget);
-        np = growth.monster;
-        for (const mv of growth.forgotten) {
-          await sendLogAndWait(`${np.name}은(는) ${mv.name}을(를) 잊어버렸다...`);
-        }
-        for (const mv of growth.learned) {
-          await sendLogAndWait(`${np.name}은(는) ${mv.name}을(를) 배웠다!`);
-        }
-        if (growth.evolvedFrom) {
-          await sendLogAndWait(`…어라? ${growth.evolvedFrom}의 모습이 변하고 있다!`);
-          await sendLogAndWait(`${growth.evolvedFrom}은(는) ${np.name}(으)로 진화했다!`);
-          addToDexSeen(np.id);
-          addToDexCaught(np.id);
-        }
-      }
-
-      // 재료 드랍
-      const battleDrops = rollBattleDrop(floor);
-      if (ne.id === "ormr") battleDrops.push({ id: "ormr_essence", count: 1 });
-      for (const drop of battleDrops) {
-        addMaterial(drop.id, drop.count);
-      }
-      if (battleDrops.some((d) => d.id === "ormr_essence")) {
-        await sendLogAndWait("…이게 뭐지? 처음 보는 물건이다.");
-        await sendLogAndWait("촌장님이라면 아실지도 모른다. 가져가 봐야겠다.");
-      }
-
-      const owned = initialParty[activePartyIndex];
-      if (owned) {
-        updatePartyMember(toPersisted({ ...owned, ...np, uid: owned.uid }));
-      }
-
-      // 출전하지 않은 파티원에게도 경험치를 나눠준다.
-      // 예전에는 마지막에 싸운 한 마리만 경험치를 받아서, 탑을 오를수록 나머지 둘이 방치되고
-      // 사실상 1마리로 50층을 가야 했다(교체는 곧 레벨 20짜리를 레벨 40 적 앞에 내놓는 일).
-      for (let i = 0; i < initialParty.length; i++) {
-        if (i === activePartyIndex) continue;
-        const mate = initialParty[i];
-        const hp = partyHp[mate.uid] ?? mate.currentHp;
-        if (hp <= 0) continue;   // 기절한 몬스터는 분배 대상에서 제외
-        const share = Math.max(1, Math.floor(earnedExp * benchExpShare(mate.level, np.level)));
-        const bm = createBattleMonsterFromOwned({ ...mate, currentHp: hp });
-        const prev = bm.level;
-        const res = gainExp(bm, share);
-        let grownMate = res.updatedMonster;
-        if (res.leveledUp) {
-          // 대기 파티원까지 매번 물으면 승리 화면이 선택 창으로 도배된다 → 자동 판단
-          const g = await applyLevelGrowth(grownMate, prev);
-          grownMate = g.monster;
-          if (g.evolvedFrom) { addToDexSeen(grownMate.id); addToDexCaught(grownMate.id); }
-        }
-        updatePartyMember(toPersisted({ ...mate, ...grownMate, uid: mate.uid }));
-      }
-
-      updateBestFloor(floor);
-      addToDexSeen(ne.id);
-      setPlayer(np); setEnemyState(ne);
-      setBattleDrops(battleDrops);
-      finishBattle("win"); setIsProcessing(false); return;
+      await resolveVictory(np, ne, activePartyIndex);
+      setIsProcessing(false); return;
     }
 
     if (enemyWon) {
@@ -593,11 +708,10 @@ export default function BattlePage() {
     setPlayer(np); setEnemyState(ne);
     setIsProcessing(false);
   }, [
-    isProcessing, battleOutcome, mustSwitch, player, enemyState, floor,
-    activePartyIndex, initialParty, resolveAttack, syncHpToPhaser,
-    sendLogAndWait, finishBattle, hasAlivePartyMember, getEquipCombatBonus, playExpGain,
-    addMaterial, addToDexCaught, askWhichToForget, partyHp,
-    updatePartyMember, updateBestFloor, addToDexSeen,
+    isProcessing, battleOutcome, mustSwitch, player, enemyState,
+    activePartyIndex, initialParty, resolveAttack, nextEnemyMove, runStatusPhase,
+    sendLogAndWait, finishBattle, hasAlivePartyMember, getEquipCombatBonus,
+    resolveVictory, syncGauges,
   ]);
 
   // ─── 파티 교체 ──────────────────────────────────────────────────────────────────
@@ -623,28 +737,35 @@ export default function BattlePage() {
 
     if (mustSwitch) { setIsProcessing(false); return; }
 
-    const ne = enemyState;
-    const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, nextPlayer);
-    const nextDefBonus = getEquipCombatBonus(nextOwned.uid).defense;
-    const atk = await resolveAttack(ne, nextPlayer, eMove, nextPlayer, ne, false, 0, nextDefBonus);
-    const np2 = atk.updated;
-    enemyTurnRef.current += 1;
+    // 새로 나온 몬스터의 속도로 게이지를 다시 잡는다 — 앞선 몬스터가 쌓아 둔 값을
+    // 물려받으면, 느린 몬스터를 내보내자마자 연속 공격이 터지는 일이 생긴다.
+    playerGaugeRef.current = 0;
+    enemyGaugeRef.current  = 0;
 
-    if (atk.fainted) {
+    const bonus = getEquipCombatBonus(nextOwned.uid);
+    const turn = await runEnemyTurn(nextPlayer, enemyState, bonus.defense, nextPlayer.speed + bonus.speed);
+    const np2 = turn.player;
+
+    if (turn.enemyFainted) {
+      await resolveVictory(np2, turn.enemy, partyIdx);
+      setIsProcessing(false);
+      return;
+    }
+    if (turn.playerFainted) {
       setPartyHp(prev => ({ ...prev, [nextOwned.uid]: 0 }));
-      setPlayer({ ...np2, currentHp: 0 }); setEnemyState(ne);
+      setPlayer({ ...np2, currentHp: 0 }); setEnemyState(turn.enemy);
       if (hasAlivePartyMember(partyIdx, nextOwned.uid, 0)) setMustSwitch(true);
       else finishBattle("lose");
     } else {
       setPartyHp(prev => ({ ...prev, [nextOwned.uid]: np2.currentHp }));
-      setPlayer(np2); setEnemyState(ne);
+      setPlayer(np2); setEnemyState(turn.enemy);
     }
     setIsProcessing(false);
   }, [
     isProcessing, battleOutcome, activePartyIndex, initialParty, player,
-    enemyState, floor, partyHp, mustSwitch,
-    resolveAttack, syncHpToPhaser, sendLogAndWait, finishBattle, hasAlivePartyMember,
-    getEquipCombatBonus,
+    enemyState, partyHp, mustSwitch,
+    syncHpToPhaser, sendLogAndWait, finishBattle, hasAlivePartyMember,
+    getEquipCombatBonus, runEnemyTurn, resolveVictory,
   ]);
 
   // ─── 물약 사용 ──────────────────────────────────────────────────────────────────
@@ -656,13 +777,41 @@ export default function BattlePage() {
 
     setIsProcessing(true);
 
+    // 물약을 꺼내는 것도 턴이다 — 화상·독은 여기서도 깎는다. 여기서 쓰러지면 물약은
+    // 쓰지 않은 것이 되고(재고도 그대로), 마비·빙결이면 꺼내지도 못한 채 턴만 넘어간다.
+    const uid = initialParty[activePartyIndex]?.uid;
+    const bonus = getEquipCombatBonus(uid);
+    const pre = await runStatusPhase(player, enemyState, true);
+    if (pre.fainted) {
+      if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
+      setPlayer({ ...pre.mon, currentHp: 0 });
+      if (hasAlivePartyMember(activePartyIndex, uid, 0)) setMustSwitch(true);
+      else finishBattle("lose");
+      setIsProcessing(false); return;
+    }
+    if (pre.skip) {
+      setPlayer(pre.mon);
+      const skipped = await runEnemyTurn(pre.mon, enemyState, bonus.defense, pre.mon.speed + bonus.speed);
+      if (skipped.enemyFainted) { await resolveVictory(skipped.player, skipped.enemy, activePartyIndex); setIsProcessing(false); return; }
+      if (skipped.playerFainted) {
+        if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
+        setPlayer({ ...skipped.player, currentHp: 0 }); setEnemyState(skipped.enemy);
+        if (hasAlivePartyMember(activePartyIndex, uid, 0)) setMustSwitch(true);
+        else finishBattle("lose");
+      } else {
+        if (uid) setPartyHp(prev => ({ ...prev, [uid]: skipped.player.currentHp }));
+        setPlayer(skipped.player); setEnemyState(skipped.enemy);
+      }
+      setIsProcessing(false); return;
+    }
+
     // 물약 소모
     const ok = consumePotion(potionId);
     if (!ok) { setIsProcessing(false); return; }
     setPotionCounts(prev => ({ ...prev, [potionId]: Math.max(0, (prev[potionId] ?? 0) - 1) }));
 
     // 효과 적용
-    let np = player;
+    let np = pre.mon;
     const eff = potion.effect;
     if (eff.type === "heal") {
       const restored = Math.min(np.maxHp, np.currentHp + eff.amount);
@@ -684,34 +833,33 @@ export default function BattlePage() {
     }
 
     // 물약 사용 후 partyHp 업데이트
-    const uid = initialParty[activePartyIndex]?.uid;
     if (uid) setPartyHp(prev => ({ ...prev, [uid]: np.currentHp }));
     setPlayer(np);
     syncHpToPhaser(np, enemyState);
 
     // 적 반격 (아이템 사용 = 1턴 소비)
-    const ne = enemyState;
-    const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, np);
-    const playerDefBonus = getEquipCombatBonus(uid).defense;
-    const atk = await resolveAttack(ne, np, eMove, np, ne, false, 0, playerDefBonus);
-    np = atk.updated;
-    enemyTurnRef.current += 1;
+    const turn = await runEnemyTurn(np, enemyState, bonus.defense, np.speed + bonus.speed);
+    np = turn.player;
 
-    if (atk.fainted) {
+    if (turn.enemyFainted) {
+      await resolveVictory(np, turn.enemy, activePartyIndex);
+      setIsProcessing(false); return;
+    }
+    if (turn.playerFainted) {
       if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
-      setPlayer({ ...np, currentHp: 0 }); setEnemyState(ne);
+      setPlayer({ ...np, currentHp: 0 }); setEnemyState(turn.enemy);
       if (hasAlivePartyMember(activePartyIndex, uid, 0)) setMustSwitch(true);
       else finishBattle("lose");
     } else {
       if (uid) setPartyHp(prev => ({ ...prev, [uid]: np.currentHp }));
-      setPlayer(np); setEnemyState(ne);
+      setPlayer(np); setEnemyState(turn.enemy);
     }
     setIsProcessing(false);
   }, [
     isProcessing, battleOutcome, mustSwitch, player, enemyState,
-    floor, potionCounts, activePartyIndex, initialParty,
-    consumePotion, resolveAttack, syncHpToPhaser, sendLogAndWait,
-    finishBattle, hasAlivePartyMember, getEquipCombatBonus,
+    potionCounts, activePartyIndex, initialParty,
+    consumePotion, syncHpToPhaser, sendLogAndWait, runStatusPhase, runEnemyTurn,
+    finishBattle, hasAlivePartyMember, getEquipCombatBonus, resolveVictory,
   ]);
 
   // ─── 포획 ────────────────────────────────────────────────────────────────────────
@@ -733,29 +881,30 @@ export default function BattlePage() {
       finishBattle("win"); setIsProcessing(false); return;
     }
 
-    let np = player;
-    const ne = enemyState;
-    const eMove = getFloorEnemySkill(floor, enemyTurnRef.current, ne.moves) ?? getAIAction(ne, np);
-    const playerDefBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid).defense;
-    const atk = await resolveAttack(ne, np, eMove, np, ne, false, 0, playerDefBonus);
-    np = atk.updated; enemyTurnRef.current += 1;
+    // 던졌지만 놓쳤다 — 여기서부터는 그냥 한 턴을 쓴 것이다
+    const uid = initialParty[activePartyIndex]?.uid;
+    const bonus = getEquipCombatBonus(uid);
+    const turn = await runEnemyTurn(player, enemyState, bonus.defense, player.speed + bonus.speed);
+    const np = turn.player;
 
-    if (atk.fainted) {
-      const uid = initialParty[activePartyIndex]?.uid;
+    if (turn.enemyFainted) {
+      await resolveVictory(np, turn.enemy, activePartyIndex);
+      setIsProcessing(false); return;
+    }
+    if (turn.playerFainted) {
       if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
-      setPlayer({ ...np, currentHp: 0 }); setEnemyState(ne);
+      setPlayer({ ...np, currentHp: 0 }); setEnemyState(turn.enemy);
       if (hasAlivePartyMember(activePartyIndex, uid, 0)) setMustSwitch(true);
       else finishBattle("lose");
     } else {
-      const uid = initialParty[activePartyIndex]?.uid;
       if (uid) setPartyHp(prev => ({ ...prev, [uid]: np.currentHp }));
-      setPlayer(np); setEnemyState(ne);
+      setPlayer(np); setEnemyState(turn.enemy);
     }
     setIsProcessing(false);
   }, [
-    isProcessing, battleOutcome, player, enemyState, isCatchZone, floor,
+    isProcessing, battleOutcome, player, enemyState, isCatchZone,
     activePartyIndex, initialParty,
-    resolveAttack, sendLogAndWait, finishBattle, getEquipCombatBonus,
+    sendLogAndWait, finishBattle, getEquipCombatBonus, runEnemyTurn, resolveVictory,
     addCapturedMonster, addToDexCaught, hasAlivePartyMember, setStoryFlag,
   ]);
 

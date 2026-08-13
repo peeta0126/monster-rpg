@@ -27,6 +27,7 @@ import type { RpsChoice } from "../../src/workshop/rps";
 import {
   applyDamage, applyStatusEffect, calculateDamage, checkStatusEffects,
   benchExpShare, createBattleMonster, gainExp, getAIAction, getTypeMultiplier, isFainted,
+  tickSpeedGauge,
   type BattleMonster,
 } from "../../src/battle/battleUtils";
 import { monsters } from "../../src/monster/monsters";
@@ -188,6 +189,9 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
   let turns = 0;
   let potionsUsed = 0;
   let enemyTurnIdx = 0;
+  let playerGauge = 0;
+  let enemyGauge = 0;
+  let lastEnemyMove: string | undefined;
 
   const startIdx = activeIdx;
   void startIdx;
@@ -202,8 +206,41 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
     const missing = np.maxHp - np.currentHp;
     const potionId = np.currentHp / np.maxHp < 0.4 ? pickHealPotion(s, missing) : null;
     const move = pickBestMove(np, ne);
-    const eMove = getFloorEnemySkill(floor, enemyTurnIdx, ne.moves) ?? getAIAction(ne, np);
-    const playerFirst = (np.speed + bonus.speed) >= ne.speed;
+    const playerSpeed = np.speed + bonus.speed;
+    const playerFirst = playerSpeed >= ne.speed;
+    // 속도 게이지 — 차이가 쌓이면 그 쪽이 이 턴에 한 번 더 움직인다 (BattlePage 와 같은 규칙)
+    const pTick = tickSpeedGauge(playerGauge, playerSpeed, ne.speed);
+    const eTick = tickSpeedGauge(enemyGauge, ne.speed, playerSpeed);
+    playerGauge = pTick.gauge.charge;
+    enemyGauge  = eTick.gauge.charge;
+
+    const playerAttack = (): boolean => {
+      const eff = bonus.attack ? { ...np, attack: np.attack + bonus.attack } : np;
+      const res = calculateDamage(
+        eff, ne, move, bonus.critRate, bonus.elementPower, bonus.elementalDamage, bonus.critDamage,
+      );
+      if (!res.isHit) return false;
+      if (res.damage > 0) ne = applyDamage(ne, res.damage);
+      if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
+        ne = applyStatusEffect(ne, move.statusEffect);
+      }
+      return isFainted(ne);
+    };
+
+    const enemyAttack = (): boolean => {
+      const eMove = getFloorEnemySkill(floor, enemyTurnIdx++, ne.moves, lastEnemyMove)
+        ?? getAIAction(ne, np, floor, lastEnemyMove);
+      lastEnemyMove = eMove.id;
+      const defended = bonus.defense ? { ...np, defense: np.defense + bonus.defense } : np;
+      const res = calculateDamage(ne, defended, eMove);
+      if (!res.isHit) return false;
+      if (res.damage > 0) np = applyDamage(np, res.damage);
+      if (eMove.statusEffect && (eMove.statusChance ?? 0) > 0 && Math.random() * 100 <= (eMove.statusChance ?? 0)) {
+        np = applyStatusEffect(np, eMove.statusEffect);
+      }
+      battlers[activeIdx] = np;
+      return isFainted(np);
+    };
 
     const doPlayerTurn = (): boolean => {
       if (potionId) {
@@ -220,43 +257,35 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       const st = checkStatusEffects(np);
       np = st.monster;
       battlers[activeIdx] = np;
+      // 상태이상 피해로 죽으면 그 턴의 공격은 나가지 않는다 (BattlePage 와 같은 규칙)
+      if (isFainted(np)) return false;
       if (st.skipTurn) return false;
-      const eff = bonus.attack ? { ...np, attack: np.attack + bonus.attack } : np;
-      const res = calculateDamage(
-        eff, ne, move, bonus.critRate, bonus.elementPower, bonus.elementalDamage, bonus.critDamage,
-      );
-      if (!res.isHit) return false;
-      if (res.damage > 0) ne = applyDamage(ne, res.damage);
-      if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
-        ne = applyStatusEffect(ne, move.statusEffect);
-      }
-      return isFainted(ne);
+      return playerAttack();
     };
 
     const doEnemyTurn = (): boolean => {
       const st = checkStatusEffects(ne);
       ne = st.monster;
+      if (isFainted(ne)) return false;
       if (st.skipTurn) return false;
-      const defended = bonus.defense ? { ...np, defense: np.defense + bonus.defense } : np;
-      const res = calculateDamage(ne, defended, eMove);
-      if (!res.isHit) return false;
-      if (res.damage > 0) np = applyDamage(np, res.damage);
-      if (eMove.statusEffect && (eMove.statusChance ?? 0) > 0 && Math.random() * 100 <= (eMove.statusChance ?? 0)) {
-        np = applyStatusEffect(np, eMove.statusEffect);
-      }
-      battlers[activeIdx] = np;
-      return isFainted(np);
+      return enemyAttack();
     };
 
+    // 누가 쓰러졌는지는 두 몬스터의 HP 가 말해 준다 — 상태이상 피해로도 죽을 수 있어서
+    // 행동 함수의 반환값 하나로는 부족하다
     let playerWon = false, enemyWon = false;
+    const settle = () => { playerWon = isFainted(ne); enemyWon = isFainted(np); };
     if (playerFirst) {
-      playerWon = doPlayerTurn();
-      if (!playerWon) enemyWon = doEnemyTurn();
+      doPlayerTurn(); settle();
+      if (!playerWon && !enemyWon) { doEnemyTurn(); settle(); }
     } else {
-      enemyWon = doEnemyTurn();
-      if (!enemyWon) playerWon = doPlayerTurn();
+      doEnemyTurn(); settle();
+      if (!playerWon && !enemyWon) { doPlayerTurn(); settle(); }
     }
-    enemyTurnIdx++;
+
+    // 속도 게이지가 찬 쪽의 추가 행동
+    if (!playerWon && !enemyWon && pTick.extra) { playerAttack(); settle(); }
+    else if (!playerWon && !enemyWon && eTick.extra) { enemyAttack(); settle(); }
 
     if (playerWon) {
       // 경험치는 마지막에 싸운 몬스터만 받는다 (BattlePage와 동일)
@@ -322,8 +351,11 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       }
       // 살아 있는 다음 몬스터로 교체 (교체 턴에는 적이 한 대 때린다)
       activeIdx = battlers.findIndex((b, i) => i !== activeIdx && !isFainted(b));
+      playerGauge = 0; enemyGauge = 0;   // 속도가 바뀌었으니 게이지도 다시 잡는다
       const nb = battlers[activeIdx];
-      const swMove = getFloorEnemySkill(floor, enemyTurnIdx, ne.moves) ?? getAIAction(ne, nb);
+      const swMove = getFloorEnemySkill(floor, enemyTurnIdx, ne.moves, lastEnemyMove)
+        ?? getAIAction(ne, nb, floor, lastEnemyMove);
+      lastEnemyMove = swMove.id;
       const defended = bonuses[activeIdx].defense
         ? { ...nb, defense: nb.defense + bonuses[activeIdx].defense } : nb;
       const res = calculateDamage(ne, defended, swMove);
