@@ -390,10 +390,29 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
 
 // ─── 층별 고정 스킬 조회 ──────────────────────────────────────────────────────────
 
+/**
+ * 오름이 몇 턴에 한 번 **겨냥하는가**. 그 턴만 AI 가 상성을 계산하고, 나머지 턴은
+ * 가진 기술을 마구잡이로 던진다(직전에 쓴 것은 빼고).
+ *
+ * 오름은 7속성 최상급 기술을 전부 들고 있는 유일한 몬스터다. 모든 속성에 약점이 생긴
+ * 지금(typeChart 참고) 매 턴 상성을 계산하게 두면 어떤 파티를 데려와도 2배를 맞는다 —
+ * 시뮬(scripts/sim/floorProbe.ts, Lv55 파티 120판)에서 승률이 이렇게 갈렸다:
+ *
+ *      예전(1→2→3→4 순환) | 매 턴 겨냥 | 3턴에 한 번 겨냥
+ *   섞은 파티      100%   |     57%    |      79%
+ *   전기 편중       99%   |     44%    |      69%
+ *
+ * 매 턴 겨냥은 최종보스가 아니라 정답이 하나뿐인 문제가 된다. 반대로 예전처럼 순환만
+ * 하면 두 바퀴에 다 읽힌다. 그래서 대부분은 읽을 수 없게 두되, 세 턴에 한 번은 정확히
+ * 약점을 찌른다 — 그 한 방이 오는 걸 알기 때문에 교체와 물약 타이밍이 생긴다.
+ */
+export const ORMR_AIM_INTERVAL = 3;
+
 export function getFloorEnemySkill(
   floor: number,
   turnIndex: number,
-  enemyMoves: Move[]
+  enemyMoves: Move[],
+  lastMoveId?: string,
 ): Move | null {
   if (floor === 10) {
     const order = ["spark", "thunderbolt", "quick-attack", "spark", "ice-punch"];
@@ -416,8 +435,12 @@ export function getFloorEnemySkill(
     return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
   }
   if (floor === 50) {
-    // 전투 시작 시 무작위로 정해진 4개 기술을 순환 사용
-    return enemyMoves[turnIndex % enemyMoves.length] ?? enemyMoves[0] ?? null;
+    // 겨냥하는 턴은 null 을 돌려 AI(상성 계산)에 맡긴다
+    if (turnIndex % ORMR_AIM_INTERVAL === ORMR_AIM_INTERVAL - 1) return null;
+    // 나머지 턴은 마구잡이. 직전 기술만 빼서 같은 걸 두 번 연달아 보지 않게 한다
+    const pool = enemyMoves.filter((m) => m.id !== lastMoveId);
+    const from = pool.length > 0 ? pool : enemyMoves;
+    return from[Math.floor(Math.random() * from.length)] ?? null;
   }
 
   const cfg = FLOOR_FIXED[floor];

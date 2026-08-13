@@ -388,38 +388,90 @@ export function checkCatchCondition(
 // ─── AI 로직 ────────────────────────────────────────────────────────────────────
 
 /**
- * AI 적의 최선 스킬 선택
- * 1. 자신 HP 30% 이하: 회복 스킬(category="status", power<=0) 우선 사용
- * 2. 그 외: 상성표 기준 플레이어에게 가장 효과적인 스킬 선택
+ * 이 기술의 기대값. 위력 × 상성배율 × 명중률이다.
+ *
+ * 상태기(위력 0)는 이 식으로는 늘 0 이라 영영 안 뽑힌다. 그렇다고 공격기와 같은
+ * 저울에 올릴 수도 없어서, "제일 센 공격기의 8할" 자리에 놓는다 — 최선은 아니지만
+ * 두 번째로는 자주 나오는 수, 실제로 상태기가 그런 기술이다.
+ * 상대가 이미 상태이상이면 아예 후보에서 빠지므로(아래) 여기까지 오지 않는다.
+ */
+function moveScore(move: Move, defender: BattleMonster, bestAttackScore: number): number {
+  if (move.power === 0) return bestAttackScore * 0.8 * (move.accuracy / 100);
+  return move.power * getTypeMultiplier(move.type, defender.type) * (move.accuracy / 100);
+}
+
+/**
+ * 층이 오를수록 최선을 고를 확률. 1층 0.35 → 50층 0.90.
+ * 낮은 층이 만만해야 한다 — 1층 적이 50층 보스처럼 정확히 약점을 찌르면 곤란하다.
+ */
+export function aiFocus(floor: number): number {
+  return Math.min(0.9, 0.35 + Math.max(0, floor - 1) * 0.011);
+}
+
+/**
+ * AI 적의 기술 선택.
+ *
+ * 예전엔 상성 배율만 비교했다. 배율이 같으면 늘 목록의 첫 번째를 골랐고, 상대가
+ * normal 이면 전부 1배라 매 전투 같은 기술만 나왔다 — 위력 40 짜리 몸통박치기를
+ * 50층까지 반복하는 적이 실제로 있었다.
+ *
+ * 이제 기대 데미지(위력 × 상성 × 명중)로 줄을 세운 뒤, 늘 1등을 고르지는 않는다.
+ * 항상 최선만 두면 두 턴이면 읽히고, 완전 무작위면 상성이 의미를 잃는다. 그래서
+ * 층이 높을수록 1등을 고를 확률을 올리고(aiFocus), 나머지는 점수에 비례해 뽑는다.
+ *
+ * 회복 분기는 뺐다. HP 30% 이하면 회복기를 찾는 코드가 있었는데 **이 게임에는 회복
+ * 기술이 하나도 없다**(moves.ts 전수 확인). 그래서 조건에 걸리는 건 늘 상태기였고,
+ * 적은 죽어가면서 불티날림을 던지고 있었다. 회복기를 새로 만들면 전투가 길어지기만
+ * 하므로(적의 HP 를 깎는 게 유일한 승리 조건이다) 분기 쪽을 지웠다.
  */
 export function getAIAction(
   enemy: BattleMonster,
-  player: BattleMonster
+  player: BattleMonster,
+  floor = 1,
+  lastMoveId?: string,
 ): Move {
   const { moves } = enemy;
+  if (moves.length <= 1) return moves[0];
 
-  // HP 30% 이하 → 회복 스킬 탐색
-  const enemyHpRatio = enemy.currentHp / enemy.maxHp;
-  if (enemyHpRatio <= 0.3) {
-    const healMove = moves.find(
-      (m) => m.category === "status" && (m.power ?? 0) <= 0
-    );
-    if (healMove) return healMove;
+  // 상대가 이미 상태이상이면 상태기는 후보에서 뺀다 — 어차피 안 걸린다
+  const usable = player.status !== null ? moves.filter((m) => m.power > 0) : moves;
+  let pool = usable.length > 0 ? usable : moves;
+
+  /**
+   * 같은 기술을 두 턴 연속으로 쓰지 않는다 (기술이 셋 이상일 때만).
+   *
+   * 이게 없으면 기대 데미지가 제일 큰 기술 하나를 계속 던지게 된다. 특히 오름은 7속성
+   * 최상급 기술을 다 들고 있어서, 모든 속성에 약점이 생긴 지금은 **어떤 파티를 데려와도**
+   * 2배 기술이 하나씩 있다. 그걸 매 턴 던지면 최종보스가 아니라 그냥 정답이 하나뿐인
+   * 문제가 된다(시뮬: 50층 승률 79% → 44%).
+   *
+   * 둘뿐일 때 이 규칙을 적용하면 딱딱 번갈아 나와 오히려 완전히 읽힌다.
+   */
+  if (lastMoveId && pool.length >= 3) {
+    const varied = pool.filter((m) => m.id !== lastMoveId);
+    if (varied.length > 0) pool = varied;
   }
 
-  // 속성 상성표 기반 최선 스킬 선택
-  let bestMove = moves[0];
-  let bestMultiplier = getTypeMultiplier(bestMove.type, player.type);
+  const bestAttackScore = pool.reduce(
+    (best, m) => (m.power > 0 ? Math.max(best, moveScore(m, player, 0)) : best), 0,
+  );
+  const ranked = pool
+    .map((move) => ({ move, score: Math.max(0.01, moveScore(move, player, bestAttackScore)) }))
+    .sort((a, b) => b.score - a.score);
 
-  for (const move of moves) {
-    const multiplier = getTypeMultiplier(move.type, player.type);
-    if (multiplier > bestMultiplier) {
-      bestMultiplier = multiplier;
-      bestMove = move;
-    }
+  if (Math.random() < aiFocus(floor)) return ranked[0].move;
+
+  // 나머지 후보 중 점수 비례 추첨. 상위 3개까지만 본다 — 꼴찌 기술까지 섞으면
+  // "가끔 실수한다"가 아니라 "아무거나 낸다"가 된다.
+  const rest = ranked.slice(1, 3);
+  if (rest.length === 0) return ranked[0].move;
+  const total = rest.reduce((sum, c) => sum + c.score, 0);
+  let roll = Math.random() * total;
+  for (const c of rest) {
+    roll -= c.score;
+    if (roll <= 0) return c.move;
   }
-
-  return bestMove;
+  return rest[rest.length - 1].move;
 }
 
 // ─── 경험치 / 레벨업 ────────────────────────────────────────────────────────────
