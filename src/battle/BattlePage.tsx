@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { getFloorEnemy, getFloorEnemySkill, isBossFloor, MAX_TOWER_FLOOR, getTowerSecretReveal } from "../shared/floorTable";
+import {
+  getFloorEnemy, getFloorEnemySkill, isBossFloor, isGateFloor, MAX_TOWER_FLOOR,
+  getTowerSecretReveal, bossRegenAmount, getBossRegen,
+} from "../shared/floorTable";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
 import { rollBattleDrop } from "../shared/dropTables";
@@ -54,21 +57,16 @@ import {
   applyDamage,
   applyStatusEffect,
   calculateDamage,
-  checkCatchCondition,
   checkStatusEffects,
   createBattleMonster,
   createBattleMonsterFromOwned,
   gainExp,
   benchExpShare,
-  catchChance,
-  CATCH_BASE_RATE,
-  CATCH_HP_THRESHOLD,
-  CATCH_MAX_RATE,
-  CATCH_STATUS_MULT,
+  expLevelGapMultiplier,
   getAIAction,
   isFainted,
   tickSpeedGauge,
-  turnsToExtraAction,
+
   type BattleMonster,
 } from "./battleUtils";
 
@@ -76,9 +74,11 @@ import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { createBattleGame } from "../shared/phaser/phaserConfig";
 import { setBattleInitData } from "./battleInitStore";
 import { CaptureOverflowPrompt } from "../monster/CaptureOverflowPrompt";
-import { StatBar } from "../shared/ui";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { BattleCommandMenu } from "./BattleCommandMenu";
+import { PartyStrip } from "./PartyStrip";
+import { EnemyCard } from "./EnemyCard";
+import { TurnOrderBar } from "./TurnOrderBar";
 import { previewMove } from "./damagePreview";
 import { statusDetail, statusLabel } from "./statusInfo";
 import { TypeChartPanel } from "./TypeChartPanel";
@@ -103,15 +103,14 @@ export default function BattlePage() {
   const location   = useLocation();
   const routeState = location.state as BattleRouteState | undefined;
 
-  const isCatchZone = routeState?.isCatchZone ?? false;
   const floor       = routeState?.floor ?? 1;
 
   const gameRef = useRef<HTMLDivElement | null>(null);
   const { autoAdvance, logSpeed, toggleAuto, cycleSpeed } = useBattleSettings();
 
-  const { updateBestFloor, updatePartyMember, addCapturedMonster, absorbCapture,
+  const { updateBestFloor, updatePartyMember, absorbCapture,
           addToDexSeen, addToDexCaught, usePotion: consumePotion,
-          addMaterial, setStoryFlag, dexCaught, restorePartyHp } = usePlayerStore();
+          addMaterial, dexCaught } = usePlayerStore();
 
   // 각인 배수와 장착 장비 HP 보너스를 미리 반영한 파티 스냅샷
   const [initialParty] = useState(() => usePlayerStore.getState().party.map(toBattleEntry));
@@ -123,6 +122,14 @@ export default function BattlePage() {
     return m;
   });
   const [mustSwitch, setMustSwitch] = useState(false);
+  /**
+   * 키보드 포커스가 어느 구역에 있는가.
+   *
+   * 두 구역(파티·커맨드)이 각자 키를 듣는데 둘 다 듣고 있으면 ← 한 번에 두 곳이 움직인다.
+   * 그래서 "지금 듣는 쪽"을 여기서 하나만 정한다 — 화면의 밝기도 이 값을 따라간다.
+   */
+  const [focusZone, setFocusZone] = useState<"party" | "command">("command");
+  const [partyCursor, setPartyCursor] = useState(0);
 
   // 실시간 물약 재고 (사용 시 갱신)
   const [potionCounts, setPotionCounts] = useState<Record<string, number>>(
@@ -142,8 +149,6 @@ export default function BattlePage() {
   const [battleDrops,   setBattleDrops]   = useState<{ id: string; count: number }[]>([]);
   /** 최근 전투 로그. 캔버스 로그는 한 줄씩 지나가 버려서 놓치면 확인할 방법이 없었다. */
   const [logHistory,    setLogHistory]    = useState<string[]>([]);
-  /** 결과 화면에서 회복을 눌렀는지 (중복 클릭 방지 겸 피드백) */
-  const [healed,        setHealed]        = useState(false);
   const [showLog,       setShowLog]       = useState(false);
   /** 속성 상성표. 전투를 멈추지 않고 패널 위에 떠 있기만 한다 */
   const [showTypeChart, setShowTypeChart] = useState(false);
@@ -167,6 +172,8 @@ export default function BattlePage() {
   const enemyTurnRef = useRef(0);
   /** 적이 직전에 쓴 기술. 같은 기술을 두 턴 연속으로 던지지 않게 하는 데만 쓴다 */
   const lastEnemyMoveRef = useRef<string | undefined>(undefined);
+  /** 보스 회복 기믹은 전투당 한 번뿐이다 */
+  const bossRegenUsedRef = useRef(false);
   const cancelledRef = useRef(false);
   /**
    * 속도 게이지(battleUtils.tickSpeedGauge). 빠른 쪽만 찬다.
@@ -206,13 +213,41 @@ export default function BattlePage() {
     return () => clearTimeout(t);
   }, [battleOutcome]);
 
-  // 상성표는 T 하나로 열고 닫는다. code 로 보는 건 한글 자판에서도 같은 키가 되게 하려는 것.
+  /**
+   * 결과 화면과 기술 교체 창의 키보드.
+   *
+   * 전투는 키보드로 다 되는데 마지막 두 화면만 마우스를 요구하면, 한 판에 한 번은 반드시
+   * 손이 마우스로 간다. Enter 는 주 행동, Esc 는 물러나기 — 게임 전체에서 같은 약속이다.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (forgetPrompt) {
+        if (e.key === "Escape") { e.preventDefault(); answerForgetRef.current(null); }
+        else if (/^[1-4]$/.test(e.key)) {
+          const idx = Number(e.key) - 1;
+          if (idx < forgetPrompt.current.length) { e.preventDefault(); answerForgetRef.current(idx); }
+        }
+        return;
+      }
+      if (!showResultUI || !battleOutcome) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        (document.querySelector("[data-testid=result-primary]") as HTMLButtonElement | null)?.click();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        (document.querySelector("[data-testid=result-camp], [data-testid=result-primary]") as HTMLButtonElement | null)?.click();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showResultUI, battleOutcome, forgetPrompt]);
+
+  // 상성표는 T, 기록은 L. code 로 보는 건 한글 자판에서도 같은 키가 되게 하려는 것.
   // Esc 는 쓰지 않는다 — 커맨드 메뉴의 "뒤로"와 같은 키라 표를 닫으면서 커서까지 되돌아간다.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== "KeyT") return;
-      e.preventDefault();
-      setShowTypeChart((v) => !v);
+      if (e.code === "KeyT") { e.preventDefault(); setShowTypeChart((v) => !v); return; }
+      if (e.code === "KeyL") { e.preventDefault(); setShowLog((v) => !v); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -306,6 +341,9 @@ export default function BattlePage() {
   const answerForget = useCallback((idx: number | null) => {
     setForgetPrompt((p) => { p?.resolve(idx); return null; });
   }, []);
+  /** 키보드 쪽에서 부르는 최신 참조 (선언 순서 때문에 effect 가 직접 못 잡는다) */
+  const answerForgetRef = useRef(answerForget);
+  answerForgetRef.current = answerForget;
 
   /**
    * 경험치 연출을 띄우고 끝날 때까지 기다린다. 로그 한 줄과 같은 자리를 차지하는 대신
@@ -340,6 +378,28 @@ export default function BattlePage() {
     navigate("/");
   }, [isProcessing, battleOutcome, floor, initialParty, activePartyIndex, player,
       partyHp, updatePartyMember, navigate]);
+
+  /** 파티 구역이 그릴 값. 화면 부품이 스토어 모양을 몰라도 되게 여기서 한 번 빚는다 */
+  const partyView = initialParty.map((m, idx) => {
+    const isActive = idx === activePartyIndex;
+    const hp = isActive ? player.currentHp : (partyHp[m.uid] ?? m.currentHp);
+    return {
+      uid: m.uid, id: m.id, name: m.nickname ?? m.name, level: m.level,
+      currentHp: hp, maxHp: m.maxHp,
+      status: isActive ? player.status : null,
+      statusTurns: isActive ? player.statusTurns : 0,
+      isActive, fainted: hp <= 0,
+    };
+  });
+
+  const floorLabel = isBossFloor(floor) ? `${floor}층 · 보스`
+    : isGateFloor(floor) ? `${floor}층 · 관문`
+    : `${floor}층`;
+  /**
+   * 속도 차가 쌓여 한 번 더 움직이기까지 몇 턴 남았는가. 굴림이 아니라 누적이라
+   * 미리 적을 수 있다 — "이번엔 누가 먼저 움직이지?"를 예측할 수 있어야 한다는 조건이
+   * 무작위 선공을 못 쓰게 만든다.
+   */
 
   // ─── 파티 전원 기절 여부 ────────────────────────────────────────────────────────
   const hasAlivePartyMember = useCallback(
@@ -514,7 +574,11 @@ export default function BattlePage() {
   ) => {
     let np = won;
     const bonus = getEquipCombatBonus(initialParty[activeIdx]?.uid);
-    const earnedExp = Math.floor(ne.rewardExp * (1 + bonus.expBonus / 100));
+    // 레벨차 배수는 **받는 쪽마다** 다르다. 여기서 한 번 곱해 버리면 뒤처진 벤치 몬스터도
+    // 선봉의 배수를 물려받는다 — 그럼 따라잡기가 안 된다.
+    const baseExp = ne.rewardExp * (1 + bonus.expBonus / 100);
+    const leadGapMult = expLevelGapMultiplier(ne.level, np.level);
+    const earnedExp = Math.floor(baseExp * leadGapMult);
     const prevLevel = np.level;
     const beforeExp = np;
     const expResult = gainExp(np, earnedExp);
@@ -522,6 +586,13 @@ export default function BattlePage() {
     if (expResult.leveledUp) {
       gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "player");
       setLogHistory((prev) => [...prev.slice(-49), `레벨이 ${np.level}(으)로 올랐다!`]);
+    }
+    // 경험치가 왜 안 들어오는지 말해 준다. 이 줄이 없으면 플레이어는 고장으로 읽는다 —
+    // 실제로는 "이 층은 이제 네 밥이 아니다, 위로 가라"는 설계다.
+    if (leadGapMult <= 0) {
+      await sendLogAndWait(`${np.name}은(는) 이 층의 상대에게서 더 배울 것이 없다.`);
+    } else if (leadGapMult < 0.35) {
+      await sendLogAndWait(`${np.name}에게는 너무 약한 상대다. 배울 게 거의 없다…`);
     }
     // 로그 한 줄 대신 바가 차오르는 걸 보여준다. 레벨업이면 여기서 멈춰 오른 스탯을 띄운다.
     await playExpGain(beforeExp, earnedExp);
@@ -568,7 +639,11 @@ export default function BattlePage() {
       const mate = initialParty[i];
       const hp = partyHp[mate.uid] ?? mate.currentHp;
       if (hp <= 0) continue;   // 기절한 몬스터는 분배 대상에서 제외
-      const share = Math.max(1, Math.floor(earnedExp * benchExpShare(mate.level, np.level)));
+      // 하한 1 을 두지 않는다 — 1 경험치라도 들어오면 죽은 갈이가 기술적으로는 살아난다
+      const share = Math.floor(
+        baseExp * expLevelGapMultiplier(ne.level, mate.level) * benchExpShare(mate.level, np.level),
+      );
+      if (share <= 0) continue;
       const bm = createBattleMonsterFromOwned({ ...mate, currentHp: hp });
       const prev = bm.level;
       const res = gainExp(bm, share);
@@ -627,13 +702,26 @@ export default function BattlePage() {
     return { player: p, enemy: e, playerFainted: false, enemyFainted: false };
   }, [runStatusPhase, resolveAttack, nextEnemyMove, sendLogAndWait, syncGauges]);
 
-  // ─── 스킬 선택 ──────────────────────────────────────────────────────────────────
-  const handleMoveClick = useCallback(async (move: Move) => {
+  // ─── 한 라운드 ──────────────────────────────────────────────────────────────────
+  /**
+   * 플레이어의 행동 한 번과 그에 딸린 적의 차례.
+   *
+   * 공격이든 방어든 라운드 구조는 같아서 한 함수로 둔다 — 방어를 따로 짜면 상태이상·속도
+   * 게이지·기절 판정이 두 벌이 되고, 그 둘은 반드시 어긋난다(이 저장소에서 물약 턴이
+   * 그랬다).
+   */
+  const runRound = useCallback(async (action: { kind: "move"; move: Move } | { kind: "guard" }) => {
     if (isProcessing || battleOutcome !== null || mustSwitch) return;
     setIsProcessing(true);
 
     let np = player;
     let ne = enemyState;
+
+    // 방어는 **적이 때리기 전에** 서 있어야 한다. 적이 선공이어도 막아야 하므로 라운드 맨 앞에서 건다
+    if (action.kind === "guard") {
+      np = { ...np, guarding: true };
+      await sendLogAndWait(`${np.name}이(가) 몸을 웅크렸다. 다음 공격을 견딘다!`);
+    }
 
     const playerBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid);
     const playerSpeed = np.speed + playerBonus.speed;
@@ -646,13 +734,27 @@ export default function BattlePage() {
     enemyGaugeRef.current  = eTick.gauge.charge;
 
     const playerAttack = async (): Promise<boolean> => {
+      if (action.kind === "guard") return false;   // 방어한 턴에는 공격이 없다
       const res = await resolveAttack(
-        np, ne, move, np, ne, true,
+        np, ne, action.move, np, ne, true,
         playerBonus.attack, 0, playerBonus.critRate, playerBonus.elementPower,
         playerBonus.elementalDamage, playerBonus.critDamage,
       );
       ne = res.updated;
-      return res.fainted;
+      if (res.fainted) return true;
+      // 보스 기믹 — 한 번은 몸을 추스른다(40층 모왕). 숫자만 큰 보스는 "몇 대 더"의 문제라
+      // 장비가 있으나 없으나 결론이 같지만, 회복이 끼면 "정해진 턴 안에 넣을 수 있나"가 된다
+      if (!bossRegenUsedRef.current) {
+        const heal = bossRegenAmount(floor, ne.currentHp, ne.maxHp);
+        if (heal > 0) {
+          bossRegenUsedRef.current = true;
+          ne = { ...ne, currentHp: Math.min(ne.maxHp, ne.currentHp + heal) };
+          syncHpToPhaser(np, ne);
+          gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "enemy");
+          await sendLogAndWait(getBossRegen(floor)?.line ?? `${ne.name}이(가) 회복했다!`);
+        }
+      }
+      return false;
     };
 
     const enemyAttack = async (): Promise<boolean> => {
@@ -704,6 +806,9 @@ export default function BattlePage() {
     }
     syncGauges();
 
+    // 방어 자세는 그 턴에만 유효하다
+    np = { ...np, guarding: false };
+
     if (playerWon) {
       await resolveVictory(np, ne, activePartyIndex);
       setIsProcessing(false); return;
@@ -722,13 +827,63 @@ export default function BattlePage() {
     setPlayer(np); setEnemyState(ne);
     setIsProcessing(false);
   }, [
-    isProcessing, battleOutcome, mustSwitch, player, enemyState,
+    isProcessing, battleOutcome, mustSwitch, player, enemyState, floor,
     activePartyIndex, initialParty, resolveAttack, nextEnemyMove, runStatusPhase,
     sendLogAndWait, finishBattle, hasAlivePartyMember, getEquipCombatBonus,
-    resolveVictory, syncGauges,
+    resolveVictory, syncGauges, syncHpToPhaser,
   ]);
 
+  const handleMoveClick = useCallback((move: Move) => runRound({ kind: "move", move }), [runRound]);
+  /** 방어 — 그 턴 피해 절반, 새 상태이상 차단. 대신 공격이 없다 */
+  const handleGuard = useCallback(() => runRound({ kind: "guard" }), [runRound]);
+
   // ─── 파티 교체 ──────────────────────────────────────────────────────────────────
+  /** 키보드에서 부를 때 쓰는 최신 참조 — 선언 순서 때문에 직접 못 부른다 */
+  const handlePartySwapRef = useRef<(i: number) => void>(() => {});
+
+  /**
+   * 파티 구역의 키보드. 커맨드 메뉴와 **동시에 듣지 않는다**(focusZone 이 하나뿐).
+   * 기절해서 반드시 골라야 하는 상황에서는 자동으로 이쪽에 포커스가 온다.
+   */
+  useEffect(() => {
+    if (isProcessing && !mustSwitch) return;
+    if (focusZone !== "party" && !mustSwitch) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      const n = initialParty.length;
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault(); setPartyCursor((c) => Math.max(0, c - 1)); break;
+        case "ArrowDown":
+          e.preventDefault(); setPartyCursor((c) => Math.min(n - 1, c + 1)); break;
+        case "ArrowRight":
+        case "Escape":
+          // 기절 교체 중에는 빠져나갈 수 없다 — 고르는 것 말고 할 게 없는 상태다
+          if (mustSwitch) return;
+          e.preventDefault(); setFocusZone("command"); break;
+        case "Enter":
+        case " ": {
+          e.preventDefault();
+          const target = partyView[partyCursor];
+          if (target && !target.fainted && !target.isActive) handlePartySwapRef.current(partyCursor);
+          break;
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focusZone, mustSwitch, isProcessing, initialParty.length, partyCursor, partyView]);
+
+  // 기절하면 고를 곳으로 포커스를 옮겨 준다. 손이 알아서 가야 하는 자리다
+  useEffect(() => {
+    if (!mustSwitch) return;
+    setFocusZone("party");
+    const first = partyView.findIndex((m) => !m.fainted && !m.isActive);
+    if (first >= 0) setPartyCursor(first);
+    // partyView 는 매 렌더 새로 만들어지므로 의존성에 넣으면 커서가 계속 되돌아간다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mustSwitch]);
+
   const handlePartySwap = useCallback(async (partyIdx: number) => {
     if (isProcessing || battleOutcome !== null || partyIdx === activePartyIndex) return;
     const nextOwned = initialParty[partyIdx];
@@ -781,6 +936,7 @@ export default function BattlePage() {
     syncHpToPhaser, sendLogAndWait, finishBattle, hasAlivePartyMember,
     getEquipCombatBonus, runEnemyTurn, resolveVictory,
   ]);
+  handlePartySwapRef.current = handlePartySwap;
 
   // ─── 물약 사용 ──────────────────────────────────────────────────────────────────
   const handleUsePotion = useCallback(async (potionId: string) => {
@@ -876,81 +1032,12 @@ export default function BattlePage() {
     finishBattle, hasAlivePartyMember, getEquipCombatBonus, resolveVictory,
   ]);
 
-  // ─── 포획 ────────────────────────────────────────────────────────────────────────
-  const handleCatch = useCallback(async () => {
-    if (isProcessing || battleOutcome !== null) return;
-    setIsProcessing(true);
-    const res = checkCatchCondition(enemyState, isCatchZone);
-    await sendLogAndWait(res.message);
-    if (!res.canAttempt) { setIsProcessing(false); return; }
-
-    if (res.success) {
-      gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "enemy");
-      const captureResult = addCapturedMonster(enemyState);
-      addToDexCaught(enemyState.id);
-      if (captureResult === "storage") setStoryFlag("first_capture");
-      await sendLogAndWait(captureResult === "storage" ? "보관함에 저장되었다!" : "보관함이 가득 찼다...");
-      // 자리가 없다고 그냥 없애지 않는다 — 각인으로 흡수할 길이 생겼다
-      if (captureResult === "full") setOverflowCapture(enemyState);
-      finishBattle("win"); setIsProcessing(false); return;
-    }
-
-    // 던졌지만 놓쳤다 — 여기서부터는 그냥 한 턴을 쓴 것이다
-    const uid = initialParty[activePartyIndex]?.uid;
-    const bonus = getEquipCombatBonus(uid);
-    const turn = await runEnemyTurn(player, enemyState, bonus.defense, player.speed + bonus.speed);
-    const np = turn.player;
-
-    if (turn.enemyFainted) {
-      await resolveVictory(np, turn.enemy, activePartyIndex);
-      setIsProcessing(false); return;
-    }
-    if (turn.playerFainted) {
-      if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
-      setPlayer({ ...np, currentHp: 0 }); setEnemyState(turn.enemy);
-      if (hasAlivePartyMember(activePartyIndex, uid, 0)) setMustSwitch(true);
-      else finishBattle("lose");
-    } else {
-      if (uid) setPartyHp(prev => ({ ...prev, [uid]: np.currentHp }));
-      setPlayer(np); setEnemyState(turn.enemy);
-    }
-    setIsProcessing(false);
-  }, [
-    isProcessing, battleOutcome, player, enemyState, isCatchZone,
-    activePartyIndex, initialParty,
-    sendLogAndWait, finishBattle, getEquipCombatBonus, runEnemyTurn, resolveVictory,
-    addCapturedMonster, addToDexCaught, hasAlivePartyMember, setStoryFlag,
-  ]);
-
   // ─── 렌더 헬퍼 ──────────────────────────────────────────────────────────────────
-  // 포획 칸을 언제 보여줄지. HP 가 아직 높아도 자리를 비우지 않는다 — 예전엔 30% 를
-  // 넘으면 버튼 자체가 없어서, 이 전투가 포획 가능한 전투인지조차 알 수 없었다.
-  const catchZone = isCatchZone && enemyState.id !== "ormr"
-    && battleOutcome === null && !mustSwitch;
-  const enemyHpRatio = enemyState.currentHp / enemyState.maxHp;
-  const catchReady = enemyHpRatio <= CATCH_HP_THRESHOLD;
-  const catchPercent = Math.round(catchChance(enemyState) * 100);
-  const catchBoostPercent = Math.round(
-    Math.min(CATCH_MAX_RATE, CATCH_BASE_RATE * CATCH_STATUS_MULT) * 100,
-  );
   const activeBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid);
   const activeSpeed = player.speed + activeBonus.speed;
   const speedFirst = activeSpeed >= enemyState.speed;
-  /**
-   * 속도 차가 쌓여 한 번 더 움직이기까지 몇 턴 남았는가. 굴림이 아니라 누적이라
-   * 미리 적을 수 있다 — "이번엔 누가 먼저 움직이지?"를 예측할 수 있어야 한다는 조건이
-   * 무작위 선공을 못 쓰게 만든다.
-   */
-  const extraOwner = activeSpeed > enemyState.speed ? "player"
-    : activeSpeed < enemyState.speed ? "enemy" : null;
-  const extraTurnsAway = extraOwner === "player"
-    ? turnsToExtraAction(gauges.player, activeSpeed, enemyState.speed)
-    : extraOwner === "enemy"
-      ? turnsToExtraAction(gauges.enemy, enemyState.speed, activeSpeed)
-      : null;
-  // 속도 차가 손톱만 하면 "75턴 뒤"처럼 전투보다 긴 예고가 뜬다. 그건 정보가 아니라 잡음이라
-  // 전투 안에 들어올 만한 때(9턴)만 적는다. 그 아래로는 선공 표시만 남는다.
-  const extraIn = extraTurnsAway !== null && extraTurnsAway <= 9 ? extraTurnsAway : null;
+  void speedFirst;   // 순서는 이제 턴 바가 보여준다 (TurnOrderBar)
+
   /**
    * 기술 셀에 들어갈 예상 결과. 전투가 실제로 쓰는 계산 함수를 그대로 부른다
    * (damagePreview → battleUtils.computeDamage). 보너스도 resolveAttack 에 넘기는 것과
@@ -993,38 +1080,38 @@ export default function BattlePage() {
           </div>
         )}
 
-        {/* 상태 바 — HP는 전투에서 가장 자주 보는 정보라 바를 크게 잡는다 */}
-        <div className="flex items-center justify-between border-b border-earth-500/40 px-3 py-2 text-pixel-sm">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-cream-100">{player.name}</span>
-            <span className="text-earth-400">Lv.{player.level}</span>
-            <StatBar value={player.currentHp} max={player.maxHp} showNumbers className="w-64" />
+        {/* ── ① 턴 바 ──────────────────────────────────────────────────────────
+            예전 이 자리는 플레이어 HP 바였는데, 그건 캔버스 패널이 이미 크게 보여준다.
+            같은 걸 두 번 그리는 대신 캔버스가 못 하는 것 — 이번 라운드의 순서 — 을 놓는다. */}
+        <div className="flex items-center justify-between gap-3 border-b border-earth-500/40 px-3 py-2 text-pixel-sm">
+          <div className="flex min-w-0 items-center gap-3">
+            {battleOutcome === null && !mustSwitch && (
+              <TurnOrderBar
+                player={player} enemy={enemyState}
+                playerSpeed={activeSpeed}
+                playerCharge={gauges.player} enemyCharge={gauges.enemy}
+              />
+            )}
             {player.status && (
-              /* 자리가 있는 쪽이라 남은 턴과 매 턴 깎이는 양까지 적는다 — "버틸까 지금 지를까"의 근거다 */
-              <span className="rounded bg-ember-700/18 px-1 py-0.5 text-ember-500 text-pixel-sm">
+              <span className="shrink-0 rounded bg-ember-700/20 px-1 py-0.5 text-pixel-sm text-ember-500">
                 {statusDetail(player.status, player.statusTurns)}
               </span>
             )}
             {player.attackBuffTurns > 0 && (
-              <span className="rounded bg-ember-700/18 px-1 py-0.5 text-ember-500 text-pixel-sm">
-                ⚔️ ×{player.attackBuffMult} ({player.attackBuffTurns}턴)
+              <span className="shrink-0 rounded bg-ember-700/20 px-1 py-0.5 text-pixel-sm text-ember-500">
+                ▲공격 ×{player.attackBuffMult} ({player.attackBuffTurns}턴)
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {!mustSwitch && battleOutcome === null && (
-              <span
-                data-testid="speed-info"
-                title="속도 차이가 쌓이면 그 쪽이 한 턴에 두 번 움직인다"
-                className={`text-pixel-sm ${speedFirst ? "text-moss-500" : "text-ember-700"}`}>
-                {speedFirst ? "▲ 선공" : "▼ 후공"}
-                {extraIn !== null && (extraOwner === "player" ? ` · 연속 ${extraIn}턴` : ` · 적 연속 ${extraIn}턴`)}
-              </span>
-            )}
+
+          <div className="flex shrink-0 items-center gap-2">
+            {/* 지금 무엇을 기다리는지. 로그 대기와 내 차례는 다른 상태다 */}
             {isProcessing && !mustSwitch && (
-              <span className="text-ember-500 animate-pulse text-pixel-sm">▶ Q / 클릭</span>
+              <span data-testid="log-wait" className="animate-pulse text-pixel-sm text-ember-500">▶ Q / 클릭</span>
             )}
-            <span className="rounded bg-ember-700/15 px-1.5 py-0.5 text-ember-500 font-mono text-pixel-sm font-bold">
+            <span
+              data-testid="floor-chip"
+              className="rounded bg-ember-700/15 px-1.5 py-0.5 font-mono text-pixel-sm font-bold text-ember-500">
               {floor}F
             </span>
             {/* 자동 진행 — 로그 한 줄마다 Q 를 누르는 게 엔딩까지 8천 번이다 */}
@@ -1051,21 +1138,24 @@ export default function BattlePage() {
               상성 T
             </button>
             <button onClick={() => setShowLog((v) => !v)}
+              data-testid="cmd-log"
+              title="지나간 로그 (L)"
               className={`text-pixel-sm border rounded px-1.5 py-0.5 transition ${
                 showLog ? "border-stone-600 text-sand-200" : "border-shadow-700 text-earth-400 hover:text-sand-300"}`}>
-              기록
+              기록 L
             </button>
             <button onClick={() => navigate("/")}
+              data-testid="cmd-exit"
               className="text-pixel-sm text-earth-400 hover:text-sand-300 border border-shadow-700 rounded px-1.5 py-0.5">
               나가기
             </button>
           </div>
         </div>
 
-        {/* 로그 — 높이 고정. 텍스트 길이에 따라 레이아웃이 흔들리면 안 된다 (ART_DIRECTION 3-2).
-            '기록' 버튼은 지나간 줄을 다시 보는 용도로 남긴다. */}
-        <div className="flex h-14 items-center border-b border-earth-500/40 bg-shadow-700/60 px-4">
-          <p data-testid="battle-log-line" className="line-clamp-2 text-pixel-sm leading-[18px] text-sand-200">
+        {/* 로그 한 줄 — 캔버스 로그 상자와 같은 내용이다. 접근성·테스트용으로 DOM 에도 남기되
+            자리를 적게 쓴다(예전엔 56px 짜리 띠가 대부분 비어 있었다). */}
+        <div className="flex h-7 items-center border-b border-earth-500/40 bg-shadow-700/50 px-3">
+          <p data-testid="battle-log-line" className="truncate text-pixel-sm text-sand-200">
             {logHistory[logHistory.length - 1] ?? ""}
           </p>
         </div>
@@ -1084,94 +1174,53 @@ export default function BattlePage() {
           </div>
         )}
 
-        {/* 전투 중 메인 패널 */}
+        {/* 전투 중 메인 패널 — 파티 · 커맨드 · 상대 카드 세 구역 */}
         {battleOutcome === null && (
-          <div className="flex" style={{ minHeight: "148px" }}>
+          <div className="flex" style={{ minHeight: "152px" }}>
 
-            {/* ─── 파티 벤치 ─────────────────────────────── */}
-            <div className="w-44 shrink-0 border-r border-shadow-700 p-2 flex flex-col gap-1.5">
-              <p className="text-pixel-sm text-earth-400 font-semibold uppercase tracking-wider">파티</p>
-              {initialParty.map((m, idx) => {
-                const isActive = idx === activePartyIndex;
-                const hp       = isActive ? player.currentHp : (partyHp[m.uid] ?? m.currentHp);
-                const fainted  = hp <= 0;
-                const canSwap  = !fainted && !isActive && !isProcessing && !mustSwitch;
-                const mustPick = mustSwitch && !fainted && !isActive;
+            <PartyStrip
+              members={partyView}
+              focused={focusZone === "party"}
+              cursor={partyCursor}
+              mustPick={mustSwitch}
+              disabled={isProcessing}
+              onHover={(i) => { setFocusZone("party"); setPartyCursor(i); }}
+              onSelect={handlePartySwap}
+            />
 
-                return (
-                  <button key={m.uid}
-                    onClick={() => (canSwap || mustPick) && handlePartySwap(idx)}
-                    disabled={fainted || (isActive && !mustSwitch)}
-                    className={[
-                      "relative flex items-center gap-1.5 rounded-lg border px-1.5 py-1 text-left transition-all",
-                      isActive  && "border-ember-500/70 bg-ember-700/9",
-                      fainted   && "border-shadow-700 bg-shadow-800/10 opacity-40 cursor-not-allowed",
-                      mustPick  && "border-mist-500 bg-mist-500/10 hover:bg-mist-500/16 shadow-[0_0_8px_rgba(59,130,246,0.4)] cursor-pointer",
-                      canSwap   && "border-stone-600 bg-shadow-800/40 hover:border-sand-300 hover:bg-shadow-700/40 cursor-pointer",
-                      !isActive && !fainted && !mustPick && !canSwap && "border-shadow-700 bg-shadow-800/20 cursor-not-allowed",
-                    ].filter(Boolean).join(" ")}
-                  >
-                    <div className="relative shrink-0">
-                      <img src={MONSTER_IMAGE_MAP[m.id]} alt={m.nickname ?? m.name} className="h-9 w-9 object-contain"
-                        style={fainted ? { filter: "grayscale(100%) brightness(0.4)" } : undefined} />
-                      {isActive && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-ember-500 shadow-[0_0_4px_rgba(250,204,21,0.8)]" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-pixel-sm font-semibold text-sand-200 truncate leading-tight">{m.nickname ?? m.name}</p>
-                      <p className="text-pixel-sm text-earth-400 leading-tight">Lv.{m.level}</p>
-                      <StatBar value={hp} max={m.maxHp} height={6} className="mt-0.5" />
-                      <p className="font-mono text-pixel-sm text-earth-400">{hp}/{m.maxHp}</p>
-                    </div>
-                    {isActive  && <span className="text-pixel-sm text-ember-500 font-bold shrink-0">출전</span>}
-                    {fainted   && <span className="text-pixel-sm text-earth-400 shrink-0">기절</span>}
-                    {mustPick  && <span className="text-pixel-sm text-mist-300 animate-pulse shrink-0">선택</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* ─── 오른쪽 액션 영역 ──────────────────────── */}
             <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2">
               {mustSwitch ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
                   <p className="text-pixel-sm font-bold text-ember-500">{player.name}이(가) 기절했다!</p>
-                  <p className="text-pixel-sm text-sand-300">← 왼쪽에서 다음 몬스터를 선택하세요</p>
+                  <p data-testid="must-switch" className="text-pixel-sm text-sand-300">
+                    ← 왼쪽에서 다음 몬스터를 선택하세요 (←→ · Enter)
+                  </p>
                 </div>
               ) : (
-                <>
-                  <BattleCommandMenu
-                    moves={player.moves}
-                    getPreview={getMovePreview}
-                    potions={potionEntries}
-                    disabled={isProcessing}
-                    canFlee={!isBossFloor(floor)}
-                    fleeBlockedReason="보스는 못 피한다"
-                    onUseMove={handleMoveClick}
-                    onUsePotion={handleUsePotion}
-                    onFlee={handleFlee}
-                  />
-
-                  {catchZone && (
-                    <div className="flex flex-col gap-0.5">
-                      <button onClick={handleCatch} disabled={isProcessing || !catchReady}
-                        data-testid="cmd-catch"
-                        className="w-full rounded-lg border border-mist-500 bg-mist-500/15 py-1.5 text-pixel-sm font-semibold text-mist-300 transition hover:bg-mist-500/25 disabled:opacity-30">
-                        {catchReady
-                          ? <>포획 시도 <span className="font-bold text-cream-100">{catchPercent}%</span></>
-                          : <>포획 시도 — HP {Math.round(CATCH_HP_THRESHOLD * 100)}% 이하부터</>}
-                      </button>
-                      {/* 힌트지 강요가 아니다. 올릴 수 있는 조건이 남아 있을 때만 적는다. */}
-                      <p data-testid="catch-hint" className="text-center text-pixel-sm text-earth-400">
-                        {!catchReady
-                          ? `지금 ${Math.round(enemyHpRatio * 100)}% — 더 깎으면 시도할 수 있다`
-                          : enemyState.status
-                            ? `${statusLabel(enemyState.status)} 보너스 ×${CATCH_STATUS_MULT} 적용 중`
-                            : `상태이상을 걸면 ${catchBoostPercent}% 로 오른다`}
-                      </p>
-                    </div>
-                  )}
-                </>
+                <BattleCommandMenu
+                  moves={player.moves}
+                  getPreview={getMovePreview}
+                  potions={potionEntries}
+                  disabled={isProcessing}
+                  focused={focusZone === "command"}
+                  canFlee={!isBossFloor(floor)}
+                  fleeBlockedReason="보스는 못 피한다"
+                  onUseMove={handleMoveClick}
+                  onUsePotion={handleUsePotion}
+                  onGuard={handleGuard}
+                  onFlee={handleFlee}
+                  onLeaveLeft={() => setFocusZone("party")}
+                />
               )}
+            </div>
+
+            {/* ─── 상대 카드 ─────────────────────────────── */}
+            <div className="w-48 shrink-0 border-l border-shadow-700 p-2">
+              <EnemyCard
+                enemy={enemyState}
+                moves={player.moves}
+                floorLabel={floorLabel}
+              />
             </div>
           </div>
         )}
@@ -1230,10 +1279,13 @@ export default function BattlePage() {
             <div className="grid grid-cols-2 gap-1.5 mb-3">
               {forgetPrompt.current.map((mv, i) => (
                 <button key={mv.id} onClick={() => answerForget(i)}
+                  data-testid={`forget-${i}`}
                   className={`border px-2 py-1.5 text-left transition ${ELEMENT_CHIP_CLASS[mv.type as keyof typeof ELEMENT_CHIP_CLASS] ?? ELEMENT_CHIP_CLASS.normal}`}
                   style={{ borderRadius: 0 }}>
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-pixel-sm font-semibold leading-tight">{mv.name}</span>
+                    <span className="text-pixel-sm font-semibold leading-tight">
+                      <span className="mr-1 opacity-60">{i + 1}</span>{mv.name}
+                    </span>
                     <span className="text-pixel-sm opacity-50 uppercase shrink-0">{mv.type}</span>
                   </div>
                   <div className="text-pixel-sm opacity-45 mt-0.5">위력 {mv.power} · 명중 {mv.accuracy}</div>
@@ -1242,8 +1294,9 @@ export default function BattlePage() {
             </div>
 
             <button onClick={() => answerForget(null)}
+              data-testid="forget-none"
               className="w-full border border-stone-600 py-2 text-pixel-sm text-sand-300 hover:bg-shadow-800 transition">
-              배우지 않는다
+              배우지 않는다 <span className="opacity-70">(Esc)</span>
             </button>
           </div>
         </div>
@@ -1276,28 +1329,41 @@ export default function BattlePage() {
               </div>
             )}
 
+            {/* 파티 상태 — 다음 층으로 갈지 내려갈지는 이 숫자를 보고 정한다.
+                예전엔 여기 "전회복" 버튼이 있어서 볼 이유가 없었다. */}
+            <div className="mb-4 flex flex-col gap-1">
+              {partyView.map((m) => (
+                <p key={m.uid} className="flex items-center justify-between text-pixel-sm">
+                  <span className={m.fainted ? "text-earth-400" : "text-sand-200"}>{m.name}</span>
+                  <span className={m.fainted ? "text-ember-700" : m.currentHp / m.maxHp <= 0.3 ? "text-ember-500" : "text-sand-300"}>
+                    {m.fainted ? "기절" : `${m.currentHp}/${m.maxHp}`}
+                  </span>
+                </p>
+              ))}
+            </div>
+
             <div className="flex flex-col gap-2">
-              {/* 회복 — 예전에는 이걸 하려고 탑에서 나가 /monsters까지 갔다가
-                  베이스캠프에서 탑까지 다시 걸어와야 했다. 결과 화면에서 바로 처리한다. */}
-              <button onClick={() => { restorePartyHp(); setHealed(true); }} disabled={healed}
-                className="w-full border-2 border-mist-500 bg-mist-500/15 py-2.5 text-pixel-sm font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-40 transition active:scale-95">
-                {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
-              </button>
               {floor === MAX_TOWER_FLOOR ? (
                 <button onClick={() => navigate("/ending")}
+                  data-testid="result-primary"
                   className="w-full border-2 border-ember-500 bg-ember-700/25 py-3 text-pixel-sm font-bold text-ember-500 hover:bg-ember-700/40 transition active:scale-95">
-                  &gt; 정수를 들고 마을로
+                  &gt; 정수를 들고 마을로 <span className="opacity-70">(Enter)</span>
                 </button>
               ) : (
-                <button onClick={() => navigate("/battle", { state: { floor: floor + 1, isCatchZone: false } })}
+                <button onClick={() => navigate("/battle", { state: { floor: floor + 1 } })}
+                  data-testid="result-primary"
                   className="w-full border-2 border-moss-500 bg-moss-500/25 py-3 text-pixel-sm font-bold text-moss-500 hover:bg-moss-500/40 transition active:scale-95">
-                  &gt; 다음층 ({floor + 1}F)
+                  &gt; 다음층 ({floor + 1}F) <span className="opacity-70">(Enter)</span>
                 </button>
               )}
               <button onClick={() => navigate("/")}
+                data-testid="result-camp"
                 className="w-full border-2 border-stone-600 bg-shadow-700/80 py-3 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600/80 transition active:scale-95">
-                &gt; 베이스캠프
+                &gt; 베이스캠프에서 정비 <span className="opacity-70">(Esc)</span>
               </button>
+              <p className="text-pixel-sm text-earth-400">
+                회복은 캠프·몬스터 화면에서. 탑 안에서는 물약뿐이다.
+              </p>
             </div>
           </div>
         </div>
@@ -1311,20 +1377,15 @@ export default function BattlePage() {
             <p className="text-title-md font-bold text-ember-500 mb-4">LOSE...</p>
             <p className="text-pixel-sm text-sand-300 mb-6 leading-relaxed">{floor}층 재도전?</p>
             <div className="flex flex-col gap-2">
-              {/* 회복 — 예전에는 이걸 하려고 탑에서 나가 /monsters까지 갔다가
-                  베이스캠프에서 탑까지 다시 걸어와야 했다. 결과 화면에서 바로 처리한다. */}
-              <button onClick={() => { restorePartyHp(); setHealed(true); }} disabled={healed}
-                className="w-full border-2 border-mist-500 bg-mist-500/15 py-2.5 text-pixel-sm font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-40 transition active:scale-95">
-                {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
-              </button>
-              <button onClick={() => navigate("/battle", { state: { floor, isCatchZone } })}
-                className="w-full border-2 border-ember-700 bg-ember-700/25 py-3 text-pixel-sm font-bold text-ember-500 hover:bg-ember-700/40 transition active:scale-95">
-                &gt; 재도전 ({floor}F)
-              </button>
+              {/* 전멸한 채로 재도전은 허구다 — 캠프에서 회복하고 오는 게 유일한 길이다 */}
               <button onClick={() => navigate("/")}
-                className="w-full border-2 border-stone-600 bg-shadow-700/80 py-3 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600/80 transition active:scale-95">
-                &gt; 베이스캠프
+                data-testid="result-primary"
+                className="w-full border-2 border-ember-700 bg-ember-700/25 py-3 text-pixel-sm font-bold text-ember-500 hover:bg-ember-700/40 transition active:scale-95">
+                &gt; 캠프로 돌아가 회복한다 <span className="opacity-70">(Enter)</span>
               </button>
+              <p className="text-pixel-sm text-earth-400">
+                파티가 전멸했다. 캠프에서 회복하고 장비를 손본 뒤 다시 오르자.
+              </p>
             </div>
           </div>
         </div>

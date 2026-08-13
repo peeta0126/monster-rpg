@@ -26,12 +26,29 @@ const shaky = move({ id: "shaky", power: 95, type: "normal", accuracy: 20 });
 const hex   = move({ id: "hex", power: 0, type: "poison", category: "status",
   statusEffect: "poison", statusChance: 100 });
 
-/** 늘 최선만 고르면 읽힌다. 100번 중 한 번도 다른 수가 안 나오면 그게 예전 AI 다 */
+/**
+ * 늘 최선만 고르면 읽힌다. 2,000번 중 한 번도 다른 수가 안 나오면 그게 예전 AI 다.
+ *
+ * 굴림은 씨를 고정한다 — AI 가 확률로 고르는 이상 표본이 흔들리는데, 테스트가 가끔
+ * 빨개지면 사람은 곧 테스트를 안 믿게 된다.
+ */
 function sample(enemy: BattleMonster, target: BattleMonster, floor: number): Record<string, number> {
   const counts: Record<string, number> = {};
-  for (let i = 0; i < 400; i++) {
-    const m = getAIAction(enemy, target, floor);
-    counts[m.id] = (counts[m.id] ?? 0) + 1;
+  const orig = Math.random;
+  let seed = 12345;
+  Math.random = () => {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  try {
+    for (let i = 0; i < 2000; i++) {
+      const m = getAIAction(enemy, target, floor);
+      counts[m.id] = (counts[m.id] ?? 0) + 1;
+    }
+  } finally {
+    Math.random = orig;
   }
   return counts;
 }

@@ -14,6 +14,8 @@ export interface BattleMonster extends Monster {
   attackBuffMult: number;
   /** 공격 버프 남은 턴 (0 = 없음) */
   attackBuffTurns: number;
+  /** 이번 턴에 방어 자세인가 (피해 절반 · 새 상태이상 차단) */
+  guarding: boolean;
 }
 
 /** Monster → BattleMonster 변환 (전투 시작 시 사용) */
@@ -25,6 +27,7 @@ export function createBattleMonster(monster: Monster): BattleMonster {
     statusTurns: 0,
     attackBuffMult: 1.0,
     attackBuffTurns: 0,
+    guarding: false,
   };
 }
 
@@ -36,6 +39,7 @@ export function createBattleMonsterFromOwned(monster: Monster & { currentHp: num
     statusTurns: 0,
     attackBuffMult: 1.0,
     attackBuffTurns: 0,
+    guarding: false,
   };
 }
 
@@ -71,6 +75,14 @@ const CRIT_DAMAGE_MULTIPLIER = 1.5;
  * 누가 이기는지를 굴림이 정하기 시작하고, 3% 면 연출을 못 보고 끝나는 전투가 절반이다.
  */
 export const BASE_CRIT_RATE = 6;
+
+/**
+ * 방어 자세일 때 받는 피해 배율.
+ *
+ * 절반이라야 "한 턴을 버린다"는 값을 치를 만해진다. 0.75 로는 그냥 공격하는 게 늘 낫고,
+ * 0.25 면 강한 한 방을 아예 무효로 만드는 답이 하나뿐인 문제가 된다.
+ */
+export const GUARD_DAMAGE_MULT = 0.5;
 
 /** 실제로 굴리는 치명타율(%). 장비 보너스는 기본값 **위에** 더해진다. */
 export function critChanceOf(critRateBonus = 0): number {
@@ -125,6 +137,10 @@ export function computeDamage(
   }
 
   if (isCrit) baseDamage *= CRIT_DAMAGE_MULTIPLIER + critDamageBonus / 100;
+
+  // 방어 자세는 마지막에 곱한다 — 상성·치명타가 다 얹힌 뒤의 값을 반으로 줄여야
+  // "센 걸 막았다"가 성립한다
+  if (defender.guarding) baseDamage *= GUARD_DAMAGE_MULT;
 
   return Math.max(1, Math.floor(baseDamage * multiplier));
 }
@@ -230,6 +246,9 @@ export function applyStatusEffect(
   monster: BattleMonster,
   effect: NonNullable<StatusEffect>
 ): BattleMonster {
+  // 방어 자세는 새 상태이상을 막는다. 이게 방어의 두 번째 쓸모다 — 마비·빙결을 던지는
+  // 관문 보스 앞에서 "이번 턴은 흘린다"는 선택이 생긴다
+  if (monster.guarding) return monster;
   // 이미 상태이상 존재 시 중복 적용 불가
   if (monster.status !== null) return monster;
   return { ...monster, status: effect, statusTurns: STATUS_DURATION[effect] };
@@ -315,75 +334,6 @@ export function checkStatusEffects(monster: BattleMonster): {
 const STATUS_NAME: Record<NonNullable<StatusEffect>, string> = {
   burn: "화상", poison: "독", paralysis: "마비", freeze: "빙결",
 };
-
-// ─── 포획 ───────────────────────────────────────────────────────────────────────
-
-/** 기본 포획률. HP 문턱을 넘긴 뒤에는 이 값이 바닥이다 */
-export const CATCH_BASE_RATE = 0.4;
-/** 상태이상이 걸려 있을 때의 배수 */
-export const CATCH_STATUS_MULT = 1.5;
-/** 아무리 겹쳐도 여기까지 */
-export const CATCH_MAX_RATE = 0.95;
-/** 이 비율 이하로 깎아야 시도할 수 있다 */
-export const CATCH_HP_THRESHOLD = 0.3;
-
-/**
- * 지금 던지면 잡힐 확률(0~1). 굴림이 없어 화면에서 몇 번을 불러도 안전하다.
- *
- * checkCatchCondition 에서 떼어낸 것이라 판정과 표시가 같은 값을 본다 — 버튼에 적힌
- * 숫자와 실제 확률이 어긋나는 것만큼 사람을 속이는 UI 도 없다.
- *
- * ⚠️ HP 는 확률에 들어가지 않는다. 30% 이하라는 **문을 여는 조건**일 뿐이고, 29% 든
- * 1% 든 확률은 같다. 화면에서 "더 깎으면 잘 잡힌다"고 말하면 거짓말이 된다.
- */
-export function catchChance(target: BattleMonster): number {
-  const statusMultiplier = target.status !== null ? CATCH_STATUS_MULT : 1;
-  return Math.min(CATCH_MAX_RATE, CATCH_BASE_RATE * statusMultiplier);
-}
-
-/**
- * 포획 가능 여부 및 성공 여부 판단
- * - isCatchZone 플래그가 false면 포획 불가
- * - 대상 HP가 30% 초과면 포획 시도 불가
- * - 확률은 catchChance 가 정한다
- */
-export function checkCatchCondition(
-  target: BattleMonster,
-  isCatchZone: boolean,
-): { canAttempt: boolean; success: boolean; message: string } {
-  if (target.id === "ormr") {
-    return {
-      canAttempt: false,
-      success: false,
-      message: "오름은 포획할 수 없다!",
-    };
-  }
-
-  if (!isCatchZone) {
-    return {
-      canAttempt: false,
-      success: false,
-      message: "이 곳에서는 포획할 수 없다!",
-    };
-  }
-
-  // HP 30% 초과 시 포획 시도 불가
-  const hpRatio = target.currentHp / target.maxHp;
-  if (hpRatio > CATCH_HP_THRESHOLD) {
-    return {
-      canAttempt: false,
-      success: false,
-      message: "HP가 너무 높아 포획할 수 없다! (30% 이하로 줄여야 함)",
-    };
-  }
-
-  const success = Math.random() < catchChance(target);
-  const message = success
-    ? `${target.name} 포획 성공!`
-    : `${target.name}이(가) 탈출했다!`;
-
-  return { canAttempt: true, success, message };
-}
 
 // ─── AI 로직 ────────────────────────────────────────────────────────────────────
 

@@ -7,7 +7,7 @@ import { STATUS_META } from "./statusInfo";
 /**
  * 전투 커맨드 2단 메뉴.
  *
- * 1단 [기술 / 가방 / 도망] → 기술은 2단에서 **한 목록**으로.
+ * 1단 [기술 / 방어 / 가방 / 도망] → 기술은 2단에서 **한 목록**으로.
  *
  * 예전엔 1단이 [공격 / 스킬 / 가방 / 도망] 이었다. 공격=물리, 스킬=특수+상태로 나뉘어
  * 있었는데 데미지 공식은 둘을 구분하지 않는다(특수공격 능력치가 없다). 의미 없는 한 겹인
@@ -57,9 +57,14 @@ interface Props {
   disabled: boolean;
   canFlee: boolean;
   fleeBlockedReason?: string;
+  /** 이 구역에 포커스가 있는가. 없으면 키 입력을 파티 구역이 가져간다 */
+  focused: boolean;
   onUseMove: (move: Move) => void;
   onUsePotion: (id: string) => void;
+  onGuard: () => void;
   onFlee: () => void;
+  /** 1단에서 ← 를 눌렀다 — 파티 구역으로 넘어간다 */
+  onLeaveLeft: () => void;
 }
 
 interface Cell {
@@ -73,8 +78,6 @@ interface Cell {
   hint?: ReactNode;
   chipClass?: string;
   disabled?: boolean;
-  /** 1단의 첫 칸(기술)은 가로 두 칸을 다 쓴다 */
-  wide?: boolean;
   testId: string;
   onSelect: () => void;
 }
@@ -91,8 +94,8 @@ function KoBadge({ ko }: { ko: MovePreview["ko"] }) {
 }
 
 export function BattleCommandMenu({
-  moves, getPreview, potions, disabled, canFlee, fleeBlockedReason,
-  onUseMove, onUsePotion, onFlee,
+  moves, getPreview, potions, disabled, canFlee, fleeBlockedReason, focused,
+  onUseMove, onUsePotion, onGuard, onFlee, onLeaveLeft,
 }: Props) {
   const [menu, setMenu] = useState<MenuState>({ level: "root" });
   const [cursor, setCursor] = useState(0);
@@ -157,9 +160,14 @@ export function BattleCommandMenu({
   if (menu.level === "root") {
     cells = [
       {
-        key: "moves", label: "기술", sub: `${moves.length}개`, wide: true,
+        key: "moves", label: "기술", sub: `${moves.length}개`,
         disabled: moves.length === 0, testId: "cmd-moves",
         onSelect: () => enter({ level: "moves" }),
+      },
+      {
+        key: "guard", label: "방어", sub: "피해 절반 · 상태이상 차단",
+        testId: "cmd-guard",
+        onSelect: onGuard,
       },
       {
         key: "bag", label: "가방", sub: `물약 ${potions.reduce((a, p) => a + p.count, 0)}개`,
@@ -194,24 +202,11 @@ export function BattleCommandMenu({
 
   // ── 키보드 ─────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (disabled) return;
+    if (disabled || !focused) return;
 
-    /**
-     * 1단은 [기술(가로 두 칸)] / [가방][도망] 이라 2×2 규칙이 그대로는 안 맞는다.
-     * 2단은 예전과 같은 2×2다.
-     */
+    /** 어느 단계든 2×2 다. 빈 칸으로는 넘어가지 않는다 */
     const move = (key: string, c: number, n: number): number => {
-      if (atRoot) {
-        switch (key) {
-          case "ArrowUp":    return 0;
-          case "ArrowDown":  return c === 0 ? 1 : c;
-          case "ArrowLeft":  return c === 2 ? 1 : c;
-          case "ArrowRight": return c === 1 ? 2 : c;
-        }
-        return c;
-      }
       switch (key) {
-        // 2×2 안에서 좌우는 ±1, 상하는 ±2. 칸이 비어 있으면 넘어가지 않는다.
         case "ArrowLeft":  return c % 2 === 1 ? c - 1 : c;
         case "ArrowRight": return c % 2 === 0 && c + 1 < n ? c + 1 : c;
         case "ArrowUp":    return c >= 2 ? c - 2 : c;
@@ -224,8 +219,21 @@ export function BattleCommandMenu({
       const n = pageCells.length;
       if (n === 0 && e.key !== "Escape") return;
 
+      // 1~4 로 칸을 바로 고른다 (JRPG 관례). 커서를 옮기지 않고 즉시 실행한다
+      if (/^[1-4]$/.test(e.key)) {
+        e.preventDefault();
+        const cell = pageCells[Number(e.key) - 1];
+        if (cell && !cell.disabled) { setCursor(Number(e.key) - 1); cell.onSelect(); }
+        return;
+      }
+
       switch (e.key) {
         case "ArrowLeft":
+          e.preventDefault();
+          // 왼쪽 열에서 한 번 더 왼쪽 → 파티 구역으로 건너간다. 화면 배치 그대로다
+          if (atRoot && activeCursor % 2 === 0) { onLeaveLeft(); return; }
+          setCursor((c) => Math.min(move(e.key, c, n), n - 1));
+          break;
         case "ArrowRight":
         case "ArrowUp":
         case "ArrowDown":
@@ -256,7 +264,7 @@ export function BattleCommandMenu({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [disabled, pageCells, activeCursor, atRoot, goRoot, pageCount]);
+  }, [disabled, focused, pageCells, activeCursor, atRoot, goRoot, pageCount, onLeaveLeft]);
 
   const title =
     menu.level === "root" ? null
@@ -265,7 +273,8 @@ export function BattleCommandMenu({
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col gap-1.5"
+      className={`flex min-h-0 flex-1 flex-col gap-1.5 rounded-lg p-1 transition-colors ${
+        focused ? "bg-mist-500/5" : ""}`}
       data-testid="battle-command"
       onContextMenu={(e) => { e.preventDefault(); if (!atRoot) goRoot(); }}
     >
@@ -295,8 +304,6 @@ export function BattleCommandMenu({
         {Array.from({ length: PAGE_SIZE }, (_, i) => {
           const cell = pageCells[i];
           if (!cell) {
-            // 1단은 세 칸이 정원이라(기술이 가로 두 칸을 쓴다) 빈 칸이 없다.
-            if (atRoot) return null;
             return (
               <div key={`empty-${i}`}
                 className="flex min-h-13 items-center justify-center border border-earth-500/25 bg-shadow-900/40">
@@ -304,7 +311,7 @@ export function BattleCommandMenu({
               </div>
             );
           }
-          const selected = i === activeCursor;
+          const selected = focused && i === activeCursor;
           return (
             <button
               key={cell.key}
@@ -315,7 +322,6 @@ export function BattleCommandMenu({
               onClick={() => !cell.disabled && cell.onSelect()}
               className={`relative min-h-13 border-2 px-2 py-1.5 text-left transition
                 disabled:opacity-30
-                ${cell.wide ? "col-span-2" : ""}
                 ${cell.chipClass ?? "border-earth-500 bg-shadow-700/80 text-sand-200"}
                 ${selected ? "brightness-125" : ""}`}
             >
