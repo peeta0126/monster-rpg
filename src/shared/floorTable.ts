@@ -1,5 +1,6 @@
 import type { Monster, Move } from "./game";
 import { monsters } from "../monster/monsters";
+import { expToNext } from "../battle/battleUtils";
 import {
   ember, tackle, vineWhip, waterGun, thunderbolt, toxic, iceLeaf, spark,
   iceBeam, blizzard, bodySlam, flamethrower, surf,
@@ -96,9 +97,12 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["tackle", "vine-whip", "ice-leaf", "vine-whip"],
   },
   14: {
-    monsterId: "aquavern",
-    moves: [tackle, waterGun, aquaWhirl],
-    skillOrder: ["aqua-whirl", "water-gun", "tackle", "aqua-whirl"],
+    // 아쿠사(22레벨 진화체)가 서 있던 자리다. 플레이어 쪽은 아직 진화 전인데 상대만
+    // 최종 진화체라 14층만 난이도가 튀었다 — 예전 시뮬에서도 이 층 패배율이 45% 로
+    // 20층 보스와 비슷했다. 같은 물 계열의 미진화체로 되돌린다.
+    monsterId: "bubblet",
+    moves: [tackle, waterGun, surf],
+    skillOrder: ["surf", "water-gun", "tackle", "surf"],
   },
   15: {
     monsterId: "frostorb",
@@ -181,22 +185,84 @@ export function scaleToLevel(base: Monster, targetLevel: number): Monster {
     attack: base.attack + n * 3,
     defense: base.defense + n * 2,
     speed: base.speed + n * 2,
-    // 계수 0.22 → 0.30. 11~25층 고정 구성을 되살리자 그 층들이 전부 진짜 전투가 되면서
-    // 30층 이후 도달 레벨이 전부 보스 아래로 내려갔다(-1.1 ~ -3.3). 예전엔 그 층들이
-    // 공짜라 레벨을 미리 벌어뒀던 것이라, 그만큼을 경험치로 정직하게 메운다.
-    // scripts/sim/expSweep.mjs (40판): 0.22 → 탑전투 124.9 / 재도전 15.6 / 레벨차 -1.1~-3.3
-    //                                  0.30 → 탑전투  92.5 / 재도전  8.5 / 레벨차 +1.4~+2.9
-    //                                  0.40 → 탑전투  79.1 / 재도전  6.2 / 레벨차 +3.6~+10.4 (헐거움)
-    rewardExp: Math.floor(base.rewardExp * (1 + n * 0.30)),
-    expToNextLevel: Math.floor(base.expToNextLevel * Math.pow(1.2, n)),
+    // 계수 0.30 → 0.15. 0.30 은 레벨차 컷오프가 없던 시절의 값이다. 그때는 층이 올라도
+    // 레벨이 안 따라와서 보상을 키워야 했는데, 지금은 반대로 **한 판이 10레벨**을 준다
+    // (40층 모왕 보상 1778 vs Lv50 요구 683). 컷오프가 갈이를 막는 지금은 보상이 층을
+    // 따라 붙기만 하면 된다.
+    rewardExp: Math.floor(base.rewardExp * (1 + n * 0.15)),
+    // 요구 경험치는 레벨 하나로 정해진다(battleUtils.expToNext). 여기서 따로 굴리면
+    // 잡은 몬스터만 다른 곡선을 타게 된다 — 실제로 Lv40 잡은 개체가 122,480 을 요구했다.
+    expToNextLevel: expToNext(targetLevel),
     exp: 0,
   };
 }
 
-// ─── 보스층 판별 ─────────────────────────────────────────────────────────────────
+// ─── 층의 성격 ───────────────────────────────────────────────────────────────────
 
+/**
+ * 이름 있는 보스가 서는 층. 10층마다 하나씩이고 이야기가 붙어 있다
+ * (분노한 모시 · 격노한 모치 · 고대의 프리로 · 전설의 모왕 · 오름).
+ *
+ * ⚠️ 이 플래그는 난이도만 뜻하지 않는다 — 도망 금지·보스 드랍·배경 연출이 전부 여기
+ * 물려 있다. 중간 관문을 여기에 끼워 넣으면 도망까지 같이 막히므로 따로 둔다.
+ */
 export function isBossFloor(floor: number): boolean {
   return floor % 10 === 0;
+}
+
+/**
+ * 중간 관문. 5층마다 걸리되 n0층은 보스가 맡으므로 그 사이(15·25·35·45)만 관문이다.
+ *
+ * 보스가 "장비 없으면 못 넘는 벽"이라면 관문은 "장비 없으면 아픈 검문"이다. 5층마다
+ * 벽돌담을 세우면 진행이 여덟 번 끊긴다 — 대부분은 물약과 정비로 넘고, 제작대까지
+ * 돌아가야 하는 건 n0층뿐이어야 한다.
+ *
+ * 도망은 열어 둔다(isBossFloor 가 아니다). 드랍은 보스급으로 준다(dropTables).
+ */
+export const GATE_FLOORS = [15, 25, 35, 45] as const;
+
+export function isGateFloor(floor: number): boolean {
+  return (GATE_FLOORS as readonly number[]).includes(floor);
+}
+
+/**
+ * 관문 배수. 층마다 다르다.
+ *
+ * 하나로 통일해 봤더니 층마다 체감이 딴판이었다 — 파티의 화력 곡선이 균일하지 않아서다.
+ * 45층 파티(모왕 Lv45, 위력 95)는 25층 파티(모치)보다 훨씬 세게 때린다. 그래서 같은
+ * 배수를 걸면 25층은 맨몸 100%, 45층은 맨몸 100% 로 둘 다 무너지는 게 아니라 **다른
+ * 이유로** 무너진다. 배수는 파티가 그 층에서 실제로 내는 화력에 맞춰야 한다.
+ *
+ * 값은 scripts/sim/gateCheck.ts 로 맞췄다(맨몸 35~60% · 정규 장비 ≥82%).
+ */
+const GATE_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number }> = {
+  15: { hp: 1.55, attack: 1.28, defense: 1.62 },
+  25: { hp: 1.95, attack: 1.45, defense: 2.00 },
+  35: { hp: 1.36, attack: 1.15, defense: 1.45 },
+  45: { hp: 2.00, attack: 1.50, defense: 2.00 },
+};
+
+export function gateMultiplier(floor: number) {
+  return GATE_MULT_BY_FLOOR[floor] ?? { hp: 1.5, attack: 1.25, defense: 1.65 };
+}
+
+/**
+ * 26층부터의 일반 층에 붙는 배수.
+ *
+ * 1~25층은 손으로 짠 구성인데 26층부터는 랜덤 풀만 돌아서, 무장비·자연 레벨로도
+ * 승률 100% / 6턴이었다. 45개 층이 복도였다는 뜻이다. 1.4 를 넘기지 말 것 —
+ * 그 위는 소모가 아니라 벽이 된다(43층 실측: ×1.5 에서 무장비 승률 85%).
+ */
+export function corridorMultiplier(floor: number): number {
+  if (floor >= 41) return 1.40;
+  if (floor >= 31) return 1.28;
+  if (floor >= 26) return 1.15;
+  return 1;
+}
+
+/** 보스든 관문이든 "각오하고 들어가는 층". 물약을 아끼지 않는 자리다 */
+export function isHardFloor(floor: number): boolean {
+  return isBossFloor(floor) || isGateFloor(floor);
 }
 
 // ─── 탑 최상층 ───────────────────────────────────────────────────────────────────
@@ -282,6 +348,38 @@ export function getTowerSecretReveal(floor: number, moveId: string): TowerSecret
 // ─── 층별 적 생성 ────────────────────────────────────────────────────────────────
 
 export function getFloorEnemy(floor: number, excludeId?: string): Monster {
+  const enemy = buildFloorEnemy(floor, excludeId);
+  // 관문은 그 층이 원래 내놓는 적을 **그대로 두고 무겁게 만든다**. 15·25층은 손으로 짠
+  // 구성이 있는 층이라(프리로·모치) 여기서 종족을 갈아치우면 그 설계가 사라진다.
+  if (!isGateFloor(floor)) return enemy;
+  // ⚠️ scaleToLevel 을 다시 부르면 안 된다 — 이미 층 레벨로 부푼 값을 **다시 종족 기본값 취급**해서
+  //    한 번 더 올린다. 35층 관문이 HP 1505 로 40층 보스(1007)를 넘어섰던 게 그 실수였다.
+  const lifted = liftLevels(enemy, 2);
+  const mult = gateMultiplier(floor);
+  return {
+    ...lifted,
+    name: `관문의 ${enemy.name}`,
+    maxHp: Math.floor(lifted.maxHp * mult.hp),
+    attack: Math.floor(lifted.attack * mult.attack),
+    defense: Math.floor(lifted.defense * mult.defense),
+    rewardExp: Math.floor(lifted.rewardExp * 2),
+  };
+}
+
+/** 이미 만들어진 적에게 레벨 n 만큼의 성장분만 더한다 (레벨당 HP+10/공+3/방+2/속+2) */
+function liftLevels(m: Monster, n: number): Monster {
+  return {
+    ...m,
+    level: m.level + n,
+    maxHp: m.maxHp + n * 10,
+    attack: m.attack + n * 3,
+    defense: m.defense + n * 2,
+    speed: m.speed + n * 2,
+    expToNextLevel: expToNext(m.level + n),
+  };
+}
+
+function buildFloorEnemy(floor: number, excludeId?: string): Monster {
   // ── 고정 구성 층 (1~9, 11~25) ──
   // 예전에 조건이 `floor <= 9` 라서 11~25층 구성 15개가 통째로 죽어 있었다. 그 층들은
   // 랜덤 풀에서 뽑혔는데, getFloorEnemySkill 쪽에는 같은 제한이 없어 없는 몬스터의
@@ -301,66 +399,69 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
   // ── 보스층 ──
   if (floor === 10) {
     const base = monsters.find((m) => m.id === "mossy")!;
-    const scaled = scaleToLevel(base, 11);
+    const scaled = scaleToLevel(base, 12);
     return {
       ...scaled,
       name: "분노한 모시",
-      moves: [spark, thunderbolt, quickAttack, icePunch],
+      // 이 층의 전기불꽃만 마비를 크게 건다. 첫 관문의 답을 **해독제**로 잡으려는 것이다 —
+      // 10층 시점에 만들 수 있는 건 소모품뿐이라(아티팩트 재료는 깊은 숲부터) 답도 거기 있어야 한다.
+      moves: [{ ...spark, statusEffect: "paralysis", statusChance: 35 }, thunderbolt, quickAttack, icePunch],
       maxHp: Math.floor(scaled.maxHp * 1.5),
-      attack: Math.floor(scaled.attack * 1.3),
-      defense: Math.floor(scaled.defense * 1.2),
+      attack: Math.floor(scaled.attack * 1.25),
+      defense: Math.floor(scaled.defense * 1.15),
       rewardExp: Math.floor(scaled.rewardExp * 2.4),
     };
   }
   if (floor === 20) {
     const base = monsters.find((m) => m.id === "mossevo")!;
-    const scaled = scaleToLevel(base, 20);
+    const scaled = scaleToLevel(base, 22);
     return {
       ...scaled,
       name: "격노한 모치",
       moves: [voltCrash, thunderbolt, bodySlam, flamethrower],
-      maxHp: Math.floor(scaled.maxHp * 1.2),
-      attack: Math.floor(scaled.attack * 1.05),
-      defense: Math.floor(scaled.defense * 1.15),
+      maxHp: Math.floor(scaled.maxHp * 1.38),
+      attack: Math.floor(scaled.attack * 1.15),
+      defense: Math.floor(scaled.defense * 1.5),
       rewardExp: Math.floor(scaled.rewardExp * 2.4),
     };
   }
   if (floor === 30) {
     const base = monsters.find((m) => m.id === "frostorb")!;
-    const scaled = scaleToLevel(base, 31);
+    const scaled = scaleToLevel(base, 32);
     return {
       ...scaled,
       name: "고대의 프리로",
-      moves: [blizzard, crystalBurst, tidalCrash, solarBeam],
-      maxHp: Math.floor(scaled.maxHp * 1.45),
-      attack: Math.floor(scaled.attack * 1.7),
-      defense: Math.floor(scaled.defense * 1.2),
+      // 설풍에 빙결을 크게 실었다. 빙결은 한 턴을 확실히 먹으므로 해독제나 방어가 답이 된다
+      moves: [{ ...blizzard, statusEffect: "freeze", statusChance: 30 }, crystalBurst, tidalCrash, solarBeam],
+      maxHp: Math.floor(scaled.maxHp * 1.90),
+      attack: Math.floor(scaled.attack * 1.72),
+      defense: Math.floor(scaled.defense * 1.88),
       rewardExp: Math.floor(scaled.rewardExp * 2.4),
     };
   }
   if (floor === 40) {
     const base = monsters.find((m) => m.id === "mossyfinal")!;
-    const scaled = scaleToLevel(base, 40);
+    const scaled = scaleToLevel(base, 42);
     return {
       ...scaled,
       name: "전설의 모왕",
       moves: [thunderStrike, voltCrash, overheat, blizzard],
-      maxHp: Math.floor(scaled.maxHp * 1.25),
-      attack: Math.floor(scaled.attack * 1.1),
-      defense: Math.floor(scaled.defense * 1.25),
+      maxHp: Math.floor(scaled.maxHp * 1.7),
+      attack: Math.floor(scaled.attack * 1.37),
+      defense: Math.floor(scaled.defense * 1.94),
       rewardExp: Math.floor(scaled.rewardExp * 2.8),
     };
   }
   if (floor === 50) {
     const base = monsters.find((m) => m.id === "ormr")!;
-    const scaled = scaleToLevel(base, 51);
+    const scaled = scaleToLevel(base, 52);
     return {
       ...scaled,
       name: "오름",
       moves: pickOrmrMoves(),
-      maxHp: Math.floor(scaled.maxHp * 1.5),
-      attack: Math.floor(scaled.attack * 1.15),
-      defense: Math.floor(scaled.defense * 1.05),
+      maxHp: Math.floor(scaled.maxHp * 2.15),
+      attack: Math.floor(scaled.attack * 1.38),
+      defense: Math.floor(scaled.defense * 1.75),
       rewardExp: Math.floor(scaled.rewardExp * 3.5),
     };
   }
@@ -372,7 +473,7 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
     .map((id) => monsters.find((m) => m.id === id)!)
     .filter((m) => !!m && m.id !== excludeId);
   const base = pool[Math.floor(Math.random() * pool.length)];
-  const level = boss ? floor + 3 : floor;
+  const level = boss ? floor + 2 : floor;
   const scaled = scaleToLevel(base, level);
 
   if (boss) {
@@ -383,6 +484,19 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
       attack: Math.floor(scaled.attack * 1.3),
       defense: Math.floor(scaled.defense * 1.3),
       rewardExp: Math.floor(scaled.rewardExp * 2),
+    };
+  }
+
+  // 26층부터의 일반 층. 여기는 설계가 없어 랜덤 풀만 돌던 구간이라, 무장비 파티도
+  // 6턴에 완승했다. **패배율이 아니라 소모율**을 올린다 — 층이 길어져 물약과 HP 가 닳는다.
+  const zone = corridorMultiplier(floor);
+  if (zone > 1) {
+    return {
+      ...scaled,
+      maxHp: Math.floor(scaled.maxHp * zone),
+      // 방어는 조금 더, 공격은 조금만. 공격을 같이 올리면 소모가 아니라 사고가 된다
+      defense: Math.floor(scaled.defense * (1 + (zone - 1) * 1.15)),
+      attack: Math.floor(scaled.attack * (1 + (zone - 1) * 0.4)),
     };
   }
   return scaled;
@@ -407,6 +521,41 @@ export function getFloorEnemy(floor: number, excludeId?: string): Monster {
  * 약점을 찌른다 — 그 한 방이 오는 걸 알기 때문에 교체와 물약 타이밍이 생긴다.
  */
 export const ORMR_AIM_INTERVAL = 3;
+
+// ─── 보스 전용 기믹 ──────────────────────────────────────────────────────────────
+
+/**
+ * 40층 전설의 모왕은 한 번, HP 가 절반 아래로 떨어질 때 몸을 추스른다.
+ *
+ * 숫자만 키운 보스는 "몇 대 더 때리면 되는" 문제라 장비가 있으나 없으나 결론이 같다.
+ * 회복이 한 번 끼면 **정해진 턴 안에 그만큼을 더 넣을 수 있는가**가 되고, 그건 화력 —
+ * 즉 장비를 갖췄는가 — 로만 답할 수 있는 질문이다.
+ *
+ * 회복 기술이 아니라 보스 전용 훅인 이유: moves.ts 에 회복기가 하나도 없고, 하나를 만들면
+ * 그 기술을 배우는 모든 몬스터의 밸런스가 같이 움직인다.
+ */
+export const BOSS_REGEN: Record<number, { atHpRatio: number; healRatio: number; line: string }> = {
+  40: {
+    atHpRatio: 0.5,
+    healRatio: 0.25,
+    line: "전설의 모왕이 숨을 고른다 — 상처가 아물고 있다!",
+  },
+};
+
+export function getBossRegen(floor: number) {
+  return BOSS_REGEN[floor] ?? null;
+}
+
+/**
+ * 지금 이 보스가 몸을 추스르는가. 회복량을 돌려주고, 아니면 0.
+ * "한 번뿐"은 호출부가 기억한다(전투 상태라 여기서 들고 있을 수 없다).
+ */
+export function bossRegenAmount(floor: number, currentHp: number, maxHp: number): number {
+  const regen = getBossRegen(floor);
+  if (!regen || currentHp <= 0) return 0;
+  if (currentHp > maxHp * regen.atHpRatio) return 0;
+  return Math.min(maxHp - currentHp, Math.floor(maxHp * regen.healRatio));
+}
 
 export function getFloorEnemySkill(
   floor: number,
@@ -433,6 +582,14 @@ export function getFloorEnemySkill(
     const order = ["thunder-strike", "volt-crash", "thunder-strike", "overheat", "blizzard"];
     const id = order[turnIndex % order.length];
     return enemyMoves.find((m) => m.id === id) ?? enemyMoves[0];
+  }
+  if (isGateFloor(floor)) {
+    // 관문은 무작위 풀에서 나오므로 기술 id 를 고정할 수 없다. 대신 **가진 기술을 센 것부터
+    // 순서대로** 돌린다 — 읽히되 아프다. 보스처럼 이야기가 붙은 패턴은 아니다.
+    const ordered = [...enemyMoves].sort((a, b) => b.power - a.power);
+    if (ordered.length === 0) return null;
+    const cycle = [ordered[0], ordered[ordered.length - 1], ordered[0], ...ordered.slice(1)];
+    return cycle[turnIndex % cycle.length];
   }
   if (floor === 50) {
     // 겨냥하는 턴은 null 을 돌려 AI(상성 계산)에 맡긴다
