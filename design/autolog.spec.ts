@@ -36,25 +36,25 @@ test("fx: 로그 자동 진행", async ({ page }) => {
   await expect(page.getByTestId("log-auto")).toContainText("수동");
   await expect(page.getByTestId("log-speed")).toHaveCount(0);
 
-  await page.getByTestId("cmd-attack").click();
+  await page.getByTestId("cmd-moves").click();
   await page.locator('[data-testid^="move-"]').first().click();
   await page.waitForTimeout(1200);
   const stalled = await line();
   await page.waitForTimeout(2000);
   expect(await line()).toBe(stalled);
   // 메뉴는 항상 떠 있고 disabled 로만 막힌다 — 존재 여부가 아니라 활성 여부를 본다
-  await expect(page.getByTestId("cmd-attack")).toBeDisabled();
+  await expect(page.getByTestId("cmd-moves")).toBeDisabled();
 
   // 키를 누르고 있으면 남은 줄이 알아서 흘러간다 (연타가 아니라 keydown 한 번이다).
   // 바로 위에서 2초를 그냥 뒀을 때는 같은 자리였으니, 이 3초는 홀드가 민 것이다.
   await page.keyboard.down("q");
-  await expect(page.getByTestId("cmd-attack")).toBeEnabled({ timeout: 3000 });
+  await expect(page.getByTestId("cmd-moves")).toBeEnabled({ timeout: 3000 });
   await page.keyboard.up("q");
 
   // 자동으로 되돌리면 아무 키 없이 다음 줄로 넘어간다
   await page.getByTestId("log-auto").click();
   await expect(page.getByTestId("log-auto")).toContainText("자동");
-  await page.getByTestId("cmd-attack").click();
+  await page.getByTestId("cmd-moves").click();
   await page.locator('[data-testid^="move-"]').first().click();
   await page.waitForTimeout(300);
   const firstLine = await line();

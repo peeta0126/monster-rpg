@@ -18,7 +18,7 @@ test("fx: 타격 연출 중/후", async ({ page }) => {
   await page.waitForTimeout(1200);
 
   // 기술은 2단 메뉴 안에 있다 — 1단에서 "공격"을 먼저 열어야 보인다
-  await page.getByTestId("cmd-attack").click();
+  await page.getByTestId("cmd-moves").click();
   await page.locator('[data-testid^="move-"]').first().click();
   // 기술명 로그를 Q로 넘기면 곧바로 타격 연출이 시작된다
   await page.waitForTimeout(300);
@@ -61,13 +61,13 @@ test("fx: 전투 HUD 경고", async ({ page }) => {
   // 시작부터 아군은 위험 구간이다 — 하단 상태바가 먼저 그것을 말해야 한다
   await page.screenshot({ path: path.join(OUT, "_hud-danger.png") });
 
-  await page.getByTestId("cmd-skill").click();
+  await page.getByTestId("cmd-moves").click();
   await page.getByTestId("move-cinder-toss").click();
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press("q");
     await page.waitForTimeout(120);
   }
-  await expect(page.getByTestId("cmd-skill")).toBeEnabled({ timeout: 20_000 });
+  await expect(page.getByTestId("cmd-moves")).toBeEnabled({ timeout: 20_000 });
   await page.waitForTimeout(400);
   await page.screenshot({ path: path.join(OUT, "_hud-status.png") });
 });
@@ -115,11 +115,11 @@ test("fx: 포획률과 경험치 연출", async ({ page }) => {
   await page.screenshot({ path: path.join(OUT, "_catch-locked.png") });
 
   const swing = async () => {
-    await page.getByTestId("cmd-attack").click();
+    await page.getByTestId("cmd-moves").click();
     await page.getByTestId("move-tap").click();
     for (let i = 0; i < 20; i++) {
       if (await page.getByTestId("exp-gain").count()) return;
-      if (await page.getByTestId("cmd-attack").isEnabled().catch(() => false)) return;
+      if (await page.getByTestId("cmd-moves").isEnabled().catch(() => false)) return;
       await page.keyboard.press("q");
       await page.waitForTimeout(110);
     }
@@ -165,7 +165,7 @@ test("fx: 속성 상성표", async ({ page }) => {
   await page.screenshot({ path: path.join(OUT, "_type-chart.png") });
 
   // 열어 둔 채로 기술을 고를 수 있어야 한다 (전투를 멈추지 않는다)
-  await page.getByTestId("cmd-attack").click();
+  await page.getByTestId("cmd-moves").click();
   await expect(page.locator('[data-testid^="move-"]').first()).toBeVisible();
   await expect(page.getByTestId("type-chart")).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_type-chart-with-moves.png") });

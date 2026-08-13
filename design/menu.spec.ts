@@ -61,14 +61,14 @@ test("fx: 커맨드 메뉴 기술 예측", async ({ page }) => {
   // ① 1층 물속성 적 — 배율(▲×2 / ▼×0.5)과 "쓰러뜨린다"가 같이 뜨는 화면
   await seedDenseParty(page, 30);
   await enterFloor(page, 1);
-  await page.getByTestId("cmd-skill").click();
+  await page.getByTestId("cmd-moves").click();
   await expect(page.locator('[data-testid^="move-"]')).toHaveCount(4);
   await expect(page.getByText("쓰러뜨린다").first()).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_menu-preview-ko.png") });
 
   // ② 50층 오름 — type 이 null 이라 배율이 없고, 한 방에 안 죽는다
   await enterFloor(page, 50);
-  await page.getByTestId("cmd-skill").click();
+  await page.getByTestId("cmd-moves").click();
   await expect(page.locator('[data-testid^="move-"]')).toHaveCount(4);
   await expect(page.getByText("쓰러뜨린다")).toHaveCount(0);
   await page.screenshot({ path: path.join(OUT, "_menu-preview-tough.png") });
@@ -85,40 +85,41 @@ test("fx: 커맨드 메뉴 2단", async ({ page }) => {
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // 1단
-  await expect(page.getByTestId("cmd-attack")).toBeVisible();
-  await expect(page.getByTestId("cmd-skill")).toBeVisible();
+  // 1단 — 기술 하나로 합쳤다(예전엔 공격/스킬로 갈려 있었고, 특수기가 없는 몬스터는
+  // "스킬"이 영구 비활성이었다). 시작 몬스터도 회색 버튼을 보지 않는다.
+  await expect(page.getByTestId("cmd-moves")).toBeEnabled();
   await expect(page.getByTestId("cmd-bag")).toBeVisible();
   await expect(page.getByTestId("cmd-flee")).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_menu-root.png") });
 
-  // 방향키로 커서 이동 → 스킬에서 확정
-  await page.keyboard.press("ArrowRight");
+  // 방향키(위)로 기술 칸에 올라가 확정
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowUp");
   await page.keyboard.press("Enter");
   await expect(page.locator('[data-testid^="move-"]').first()).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_menu-skill.png") });
 
   // ESC 로 1단 복귀
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("cmd-attack")).toBeVisible();
+  await expect(page.getByTestId("cmd-moves")).toBeVisible();
 
   // 1단에서 ESC 는 아무 일도 없어야 한다
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("cmd-attack")).toBeVisible();
+  await expect(page.getByTestId("cmd-moves")).toBeVisible();
 
   // 신규 게스트는 물약이 0개다 → 가방은 비활성이어야 하고 눌러도 안 열린다
   await expect(page.getByTestId("cmd-bag")).toBeDisabled();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByTestId("cmd-attack")).toBeVisible();
+  await expect(page.getByTestId("cmd-moves")).toBeVisible();
 
   // 1층은 보스가 아니라 도망은 활성
   await expect(page.getByTestId("cmd-flee")).toBeEnabled();
 
   // 우클릭으로도 2단에서 뒤로 나온다
-  await page.getByTestId("cmd-attack").click();
+  await page.getByTestId("cmd-moves").click();
   await expect(page.getByTestId("cmd-back")).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_menu-attack.png") });
   await page.getByTestId("battle-command").click({ button: "right" });
-  await expect(page.getByTestId("cmd-attack")).toBeVisible();
+  await expect(page.getByTestId("cmd-moves")).toBeVisible();
 });

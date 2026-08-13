@@ -8,9 +8,10 @@ import { expect, type Locator, type Page } from "@playwright/test";
 /** 한 층에서 허용할 최대 턴 수 — 무한 루프 방지용 안전장치 */
 const MAX_TURNS_PER_FLOOR = 300;
 
-/** 2단 메뉴의 기술 버튼들 (공격/스킬 하위에서만 보인다) */
+/** 2단 메뉴의 기술 버튼들 ("기술" 하위에서만 보인다) */
 export const moveButtons = (page: Page) => page.locator('[data-testid^="move-"]');
-const MOVE_GROUPS = ["cmd-attack", "cmd-skill"] as const;
+/** 1단의 기술 항목. 예전엔 공격·스킬 둘로 갈려 있었는데 한 목록으로 합쳐졌다 */
+const MOVE_ENTRY = "cmd-moves";
 
 export const winOverlay = (page: Page) => page.getByText("WIN!", { exact: true });
 export const loseOverlay = (page: Page) => page.getByText("LOSE...", { exact: true });
@@ -25,15 +26,12 @@ async function isVisible(loc: Locator): Promise<boolean> {
 }
 
 /**
- * 1단 메뉴가 떠 있고 공격·스킬 중 하나라도 누를 수 있으면 조작 대기 중이다.
+ * 1단 메뉴의 "기술"을 누를 수 있으면 조작 대기 중이다.
  * 기술은 2단에 있어서 예전처럼 "위력" 버튼 존재 여부로는 못 본다.
  */
 export async function canAct(page: Page): Promise<boolean> {
-  for (const id of MOVE_GROUPS) {
-    const b = page.getByTestId(id);
-    if ((await b.count()) > 0 && (await b.first().isEnabled())) return true;
-  }
-  return false;
+  const b = page.getByTestId(MOVE_ENTRY);
+  return (await b.count()) > 0 && (await b.first().isEnabled());
 }
 
 /**
@@ -79,8 +77,6 @@ export async function advanceLogs(page: Page, timeoutMs = 60_000): Promise<void>
 }
 
 interface MoveOption {
-  /** 어느 1단 항목 아래에 있는지 */
-  group: (typeof MOVE_GROUPS)[number];
   testId: string;
   /** 셀에 적힌 예상 데미지(범위면 최소값). 상성 배율이 이미 반영된 값이다 */
   damage: number;
@@ -88,36 +84,33 @@ interface MoveOption {
   ko: boolean;
 }
 
-/** 공격·스킬 두 그룹을 차례로 열어 기술을 전부 훑고 1단으로 돌아온다 */
+/** "기술"을 열어 목록을 전부 훑고 1단으로 돌아온다 */
 async function readMoves(page: Page): Promise<MoveOption[]> {
   const options: MoveOption[] = [];
-  for (const group of MOVE_GROUPS) {
-    const entry = page.getByTestId(group);
-    if ((await entry.count()) === 0 || !(await entry.first().isEnabled())) continue;
-    await entry.first().click();
+  const entry = page.getByTestId(MOVE_ENTRY);
+  if ((await entry.count()) === 0 || !(await entry.first().isEnabled())) return options;
+  await entry.first().click();
 
-    const buttons = moveButtons(page);
-    const count = await buttons.count();
-    for (let i = 0; i < count; i++) {
-      const btn = buttons.nth(i);
-      const testId = await btn.getAttribute("data-testid");
-      if (!testId) continue;
-      const text = (await btn.innerText()).replace(/\s+/g, " ");
-      options.push({
-        group,
-        testId,
-        damage: Number(text.match(/예상 (\d+)/)?.[1] ?? 0),
-        ko: text.includes("쓰러뜨린다"),
-      });
-    }
-    await page.getByTestId("cmd-back").click();
+  const buttons = moveButtons(page);
+  const count = await buttons.count();
+  for (let i = 0; i < count; i++) {
+    const btn = buttons.nth(i);
+    const testId = await btn.getAttribute("data-testid");
+    if (!testId) continue;
+    const text = (await btn.innerText()).replace(/\s+/g, " ");
+    options.push({
+      testId,
+      damage: Number(text.match(/예상 (\d+)/)?.[1] ?? 0),
+      ko: text.includes("쓰러뜨린다"),
+    });
   }
+  await page.getByTestId("cmd-back").click();
   return options;
 }
 
-/** 고른 기술을 실제로 사용한다 (그룹을 다시 열고 클릭) */
+/** 고른 기술을 실제로 사용한다 (목록을 다시 열고 클릭) */
 async function selectMove(page: Page, choice: MoveOption): Promise<void> {
-  await page.getByTestId(choice.group).first().click();
+  await page.getByTestId(MOVE_ENTRY).first().click();
   await page.getByTestId(choice.testId).first().click();
 }
 

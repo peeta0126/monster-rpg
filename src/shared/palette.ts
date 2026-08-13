@@ -9,6 +9,7 @@
  * ⚠️ index.css 의 @theme 블록과 값이 항상 같아야 한다. 색을 바꿀 때는
  *    ART_DIRECTION 1-2 표 → index.css → 이 파일 순서로 셋 다 고칠 것.
  */
+import { ELEMENT_KO } from "./game";
 
 /** CSS/Phaser 텍스트 스타일용 문자열 형태 */
 export const PALETTE = {
@@ -57,11 +58,14 @@ export const ELEMENT_COLOR = {
   normal:   "sand300",
 } as const satisfies Record<string, PaletteName>;
 
-/** 속성 7종의 한글 이름. 칩·툴팁이 같은 이름을 쓰게 여기 한 벌만 둔다. */
-export const ELEMENT_KO: Record<keyof typeof ELEMENT_COLOR, string> = {
-  fire: "불꽃", water: "물", grass: "풀", electric: "전기",
-  ice: "얼음", poison: "독", normal: "노말",
-};
+/**
+ * 속성 7종의 한글 이름.
+ *
+ * 표 자체는 game.ts 에 있다. 여기에도 똑같은 표가 한 벌 더 있었는데, 두 벌이면 한쪽만
+ * 고쳐도 티가 안 난다 — 이름을 바꾸는 날 화면 절반만 따라온다. 부르는 쪽이 팔레트에서
+ * 같이 가져다 쓸 수 있게 이름만 다시 내보낸다.
+ */
+export { ELEMENT_KO };
 
 /**
  * 속성 칩(작은 태그) 의 Tailwind 클래스. 배경·테두리가 속성을 구분하고,
