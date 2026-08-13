@@ -67,6 +67,8 @@ import {
   CATCH_STATUS_MULT,
   getAIAction,
   isFainted,
+  tickSpeedGauge,
+  turnsToExtraAction,
   type BattleMonster,
 } from "./battleUtils";
 
@@ -163,7 +165,19 @@ export default function BattlePage() {
   enemyRef.current  = enemyState;
 
   const enemyTurnRef = useRef(0);
+  /** 적이 직전에 쓴 기술. 같은 기술을 두 턴 연속으로 던지지 않게 하는 데만 쓴다 */
+  const lastEnemyMoveRef = useRef<string | undefined>(undefined);
   const cancelledRef = useRef(false);
+  /**
+   * 속도 게이지(battleUtils.tickSpeedGauge). 빠른 쪽만 찬다.
+   * 화면에도 남은 턴을 적어야 해서 상태로 한 벌 복사해 둔다 — ref 는 다시 그리지 않는다.
+   */
+  const playerGaugeRef = useRef(0);
+  const enemyGaugeRef  = useRef(0);
+  const [gauges, setGauges] = useState({ player: 0, enemy: 0 });
+  const syncGauges = useCallback(() => {
+    setGauges({ player: playerGaugeRef.current, enemy: enemyGaugeRef.current });
+  }, []);
   // 탑의 비밀 연출은 전투당 한 번만 (같은 보스가 금지된 기술을 여러 번 써도 재생 안 함)
   const towerSecretShownRef = useRef(false);
 
@@ -920,7 +934,23 @@ export default function BattlePage() {
     Math.min(CATCH_MAX_RATE, CATCH_BASE_RATE * CATCH_STATUS_MULT) * 100,
   );
   const activeBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid);
-  const speedFirst = (player.speed + activeBonus.speed) >= enemyState.speed;
+  const activeSpeed = player.speed + activeBonus.speed;
+  const speedFirst = activeSpeed >= enemyState.speed;
+  /**
+   * 속도 차가 쌓여 한 번 더 움직이기까지 몇 턴 남았는가. 굴림이 아니라 누적이라
+   * 미리 적을 수 있다 — "이번엔 누가 먼저 움직이지?"를 예측할 수 있어야 한다는 조건이
+   * 무작위 선공을 못 쓰게 만든다.
+   */
+  const extraOwner = activeSpeed > enemyState.speed ? "player"
+    : activeSpeed < enemyState.speed ? "enemy" : null;
+  const extraTurnsAway = extraOwner === "player"
+    ? turnsToExtraAction(gauges.player, activeSpeed, enemyState.speed)
+    : extraOwner === "enemy"
+      ? turnsToExtraAction(gauges.enemy, enemyState.speed, activeSpeed)
+      : null;
+  // 속도 차가 손톱만 하면 "75턴 뒤"처럼 전투보다 긴 예고가 뜬다. 그건 정보가 아니라 잡음이라
+  // 전투 안에 들어올 만한 때(9턴)만 적는다. 그 아래로는 선공 표시만 남는다.
+  const extraIn = extraTurnsAway !== null && extraTurnsAway <= 9 ? extraTurnsAway : null;
   /**
    * 기술 셀에 들어갈 예상 결과. 전투가 실제로 쓰는 계산 함수를 그대로 부른다
    * (damagePreview → battleUtils.computeDamage). 보너스도 resolveAttack 에 넘기는 것과
@@ -983,8 +1013,12 @@ export default function BattlePage() {
           </div>
           <div className="flex items-center gap-2">
             {!mustSwitch && battleOutcome === null && (
-              <span className={`text-pixel-sm ${speedFirst ? "text-moss-500" : "text-ember-700"}`}>
+              <span
+                data-testid="speed-info"
+                title="속도 차이가 쌓이면 그 쪽이 한 턴에 두 번 움직인다"
+                className={`text-pixel-sm ${speedFirst ? "text-moss-500" : "text-ember-700"}`}>
                 {speedFirst ? "▲ 선공" : "▼ 후공"}
+                {extraIn !== null && (extraOwner === "player" ? ` · 연속 ${extraIn}턴` : ` · 적 연속 ${extraIn}턴`)}
               </span>
             )}
             {isProcessing && !mustSwitch && (

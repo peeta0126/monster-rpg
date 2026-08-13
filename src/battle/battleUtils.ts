@@ -487,3 +487,63 @@ export function gainExp(monster: BattleMonster, gainedExp: number) {
 
   return { updatedMonster: nextMonster, leveledUp };
 }
+
+// ─── 속도 ───────────────────────────────────────────────────────────────────────
+
+/**
+ * 속도가 하는 일.
+ *
+ * 예전엔 speed 를 한 번 비교해 선공만 정했다. 1 빠른 것과 30 빠른 것이 똑같았고,
+ * 동점이면 늘 플레이어가 먼저였다. 속도에 능력치를 쓸 이유가 없었다는 뜻이다.
+ *
+ * 그래서 **차이를 쌓는다**. 매 턴 빠른 쪽이 (내 속도 - 상대 속도) 만큼 게이지를
+ * 채우고, 다 채우면 그 턴에 한 번 더 움직인다. 예를 들어 속도 60 인 상대보다 30
+ * 빠르면 여섯 턴에 한 번 더 때린다. 1 빠르면 180턴에 한 번이라 사실상 선공
+ * 우선권만 남는다 — 차이가 곧 이득의 크기다.
+ *
+ * 굴림이 없어 다음 턴에 무슨 일이 일어날지 화면에 미리 적을 수 있다. 그게 조건이었다.
+ */
+/**
+ * 게이지가 얼마나 무거운가. 필요한 값은 (느린 쪽 속도 × 이 배수)다.
+ *
+ * 1 로 두면 속도가 2배인 상대는 **매 턴** 두 번 움직인다 — 시뮬(scripts/sim/battleSweep.mjs)에서
+ * 19층 모치(속도 88 대 모시 51)가 정확히 그랬고, 그 층 패배율이 18% → 78% 로 뛰었다.
+ * 능력치 하나가 화력을 곱절로 만들면 그건 속도가 아니라 두 번째 공격력이다.
+ * 3 이면 속도가 1.7배일 때 네 턴에 한 번(+23%) — 크지만 뒤집지는 못하는 크기다.
+ */
+export const SPEED_GAUGE_WEIGHT = 3;
+
+export interface SpeedGauge {
+  /** 쌓인 값 */
+  charge: number;
+  /** 한 번 더 움직이는 데 필요한 값. 0 이면 추가 행동이 없다 */
+  need: number;
+}
+
+export const EMPTY_SPEED_GAUGE: SpeedGauge = { charge: 0, need: 0 };
+
+/**
+ * 이번 턴이 끝난 뒤의 게이지. `extra` 가 true 면 그 턴에 한 번 더 움직인다.
+ * 한 턴에 두 번까지만 — 게이지가 아무리 넘쳐도 추가 행동은 하나다.
+ */
+export function tickSpeedGauge(charge: number, mySpeed: number, oppSpeed: number): {
+  gauge: SpeedGauge; extra: boolean;
+} {
+  const diff = mySpeed - oppSpeed;
+  const need = Math.max(1, oppSpeed * SPEED_GAUGE_WEIGHT);
+  if (diff <= 0) return { gauge: { charge: 0, need: 0 }, extra: false };
+
+  const filled = charge + diff;
+  if (filled >= need) {
+    return { gauge: { charge: Math.min(filled - need, need), need }, extra: true };
+  }
+  return { gauge: { charge: filled, need }, extra: false };
+}
+
+/** 앞으로 몇 턴 뒤에 추가 행동이 오는가. 오지 않으면 null */
+export function turnsToExtraAction(charge: number, mySpeed: number, oppSpeed: number): number | null {
+  const diff = mySpeed - oppSpeed;
+  if (diff <= 0) return null;
+  const need = Math.max(1, oppSpeed * SPEED_GAUGE_WEIGHT);
+  return Math.max(1, Math.ceil((need - charge) / diff));
+}
