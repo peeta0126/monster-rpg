@@ -433,9 +433,9 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       name: "고대의 프리로",
       // 설풍에 빙결을 크게 실었다. 빙결은 한 턴을 확실히 먹으므로 해독제나 방어가 답이 된다
       moves: [{ ...blizzard, statusEffect: "freeze", statusChance: 30 }, crystalBurst, tidalCrash, solarBeam],
-      maxHp: Math.floor(scaled.maxHp * 1.90),
-      attack: Math.floor(scaled.attack * 1.72),
-      defense: Math.floor(scaled.defense * 1.88),
+      maxHp: Math.floor(scaled.maxHp * 1.95),
+      attack: Math.floor(scaled.attack * 1.78),
+      defense: Math.floor(scaled.defense * 1.95),
       rewardExp: Math.floor(scaled.rewardExp * 2.4),
     };
   }
