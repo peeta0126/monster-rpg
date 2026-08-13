@@ -14,6 +14,17 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
 - 한국어 문구를 추가하면 폰트 서브셋이 다시 돌아야 한다. 빌드에 물려 있지만
   dev 서버만 볼 때 글자가 폴백으로 나오면 `npm run fonts:subset`.
 
+## 전투 난이도 (숫자를 만지기 전에)
+- 난이도 등급은 **'상'**이고 정의는 하나다 — 특정 층에서 막히고, 그 벽은 **제작·강화로만** 넘어간다.
+  레벨로 못 넘는다: `expLevelGapMultiplier` 가 자기보다 6레벨 낮은 층의 경험치를 0 으로 만든다.
+- 관문은 **5층마다**다. n0층은 이름 있는 보스(`isBossFloor`), 15·25·35·45층은 `GATE_FLOORS`.
+  이름 있는 보스는 n0층에만 세울 것.
+- 값을 고쳤으면 `npx tsx scripts/sim/gateCheck.ts` 로 합격선을 확인한다
+  (보스 맨몸 ≤25% · 정규 장비 60~78%, 관문 맨몸 35~60% · 정규 ≥82%).
+  실제 UI 증명은 `npx playwright test e2e/balanceRun.spec.ts` — "맨몸은 막히고, 장비를 갖추면 넘는다" 두 판이다.
+- 시뮬 도구가 틀리면 밸런스도 틀린다. 물약은 **시행마다 새로** 만들고, 파티는
+  `scripts/sim/loadout.ts` 로만 만든다(진화를 안 태우면 플레이어를 5배 과소평가한다).
+
 ## 충돌 박스
 - 형상은 `src/camp/campCollision.ts`(베이스캠프) · `src/workshop/workshopLayout.ts`(공방)
   두 곳에만 있다. 씬/페이지에 좌표를 적지 말 것.
