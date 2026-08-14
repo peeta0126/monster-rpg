@@ -175,3 +175,64 @@ test("fx: 속성 상성표", async ({ page }) => {
   await page.keyboard.press("t");
   await expect(page.getByTestId("type-chart")).toHaveCount(0);
 });
+
+/**
+ * 상태이상 칩과 공격버프 칩이 **동시에** 뜬 상태. 순서 줄은 칩이 뜨는 대로 늘어나므로
+ * 여기서 아래 경험치 줄이 밀리거나 잘리면 배치가 잘못된 것이다.
+ *
+ * 10층 보스만 마비를 35% 로 건다. 강화 전투 물약을 계속 들이켜며 맞아 주면
+ * 두 칩이 겹치는 순간이 온다.
+ */
+test("fx: 칩 두 개", async ({ page }) => {
+  fs.mkdirSync(OUT, { recursive: true });
+  await page.addInitScript(() => {
+    localStorage.setItem("monster-rpg-auth", JSON.stringify({
+      state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
+    localStorage.setItem("monster-rpg-player", JSON.stringify({
+      state: {
+        // 오래 버텨야 두 칩이 겹친다 — 레벨을 올려 맞아도 안 죽게 두고 공격은 안 한다
+        party: [{
+          id: "flameling", level: 26, uid: "chip-0",
+          moves: [{ id: "tap", name: "톡", type: "normal", power: 5, accuracy: 100, category: "physical" }],
+        }],
+        storage: [], dexSeen: [], dexCaught: [], materials: {},
+        potions: { strong_attack_buff: 30 },
+        bestFloor: 9, storyFlags: {}, questStatus: {},
+        craftedItems: [], craftedArtifacts: [], craftedPotions: [], equippedArtifacts: {},
+      },
+      version: 1,
+    }));
+    localStorage.setItem("monster-rpg-battle-settings", JSON.stringify({
+      state: { autoAdvance: true, logSpeed: "fast" }, version: 0 }));
+  });
+  await page.goto("/battle");
+  await expect(page.locator("#root")).not.toBeEmpty();
+  await page.evaluate(() => {
+    history.replaceState({ ...(history.state ?? {}), usr: { floor: 10 } }, "");
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
+  await page.waitForTimeout(1200);
+
+  const status = page.getByTestId("chip-status");
+  const buff = page.getByTestId("chip-buff");
+  for (let turn = 0; turn < 40; turn++) {
+    if (await status.count() && await buff.count()) break;
+    if (await page.getByTestId("cmd-bag").isEnabled().catch(() => false)) {
+      await page.getByTestId("cmd-bag").click();
+      // 가방은 두 쪽이다. 전투 물약은 뒷장에 있다
+      const buffPotion = page.getByTestId("potion-strong_attack_buff");
+      if (!(await buffPotion.count())) await page.keyboard.press("Tab");
+      await buffPotion.click();
+    } else {
+      await page.keyboard.press("q");
+    }
+    await page.waitForTimeout(200);
+  }
+
+  await expect(status).toBeVisible();
+  await expect(buff).toBeVisible();
+  // 칩이 둘 다 뜬 채로도 경험치 줄은 제자리에 온전히 있어야 한다
+  await expect(page.getByTestId("exp-row")).toContainText("EXP");
+  await page.screenshot({ path: path.join(OUT, "_chips-two.png") });
+});

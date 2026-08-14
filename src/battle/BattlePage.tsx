@@ -83,6 +83,7 @@ import { previewMove } from "./damagePreview";
 import { statusDetail, statusLabel } from "./statusInfo";
 import { TypeChartPanel } from "./TypeChartPanel";
 import { ExpGainOverlay } from "./ExpGainOverlay";
+import { ExpStatusRow } from "./ExpStatusRow";
 import { buildExpTimeline, type ExpSegment } from "./expTimeline";
 import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
 
@@ -1093,12 +1094,14 @@ export default function BattlePage() {
               />
             )}
             {player.status && (
-              <span className="shrink-0 rounded bg-ember-700/20 px-1 py-0.5 text-pixel-sm text-ember-500">
+              <span data-testid="chip-status"
+                className="shrink-0 rounded bg-ember-700/20 px-1 py-0.5 text-pixel-sm text-ember-500">
                 {statusDetail(player.status, player.statusTurns)}
               </span>
             )}
             {player.attackBuffTurns > 0 && (
-              <span className="shrink-0 rounded bg-ember-700/20 px-1 py-0.5 text-pixel-sm text-ember-500">
+              <span data-testid="chip-buff"
+                className="shrink-0 rounded bg-ember-700/20 px-1 py-0.5 text-pixel-sm text-ember-500">
                 ▲공격 ×{player.attackBuffMult} ({player.attackBuffTurns}턴)
               </span>
             )}
@@ -1151,6 +1154,15 @@ export default function BattlePage() {
             </button>
           </div>
         </div>
+
+        {/* ── ② 경험치 줄 ────────────────────────────────────────────────────
+            자기 줄을 쓴다. 위 줄은 칩이 뜨는 대로 늘어나므로 거기 끼우면 칩 둘에 눌린다. */}
+        <ExpStatusRow
+          name={player.name}
+          level={player.level}
+          exp={player.exp}
+          expToNext={player.expToNextLevel}
+        />
 
         {/* 로그 한 줄 — 캔버스 로그 상자와 같은 내용이다. 접근성·테스트용으로 DOM 에도 남기되
             자리를 적게 쓴다(예전엔 56px 짜리 띠가 대부분 비어 있었다). */}
