@@ -313,3 +313,53 @@ test("fx: 칩 두 개", async ({ page }) => {
   await expect(page.getByTestId("exp-row")).toContainText("EXP");
   await page.screenshot({ path: path.join(OUT, "_chips-two.png") });
 });
+
+/**
+ * 파티 교체와 공격 모션 뒤에도 둘이 계속 마주보는지.
+ *
+ * 교체는 스프라이트를 새로 만들지 않고 텍스처만 갈아끼우고, 공격 모션은 x 를 흔들었다가
+ * 되돌린다 — 둘 다 방향을 잃기 쉬운 자리다. 캔버스는 접근성 트리에 안 잡히니
+ * 사람이 그림을 봐야 한다.
+ */
+test("fx: 교체·공격 뒤 방향", async ({ page }) => {
+  fs.mkdirSync(OUT, { recursive: true });
+  await page.addInitScript(() => {
+    localStorage.setItem("monster-rpg-auth", JSON.stringify({
+      state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
+    localStorage.setItem("monster-rpg-player", JSON.stringify({
+      state: {
+        party: [
+          { id: "flameling", level: 8, uid: "dir-0",
+            moves: [{ id: "tap", name: "톡", type: "normal", power: 20, accuracy: 100, category: "physical" }] },
+          { id: "leafy", level: 8, uid: "dir-1",
+            moves: [{ id: "tap", name: "톡", type: "normal", power: 20, accuracy: 100, category: "physical" }] },
+        ],
+        storage: [], dexSeen: [], dexCaught: [], materials: {}, potions: {},
+        bestFloor: 0, storyFlags: {}, questStatus: {},
+        craftedItems: [], craftedArtifacts: [], craftedPotions: [], equippedArtifacts: {},
+      },
+      version: 1,
+    }));
+    localStorage.setItem("monster-rpg-battle-settings", JSON.stringify({
+      state: { autoAdvance: true, logSpeed: "fast" }, version: 0 }));
+  });
+  await page.goto("/battle");
+  await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: path.join(OUT, "_facing-start.png") });
+
+  // 2번 몬스터로 교체 — 텍스처만 바뀐다
+  await page.getByTestId("party-1").click();
+  await page.waitForTimeout(2200);
+  await page.screenshot({ path: path.join(OUT, "_facing-after-swap.png") });
+
+  // 한 대 때리고 원위치까지 기다린다
+  for (let i = 0; i < 20; i++) {
+    if (await page.getByTestId("cmd-moves").isEnabled().catch(() => false)) break;
+    await page.waitForTimeout(200);
+  }
+  await page.getByTestId("cmd-moves").click();
+  await page.getByTestId("move-tap").click();
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: path.join(OUT, "_facing-after-attack.png") });
+});

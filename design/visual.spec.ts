@@ -26,6 +26,9 @@ const SCREENS = [
   { name: "farm",     path: "/farm",     auth: true,  phaser: false },
   { name: "monsters", path: "/monsters", auth: true,  phaser: false },
   { name: "workshop", path: "/workshop", auth: true,  phaser: false },
+  // 2026-08-14: 하단 패널에 경험치 줄이 한 줄 늘면서 캔버스가 그만큼 짧아졌다. 몬스터
+  // 방향은 그대로다 — 뒤집기를 좌표에서 계산하도록 바꿨지만 지금 배치에서는 결과가 같다.
+  //
   // battle 기준 이미지를 2026-08-12 에 다시 갱신했다. 배경이 Graphics 로 그리던 벽돌방에서
   // 층 구간 × 적 속성으로 고르는 이미지 한 장으로 바뀌었고, 배치도 아군 앞(왼쪽·아래·크게)·
   // 적 뒤(오른쪽·위·작게)로 다시 잡았다. HP 패널은 각자 발밑, 로그 상자는 오른쪽 아래다.

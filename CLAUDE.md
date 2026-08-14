@@ -6,6 +6,9 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
 - 색은 index.css @theme 토큰만 사용. hex 하드코딩 금지.
   신규 색은 docs/ART_DIRECTION.md 1-2 표에 먼저 추가한 뒤 사용.
 - 픽셀 스프라이트 표시 크기는 원본의 정수배만 (64 → 128 O, 110 X).
+- 게이지는 `shared/ui/StatBar` 하나만 쓴다. 굵기(HP 12 · 경험치 8)와 색은 부품이 정한다 —
+  손으로 막대를 만들면 같은 화면에서 HP 보다 경험치가 커지거나 HP 위험색을 따라 쓰게 된다.
+- 전투 몬스터의 좌우 방향은 `battleLayout.shouldFlipX` 로만 정한다. 왼쪽에 선 쪽만 뒤집는다.
 - 폰트 크기는 Galmuri 기준 크기의 정수배만 (12/24/36px). text-pixel-* / text-title-* 만 쓴다.
 - 몬스터 일러스트에 image-rendering: pixelated 를 적용하지 말 것.
 - 여백은 4px 그리드. Tailwind 임의값(p-[13px]) 금지.
