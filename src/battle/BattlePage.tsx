@@ -84,7 +84,7 @@ import { statusDetail, statusLabel } from "./statusInfo";
 import { TypeChartPanel } from "./TypeChartPanel";
 import { ExpGainOverlay } from "./ExpGainOverlay";
 import { ExpStatusRow } from "./ExpStatusRow";
-import { buildExpTimeline, type ExpSegment } from "./expTimeline";
+import { useExpPlayback } from "./expPlayback";
 import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────────
@@ -155,10 +155,14 @@ export default function BattlePage() {
   const [showTypeChart, setShowTypeChart] = useState(false);
   /** 보관함이 가득 차서 자리를 못 준 포획 — 각인으로 흡수할지 물어본다 */
   const [overflowCapture, setOverflowCapture] = useState<BattleMonster | null>(null);
-  /** 승리 직후 경험치 바가 차오르는 연출. 끝나야 다음 로그로 넘어간다 */
-  const [expAnim, setExpAnim] = useState<
-    { name: string; gained: number; segments: ExpSegment[]; resolve: () => void } | null
-  >(null);
+  /**
+   * 승리 직후 경험치 바가 차오르는 연출. 끝나야 다음 로그로 넘어간다.
+   * 레벨업 순간의 반짝임은 씬이 그린다 — 바는 하단에 있고 몬스터는 캔버스에 있어서,
+   * 둘이 같이 반응해야 "쟤가 컸다"로 읽힌다.
+   */
+  const { view: expView, play: playExp, advance: advanceExp } = useExpPlayback(
+    useCallback(() => gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "player"), []),
+  );
   /** 기술 칸이 찼을 때 띄우는 "무엇을 잊을까" 선택 창 */
   const [forgetPrompt, setForgetPrompt] = useState<
     { current: Move[]; incoming: Move; resolve: (idx: number | null) => void } | null
@@ -353,16 +357,9 @@ export default function BattlePage() {
    */
   const playExpGain = useCallback((before: BattleMonster, gained: number): Promise<void> => {
     setLogHistory((prev) => [...prev.slice(-49), `경험치 ${gained}를 획득했다!`]);
-    const { segments } = buildExpTimeline(before, gained);
-    if (cancelledRef.current || segments.length === 0) return Promise.resolve();
-    return new Promise<void>((resolve) => {
-      setExpAnim({ name: before.name, gained, segments, resolve });
-    });
-  }, []);
-
-  const finishExpGain = useCallback(() => {
-    setExpAnim((a) => { a?.resolve(); return null; });
-  }, []);
+    if (cancelledRef.current) return Promise.resolve();
+    return playExp(before, gained);
+  }, [playExp]);
 
   /**
    * 도망 — 전투를 포기하고 베이스캠프로 돌아간다.
@@ -584,8 +581,9 @@ export default function BattlePage() {
     const beforeExp = np;
     const expResult = gainExp(np, earnedExp);
     np = expResult.updatedMonster;
+    // 반짝임은 연출이 그 레벨에 닿는 순간에 터진다(useExpPlayback). 여기서 미리 터뜨리면
+    // 바가 차기도 전에 몬스터만 번쩍이고, 여러 레벨이 올라도 한 번밖에 안 뜬다.
     if (expResult.leveledUp) {
-      gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "player");
       setLogHistory((prev) => [...prev.slice(-49), `레벨이 ${np.level}(으)로 올랐다!`]);
     }
     // 경험치가 왜 안 들어오는지 말해 준다. 이 줄이 없으면 플레이어는 고장으로 읽는다 —
@@ -1158,10 +1156,12 @@ export default function BattlePage() {
         {/* ── ② 경험치 줄 ────────────────────────────────────────────────────
             자기 줄을 쓴다. 위 줄은 칩이 뜨는 대로 늘어나므로 거기 끼우면 칩 둘에 눌린다. */}
         <ExpStatusRow
-          name={player.name}
-          level={player.level}
-          exp={player.exp}
-          expToNext={player.expToNextLevel}
+          name={expView?.name ?? player.name}
+          level={expView?.level ?? player.level}
+          exp={expView ? Math.round(expView.ratio * expView.expToNext) : player.exp}
+          expToNext={expView?.expToNext ?? player.expToNextLevel}
+          fillMs={expView?.fillMs ?? 0}
+          levelUp={expView?.card !== null && expView !== null}
         />
 
         {/* 로그 한 줄 — 캔버스 로그 상자와 같은 내용이다. 접근성·테스트용으로 DOM 에도 남기되
@@ -1255,16 +1255,8 @@ export default function BattlePage() {
         </div>
       )}
 
-      {/* 경험치 연출 — 승리 직후, 결과 화면보다 먼저 */}
-      {expAnim && (
-        <ExpGainOverlay
-          key={expAnim.name + expAnim.gained}
-          name={expAnim.name}
-          gained={expAnim.gained}
-          segments={expAnim.segments}
-          onDone={finishExpGain}
-        />
-      )}
+      {/* 레벨업 카드 — 오른 스탯은 상태 줄 한 칸에 안 들어간다 */}
+      {expView && <ExpGainOverlay view={expView} onAdvance={advanceExp} />}
 
       {/* 기술 교체 선택 — 4칸이 찼을 때만 뜬다 */}
       {forgetPrompt && (

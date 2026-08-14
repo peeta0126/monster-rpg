@@ -21,6 +21,8 @@ export interface ExpSegment {
   /** 바의 시작·끝 비율 (0~1) */
   from: number;
   to: number;
+  /** 이 구간을 그리는 동안 바 옆에 적히는 분모. 레벨마다 달라서 구간이 들고 있어야 한다 */
+  expToNext: number;
   /** 구간 끝에서 레벨이 올랐다면 그 결과. 여기서 연출이 멈춘다 */
   levelUp: { level: number; gains: StatGains } | null;
 }
@@ -48,6 +50,7 @@ export function buildExpTimeline(
 
     segments.push({
       level: before.level,
+      expToNext: before.expToNextLevel,
       from: before.expToNextLevel > 0 ? before.exp / before.expToNextLevel : 0,
       to: res.leveledUp
         ? 1

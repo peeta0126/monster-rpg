@@ -10,12 +10,16 @@ import { StatBar } from "../shared/ui";
  * 성장이 생존보다 커 보인다 — HP 가 화면에서 제일 큰 게이지여야 한다.
  */
 export function ExpStatusRow({
-  name, level, exp, expToNext,
+  name, level, exp, expToNext, fillMs, levelUp,
 }: {
   name: string;
   level: number;
   exp: number;
   expToNext: number;
+  /** 바가 차오르는 시간(ms). 평소에는 0 이라 값이 그냥 얹힌다 */
+  fillMs: number;
+  /** 방금 레벨이 올랐다 */
+  levelUp: boolean;
 }) {
   return (
     <div
@@ -27,11 +31,16 @@ export function ExpStatusRow({
       {/* 라벨이 없으면 색만으로 HP 바와 구분해야 한다. 색을 못 보는 사람에게도 남게 적는다 */}
       <span className="shrink-0 font-bold uppercase tracking-wider text-earth-400">EXP</span>
       <div className="w-40 shrink-0">
-        <StatBar value={exp} max={expToNext} variant="exp" />
+        <StatBar value={exp} max={expToNext} variant="exp" fillMs={fillMs} />
       </div>
       <span className="shrink-0 font-mono text-earth-400">
         {exp} / {expToNext}
       </span>
+      {levelUp && (
+        <span data-testid="exp-levelup-flash" className="shrink-0 font-bold text-moss-500">
+          ▲ 레벨 업!
+        </span>
+      )}
     </div>
   );
 }
