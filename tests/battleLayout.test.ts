@@ -8,7 +8,7 @@ import {
   PLAYER_SPRITE_BOX, PLAYER_PANEL_BOX, LOG_BOX_RECT,
   ORMR_X, ORMR_FEET, ORMR_SIZE,
   enemySpriteBox, enemyPanelBox, getEnemyLayout,
-  overlaps, type Box,
+  overlaps, shouldFlipX, type Box,
 } from "../src/battle/battleLayout";
 import { getTowerZone, isBossFloor, MAX_TOWER_FLOOR } from "../src/shared/floorTable";
 import { towerBattleBg } from "../src/shared/assetPaths";
@@ -159,4 +159,26 @@ test("z41 까지의 경로 규칙이 구간·속성 35 조합을 다 만든다",
   const paths = new Set(zones.flatMap((z) => elements.map((e) => towerBattleBg(z, e))));
   assert.equal(paths.size, 35);
   assert.ok(paths.has("/assets/tower/z21_grass.webp"));
+});
+
+// ── 마주보기 ──────────────────────────────────────────────────────────────────
+// 원화는 왼쪽 아니면 정면을 본다. 오른쪽을 보는 그림이 없으니 "왼쪽에 선 쪽만 뒤집는다"
+// 한 줄로 전 층이 해결된다. 상수로 박아 두면 배치를 옮길 때마다 서로 등진다.
+
+test("왼쪽에 선 쪽만 뒤집는다 — 둘이 마주본다", () => {
+  assert.equal(shouldFlipX(PLAYER_X, ENEMY_X), true);
+  assert.equal(shouldFlipX(ENEMY_X, PLAYER_X), false);
+});
+
+test("좌우를 뒤바꿔도 규칙 하나로 계속 마주본다", () => {
+  // 언젠가 아군을 오른쪽에 세우더라도 두 값이 서로 반대이기만 하면 된다
+  assert.notEqual(shouldFlipX(800, 250), shouldFlipX(250, 800));
+});
+
+test("모든 층에서 아군과 적의 뒤집기가 서로 반대다 (50층 오름 포함)", () => {
+  for (const floor of [1, 10, 25, 30, 49, MAX_TOWER_FLOOR]) {
+    const e = getEnemyLayout(floor);
+    assert.equal(shouldFlipX(PLAYER_X, e.x), true, `${floor}층 아군은 왼쪽이라 뒤집는다`);
+    assert.equal(shouldFlipX(e.x, PLAYER_X), false, `${floor}층 적은 오른쪽이라 안 뒤집는다`);
+  }
 });

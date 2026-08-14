@@ -40,6 +40,20 @@ export const ORMR_PANEL_CY = 386;
 export const PLAYER_CY = PLAYER_FEET - PLAYER_SIZE / 2;
 export const ENEMY_CY  = ENEMY_FEET  - ENEMY_SIZE  / 2;
 
+/**
+ * 마주보기.
+ *
+ * 몬스터 원화 15장 중 12장이 왼쪽을 보고, 3장(크리샤·프로스톨·리피)이 정면을 본다.
+ * 오른쪽을 보는 그림은 하나도 없다 — 그래서 **왼쪽에 선 쪽만 뒤집으면** 둘은 항상 마주본다.
+ * 정면 3장은 뒤집어도 정면이라 예외를 두지 않는다.
+ *
+ * 아군에 `setFlipX(true)` 를 박아 두던 시절엔 자리를 옮길 때마다 서로 등졌다. 좌우 배치는
+ * 층마다 다르고(50층 오름은 x 가 다르다) 앞으로도 바뀌므로, 상수가 아니라 좌표에서 나온다.
+ */
+export function shouldFlipX(selfX: number, opponentX: number): boolean {
+  return selfX < opponentX;
+}
+
 // ── HP 패널 ───────────────────────────────────────────────────────────────────
 // ⚠️ 패널 X 를 몬스터 X 에서 파생시키지 않는다. 예전에 그렇게 뒀다가 패널이 몬스터를
 // 따라다니며 겹쳤다. 각자 자기 발밑에 놓인 별도 상수다.

@@ -32,7 +32,7 @@ import {
   PANEL_W, PANEL_H, P_PANEL_CX, P_PANEL_CY,
   BAR_H, BAR_W_INNER, P_BAR_X, P_BAR_Y,
   LOG_BOX, LOG_PAD_X, LOG_PAD_Y,
-  getEnemyLayout, type EnemyLayout,
+  getEnemyLayout, shouldFlipX, type EnemyLayout,
 } from "./battleLayout";
 
 /** 이 전투에서 쓰는 배경 텍스처 키. 전투마다 게임이 새로 만들어지므로 한 벌이면 된다. */
@@ -281,7 +281,7 @@ export default class BattleScene extends Phaser.Scene {
     this.smoothTexture("enemy-mon");
     for (let i = 0; i < 6; i++) this.smoothTexture(`party-mon-${i}`);
 
-    // 적 — 뒤(오른쪽·위·작게). 원본이 왼쪽을 보고 있어 뒤집지 않는다
+    // 적 — 뒤(오른쪽·위·작게)
     if (this.textures.exists("enemy-mon")) {
       this.enemySprite = this.add.image(this.enemy.x, this.enemy.cy, "enemy-mon")
         .setDisplaySize(this.enemy.size, this.enemy.size).setDepth(6);
@@ -292,11 +292,12 @@ export default class BattleScene extends Phaser.Scene {
     // 아군 — 앞(왼쪽·아래·크게). 파티 0번 슬롯 이미지 사용 (party-mon-0)
     if (this.textures.exists("party-mon-0")) {
       this.playerSprite = this.add.image(PLAYER_X, PLAYER_CY, "party-mon-0")
-        // 원본이 왼쪽을 보고 있으므로 뒤집어야 우측의 적을 바라본다
-        .setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setFlipX(true).setDepth(6);
+        .setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(6);
     } else {
       this.playerSprite = this.makeFallback(PLAYER_X, PLAYER_CY, HEX.mist500, PLAYER_SIZE);
     }
+
+    this.faceEachOther();
 
     // 등장 애니메이션
     this.enemySprite.setAlpha(0).setY(this.enemy.cy + 20);
@@ -307,6 +308,17 @@ export default class BattleScene extends Phaser.Scene {
       this.addFloat(this.enemySprite, this.enemy.cy, 6, 1750);
       this.addFloat(this.playerSprite, PLAYER_CY, 5, 1950);
     });
+  }
+
+  /**
+   * 둘이 서로를 보게 뒤집는다. 판정은 **집 좌표**로 한다 — 공격 모션은 x 를 흔들었다가
+   * 되돌리는데, 그 중간 프레임으로 방향을 정하면 파고드는 동안 몸이 홱 돌아 버린다.
+   * 텍스처를 갈아끼운 뒤에도(파티 교체) 다시 불러야 한다. flipX 는 setTexture 가 건드리지
+   * 않지만, 방향을 한 곳에서만 정하는 편이 나중에 배치를 바꿀 때 안전하다.
+   */
+  private faceEachOther() {
+    this.playerSprite?.setFlipX(shouldFlipX(PLAYER_X, this.enemy.x));
+    this.enemySprite?.setFlipX(shouldFlipX(this.enemy.x, PLAYER_X));
   }
 
   private smoothTexture(key: string) {
@@ -689,6 +701,7 @@ export default class BattleScene extends Phaser.Scene {
         this.playerSprite.setOrigin(0.5, 0.5);
         this.playerSprite.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE);
         this.playerSprite.setY(PLAYER_CY);
+        this.faceEachOther();
 
         this.tweens.add({
           targets: this.playerSprite,
