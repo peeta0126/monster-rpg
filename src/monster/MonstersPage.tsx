@@ -417,8 +417,6 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS, imprint = 
 
         {/* 성장 — 다음 레벨까지, 다음에 배울 기술, 진화 예정 */}
         {(() => {
-          const expPct = monster.expToNextLevel > 0
-            ? Math.min(100, (monster.exp / monster.expToNextLevel) * 100) : 0;
           const nextLearn = getFullLearnset(monster.id).find((e) => e.level > monster.level);
           const evoTo = monster.evolvesTo
             ? monsters.find((m) => m.id === monster.evolvesTo) : undefined;
@@ -435,9 +433,9 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS, imprint = 
                     {monster.exp} / {monster.expToNextLevel}
                   </span>
                 </div>
-                <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(243, 229, 185, .089)" }}>
-                  <div className="h-full rounded-full" style={{ width: `${expPct}%`, background: PALETTE.ember500 }} />
-                </div>
+                {/* HP 와 같은 부품·같은 규칙으로 그린다. 손으로 만든 6px 막대는 같은 화면의
+                    HP 바 옆에서 게이지로 안 읽혔고, 색도 HP 위험 단계와 같은 주황이었다. */}
+                <StatBar value={monster.exp} max={monster.expToNextLevel} variant="exp" />
 
                 {nextLearn && (
                   <p className="mt-2 text-pixel-sm" style={{ color: "rgba(205, 178, 126, .698)" }}>

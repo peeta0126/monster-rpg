@@ -92,7 +92,8 @@ export function PartyStrip({
                 {onCursor && <span className="mr-1 text-mist-300">▶</span>}{m.name}
               </p>
               <p className="text-pixel-sm leading-tight text-earth-400">Lv.{m.level}</p>
-              <StatBar value={m.currentHp} max={m.maxHp} height={6} className="mt-0.5" />
+              {/* 8px — 같은 화면의 경험치 바보다 얇아지면 생존보다 성장이 커 보인다 */}
+              <StatBar value={m.currentHp} max={m.maxHp} height={8} className="mt-0.5" />
               <p className="font-mono text-pixel-sm text-earth-400">{m.currentHp}/{m.maxHp}</p>
               {m.status && (
                 <p className="text-pixel-sm text-ember-500">
