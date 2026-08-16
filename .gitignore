@@ -41,3 +41,10 @@ server/prisma/*.db-journal
 # 폰트 서브셋 산출물 — 빌드 때 생성된다 (scripts/subset-fonts.mjs)
 /public/assets/fonts/
 
+# 작업 기록 — 진행 상황·인수인계 노트는 저장소에 올리지 않는다.
+# 공개할 것이 아니고 브랜치마다 달라져 충돌만 난다. 규칙(CLAUDE.md·docs/ART_DIRECTION.md)은
+# 코드와 같이 가야 하므로 여기 해당하지 않는다.
+/docs/notes/
+/Handoff.md
+/design/PERF.md
+

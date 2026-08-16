@@ -1,6 +1,8 @@
 # monster-rpg
 
-React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `Handoff.md` 를 먼저 읽을 것.
+React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `docs/notes/` 를 먼저 읽을 것
+(기능별로 나뉘어 있고 `docs/notes/README.md` 가 목차다). 이 노트는 진행 기록이라 저장소에
+올리지 않는다 — 클론한 곳에 없으면 그게 정상이다.
 
 ## 디자인 규칙 (UI 변경 시 필수)
 - 색은 index.css @theme 토큰만 사용. hex 하드코딩 금지.
@@ -11,11 +13,23 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
 - 전투 몬스터의 좌우 방향은 `battleLayout.shouldFlipX` 로만 정한다. 왼쪽에 선 쪽만 뒤집는다.
 - 폰트 크기는 Galmuri 기준 크기의 정수배만 (12/24/36px). text-pixel-* / text-title-* 만 쓴다.
 - 몬스터 일러스트에 image-rendering: pixelated 를 적용하지 말 것.
+- **이모지를 쓰지 말 것.** 아이콘은 `shared/ui/icons.ts` 한 벌이고 `<PixelIcon>` 으로만 그린다.
+  새 아이콘은 `src/assets/{ui,materials,artifacts}` 에 32x32 픽셀 SVG 를 그려 넣고 그 표에 이름을
+  더한다. 표시 크기는 **16 / 32 / 64** 만 — 24·48 은 1.5배라 crispEdges 로 그린 칸이 들쭉날쭉해진다.
+  이모지는 픽셀 폰트에 없어 그 글자만 다른 서체로 떨어지고, 플랫폼마다 다르게 그려진다.
+- **조사를 괄호로 쓰지 말 것.** `shared/josa.ts` 의 `withJosa(이름, "은는")` 을 쓴다.
+  전투 로그는 이 게임에서 제일 자주 읽는 글이라 "○○은(는)" 이 그대로 나가면 매 턴 괄호를 읽게 된다.
 - 여백은 4px 그리드. Tailwind 임의값(p-[13px]) 금지.
 - UI 변경 후 `npm run design:shot` 실행하고 PNG 를 Read 로 직접 확인할 것.
 - Phaser 캔버스는 접근성 트리에 안 잡힌다. browser_snapshot 대신 스크린샷을 쓸 것.
 - 한국어 문구를 추가하면 폰트 서브셋이 다시 돌아야 한다. 빌드에 물려 있지만
   dev 서버만 볼 때 글자가 폴백으로 나오면 `npm run fonts:subset`.
+
+## 시작 상태
+- **시작 파티는 비어 있다.** 첫 몬스터(플레미)는 이장 오리온이 준다
+  (`campDialogues` 의 `grantsMonsterId`). 세이브를 지우는 것만으로는 전투 화면에 못 간다 —
+  테스트는 `design/freshSave.ts` 의 `FRESH_SAVE` 를 심는다.
+- 파티가 빈 상태가 실재하므로 탑 모달·숲·`/battle` 직접 진입에 가드가 있다. 지우지 말 것.
 
 ## 전투 난이도 (숫자를 만지기 전에)
 - 난이도 등급은 **'상'**이고 정의는 하나다 — 특정 층에서 막히고, 그 벽은 **제작·강화로만** 넘어간다.
@@ -64,17 +78,26 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
   구워져 들어온 최종본이다. `optimize-assets.mjs` 의 `PRESERVED_DIRS` 가 막고 있고,
   레시피를 추가하면 스크립트가 아무것도 안 하고 죽는다. 경로는 assetPaths 상수만 참조.
 - **탐험 중 화면에만 스크림을 깐다** (`<ForestBackdrop dim>`). 원화의 스크림은 카드가
-  놓이는 가운데만 눌러 둔 것이라, UI 가 화면 전체에 흩어지는 노드 맵에는 안 맞는다.
+  놓이는 가운데만 눌러 둔 것이라, UI 가 화면 전체에 흩어지는 탐험 화면에는 안 맞는다.
   구역 선택 화면은 원화 그대로 나간다 — 거기서는 카드가 자기 판을 들고 있다.
 - 판 없이 원화 위에 바로 놓이는 UI 에 반투명 채움을 쓰지 말 것. 이동 선택 버튼이
   `rgba(cream, .04)` 였는데 옛 그라디언트 배경에서만 성립하던 값이라, 원화로 바꾸자
   버튼이 통째로 사라졌다. 자기 판(shadow-900 .8 이상)을 들리거나 텍스트 그림자를 깐다.
 - 강조색(moss/mist/ember)은 24px 굵은 글자·테두리·버튼 채움에만. 12px 글자에 쓰면
   얕은 숲 카드에서 4.2:1 까지 떨어진다. 작은 글자는 sand 계열.
-- 고쳤으면 `npm run design:shot` → `forest-{shallow,deep,ancient,nodes}.png` 를 Read 로
-  확인. 배경이 실제로 다른지, 노드 맵의 이동 버튼이 읽히는지는 눈으로만 잡힌다.
+- 고쳤으면 `npm run design:shot` → `forest-{shallow,deep,ancient,walk,nest}.png` 를 Read 로
+  확인. 배경이 실제로 다른지, 원화 위의 글자가 읽히는지는 눈으로만 잡힌다.
 - 회귀는 `npx playwright test e2e/forestTiers.spec.ts` (해금·기본 선택·프리로드·스크림·
   reduced-motion) 와 `node --import tsx --test tests/forestAreas.test.ts`.
+
+## 숲 조우
+- **숲은 파티 최고 레벨보다 센 놈을 안 내준다** (`src/camp/forest/catchLevel.ts`).
+  종은 안 막는다 — 진화체라도 레벨만 천장 아래면 나온다.
+- 천장이 구역 최저 레벨에도 못 미치면 포획 사건 자체가 안 뜬다(`steps.candidates` 의 `canCatch`).
+  재료만 나오는 원정이 된다.
+- 천장은 런에 스냅샷으로 들어간다(`run.capLevel`). 지금 파티를 그대로 읽으면 런 도중 레벨이
+  움직이는 순간 이미 굴린 사건이 바뀐다 — 그건 새로고침 리롤이다.
+- **탑에서는 몬스터를 못 잡는다.** 포획은 숲에만 있다. 전투 화면에 포획 UI 를 다시 만들지 말 것.
 
 ## 숲 원정 저장
 - 저장은 `src/camp/forest/runStorage.ts` 한 곳(`monster-rpg-forest-run`). 사건의 굴림은
