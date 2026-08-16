@@ -23,6 +23,8 @@ export interface DialogueEntry {
   lines: string[];
   setsFlag?: PersistedStoryFlag;
   quest?: QuestDef;
+  /** 대사 끝에 건네주는 몬스터. 이미 가지고 있어도 한 번 더 주지는 않는다(플래그가 같이 선다) */
+  grantsMonsterId?: string;
 }
 
 // ─── 퀘스트 ────────────────────────────────────────────────────────────────────
@@ -91,6 +93,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   {
     requires: "always",
     setsFlag: "met_orion",
+    grantsMonsterId: "flameling",
     lines: [
       "어머니 곁에 있다 왔다. …좋지 않구나.",
       "솔직히 말하마. 나도 모른다.",
@@ -100,7 +103,11 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
       "이 마을에서 설명 안 되는 일이 생기면, 늘 저 탑이었다.",
       "근거는 없다. 확신도 없어. …그저 남은 게 그것뿐이라 하는 말이다.",
       "마지막 끄나풀이라도 잡아보겠느냐.",
-      "가겠다면 탑 입구의 바로스를 찾아가라. 그 자가 널 돌려보내지 않는다면, 넌 준비된 게다.",
+      "…그 얼굴이면 됐다. 맨몸으로 보내진 않는다.",
+      "헛간에 눌러앉은 녀석이 하나 있다. 불씨를 달고 다녀서 겨울에 요긴했지.",
+      "데려가라. 이름은 플레미다.",
+      "— 플레미가 파티에 들어왔다 —",
+      "탑 입구의 바로스를 찾아가라. 그 자가 널 돌려보내지 않는다면, 넌 준비된 게다.",
     ],
   },
   // 3-2. 바로스를 만난 후
@@ -203,7 +210,9 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
     requires: "always",
     lines: ["이장 영감한테 먼저 가봐라."],
   },
-  // 4-1(첫 만남) + 4-2(포획 강의) + 4-3(성장 강의) — 첫 대면 시 한 번에
+  // 4-1. 첫 대면 — 탑의 규칙과 "혼자로는 안 된다"까지만.
+  // 예전엔 여기서 포획·육성·제작·분해를 19줄에 몰아넣었다. 그 시점에 못 하는 일까지
+  // 설명하니 아무것도 안 남았고, 없어진 탑 포획 규칙까지 그대로 읊고 있었다.
   {
     requires: "met_orion",
     setsFlag: "met_baros",
@@ -214,18 +223,9 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
       "규칙은 간단하다. 한 층에 몬스터 한 마리. 이기면 위로. 지면 처음부터.",
       "10층마다 강한 놈이 지키고 있다. 그건 각오해라.",
       "끝이 몇 층이냐고? 나도 모른다. 끝까지 간 놈이 없으니까.",
-      "이기기만 해선 못 올라간다. 데려가야 해.",
-      "탑의 몬스터는 포획할 수 있다. 조건이 둘이다.",
-      "첫째, 체력을 30% 아래로 깎아라. 멀쩡한 놈은 절대 안 잡힌다.",
-      "둘째, 독이나 마비를 걸어라. 성공률이 1.5배로 뛴다. 최대 95%까지 간다.",
-      "아무 데서나 되는 건 아니야. 잡을 수 있는 자리면 포획 버튼이 뜬다.",
-      "보관함 차면 놓아주게 된다. 미리 비워둬라.",
-      "잡았으면 키워라. 묵혀두면 아무 소용 없다.",
-      "숲에 나가라. 얕은 숲이면 지금 수준에 맞는다. 레벨 1에서 8짜리가 나온다.",
-      "숲에선 재료도 떨어진다. 약초, 나무뿌리, 철 조각.",
-      "그걸 들고 공방으로 가라. 약초 둘이면 물약 하나다. 그 정도는 지금도 만든다.",
-      "장비는 만들고 끝이 아니야. 강화석으로 레벨을 올려라. 올리면 부가 능력치가 열린다.",
-      "강화석 없으면 안 쓰는 장비를 모루에서 분해해라. 거기서 나온다.",
+      "…한 마리로 어디까지 갈 생각이냐.",
+      "탑에서는 못 잡는다. 여기 것들은 잡히라고 있는 게 아니야.",
+      "숲으로 가라. 거기서 데려오는 거다. 얕은 숲이면 지금 수준에 맞는다.",
     ],
   },
   // 첫 사냥 (met_baros 이후) — 미수락/진행중/완료는 QuestDef가 처리, 이 lines는 완료 후 필터
@@ -234,13 +234,28 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
     quest: BAROS_FIRST_HUNT_QUEST,
     lines: ["탑에 오르기 전에 준비를 단단히 해라."],
   },
-  // 4-4. 5층 도달
+  // 4-2. 첫 포획 후 — 파티와 재료 이야기는 실제로 잡아 온 다음에 한다
+  {
+    requires: "first_capture",
+    lines: [
+      "데려왔군. 키워라. 묵혀두면 아무 소용 없다.",
+      "데리고 오를 수 있는 건 셋까지다. 나머지는 보관함에 둬라.",
+      "숲에선 재료도 떨어진다. 약초, 나무뿌리, 가죽.",
+      "그걸 들고 공방으로 가라. 약초 둘에 나무뿌리 하나면 물약이다. 그 정도는 지금도 만든다.",
+      "하나 더. 숲은 네가 데리고 있는 놈보다 센 걸 내주지 않는다.",
+      "위로 오르면 숲도 따라 올라온다. 순서가 그렇다.",
+    ],
+  },
+  // 4-3. 5층 도달 — 장비 이야기는 맨몸이 슬슬 안 먹히는 이 시점에
   {
     requires: "floor_5",
     lines: [
       "5층. …인정하마.",
       "위로 갈수록 놈들이 기술을 하나씩 더 들고 나온다. 6층부터 독 쓰는 놈이 있어. 해독제 챙겨라.",
       "열매 둘이면 해독제 하나다.",
+      "그리고 슬슬 맨몸으로는 안 된다. 공방에서 장비를 만들어 채워라.",
+      "장비는 만들고 끝이 아니야. 강화석으로 레벨을 올려라. 올리면 부가 능력치가 열린다.",
+      "강화석 없으면 안 쓰는 장비를 모루에서 분해해라. 거기서 나온다.",
     ],
   },
   // 4-5. 10층 도달 — 2막 · 복선
@@ -299,6 +314,7 @@ export function selectDialogueEntry(
 export interface NpcInteractionResult {
   lines: string[];
   setsFlag?: PersistedStoryFlag;
+  grantsMonsterId?: string;
   acceptQuestId?: string;
   completeQuest?: {
     questId: string;
@@ -344,7 +360,11 @@ export function resolveNpcInteraction(
       const questEntry = dialogues.find((e) => e.quest === quest);
       const storyEntry = selectDialogueEntry(dialogues, storyFlags, bestFloor);
       if (storyEntry && storyEntry !== questEntry) {
-        return { lines: storyEntry.lines, setsFlag: storyEntry.setsFlag };
+        return {
+          lines: storyEntry.lines,
+          setsFlag: storyEntry.setsFlag,
+          grantsMonsterId: storyEntry.grantsMonsterId,
+        };
       }
       return { lines: quest.progressLines };
     }
@@ -352,5 +372,5 @@ export function resolveNpcInteraction(
 
   const entry = selectDialogueEntry(dialogues, storyFlags, bestFloor);
   if (!entry) return undefined;
-  return { lines: entry.lines, setsFlag: entry.setsFlag };
+  return { lines: entry.lines, setsFlag: entry.setsFlag, grantsMonsterId: entry.grantsMonsterId };
 }

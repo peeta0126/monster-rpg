@@ -1,6 +1,7 @@
 import { useAudioStore } from "../audio";
 import { Panel } from "./Panel";
 import { PixelButton } from "./PixelButton";
+import { PixelIcon } from "./PixelIcon";
 
 function VolumeRow({
   label, value, onChange, disabled,
@@ -43,7 +44,10 @@ export function AudioSettings() {
         variant={muted ? "danger" : "ghost"}
         onClick={() => setMuted(!muted)}
       >
-        {muted ? "🔇 음소거 해제" : "🔈 전체 음소거"}
+        <span className="inline-flex items-center gap-1.5">
+          <PixelIcon name={muted ? "mute" : "sound"} size={16} />
+          {muted ? "음소거 해제" : "전체 음소거"}
+        </span>
       </PixelButton>
 
       <p className="text-pixel-sm text-earth-400">

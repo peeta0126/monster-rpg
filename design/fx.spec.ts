@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { FRESH_SAVE } from "./freshSave";
 
 const OUT = path.resolve(process.cwd(), "design", "screenshots", "current");
 
@@ -8,11 +9,11 @@ const OUT = path.resolve(process.cwd(), "design", "screenshots", "current");
 
 test("fx: 타격 연출 중/후", async ({ page }) => {
   fs.mkdirSync(OUT, { recursive: true });
-  await page.addInitScript(() => {
+  await page.addInitScript((fresh) => {
     localStorage.setItem("monster-rpg-auth", JSON.stringify({
       state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
-    localStorage.removeItem("monster-rpg-player");
-  });
+    localStorage.setItem("monster-rpg-player", fresh);
+  }, FRESH_SAVE);
   await page.goto("/battle");
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
@@ -161,11 +162,11 @@ test("fx: 경험치 연출", async ({ page }) => {
 /** 상성표. 전투 중에 T 하나로 열리고, 지금 상대의 줄이 강조되는지 본다. */
 test("fx: 속성 상성표", async ({ page }) => {
   fs.mkdirSync(OUT, { recursive: true });
-  await page.addInitScript(() => {
+  await page.addInitScript((fresh) => {
     localStorage.setItem("monster-rpg-auth", JSON.stringify({
       state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
-    localStorage.removeItem("monster-rpg-player");
-  });
+    localStorage.setItem("monster-rpg-player", fresh);
+  }, FRESH_SAVE);
   await page.goto("/battle");
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);

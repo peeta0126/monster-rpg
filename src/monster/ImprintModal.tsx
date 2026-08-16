@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PALETTE, rgba } from "../shared/palette";
 import { usePlayerStore, type ImprintFeedResult, type OwnedMonster } from "../shared/playerStore";
 import { MONSTER_IMAGE_MAP } from "./monsterImages";
+import { withJosa } from "../shared/josa";
 import {
   chainKeyOf, imprintStatus, imprintStars, imprintMultiplier, IMPRINT_TIERS,
   IMPRINT_ESSENCE_ID, MAX_IMPRINT_TIER,
@@ -214,7 +215,7 @@ export function ImprintModal({ chainKey, onClose }: { chainKey: string; onClose:
             )}
             {inParty.length > 0 && (
               <p className="mt-2 text-pixel-sm" style={{ color: PALETTE.earth400 }}>
-                파티의 {inParty.map((m) => m.nickname ?? m.name).join(" · ")}은(는) 보관함으로 내려야 먹일 수 있다.
+                파티의 {withJosa(inParty.map((m) => m.nickname ?? m.name).join(" · "), "은는")} 보관함으로 내려야 먹일 수 있다.
               </p>
             )}
           </div>

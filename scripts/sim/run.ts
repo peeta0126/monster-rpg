@@ -118,7 +118,9 @@ async function simulateRun(seed: number): Promise<RunStats> {
 
   const doForest = () => {
     const area = [...FOREST_AREAS].reverse().find((a) => s.bestFloor >= a.unlockFloor) ?? FOREST_AREAS[0];
-    const res = runForest(area, "avoid", 85, CATCH_POLICY);
+    // 숲은 파티 최고 레벨보다 센 놈을 안 내준다(catchLevel.ts). 시뮬도 같은 천장을 쓴다
+    const capLevel = s.party.reduce((max, m) => Math.max(max, m.level), 0);
+    const res = runForest(area, "avoid", 85, CATCH_POLICY, capLevel);
     st.forestRuns++;
 
     // 가방을 한 번 합친 뒤 정산한다 — 쫓겨났으면 지목한 한 종류만 온전히 남는다

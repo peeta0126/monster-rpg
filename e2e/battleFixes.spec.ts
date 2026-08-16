@@ -109,7 +109,7 @@ test("상태이상은 몇 턴 뒤 스스로 풀리고, 이미 걸린 상대에�
   };
 
   await castMove("cinder-toss");
-  expect(await logLines(page)).toContain("🔥화상 상태이상이 걸렸다!");
+  expect(await logLines(page)).toContain("화상 상태이상이 걸렸다!");
 
   // 두 번 걸면 아무 일도 없다는 걸 화면이 말해야 한다
   await castMove("cinder-toss");

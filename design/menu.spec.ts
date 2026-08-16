@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { FRESH_SAVE } from "./freshSave";
 
 /** 2단 커맨드 메뉴 조작 확인. npm run design:menu */
 const OUT = path.resolve(process.cwd(), "design", "screenshots", "current");
@@ -76,11 +77,11 @@ test("fx: 커맨드 메뉴 기술 예측", async ({ page }) => {
 
 test("fx: 커맨드 메뉴 2단", async ({ page }) => {
   fs.mkdirSync(OUT, { recursive: true });
-  await page.addInitScript(() => {
+  await page.addInitScript((fresh) => {
     localStorage.setItem("monster-rpg-auth", JSON.stringify({
       state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
-    localStorage.removeItem("monster-rpg-player");
-  });
+    localStorage.setItem("monster-rpg-player", fresh);
+  }, FRESH_SAVE);
   await page.goto("/battle");
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);

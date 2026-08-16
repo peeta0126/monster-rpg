@@ -7,6 +7,8 @@ import {
 } from "../shared/floorTable";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { POTIONS, getMaterial } from "../shared/items";
+import { withJosa } from "../shared/josa";
+import { PixelIcon } from "../shared/ui/PixelIcon";
 import { rollBattleDrop } from "../shared/dropTables";
 import type { Move, ElementType } from "../shared/game";
 import { usePlayerStore, recomputeStatsForLevel, type OwnedMonster } from "../shared/playerStore";
@@ -73,14 +75,13 @@ import {
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { createBattleGame } from "../shared/phaser/phaserConfig";
 import { setBattleInitData } from "./battleInitStore";
-import { CaptureOverflowPrompt } from "../monster/CaptureOverflowPrompt";
 import { ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { BattleCommandMenu } from "./BattleCommandMenu";
 import { PartyStrip } from "./PartyStrip";
 import { EnemyCard } from "./EnemyCard";
 import { TurnOrderBar } from "./TurnOrderBar";
 import { previewMove } from "./damagePreview";
-import { statusDetail, statusLabel } from "./statusInfo";
+import { statusDetail, statusLabel, STATUS_META } from "./statusInfo";
 import { TypeChartPanel } from "./TypeChartPanel";
 import { ExpGainOverlay } from "./ExpGainOverlay";
 import { ExpStatusRow } from "./ExpStatusRow";
@@ -92,10 +93,14 @@ import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSetti
 type BattleRouteState = {
   from?: string;
   portalId?: string;
-  isCatchZone?: boolean;
   floor?: number;
 };
 
+
+/** 무대 우상단에 적는 층 표시. 보스는 캔버스가 ★BOSS★ 뱃지로 따로 말한다 */
+function floorLabelOf(floor: number): string {
+  return isGateFloor(floor) ? `${floor}층 · 관문` : `${floor}층`;
+}
 
 // ─── 컴포넌트 ────────────────────────────────────────────────────────────────────
 
@@ -109,7 +114,7 @@ export default function BattlePage() {
   const gameRef = useRef<HTMLDivElement | null>(null);
   const { autoAdvance, logSpeed, toggleAuto, cycleSpeed } = useBattleSettings();
 
-  const { updateBestFloor, updatePartyMember, absorbCapture,
+  const { updateBestFloor, updatePartyMember,
           addToDexSeen, addToDexCaught, usePotion: consumePotion,
           addMaterial, dexCaught } = usePlayerStore();
 
@@ -153,8 +158,6 @@ export default function BattlePage() {
   const [showLog,       setShowLog]       = useState(false);
   /** 속성 상성표. 전투를 멈추지 않고 패널 위에 떠 있기만 한다 */
   const [showTypeChart, setShowTypeChart] = useState(false);
-  /** 보관함이 가득 차서 자리를 못 준 포획 — 각인으로 흡수할지 물어본다 */
-  const [overflowCapture, setOverflowCapture] = useState<BattleMonster | null>(null);
   /**
    * 승리 직후 경험치 바가 차오르는 연출. 끝나야 다음 로그로 넘어간다.
    * 레벨업 순간의 반짝임은 씬이 그린다 — 바는 하단에 있고 몬스터는 캔버스에 있어서,
@@ -309,14 +312,25 @@ export default function BattlePage() {
       enemyName:      initialEnemy.name,
       enemyLevel:     initialEnemy.level,
       enemyType:      initialEnemy.type,
-      floor, isBoss: isBossFloor(floor),
+      floor, floorLabel: floorLabelOf(floor), isBoss: isBossFloor(floor),
       partyImageUrls: initialParty.map(m => MONSTER_IMAGE_MAP[m.id] ?? ""),
       partyNames:     initialParty.map(m => m.name),
       partyLevels:    initialParty.map(m => m.level),
     });
     const game = createBattleGame(gameRef.current);
+
+    /**
+     * 캔버스는 FIT 이라 부모 크기에 맞춰 줄어야 하는데, Phaser 는 **창** 크기가
+     * 바뀔 때만 다시 잰다. 하단 패널은 기술 목록을 펼치면 창은 그대로인 채 혼자
+     * 커지므로, 캔버스가 옛 크기로 남아 아래가 잘렸다 — 내 몬스터 HP 상자가
+     * 딱 그 자리에 있어서 기술을 고르는 동안 반쯤 사라졌다.
+     */
+    const observer = new ResizeObserver(() => game.scale.refresh());
+    observer.observe(gameRef.current);
+
     return () => {
       cancelledRef.current = true;
+      observer.disconnect();
       gameEvents.emit(GAME_EVENT.BATTLE_END);
       gameEvents.emit(GAME_EVENT.BATTLE_LOG_ACK);
       gameEvents.removeAllListeners(GAME_EVENT.BATTLE_LOG_ACK);
@@ -356,7 +370,7 @@ export default function BattlePage() {
    * 기록 패널에는 예전과 같은 한 줄을 남긴다 — 연출은 지나가고 기록은 남아야 한다.
    */
   const playExpGain = useCallback((before: BattleMonster, gained: number): Promise<void> => {
-    setLogHistory((prev) => [...prev.slice(-49), `경험치 ${gained}를 획득했다!`]);
+    setLogHistory((prev) => [...prev.slice(-49), `경험치 ${withJosa(gained, "을를")} 획득했다!`]);
     if (cancelledRef.current) return Promise.resolve();
     return playExp(before, gained);
   }, [playExp]);
@@ -390,9 +404,6 @@ export default function BattlePage() {
     };
   });
 
-  const floorLabel = isBossFloor(floor) ? `${floor}층 · 보스`
-    : isGateFloor(floor) ? `${floor}층 · 관문`
-    : `${floor}층`;
   /**
    * 속도 차가 쌓여 한 번 더 움직이기까지 몇 턴 남았는가. 굴림이 아니라 누적이라
    * 미리 적을 수 있다 — "이번엔 누가 먼저 움직이지?"를 예측할 수 있어야 한다는 조건이
@@ -511,7 +522,7 @@ export default function BattlePage() {
     // 이미 상태이상이 걸린 상대에게 상태기를 쓰면 그 턴은 통째로 날아간다. 예전엔 아무
     // 반응도 없이 다음 줄로 넘어가서, 안 걸린 건지 원래 그런 건지 알 수가 없었다.
     if (move.power === 0 && move.statusEffect && next.status !== null) {
-      await sendLogAndWait(`${next.name}은(는) 이미 ${statusLabel(next.status)} 상태다. 효과가 없었다...`);
+      await sendLogAndWait(`${withJosa(next.name, "은는")} 이미 ${statusLabel(next.status)} 상태다. 효과가 없었다...`);
     } else if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
       const before = next.status;
       next = applyStatusEffect(next, move.statusEffect);
@@ -521,7 +532,7 @@ export default function BattlePage() {
     }
 
     const fainted = isFainted(next);
-    if (fainted) await sendLogAndWait(`${defender.name}이(가) 쓰러졌다!`);
+    if (fainted) await sendLogAndWait(`${withJosa(defender.name, "이가")} 쓰러졌다!`);
     return { updated: next, fainted };
   }, [sendLogAndWait, syncHpToPhaser, dexCaught, floor]);
 
@@ -543,7 +554,7 @@ export default function BattlePage() {
       await sendLogAndWait(log);
     }
     const fainted = isFainted(updated);
-    if (fainted) await sendLogAndWait(`${updated.name}이(가) 쓰러졌다!`);
+    if (fainted) await sendLogAndWait(`${withJosa(updated.name, "이가")} 쓰러졌다!`);
     return { mon: updated, skip: s.skipTurn || fainted, fainted };
   }, [sendLogAndWait, syncHpToPhaser]);
 
@@ -584,12 +595,12 @@ export default function BattlePage() {
     // 반짝임은 연출이 그 레벨에 닿는 순간에 터진다(useExpPlayback). 여기서 미리 터뜨리면
     // 바가 차기도 전에 몬스터만 번쩍이고, 여러 레벨이 올라도 한 번밖에 안 뜬다.
     if (expResult.leveledUp) {
-      setLogHistory((prev) => [...prev.slice(-49), `레벨이 ${np.level}(으)로 올랐다!`]);
+      setLogHistory((prev) => [...prev.slice(-49), `레벨이 ${withJosa(np.level, "로")} 올랐다!`]);
     }
     // 경험치가 왜 안 들어오는지 말해 준다. 이 줄이 없으면 플레이어는 고장으로 읽는다 —
     // 실제로는 "이 층은 이제 네 밥이 아니다, 위로 가라"는 설계다.
     if (leadGapMult <= 0) {
-      await sendLogAndWait(`${np.name}은(는) 이 층의 상대에게서 더 배울 것이 없다.`);
+      await sendLogAndWait(`${withJosa(np.name, "은는")} 이 층의 상대에게서 더 배울 것이 없다.`);
     } else if (leadGapMult < 0.35) {
       await sendLogAndWait(`${np.name}에게는 너무 약한 상대다. 배울 게 거의 없다…`);
     }
@@ -601,14 +612,14 @@ export default function BattlePage() {
       const growth = await applyLevelGrowth(np, prevLevel, askWhichToForget);
       np = growth.monster;
       for (const mv of growth.forgotten) {
-        await sendLogAndWait(`${np.name}은(는) ${mv.name}을(를) 잊어버렸다...`);
+        await sendLogAndWait(`${withJosa(np.name, "은는")} ${withJosa(mv.name, "을를")} 잊어버렸다...`);
       }
       for (const mv of growth.learned) {
-        await sendLogAndWait(`${np.name}은(는) ${mv.name}을(를) 배웠다!`);
+        await sendLogAndWait(`${withJosa(np.name, "은는")} ${withJosa(mv.name, "을를")} 배웠다!`);
       }
       if (growth.evolvedFrom) {
         await sendLogAndWait(`…어라? ${growth.evolvedFrom}의 모습이 변하고 있다!`);
-        await sendLogAndWait(`${growth.evolvedFrom}은(는) ${np.name}(으)로 진화했다!`);
+        await sendLogAndWait(`${withJosa(growth.evolvedFrom, "은는")} ${withJosa(np.name, "로")} 진화했다!`);
         addToDexSeen(np.id);
         addToDexCaught(np.id);
       }
@@ -691,7 +702,7 @@ export default function BattlePage() {
     }
 
     if (tick.extra) {
-      await sendLogAndWait(`${e.name}이(가) 한 번 더 움직인다!`);
+      await sendLogAndWait(`${withJosa(e.name, "이가")} 한 번 더 움직인다!`);
       const res = await resolveAttack(e, p, nextEnemyMove(e, p), p, e, false, 0, defBonus);
       p = res.updated;
       if (res.fainted) return { player: p, enemy: e, playerFainted: true, enemyFainted: false };
@@ -719,7 +730,7 @@ export default function BattlePage() {
     // 방어는 **적이 때리기 전에** 서 있어야 한다. 적이 선공이어도 막아야 하므로 라운드 맨 앞에서 건다
     if (action.kind === "guard") {
       np = { ...np, guarding: true };
-      await sendLogAndWait(`${np.name}이(가) 몸을 웅크렸다. 다음 공격을 견딘다!`);
+      await sendLogAndWait(`${withJosa(np.name, "이가")} 몸을 웅크렸다. 다음 공격을 견딘다!`);
     }
 
     const playerBonus = getEquipCombatBonus(initialParty[activePartyIndex]?.uid);
@@ -750,7 +761,7 @@ export default function BattlePage() {
           ne = { ...ne, currentHp: Math.min(ne.maxHp, ne.currentHp + heal) };
           syncHpToPhaser(np, ne);
           gameEvents.emit(GAME_EVENT.BATTLE_SPARKLE, "enemy");
-          await sendLogAndWait(getBossRegen(floor)?.line ?? `${ne.name}이(가) 회복했다!`);
+          await sendLogAndWait(getBossRegen(floor)?.line ?? `${withJosa(ne.name, "이가")} 회복했다!`);
         }
       }
       return false;
@@ -797,10 +808,10 @@ export default function BattlePage() {
 
     // 속도 차가 쌓인 쪽의 추가 행동. 상태이상 처리는 턴에 한 번뿐이라 여기서는 때리기만 한다.
     if (!playerWon && !enemyWon && pTick.extra) {
-      await sendLogAndWait(`${np.name}이(가) 한 번 더 움직인다!`);
+      await sendLogAndWait(`${withJosa(np.name, "이가")} 한 번 더 움직인다!`);
       playerWon = await playerAttack();
     } else if (!playerWon && !enemyWon && eTick.extra) {
-      await sendLogAndWait(`${ne.name}이(가) 한 번 더 움직인다!`);
+      await sendLogAndWait(`${withJosa(ne.name, "이가")} 한 번 더 움직인다!`);
       enemyWon = await enemyAttack();
     }
     syncGauges();
@@ -894,7 +905,7 @@ export default function BattlePage() {
     const outUid = initialParty[activePartyIndex]?.uid;
     if (outUid) setPartyHp(prev => ({ ...prev, [outUid]: player.currentHp }));
 
-    if (!mustSwitch) await sendLogAndWait(`${player.name}을(를) 교체한다!`);
+    if (!mustSwitch) await sendLogAndWait(`${withJosa(player.name, "을를")} 교체한다!`);
 
     const nextPlayer: BattleMonster = { ...createBattleMonsterFromOwned(nextOwned), currentHp: nextHp };
     setActivePartyIndex(partyIdx);
@@ -1058,7 +1069,7 @@ export default function BattlePage() {
       e.type === "full_heal"   ? "HP 완전 회복" :
       e.type === "cure_status" ? "상태이상 치료" :
       e.type === "buff_attack" ? `공격 ×${e.multiplier} (${e.turns}턴)` : "";
-    return { id: p.id, name: p.name, emoji: p.emoji, effectLabel, count: potionCounts[p.id] ?? 0 };
+    return { id: p.id, name: p.name, icon: p.icon, effectLabel, count: potionCounts[p.id] ?? 0 };
   });
 
   // ─── 렌더 ────────────────────────────────────────────────────────────────────────
@@ -1069,7 +1080,7 @@ export default function BattlePage() {
       <div ref={gameRef} className="relative flex-1 min-h-0" />
 
       {/* ══════════ 하단 배틀 패널 ══════════ */}
-      <div data-testid="battle-panel" className="relative shrink-0 border-t-2 border-earth-500 bg-shadow-900">
+      <div data-testid="battle-panel" data-floor={floor} className="relative shrink-0 border-t-2 border-earth-500 bg-shadow-900">
 
         {/* 상성표 — 패널 바로 위에 뜬다. 레이아웃을 밀지 않으니 캔버스가 줄었다 늘었다 하지 않고,
             열어 둔 채로 기술을 골라도 된다. */}
@@ -1093,7 +1104,8 @@ export default function BattlePage() {
             )}
             {player.status && (
               <span data-testid="chip-status"
-                className="shrink-0 rounded bg-ember-700/20 px-1 py-0.5 text-pixel-sm text-ember-500">
+                className="flex shrink-0 items-center gap-1 rounded bg-ember-700/20 px-1 py-0.5 text-pixel-sm text-ember-500">
+                <PixelIcon name={STATUS_META[player.status].icon} size={16} />
                 {statusDetail(player.status, player.statusTurns)}
               </span>
             )}
@@ -1110,11 +1122,6 @@ export default function BattlePage() {
             {isProcessing && !mustSwitch && (
               <span data-testid="log-wait" className="animate-pulse text-pixel-sm text-ember-500">▶ Q / 클릭</span>
             )}
-            <span
-              data-testid="floor-chip"
-              className="rounded bg-ember-700/15 px-1.5 py-0.5 font-mono text-pixel-sm font-bold text-ember-500">
-              {floor}F
-            </span>
             {/* 자동 진행 — 로그 한 줄마다 Q 를 누르는 게 엔딩까지 8천 번이다 */}
             <button onClick={toggleAuto}
               data-testid="log-auto"
@@ -1203,7 +1210,7 @@ export default function BattlePage() {
             <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2">
               {mustSwitch ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
-                  <p className="text-pixel-sm font-bold text-ember-500">{player.name}이(가) 기절했다!</p>
+                  <p className="text-pixel-sm font-bold text-ember-500">{withJosa(player.name, "이가")} 기절했다!</p>
                   <p data-testid="must-switch" className="text-pixel-sm text-sand-300">
                     ← 왼쪽에서 다음 몬스터를 선택하세요 (←→ · Enter)
                   </p>
@@ -1231,7 +1238,7 @@ export default function BattlePage() {
               <EnemyCard
                 enemy={enemyState}
                 moves={player.moves}
-                floorLabel={floorLabel}
+                playerType={player.type}
               />
             </div>
           </div>
@@ -1242,19 +1249,6 @@ export default function BattlePage() {
         )}
       </div>
 
-      {/* 보관함이 꽉 찬 채로 잡았을 때 — 사라지기 전에 한 번 묻는다 */}
-      {overflowCapture && (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-shadow-900/75 px-4">
-          <CaptureOverflowPrompt
-            monster={overflowCapture}
-            onAbsorb={() => {
-              if (absorbCapture(overflowCapture) === "ok") setOverflowCapture(null);
-            }}
-            onRelease={() => setOverflowCapture(null)}
-          />
-        </div>
-      )}
-
       {/* 레벨업 카드 — 오른 스탯은 상태 줄 한 칸에 안 들어간다 */}
       {expView && <ExpGainOverlay view={expView} onAdvance={advanceExp} />}
 
@@ -1263,7 +1257,7 @@ export default function BattlePage() {
         <div className="absolute inset-0 z-[60] flex items-center justify-center bg-shadow-900/75">
           <div className="w-full max-w-md mx-4 border-2 border-ember-700 bg-shadow-900/95 p-5">
             <p className="text-center text-pixel-sm font-bold text-ember-500 mb-1">
-              {player.name}이(가) {forgetPrompt.incoming.name}을(를) 배우려 한다!
+              {withJosa(player.name, "이가")} {withJosa(forgetPrompt.incoming.name, "을를")} 배우려 한다!
             </p>
             <p className="text-center text-pixel-sm text-sand-300 mb-4">
               기술은 4개까지만 익힐 수 있다. 무엇을 잊을까?
@@ -1313,7 +1307,7 @@ export default function BattlePage() {
             style={{ fontFamily: "var(--font-title)" }}>
             <p className="text-title-md font-bold text-moss-500 mb-3">WIN!</p>
             <p className="text-pixel-sm text-sand-300 mb-3 leading-relaxed">
-              {floor === MAX_TOWER_FLOOR ? "탑의 정상을 정복했다…" : "다음 스테이지로?"}
+              {floor === MAX_TOWER_FLOOR ? "탑의 정상을 정복했다…" : "다음 층으로?"}
             </p>
 
             {/* 드랍 재료 표시 */}
@@ -1324,8 +1318,9 @@ export default function BattlePage() {
                   {battleDrops.map((d, i) => {
                     const mat = getMaterial(d.id);
                     return (
-                      <p key={i} className="text-pixel-sm text-ember-500">
-                        {mat?.emoji ?? "?"} {mat?.name ?? d.id} ×{d.count}
+                      <p key={i} className="flex items-center justify-center gap-1.5 text-pixel-sm text-ember-500">
+                        {mat && <PixelIcon name={mat.icon} size={16} />}
+                        {mat?.name ?? d.id} ×{d.count}
                       </p>
                     );
                   })}

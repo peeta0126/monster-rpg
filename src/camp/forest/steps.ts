@@ -88,23 +88,32 @@ function weightedPick(entries: [ForestStepKind, number][], rng: Rng): ForestStep
   return entries[entries.length - 1][0];
 }
 
-/** 이 걸음에 나올 수 있는 사건과 가중치 */
-function candidates(alert: number, depth: number): [ForestStepKind, number][] {
+/**
+ * 이 걸음에 나올 수 있는 사건과 가중치.
+ *
+ * `canCatch` 가 false 면 몬스터가 나오는 사건을 통째로 뺀다. 숲은 파티 최고 레벨보다
+ * 센 놈을 내주지 않으므로(catchLevel.ts), 구역 최저 레벨에도 못 미치는 파티에게는
+ * 내놓을 몬스터가 아예 없다. 그럴 때 조우를 띄우면 빈 화면이 나온다.
+ */
+function candidates(alert: number, depth: number, canCatch: boolean): [ForestStepKind, number][] {
   const list = (Object.values(STEP_DEFS) as StepDef[])
-    .filter((d) => d.weight > 0)
+    .filter((d) => d.weight > 0 && (canCatch || !hasCatch(d.kind)))
     .map((d) => [d.kind, d.weight] as [ForestStepKind, number]);
-  if (wardenCanAppear(alert, depth)) list.push(["warden", WARDEN_WEIGHT]);
+  if (canCatch && wardenCanAppear(alert, depth)) list.push(["warden", WARDEN_WEIGHT]);
   return list;
 }
 
-export function rollStep(alert: number, depth: number, rng: Rng): ForestStepKind {
-  return weightedPick(candidates(alert, depth), rng);
+export function rollStep(alert: number, depth: number, rng: Rng, canCatch = true): ForestStepKind {
+  return weightedPick(candidates(alert, depth, canCatch), rng);
 }
 
 /** 갈림길에 놓을 두 갈래. 같은 사건이 두 번 나오면 고를 이유가 없어 서로 다르게 뽑는다 */
-export function rollFork(alert: number, depth: number, rng: Rng): [ForestStepKind, ForestStepKind] {
-  const first = rollStep(alert, depth, rng);
-  const rest = candidates(alert, depth).filter(([k]) => k !== first);
+export function rollFork(
+  alert: number, depth: number, rng: Rng, canCatch = true,
+): [ForestStepKind, ForestStepKind] {
+  const first = rollStep(alert, depth, rng, canCatch);
+  const rest = candidates(alert, depth, canCatch).filter(([k]) => k !== first);
+  if (rest.length === 0) return [first, first];
   const second = weightedPick(rest, rng);
   return [first, second];
 }

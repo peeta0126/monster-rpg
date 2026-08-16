@@ -3,6 +3,7 @@ import { chainKeyOf, chainMembers } from "../../monster/imprint";
 import { RPS_KO, type RpsChoice } from "../../workshop/rps";
 import type { Rng } from "./steps";
 import type { ScoutLevel } from "./alert";
+import { withJosa } from "../../shared/josa";
 
 /**
  * 상대의 버릇 — 야생 몬스터가 어느 수를 즐겨 내는가.
@@ -97,7 +98,7 @@ export function counterTo(hand: RpsChoice): RpsChoice {
 /** 화면에 적는 버릇 한 줄 */
 export function tellText(type: ElementType): string {
   const tell = TELL_HAND[type];
-  return tell ? `주로 ${RPS_KO[tell]}를 낸다` : "버릇이 없다 — 아무거나 낸다";
+  return tell ? `주로 ${withJosa(RPS_KO[tell], "을를")} 낸다` : "버릇이 없다 — 아무거나 낸다";
 }
 
 /** 속성 칩에 적는 글자 */

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- SLIME EXTRACT - 슬라임 추출물. 흘러내리는 방울 -->
+  <rect x="12" y="2" width="8" height="6" fill="#1a1a1a"/>
+  <rect x="12" y="2" width="6" height="4" fill="#6ede8a"/>
+  <rect x="8" y="8" width="16" height="6" fill="#1a1a1a"/>
+  <rect x="8" y="8" width="14" height="4" fill="#4fbf6f"/>
+  <rect x="4" y="14" width="24" height="10" fill="#1a1a1a"/>
+  <rect x="6" y="16" width="20" height="6" fill="#3fa85f"/>
+  <rect x="8" y="24" width="16" height="4" fill="#1a1a1a"/>
+  <rect x="8" y="24" width="14" height="2" fill="#2e8449"/>
+  <!-- 흐르는 자국 -->
+  <rect x="10" y="18" width="4" height="4" fill="#7cf09c"/>
+  <rect x="18" y="17" width="2" height="2" fill="#7cf09c"/>
+  <rect x="14" y="4" width="2" height="2" fill="#c8ffd8"/>
+</svg>

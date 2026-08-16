@@ -11,6 +11,7 @@ import { alertBand } from "./forest/alert";
 import { ForestRunView } from "./forest/ForestRunView";
 import { SettleScreen } from "./forest/SettleScreen";
 import { startRun, type ForestRun, type RunBagEntry, type SettleReason } from "./forest/runStore";
+import { canCatchIn, partyCapLevel } from "./forest/catchLevel";
 import {
   loadForest, saveForestRun, saveForestSettlement, clearForest, type LoadedForest,
 } from "./forest/runStorage";
@@ -49,6 +50,10 @@ export default function ForestPage() {
   const navigate = useNavigate();
   const bestFloor = usePlayerStore((s) => s.bestFloor);
   const addMaterial = usePlayerStore((s) => s.addMaterial);
+  const party = usePlayerStore((s) => s.party);
+
+  // 숲이 내주는 레벨의 천장. 런에 스냅샷으로 들어가므로 여기서 한 번만 읽는다
+  const capLevel = partyCapLevel(party);
 
   // 화면을 그리기 전에 한 번만 읽는다. 나중에 읽으면 구역 선택 화면이 한 프레임 스친다
   const [restored] = useState(loadForest);
@@ -75,15 +80,16 @@ export default function ForestPage() {
   }, [run, settlement, area]);
 
   const enterArea = (a: ForestArea) => {
+    if (party.length === 0) return;
     setArea(a);
-    setRun(startRun(a.id, a.startingAlert));
+    setRun(startRun(a.id, a.startingAlert, { capLevel, canCatch: canCatchIn(a, capLevel) }));
     setSettlement(null);
   };
 
   const onSettle = useCallback((reason: SettleReason, bag: RunBagEntry[], caught: number, alertPeak: number) => {
     setRun(null);
     setSettlement({ reason, bag, caught, alertPeak });
-  }, []);
+  }, [setRun, setSettlement]);
 
   /** 정산 확인 — 여기서 처음으로 재료가 창고에 들어간다. 런 중에는 가방에만 있었다 */
   const confirmSettlement = (kept: RunBagEntry[]) => {
@@ -126,7 +132,11 @@ export default function ForestPage() {
             <div className="mb-2 text-center" style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
               <p className="mb-1 text-pixel-sm uppercase tracking-[.25em] text-sand-300">EXPEDITION</p>
               <h1 className="text-title-md font-black text-cream-100">숲 탐험</h1>
-              <p className="mt-1 text-pixel-sm text-sand-200">탐험할 구역을 선택하세요</p>
+              <p className="mt-1 text-pixel-sm text-sand-200">
+                {party.length === 0
+                  ? "함께 갈 몬스터가 없다 — 마을 안쪽의 이장에게 먼저 들르자"
+                  : "탐험할 구역을 선택하세요"}
+              </p>
             </div>
             {/* gap 을 두지 않는다 — 물러난 카드가 scale(.75) 로 줄면서 자리에 여백을 스스로 남긴다 */}
             {FOREST_AREAS.map((a) => (
@@ -134,8 +144,10 @@ export default function ForestPage() {
                 key={a.id}
                 area={a}
                 selected={a.id === selectedTier}
-                locked={bestFloor < a.unlockFloor}
+                locked={bestFloor < a.unlockFloor || party.length === 0}
+                lockReason={party.length === 0 ? "no-party" : "floor"}
                 bestFloor={bestFloor}
+                capLevel={capLevel}
                 onSelect={() => setSelectedTier(a.id)}
                 onEnter={() => enterArea(a)}
               />

@@ -1,6 +1,7 @@
 import { test, type Page, type CDPSession } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import { FRESH_SAVE } from "./freshSave";
 
 /**
  * 성능 실측. npm run perf
@@ -102,10 +103,10 @@ async function sampleFps(page: Page, seconds: number) {
 
 test("perf: 측정", async ({ page, context }) => {
   const cdp = await context.newCDPSession(page);
-  await page.addInitScript((g) => {
+  await page.addInitScript(({ g, fresh }) => {
     localStorage.setItem("monster-rpg-auth", g);
-    localStorage.removeItem("monster-rpg-player");
-  }, GUEST);
+    localStorage.setItem("monster-rpg-player", fresh);
+  }, { g: GUEST, fresh: FRESH_SAVE });
 
   const rows: Row[] = [];
   for (const net of NETWORKS) {

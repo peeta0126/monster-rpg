@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { PLAYER_BOUNDS, isPlayerBlocked } from "../src/workshop/workshopLayout";
+import { FRESH_SAVE } from "./freshSave";
 
 /**
  * 공방 안에서 플레이어를 걸어 다니게 하는 공용 헬퍼.
@@ -89,11 +90,23 @@ export async function walkTo(page: Page, target: Pt, tolerance = 3): Promise<boo
   return Math.hypot(end.x - target.x, end.y - target.y) <= tolerance + 1.5;
 }
 
-/** 게스트 세션을 심고 원하는 경로로 들어간다 (capture.spec.ts 와 같은 방식) */
+/**
+ * 게스트 세션과 시작 세이브를 심고 원하는 경로로 들어간다.
+ *
+ * 세이브까지 심는 이유: 새 세이브는 파티가 비어 있고 첫 몬스터를 이장에게서 받는다.
+ * 공방에서 만든 장비를 몬스터에 끼우는 흐름은 파티에 한 마리는 있어야 성립한다.
+ */
 export async function asGuest(page: Page, path: string) {
   await page.addInitScript(
-    ([k, v]) => window.localStorage.setItem(k as string, v as string),
-    [AUTH_STORAGE_KEY, GUEST_AUTH_STATE],
+    ([ak, av, pk, pv]) => {
+      window.localStorage.setItem(ak as string, av as string);
+      // ⚠ addInitScript 는 **네비게이션마다** 돈다. 무조건 덮으면 공방에서 만든 장비가
+      // /monsters 로 넘어가는 순간 사라진다. 없을 때만 심는다.
+      if (!window.localStorage.getItem(pk as string)) {
+        window.localStorage.setItem(pk as string, pv as string);
+      }
+    },
+    [AUTH_STORAGE_KEY, GUEST_AUTH_STATE, "monster-rpg-player", FRESH_SAVE],
   );
   await page.goto(path);
 }

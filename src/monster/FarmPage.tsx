@@ -9,35 +9,18 @@ import {
 } from "../shared/craftingUtils";
 import type { ArtifactStatType, ArtifactInstance, CraftedPotionStack } from "../shared/crafting";
 
-// ── pixel art assets ──────────────────────────────────────────────────────────
-import herbImg    from "../assets/materials/herb.svg";
-import berryImg   from "../assets/materials/berry.svg";
-import rootImg    from "../assets/materials/root.svg";
-import crystalImg from "../assets/materials/crystal.svg";
-import potionImg         from "../assets/potions/potion.svg";
-import superPotionImg    from "../assets/potions/super_potion.svg";
-import maxPotionImg      from "../assets/potions/max_potion.svg";
-import antidoteImg       from "../assets/potions/antidote.svg";
-import attackBuffImg     from "../assets/potions/attack_buff.svg";
-import strongAttackImg   from "../assets/potions/strong_attack_buff.svg";
 import { PALETTE } from "../shared/palette";
+import { PixelIcon } from "../shared/ui/PixelIcon";
+import { iconUrl, type IconName } from "../shared/ui/icons";
 import { SlotGrid, EmptySlot } from "../shared/ui/SlotGrid";
 import { GameBackground } from "../shared/ui/GameBackground";
 import { EmptyState } from "../shared/ui";
 
-const MATERIAL_IMG: Record<string, string> = {
-  herb: herbImg, berry: berryImg, root: rootImg, crystal: crystalImg,
-};
-
-const POTION_IMG: Record<string, string> = {
-  potion: potionImg, super_potion: superPotionImg, max_potion: maxPotionImg,
-  antidote: antidoteImg, attack_buff: attackBuffImg, strong_attack_buff: strongAttackImg,
-};
-
-const ARTIFACT_EMOJI: Record<string, string> = {
-  power_necklace: "📿",
-  guard_bracelet: "🛡️",
-  spirit_amulet:  "🔮",
+/** 아티팩트 아이콘 — itemId 가 곧 아이콘 이름이다 (shared/ui/PixelIcon) */
+const ARTIFACT_ICON: Record<string, IconName> = {
+  power_necklace: "power_necklace",
+  guard_bracelet: "guard_bracelet",
+  spirit_amulet:  "spirit_amulet",
 };
 
 // ─── CSS 애니메이션 ──────────────────────────────────────────────────────────────
@@ -131,7 +114,6 @@ function MaterialsSection({
       <SlotGrid minItemWidth={168} minSlots={15}>
         {MATERIALS.map((mat, i) => {
             const cnt    = materials[mat.id] ?? 0;
-            const hasImg = mat.id in MATERIAL_IMG;
             if (cnt === 0) return null;
             return (
               <div key={mat.id}
@@ -141,26 +123,17 @@ function MaterialsSection({
                   border: "1px solid rgba(122, 132, 85, .489)",
                   animation: `bagIn .35s ease ${i * .06}s both`,
                 }}>
-                {hasImg ? (
-                  <img src={MATERIAL_IMG[mat.id]} alt={mat.name}
-                    className="w-10 h-10 pixel-img"
-                    style={{ filter: "drop-shadow(0 0 6px rgba(122, 132, 85, .783))" }} />
-                ) : (
-                  <div className="w-10 h-10 flex items-center justify-center text-pixel-md">{mat.emoji}</div>
-                )}
+                <PixelIcon name={mat.icon} size={32}
+                  className="pixel-img"
+                  title={mat.name}
+                  style={{ filter: "drop-shadow(0 0 6px rgba(122, 132, 85, .783))" }} />
                 <p className="text-pixel-sm font-bold text-sand-200 text-center">{mat.name}</p>
                 <p className="text-pixel-md font-black font-mono mt-1" style={{ color: PALETTE.moss500 }}>×{cnt}</p>
 
-                {/* 버리기 버튼 */}
+                {/* 버리기 — 되돌릴 수 없으므로 한 개짜리도 두 번 눌러야 나간다.
+                    몬스터 놓아주기는 확인이 있는데 재료만 즉시 사라져 있었다. */}
                 <div className="flex gap-1 mt-0.5">
-                  <button
-                    type="button"
-                    onClick={() => discardMaterial(mat.id, 1)}
-                    className="rounded px-1.5 py-0.5 text-pixel-sm font-black transition"
-                    style={{ background: "rgba(13, 18, 35, .5)", border: "1px solid rgba(132, 75, 63, .235)", color: "rgba(194, 88, 40, .663)" }}
-                  >
-                    −1
-                  </button>
+                  <DiscardBtn label="−1" small onConfirm={() => discardMaterial(mat.id, 1)} />
                   {cnt > 1 && (
                     <DiscardBtn
                       label="전체"
@@ -215,13 +188,9 @@ function PotionsSection({
                 animation: `bagIn .35s ease ${i * .07}s both`,
               }}>
               {/* 이미지 or 이모지 */}
-              <div className="w-10 h-10 flex-shrink-0 relative">
-                {POTION_IMG[stack.itemId] ? (
-                  <img src={POTION_IMG[stack.itemId]} alt={stack.name}
-                    className="w-10 h-10 pixel-img" />
-                ) : (
-                  <div className="w-10 h-10 flex items-center justify-center text-pixel-md">🧪</div>
-                )}
+              <div className="w-8 h-8 flex-shrink-0 relative">
+                <img src={iconUrl(stack.itemId) ?? iconUrl("potion")} alt={stack.name}
+                  className="w-8 h-8 pixel-img" />
                 <div className="absolute -top-1 -right-1 rounded-full w-5 h-5 flex items-center justify-center"
                   style={{ background: color, fontSize: 12, fontWeight: 900, color: PALETTE.shadow900, animation: "countPop .4s ease both" }}>
                   {stack.quantity}
@@ -294,9 +263,9 @@ function ArtifactsSection({
                 animation: `bagIn .35s ease ${i * .07}s both`,
               }}>
               <div className="p-4 flex items-start gap-3">
-                <div className="w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center text-pixel-md"
+                <div className="w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center"
                   style={{ background: "rgba(13, 18, 35, .35)", border: `1px solid ${color}44` }}>
-                  {ARTIFACT_EMOJI[item.itemId] ?? "✨"}
+                  <PixelIcon name={ARTIFACT_ICON[item.itemId] ?? "artifact"} size={32} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-pixel-sm font-black text-cream-100">{item.name}</p>
@@ -419,13 +388,13 @@ export default function FarmPage() {
           {/* 총량 요약. 탭과 크기가 비슷하면 뭐가 조작이고 뭐가 정보인지 안 보여서
               라벨은 작게 죽이고 숫자만 남긴다 */}
           <div className="hidden items-center gap-4 sm:flex">
-            {[
-              { icon: "🌿", label: "재료",     value: totalMats },
-              { icon: "🧪", label: "물약",     value: totalPotions },
-              { icon: "🔮", label: "아티팩트", value: totalArtifacts },
-            ].map((s) => (
-              <div key={s.label} className="flex items-baseline gap-1.5">
-                <span className="text-pixel-sm text-earth-400">{s.icon}</span>
+            {([
+              { icon: "herb",     label: "재료",     value: totalMats },
+              { icon: "potion",   label: "물약",     value: totalPotions },
+              { icon: "artifact", label: "아티팩트", value: totalArtifacts },
+            ] as const).map((s) => (
+              <div key={s.label} className="flex items-center gap-1.5" title={s.label}>
+                <PixelIcon name={s.icon} size={16} />
                 <span className="text-pixel-sm font-black text-sand-200">{s.value}</span>
               </div>
             ))}

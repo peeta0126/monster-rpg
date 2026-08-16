@@ -15,7 +15,10 @@ import {
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { GameBackground } from "../shared/ui/GameBackground";
+import { josa, withJosa } from "../shared/josa";
 import { StatBar } from "../shared/ui";
+import { PixelIcon } from "../shared/ui/PixelIcon";
+import type { IconName } from "../shared/ui/icons";
 
 /** 파티 카드/상태창에 반영할 장비 능력치 (HP는 배틀 실수치와 어긋나지 않도록 제외) */
 export interface EquipStatBonus { attack: number; defense: number; speed: number }
@@ -230,7 +233,7 @@ function EquipModal({
             {visibleArtifacts.length === 0 ? (
               <p className="text-center py-5 text-pixel-sm" style={{ color: "rgba(205, 178, 126, .1)" }}>
                 {selectedSlot
-                  ? `장착 가능한 ${ARTIFACT_SLOT_LABEL[selectedSlot]}이 없습니다.`
+                  ? `장착 가능한 ${withJosa(ARTIFACT_SLOT_LABEL[selectedSlot], "이가")} 없습니다.`
                   : "가방에 아티팩트가 없습니다."}
               </p>
             ) : (
@@ -444,7 +447,7 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS, imprint = 
                 )}
                 {evoTo && monster.evolvesAtLevel !== undefined && (
                   <p className="mt-1 text-pixel-sm" style={{ color: "rgba(205, 178, 126, .698)" }}>
-                    Lv.{monster.evolvesAtLevel} — <span className="font-bold text-sand-200">{evoTo.name}</span>(으)로 진화
+                    Lv.{monster.evolvesAtLevel} — <span className="font-bold text-sand-200">{evoTo.name}</span>{josa(evoTo.name, "로")} 진화
                   </p>
                 )}
                 {!nextLearn && !evoTo && (
@@ -493,11 +496,19 @@ function MonsterStatusPanel({ monster, equipBonus = ZERO_EQUIP_BONUS, imprint = 
 }
 
 // ─── MonsterCard ────────────────────────────────────────────────────────────────
+/**
+ * 몬스터 카드.
+ *
+ * `layout="row"` 은 파티 칸 전용이다. 세로로 쌓으면 한 장이 200px 을 넘어 세 마리가
+ * 1280x900 화면에 안 들어갔다 — 셋째 칸의 공/방/속이 잘린 채로 보였다. 가로로 누이면
+ * 100px 남짓이라 세 장이 스크롤 없이 들어간다.
+ */
 function MonsterCard({
-  monster, size = "md", selected, dimmed, onClick, showStats = false,
+  monster, size = "md", layout = "stack", selected, dimmed, onClick, showStats = false,
   equippedSlots = [], equipBonus = ZERO_EQUIP_BONUS,
 }: {
   monster: OwnedMonster; size?: "sm" | "md" | "lg";
+  layout?: "stack" | "row";
   selected?: boolean; dimmed?: boolean; onClick: () => void; showStats?: boolean;
   equippedSlots?: string[]; equipBonus?: EquipStatBonus;
 }) {
@@ -505,11 +516,13 @@ function MonsterCard({
   const isFainted = hpPct === 0;
   const acc       = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
   const imgSize   = size === "lg" ? "w-20 h-20" : size === "md" ? "w-14 h-14" : "w-11 h-11";
+  const row       = layout === "row";
 
   return (
     <button
       onClick={onClick}
-      className="relative rounded-xl flex flex-col items-center gap-1.5 transition-all w-full overflow-hidden"
+      className={`relative rounded-xl transition-all w-full overflow-hidden ${
+        row ? "flex items-center gap-2.5 text-left" : "flex flex-col items-center gap-1.5"}`}
       style={{
         padding: size === "lg" ? "14px 10px" : "10px 8px",
         background: selected
@@ -540,53 +553,56 @@ function MonsterCard({
           }} />
       </div>
 
-      <div className="text-center w-full px-0.5">
-        <p className={`truncate font-black leading-tight text-cream-100 ${size === "sm" ? "text-pixel-sm" : "text-title-sm"}`}>
-          {monster.nickname ?? monster.name}
-        </p>
-        <div className="flex items-center justify-center gap-1 mt-0.5">
-          <span className="text-pixel-sm font-bold text-sand-300">Lv.{monster.level}</span>
-          <span className={`rounded-full border px-1 text-pixel-sm font-bold ${acc.label}`} style={{ paddingTop: 0, paddingBottom: 0 }}>
-            {TYPE_KO[monster.type ?? "none"] ?? ""}
-          </span>
-        </div>
-      </div>
-
-      {/* HP 바는 카드에서 두 번째로 큰 요소여야 한다 (ART_DIRECTION 3-2) */}
-      <div className="w-full px-0.5">
-        <div className="mb-0.5 flex items-center justify-between">
-          <span className="text-pixel-sm font-bold text-earth-400">HP</span>
-          <span className="text-pixel-sm font-bold text-sand-200">{monster.currentHp}/{monster.maxHp}</span>
-        </div>
-        <StatBar value={monster.currentHp} max={monster.maxHp} height={10} />
-      </div>
-
-      {showStats && (
-        <div className="w-full px-0.5 grid grid-cols-3 gap-0.5 mt-0.5">
-          {([
-            ["공", monster.attack, equipBonus.attack],
-            ["방", monster.defense, equipBonus.defense],
-            ["속", monster.speed, equipBonus.speed],
-          ] as [string, number, number][]).map(([l, base, bonus]) => (
-            <div key={l} className="flex flex-col items-center rounded py-0.5" style={{ background: "rgba(13, 18, 35, .3)" }}>
-              <span className="text-pixel-sm text-earth-400">{l}</span>
-              <span className="text-pixel-sm font-bold text-sand-200">{base + bonus}</span>
-              {bonus > 0 && <span className="text-pixel-sm font-bold text-moss-500 leading-none">+{bonus}</span>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {equippedSlots.length > 0 && (
-        <div className="w-full flex items-center gap-0.5 justify-center flex-wrap mt-0.5">
-          {equippedSlots.map((slot) => (
-            <span key={slot} className="text-pixel-sm px-1 rounded font-bold"
-              style={{ background: "rgba(132, 75, 63, .468)", color: PALETTE.sand300, border: "1px solid rgba(132, 75, 63, .702)" }}>
-              {ARTIFACT_SLOT_LABEL[slot]}
+      <div className={row ? "flex min-w-0 flex-1 flex-col gap-1" : "contents"}>
+        <div className={row ? "w-full min-w-0" : "text-center w-full px-0.5"}>
+          <p className={`truncate font-black leading-tight text-cream-100 ${size === "sm" ? "text-pixel-sm" : "text-title-sm"}`}>
+            {monster.nickname ?? monster.name}
+          </p>
+          <div className={`flex items-center gap-1 mt-0.5 ${row ? "" : "justify-center"}`}>
+            <span className="text-pixel-sm font-bold text-sand-300">Lv.{monster.level}</span>
+            <span className={`rounded-full border px-1 text-pixel-sm font-bold ${acc.label}`} style={{ paddingTop: 0, paddingBottom: 0 }}>
+              {TYPE_KO[monster.type ?? "none"] ?? ""}
             </span>
-          ))}
+          </div>
         </div>
-      )}
+
+        {/* HP 바는 카드에서 두 번째로 큰 요소여야 한다 (ART_DIRECTION 3-2) */}
+        <div className={row ? "w-full" : "w-full px-0.5"}>
+          <div className="mb-0.5 flex items-center justify-between">
+            <span className="text-pixel-sm font-bold text-earth-400">HP</span>
+            <span className="text-pixel-sm font-bold text-sand-200">{monster.currentHp}/{monster.maxHp}</span>
+          </div>
+          <StatBar value={monster.currentHp} max={monster.maxHp} height={10} />
+        </div>
+
+        {showStats && (
+          <div className={`w-full grid grid-cols-3 gap-0.5 ${row ? "" : "px-0.5 mt-0.5"}`}>
+            {([
+              ["공", monster.attack, equipBonus.attack],
+              ["방", monster.defense, equipBonus.defense],
+              ["속", monster.speed, equipBonus.speed],
+            ] as [string, number, number][]).map(([l, base, bonus]) => (
+              <div key={l} className={`flex items-center justify-center gap-1 rounded py-0.5 ${row ? "" : "flex-col"}`}
+                style={{ background: "rgba(13, 18, 35, .3)" }}>
+                <span className="text-pixel-sm text-earth-400">{l}</span>
+                <span className="text-pixel-sm font-bold text-sand-200">{base + bonus}</span>
+                {bonus > 0 && <span className="text-pixel-sm font-bold text-moss-500 leading-none">+{bonus}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {equippedSlots.length > 0 && (
+          <div className={`w-full flex items-center gap-0.5 flex-wrap ${row ? "" : "justify-center mt-0.5"}`}>
+            {equippedSlots.map((slot) => (
+              <span key={slot} className="text-pixel-sm px-1 rounded font-bold"
+                style={{ background: "rgba(132, 75, 63, .468)", color: PALETTE.sand300, border: "1px solid rgba(132, 75, 63, .702)" }}>
+                {ARTIFACT_SLOT_LABEL[slot]}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </button>
   );
 }
@@ -594,7 +610,7 @@ function MonsterCard({
 function EmptyPartySlot({ index, selected, onClick }: { index: number; selected?: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className={`flex h-32 w-full flex-col items-center justify-center gap-2 rounded-xl border-dashed transition-all
+      className={`flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-dashed transition-all
         ${selected ? "border-2 border-ember-500 bg-ember-500/10" : "border border-earth-500/70 bg-shadow-700/40"}`}>
       <div className={`flex h-10 w-10 items-center justify-center rounded-full border border-dashed
         ${selected ? "border-ember-500 bg-ember-500/15" : "border-earth-500/70"}`}>
@@ -754,11 +770,11 @@ export default function MonstersPage() {
 
   const faintedCount = party.filter((m) => m.currentHp === 0).length;
 
-  const hint = selParty !== null
-    ? "📦 보관함의 몬스터를 선택해 교체"
+  const hint: { icon: IconName | null; text: string } = selParty !== null
+    ? { icon: "storage", text: "보관함의 몬스터를 선택해 교체" }
     : selStorage !== null
-      ? "👥 파티 슬롯을 선택해 교체하거나 추가"
-      : "슬롯 또는 보관함 몬스터를 클릭해 선택";
+      ? { icon: "party", text: "파티 슬롯을 선택해 교체하거나 추가" }
+      : { icon: null, text: "슬롯 또는 보관함 몬스터를 클릭해 선택" };
 
   return (
     <div className="relative h-screen flex flex-col text-cream-100 overflow-hidden">
@@ -816,7 +832,7 @@ export default function MonstersPage() {
                   style={{ background: "rgba(122, 132, 85, .356)", animation: "bubblePop .6s ease" }} />
               )}
               <span className="relative">
-                {restoreAnim ? "✓ 회복 완료!" : faintedCount > 0 ? `⚡ HP 전회복 (${faintedCount}마리 기절)` : "파티 HP 전회복"}
+                {restoreAnim ? "✓ 회복 완료!" : faintedCount > 0 ? `HP 전회복 (${faintedCount}마리 기절)` : "파티 HP 전회복"}
               </span>
             </button>
           </div>
@@ -830,7 +846,7 @@ export default function MonstersPage() {
       <div className="relative flex flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
         {/* 파티 패널 */}
         <div className="m-3 flex flex-col overflow-hidden rounded-lg border-2 border-earth-500
-          bg-shadow-900/85 lg:mr-0 lg:w-56 lg:flex-shrink-0">
+          bg-shadow-900/85 lg:mr-0 lg:w-64 lg:flex-shrink-0">
           <div className="px-4 py-3 flex items-center justify-between"
             style={{ borderBottom: "1px solid rgba(132, 75, 63, .32)" }}>
             <div>
@@ -844,7 +860,7 @@ export default function MonstersPage() {
               const m = party[idx];
               return m ? (
                 <div key={m.uid} className="flex flex-col gap-1">
-                  <MonsterCard monster={m} size="md"
+                  <MonsterCard monster={m} size="md" layout="row"
                     selected={selParty === idx}
                     dimmed={selStorage !== null && selParty === null}
                     showStats
@@ -889,7 +905,11 @@ export default function MonstersPage() {
           </div>
 
           <div className="px-4 py-3" style={{ borderTop: "1px solid rgba(132, 75, 63, .32)" }}>
-            <p className="text-pixel-sm text-center" style={{ color: "rgba(132, 75, 63, .764)" }}>{hint}</p>
+            <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-pixel-sm text-center"
+              style={{ color: PALETTE.earth400 }}>
+              {hint.icon && <PixelIcon name={hint.icon} size={16} />}
+              <span>{hint.text}</span>
+            </p>
           </div>
         </div>
 
@@ -947,7 +967,7 @@ export default function MonstersPage() {
           <div className="p-3 lg:flex-1 lg:overflow-y-auto">
             {storage.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
-                <div className="text-pixel-lg opacity-20">📦</div>
+                <PixelIcon name="storage" size={64} className="opacity-20" />
                 <div>
                   <p className="font-bold text-sand-300 mb-1">보관함이 비어 있습니다</p>
                   <p className="text-pixel-sm text-earth-400">숲 탐험에서 몬스터를 포획하면<br />이곳에 자동으로 저장됩니다.</p>
@@ -964,7 +984,14 @@ export default function MonstersPage() {
                 gridTemplateColumns: "repeat(auto-fill, minmax(124px, 1fr))",
               }}>
                 {filteredStorage.map((m, i) => (
-                  <div key={m.uid} className="flex flex-col gap-1" style={{ animation: `monIn .3s ease ${i * .04}s both` }}>
+                  // 카드와 그 아래 버튼을 한 판에 담는다. 판이 없으면 옆 카드의 버튼과
+                  // 한 줄로 이어져 보여 어느 카드 것인지 알 수 없었다
+                  <div key={m.uid} className="flex flex-col gap-1 rounded-xl p-1"
+                    style={{
+                      animation: `monIn .3s ease ${i * .04}s both`,
+                      background: rgba("shadow900", 0.5),
+                      border: `1px solid ${rgba("stone600", 0.5)}`,
+                    }}>
                     <MonsterCard monster={m} size="sm"
                       selected={selStorage === m.uid}
                       equippedSlots={getEquippedSlots(m.uid)}

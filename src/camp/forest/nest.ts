@@ -5,6 +5,7 @@ import { scaleToLevel } from "../../shared/floorTable";
 import type { Monster } from "../../shared/game";
 import type { ForestArea } from "./areas";
 import type { Rng } from "./steps";
+import { encounterLevelRange } from "./catchLevel";
 
 /**
  * 둥지 후보 뽑기.
@@ -26,7 +27,10 @@ export function rollNestChoices(
   count: number,
   ownedChains: readonly string[],
   rng: Rng,
+  capLevel: number,
 ): Monster[] {
+  const range = encounterLevelRange(area, capLevel);
+  if (range === null) return [];   // 이 파티에게 내줄 게 없는 구역
   const pool = [...new Set(area.monsterPool)]
     .map((id) => monsters.find((m) => m.id === id))
     .filter((m): m is Monster => m !== undefined);
@@ -54,8 +58,8 @@ export function rollNestChoices(
     }
   }
 
-  // ── 3) 레벨 ── (조우와 같은 규칙: 구역 레벨대에서 균등)
-  const [lvMin, lvMax] = area.levelRange;
+  // ── 3) 레벨 ── (조우와 같은 규칙: 구역 레벨대에서 균등, 파티 최고 레벨이 천장)
+  const [lvMin, lvMax] = range;
   return picked.map((base) => scaleToLevel(base, lvMin + Math.floor(rng() * (lvMax - lvMin + 1))));
 }
 

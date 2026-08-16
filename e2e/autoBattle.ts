@@ -2,7 +2,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * 전투 화면을 자동으로 진행시키는 공용 헬퍼.
- * 게임 코드는 건드리지 않고 실제 UI만 조작한다 (선택 근거는 Handoff.md 5장 참고).
+ * 게임 코드는 건드리지 않고 실제 UI만 조작한다 (선택 근거는 docs/notes/testing.md 참고).
  */
 
 /** 한 층에서 허용할 최대 턴 수 — 무한 루프 방지용 안전장치 */

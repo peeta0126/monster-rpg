@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "../shared/playerStore";
 import type { ArtifactInstance } from "../shared/crafting";
 import { PALETTE } from "../shared/palette";
+import { withJosa } from "../shared/josa";
 import {
   QUALITY_COLOR,
   QUALITY_LABEL,
@@ -17,6 +18,8 @@ import {
   getEffectiveStats,
   ARTIFACT_BONUS_POOL,
 } from "../shared/craftingUtils";
+import { PixelIcon } from "../shared/ui/PixelIcon";
+import type { IconName } from "../shared/ui/icons";
 
 // ─── 팔레트 (제작 공방 공통) ──────────────────────────────────────────────────
 
@@ -30,7 +33,8 @@ const C = {
   borderGold:   "rgba(233, 148, 65, .857)",
   textPrimary:  PALETTE.cream100,
   textMuted:    PALETTE.sand300,
-  textFaint:    PALETTE.earth500,
+  // 카드 판(stone600) 위에서 earth500 은 3:1 아래다 — 작은 글자는 sand 계열로
+  textFaint:    PALETTE.sand300,
   gold:         PALETTE.ember500,
   goldDim:      PALETTE.earth500,
   btnBg:        "rgba(132, 75, 63, .515)",
@@ -47,19 +51,19 @@ const C = {
 
 type AnvilTab = "levelup" | "enhance" | "disassemble" | "synthesize";
 
-const TABS: { id: AnvilTab; label: string; icon: string }[] = [
-  { id: "levelup",     label: "레벨업",  icon: "⬆" },
-  { id: "enhance",     label: "강화",    icon: "⚡" },
-  { id: "disassemble", label: "분해",    icon: "🔨" },
-  { id: "synthesize",  label: "합성",    icon: "✦"  },
+const TABS: { id: AnvilTab; label: string; icon: IconName }[] = [
+  { id: "levelup",     label: "레벨업",  icon: "levelup" },
+  { id: "enhance",     label: "강화",    icon: "enhance" },
+  { id: "disassemble", label: "분해",    icon: "disassemble" },
+  { id: "synthesize",  label: "합성",    icon: "synthesize" },
 ];
 
-// ─── 아이템 이모지 ────────────────────────────────────────────────────────────
+// ─── 아이템 아이콘 ────────────────────────────────────────────────────────────
 
-const ARTIFACT_EMOJI: Record<string, string> = {
-  power_necklace: "📿",
-  guard_bracelet: "🛡️",
-  spirit_amulet:  "🔮",
+const ARTIFACT_ICON: Record<string, IconName> = {
+  power_necklace: "power_necklace",
+  guard_bracelet: "guard_bracelet",
+  spirit_amulet:  "spirit_amulet",
 };
 
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
@@ -111,10 +115,10 @@ function ArtifactCard({
     >
       <div className="flex items-center gap-2.5">
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-title-sm"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
           style={{ background: "rgba(132, 75, 63, .282)", border: `1px solid ${color}44` }}
         >
-          {ARTIFACT_EMOJI[artifact.itemId] ?? "✨"}
+          <PixelIcon name={ARTIFACT_ICON[artifact.itemId] ?? "artifact"} size={32} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-pixel-sm font-black" style={{ color: C.textPrimary }}>
@@ -305,7 +309,7 @@ function LevelUpPanel({
           <div className="flex justify-between">
             <span className="text-pixel-sm" style={{ color: C.textFaint }}>필요 강화석</span>
             <span className="text-pixel-sm font-black" style={{ color: stones >= cost ? C.green : C.red }}>
-              🪨 {cost}개
+              <PixelIcon name="enhancement_stone" size={16} className="inline-block align-middle" /> {cost}개
             </span>
           </div>
           <div className="flex justify-between">
@@ -457,7 +461,7 @@ function EnhancePanel({
       >
         {isMax
           ? "최대 강화"
-          : canDo ? `⚡  강화하기 (성공률 ${Math.round(getEnhancementSuccessRate(enh) * 100)}%)`
+          : canDo ? `강화하기 (성공률 ${Math.round(getEnhancementSuccessRate(enh) * 100)}%)`
           : "재료를 선택하세요"}
       </button>
       {!isMax && (
@@ -503,7 +507,9 @@ function DisassemblePanel({
         style={{ background: C.card, border: `1px solid ${C.border}` }}
       >
         <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>분해 시 획득</p>
-        <p className="text-title-md font-black" style={{ color: C.gold }}>🪨 ×{stones}</p>
+        <p className="flex items-center justify-center gap-1.5 text-title-md font-black" style={{ color: C.gold }}>
+            <PixelIcon name="enhancement_stone" size={32} />×{stones}
+          </p>
         <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>강화석</p>
         <div className="mt-3 space-y-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
           {/* 값을 여기 다시 적으면 규칙을 고친 날 화면만 옛말을 한다 — 실제로 3/8/18 로
@@ -530,7 +536,7 @@ function DisassemblePanel({
           style={{ background: "rgba(168, 61, 31, .3)", border: "1px solid rgba(168, 61, 31, .801)",
             color: C.red }}
         >
-          🔨  분해하기
+          분해하기
         </button>
       ) : (
         <div className="flex gap-2">
@@ -809,7 +815,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
       updateCraftedArtifact(primary.instanceId, { enhancement: enh + 1 });
       showToast(`${primary.name} +${enh + 1} 강화 성공!`);
     } else {
-      showToast(`강화 실패… ${primary.name}은(는) +${enh} 그대로다. (재료 소모)`);
+      showToast(`강화 실패… ${withJosa(primary.name, "은는")} +${enh} 그대로다. (재료 소모)`);
     }
     busyRef.current = false;
   };
@@ -888,7 +894,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
           className="flex shrink-0 items-center gap-4 px-5 py-4"
           style={{ borderBottom: `1px solid ${C.border}` }}
         >
-          <span className="text-pixel-md">⚒</span>
+          <PixelIcon name="anvil" size={32} />
           <div className="flex-1">
             <h2 className="text-pixel-md font-black tracking-wide" style={{ color: C.textPrimary }}>
               장비 모루
@@ -902,7 +908,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
             className="rounded-lg px-3 py-1.5 text-pixel-sm font-bold"
             style={{ background: C.card, border: `1px solid ${C.border}`, color: C.textMuted }}
           >
-            🪨 강화석 <span style={{ color: C.gold, fontVariantNumeric: "tabular-nums" }}>{enhancementStones}</span>
+            <PixelIcon name="enhancement_stone" size={16} className="inline-block align-middle" /> 강화석 <span style={{ color: C.gold, fontVariantNumeric: "tabular-nums" }}>{enhancementStones}</span>
           </div>
           <button
             type="button"
@@ -934,7 +940,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
                   boxShadow:  active ? "0 0 10px rgba(132, 75, 63, .351)" : "none",
                 }}
               >
-                <span>{t.icon}</span>
+                <PixelIcon name={t.icon} size={16} />
                 <span>{t.label}</span>
               </button>
             );
@@ -986,7 +992,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
           >
             {!primary ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-12">
-                <p className="text-title-md opacity-20">⚒</p>
+                <PixelIcon name="anvil" size={64} className="opacity-20" />
                 <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
                   왼쪽 목록에서 장비를 선택하세요
                 </p>

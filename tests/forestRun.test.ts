@@ -16,10 +16,10 @@ import { ALERT_MAX } from "../src/camp/forest/alert.ts";
  * 흘리는 방식, 정산 셈, 그리고 **저장을 못 읽을 때 플레이어가 손해를 보지 않는가**다.
  */
 
-const run0 = () => startRun("shallow", 0, 12345);
+const run0 = () => startRun("shallow", 0, { capLevel: 99, canCatch: true }, 12345);
 
 test("시작 상태 — 소란은 구역이 정하고 첫 사건이 이미 정해져 있다", () => {
-  const run = startRun("deep", 15, 999);
+  const run = startRun("deep", 15, { capLevel: 99, canCatch: true }, 999);
   assert.equal(run.runVersion, RUN_VERSION);
   assert.equal(run.areaId, "deep");
   assert.equal(run.depth, 0);
@@ -30,8 +30,8 @@ test("시작 상태 — 소란은 구역이 정하고 첫 사건이 이미 정�
 });
 
 test("같은 시드는 같은 원정을 만든다 — 새로고침 리롤이 막힌다", () => {
-  const a = startRun("shallow", 0, 4242);
-  const b = startRun("shallow", 0, 4242);
+  const a = startRun("shallow", 0, { capLevel: 99, canCatch: true }, 4242);
+  const b = startRun("shallow", 0, { capLevel: 99, canCatch: true }, 4242);
   assert.deepEqual(a, b);
 
   const a1 = resolveStep(a, {});
@@ -209,8 +209,8 @@ test("진행 기록이 깨져 있으면 안 걸은 걸음으로 되돌린다", (
 
 test("갈림길은 고르기 전까지 판정이 시작되지 않는다", () => {
   // 여러 시드를 훑어 갈림길이 나오는 런을 찾는다
-  let run = startRun("shallow", 0, 1);
-  for (let seed = 1; seed < 200 && !run.fork; seed++) run = startRun("shallow", 0, seed);
+  let run = startRun("shallow", 0, { capLevel: 99, canCatch: true }, 1);
+  for (let seed = 1; seed < 200 && !run.fork; seed++) run = startRun("shallow", 0, { capLevel: 99, canCatch: true }, seed);
   assert.ok(run.fork, "갈림길이 나오는 런을 못 찾았다 — 빈도가 0 이 됐을 수 있다");
 
   const before = { alert: run.alert, depth: run.depth, bag: run.bag };
@@ -224,7 +224,7 @@ test("갈림길은 고르기 전까지 판정이 시작되지 않는다", () => 
 
 test("갈림길 두 갈래의 이름이 서로 다르다", () => {
   for (let seed = 0; seed < 400; seed++) {
-    const run = startRun("shallow", 0, seed);
+    const run = startRun("shallow", 0, { capLevel: 99, canCatch: true }, seed);
     if (!run.fork) continue;
     assert.notEqual(run.fork.names[0], run.fork.names[1], `시드 ${seed}: 두 길 이름이 같다`);
   }

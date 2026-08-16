@@ -15,6 +15,9 @@ import { RockPaperScissorsMiniGame } from "./RockPaperScissorsMiniGame";
 import { ArrowKeyCraftingMiniGame, TOTAL_KEYS, GREAT_MAX_WRONG, GOOD_MAX_WRONG } from "./ArrowKeyCraftingMiniGame";
 import type { ArrowMiniGameResult } from "./ArrowKeyCraftingMiniGame";
 import { PALETTE } from "../shared/palette";
+import { PixelIcon } from "../shared/ui/PixelIcon";
+import { iconUrl } from "../shared/ui/icons";
+import type { IconName } from "../shared/ui/icons";
 
 // ─── 중세 공방 팔레트 ──────────────────────────────────────────────────────────
 const C = {
@@ -27,7 +30,9 @@ const C = {
   borderGold:   "rgba(233, 148, 65, .857)",
   textPrimary:  PALETTE.cream100,
   textMuted:    PALETTE.sand300,
-  textFaint:    PALETTE.earth500,
+  // 카드 판(stone600) 위에 얹히므로 earth500 이면 3:1 아래로 떨어진다 — 선택 안 된
+  // 레시피의 설명이 통째로 안 읽혔다. 작은 글자는 sand 계열로 둔다.
+  textFaint:    PALETTE.sand300,
   gold:         PALETTE.ember500,
   goldDim:      PALETTE.earth500,
   btnBg:        "rgba(132, 75, 63, .515)",
@@ -47,10 +52,44 @@ const DIFFICULTY_COLOR_MW: Record<string, string> = {
   hard:   C.diffHard,
 };
 
-const STATION_ICON: Record<CraftingStationType, string> = {
-  artifact: "⚔️",
-  potion:   "⚗️",
+const STATION_ICON: Record<CraftingStationType, IconName> = {
+  artifact: "artifact",
+  potion:   "alchemy",
 };
+
+// ─── 재료 한 칸 ────────────────────────────────────────────────────────────────
+
+/**
+ * 필요한 재료 하나를 적는 상자.
+ *
+ * 예전엔 `철 조각 30/2` 였다. 앞이 보유고 뒤가 필요인데 분수처럼 읽혀서 "30개 중
+ * 2개"로 오해할 여지가 있었다. 필요한 수는 굵게, 지금 가진 수는 그 아래 작게 적고
+ * 그림을 앞에 둔다 — 이름을 읽기 전에 무엇인지 알 수 있어야 한다.
+ */
+function CostBox({ cost, have }: { cost: { itemId: string; name: string; amount: number }; have: number }) {
+  const ok = have >= cost.amount;
+  const icon = iconUrl(cost.itemId);
+  return (
+    <span
+      className="flex items-center gap-1.5 rounded-lg border px-2 py-1 text-pixel-sm"
+      style={{
+        borderColor: ok ? "rgba(122, 132, 85, .793)" : "rgba(233, 148, 65, .5)",
+        background:  ok ? "rgba(122, 132, 85, .1)"   : "rgba(168, 61, 31, .12)",
+      }}
+    >
+      {icon && <img src={icon} alt="" aria-hidden width={16} height={16}
+        style={{ imageRendering: "pixelated" }} />}
+      <span className="flex flex-col leading-tight">
+        <span className="font-bold" style={{ color: PALETTE.cream100 }}>
+          {cost.name} {cost.amount}
+        </span>
+        <span style={{ color: ok ? PALETTE.moss500 : PALETTE.ember500 }}>
+          보유 {have}
+        </span>
+      </span>
+    </span>
+  );
+}
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────────────
 
@@ -179,7 +218,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
           className="flex shrink-0 items-center gap-4 px-5 py-4"
           style={{ borderBottom: `1px solid ${C.border}` }}
         >
-          <span className="text-pixel-md">{STATION_ICON[stationType]}</span>
+          <PixelIcon name={STATION_ICON[stationType]} size={32} />
           <div className="flex-1">
             <h2
               className="text-pixel-md font-black tracking-wide"
@@ -312,27 +351,9 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
 
                         {/* 재료 목록 */}
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                          {recipe.costs.map((cost) => {
-                            const have = materials[cost.itemId] ?? 0;
-                            const ok   = have >= cost.amount;
-                            return (
-                              <span
-                                key={cost.itemId}
-                                className="rounded-full border px-2 py-0.5 text-pixel-sm font-bold"
-                                style={{
-                                  borderColor: ok
-                                    ? "rgba(122, 132, 85, .793)"
-                                    : "rgba(233, 148, 65, .254)",
-                                  color: ok ? PALETTE.moss500 : PALETTE.ember500,
-                                  background: ok
-                                    ? "rgba(122, 132, 85, .057)"
-                                    : "rgba(168, 61, 31, .065)",
-                                }}
-                              >
-                                {cost.name} {have}/{cost.amount}
-                              </span>
-                            );
-                          })}
+                          {recipe.costs.map((cost) => (
+                            <CostBox key={cost.itemId} cost={cost} have={materials[cost.itemId] ?? 0} />
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -578,7 +599,7 @@ function RecipeDetailPanel({
               }
         }
       >
-        {affordable ? (quantity > 1 ? `⚒  ${quantity}개 제작` : "⚒  제작 시작") : "재료 부족"}
+        {affordable ? (quantity > 1 ? `${quantity}개 제작` : "제작 시작") : "재료 부족"}
       </button>
     </>
   );

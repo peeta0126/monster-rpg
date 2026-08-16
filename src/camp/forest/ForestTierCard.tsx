@@ -1,6 +1,8 @@
 import { monsters } from "../../monster/monsters";
 import { ELEMENT_CHIP_CLASS, ELEMENT_KO, rgba } from "../../shared/palette";
 import { unlockLabel, type ForestArea } from "./areas";
+import { encounterLevelRange } from "./catchLevel";
+import { PixelIcon } from "../../shared/ui/PixelIcon";
 
 type ElementId = keyof typeof ELEMENT_CHIP_CLASS;
 
@@ -40,15 +42,20 @@ function monsterTypes(area: ForestArea): string[] {
  * 버튼이 있던 자리에 해금 조건을 그대로 넣으면 같은 공간이 답을 준다.
  */
 export function ForestTierCard({
-  area, selected, locked, bestFloor, onSelect, onEnter,
+  area, selected, locked, lockReason = "floor", bestFloor, capLevel, onSelect, onEnter,
 }: {
   area: ForestArea;
   selected: boolean;
   locked: boolean;
   bestFloor: number;
+  /** 파티 최고 레벨 — 숲이 내주는 레벨의 천장이다 */
+  capLevel: number;
+  /** 왜 잠겼는가. 층수가 모자란 것과 파티가 빈 것은 답이 다르다 */
+  lockReason?: "floor" | "no-party";
   onSelect: () => void;
   onEnter: () => void;
 }) {
+  const range = encounterLevelRange(area, capLevel);
   const types = monsterTypes(area);
   const accent = area.accentColor;
   // 잠긴 구역에는 티어 강조색을 쓰지 않는다. 색이 곧 "갈 수 있다"는 신호라,
@@ -69,8 +76,8 @@ export function ForestTierCard({
       style={{
         // 선택된 카드만 원래 크기. 나머지는 물러나 보이도록 줄이고 채도를 뺀다.
         transform: selected ? "scale(1)" : "scale(.75)",
-        filter: selected ? undefined : "saturate(.4)",
-        opacity: selected ? 1 : 0.82,
+        filter: selected ? undefined : "saturate(.6)",
+        opacity: selected ? 1 : 0.92,
         borderColor: locked ? rgba("stone600", 0.9) : selected ? accent : rgba("stone600", 0.8),
         borderWidth: selected ? 4 : 2,
         borderRadius: 0,
@@ -97,7 +104,8 @@ export function ForestTierCard({
             </span>
           )}
           <h3 className="text-pixel-md font-black" style={{ color: nameColor }}>
-            {locked ? `🔒 ${area.name}` : area.name}
+            {locked && <PixelIcon name="lock" size={16} className="mr-1.5 inline-block align-middle" />}
+            {area.name}
           </h3>
           {selected && (
             <p className="text-pixel-sm leading-relaxed text-sand-200">{area.description}</p>
@@ -120,7 +128,9 @@ export function ForestTierCard({
             {area.levelRange[0]}–{area.levelRange[1]}
           </p>
           {selected && !locked && (
-            <p className="text-pixel-sm text-sand-300">맵 구조 · 랜덤 생성</p>
+            <p className="text-pixel-sm text-sand-300">
+              {range ? `만나는 레벨 ${range[0]}–${range[1]}` : "지금은 재료만"}
+            </p>
           )}
         </div>
       </div>
@@ -135,9 +145,18 @@ export function ForestTierCard({
       {/* 액션 자리 — 잠겼으면 죽은 버튼 대신 해금 조건이 이 칸을 차지한다. */}
       {locked ? (
         <div className="relative z-10 border-t px-5 py-3 text-center"
-          style={{ borderColor: rgba("stone600", 0.9), background: rgba("shadow900", 0.5) }}>
-          <p className="text-pixel-sm font-bold text-sand-200">{unlockLabel(area)}</p>
-          <p className="text-pixel-sm text-sand-300">현재 최고 층: {bestFloor}층</p>
+          style={{ borderColor: rgba("stone600", 0.9), background: rgba("shadow900", 0.92) }}>
+          {lockReason === "no-party" ? (
+            <>
+              <p className="text-pixel-sm font-bold text-cream-100">함께 갈 몬스터가 없다</p>
+              <p className="text-pixel-sm text-sand-200">마을 안쪽의 이장에게 먼저 들르자</p>
+            </>
+          ) : (
+            <>
+              <p className="text-pixel-sm font-bold text-cream-100">{unlockLabel(area)}</p>
+              <p className="text-pixel-sm text-sand-200">현재 최고 층: {bestFloor}층</p>
+            </>
+          )}
         </div>
       ) : selected ? (
         <div className="relative z-10 px-5 pb-5">

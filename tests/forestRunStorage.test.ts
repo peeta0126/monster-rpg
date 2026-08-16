@@ -32,7 +32,7 @@ function reset() { fake.clear(); }
 
 test("걷다 만 원정은 걸음 안의 진행까지 그대로 돌아온다", () => {
   reset();
-  const run = advanceStep(startRun("deep", 15, 4242), { entered: true, attempts: 1 });
+  const run = advanceStep(startRun("deep", 15, { capLevel: 99, canCatch: true }, 4242), { entered: true, attempts: 1 });
   saveForestRun(run);
 
   const loaded = loadForest();
@@ -60,7 +60,7 @@ test("정산 화면에서 끊겨도 수확이 남는다", () => {
 test("정산이 저장돼 있으면 런보다 먼저다 — 끝난 원정을 이어 걷지 않는다", () => {
   reset();
   fake.setItem(KEY, JSON.stringify({
-    run: startRun("shallow", 0, 1),
+    run: startRun("shallow", 0, { capLevel: 99, canCatch: true }, 1),
     settled: { areaId: "shallow", reason: "voluntary", bag: [], caught: 0, alertPeak: 10 },
   }));
   assert.equal(loadForest().kind, "settle");
@@ -100,7 +100,7 @@ test("빈 저장소는 그냥 빈 것이다", () => {
 
 test("지우면 남지 않는다", () => {
   reset();
-  saveForestRun(startRun("shallow", 0, 9));
+  saveForestRun(startRun("shallow", 0, { capLevel: 99, canCatch: true }, 9));
   clearForest();
   assert.equal(fake.getItem(KEY), null);
 });
@@ -113,7 +113,7 @@ test("localStorage 를 못 쓰는 브라우저에서도 숲이 열린다", () =>
   });
   try {
     // 저장을 못 하는 것과 못 노는 것은 다르다
-    assert.doesNotThrow(() => saveForestRun(startRun("shallow", 0, 3)));
+    assert.doesNotThrow(() => saveForestRun(startRun("shallow", 0, { capLevel: 99, canCatch: true }, 3)));
     assert.doesNotThrow(() => clearForest());
     assert.equal(loadForest().kind, "none");
   } finally {

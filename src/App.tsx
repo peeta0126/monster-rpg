@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { usePlayerStore } from "./shared/playerStore";
 import AuthGate from "./auth/AuthGate";
 import ErrorBoundary from "./shared/ErrorBoundary";
 import AppErrorBridge from "./shared/AppErrorBridge";
@@ -20,6 +21,10 @@ const AdminPage    = lazy(() => import("./admin/AdminPage"));
 
 function BattlePageWrapper() {
   const location = useLocation();
+  const partySize = usePlayerStore((s) => s.party.length);
+  // 첫 파티원은 이장에게서 받는다. 그 전에 주소창으로 들어오면 BattlePage 가
+  // 없는 몬스터를 읽다 죽으므로 여기서 되돌린다
+  if (partySize === 0) return <Navigate to="/" replace />;
   // location.key가 바뀔 때마다 BattlePage를 완전히 재마운트
   // → 재도전·다음 층 이동 시 새 전투로 시작
   return <BattlePage key={location.key} />;

@@ -4,7 +4,9 @@
     "target": "ES2023",
     "lib": ["ES2023"],
     "module": "ESNext",
-    "types": ["node"],
+    /* vite/client 가 있어야 `import x from "…​.svg"` 를 안다 — tests 가 items.ts 를 타고
+       아이콘 표(shared/ui/PixelIcon)까지 끌어온다 */
+    "types": ["node", "vite/client"],
     "skipLibCheck": true,
     /* tests/ 에서 컴포넌트를 renderToStaticMarkup 으로 찍어 보므로 JSX 를 알아야 한다 */
     "jsx": "react-jsx",

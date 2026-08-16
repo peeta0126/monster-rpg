@@ -3,6 +3,8 @@ import type { Move } from "../shared/game";
 import { formatDamageRange, type MovePreview } from "./damagePreview";
 import { ELEMENT_CHIP_CLASS, ELEMENT_KO } from "../shared/palette";
 import { STATUS_META } from "./statusInfo";
+import { PixelIcon } from "../shared/ui/PixelIcon";
+import type { IconName } from "../shared/ui/icons";
 
 /**
  * 전투 커맨드 2단 메뉴.
@@ -43,7 +45,7 @@ const CATEGORY_LABEL: Record<Move["category"], string> = {
 export interface PotionEntry {
   id: string;
   name: string;
-  emoji: string;
+  icon: IconName;
   effectLabel: string;
   count: number;
 }
@@ -69,7 +71,7 @@ interface Props {
 
 interface Cell {
   key: string;
-  label: string;
+  label: ReactNode;
   sub?: ReactNode;
   /** 둘째 줄을 얼마나 눌러 둘지. 기본은 곁가지 취급(흐리게) */
   subClass?: string;
@@ -135,13 +137,19 @@ export function BattleCommandMenu({
       extra: (
         <span className="flex flex-wrap items-center gap-x-1.5 whitespace-nowrap">
           {p.isStatus
-            ? status && <span className="font-bold">{status.icon}{status.name} {status.duration}</span>
+            ? status && (
+                <span className="inline-flex items-center gap-1 font-bold align-middle">
+                  <PixelIcon name={status.icon} size={16} />{status.name} {status.duration}
+                </span>
+              )
             : <span className="font-bold">예상 {formatDamageRange(p)}</span>}
           {!p.isStatus && p.multiplier !== 1 && (
             <span className="font-bold">{p.multiplier >= 2 ? "▲" : "▼"}×{p.multiplier}</span>
           )}
           {status && (m.statusChance ?? 0) > 0 && (
-            <span className="opacity-60">{status.icon}{m.statusChance}%</span>
+            <span className="inline-flex items-center gap-1 opacity-60 align-middle">
+              <PixelIcon name={status.icon} size={16} />{m.statusChance}%
+            </span>
           )}
           {p.critChance > 0 && !p.isStatus && (
             <span className="opacity-60">치명 {Math.round(p.critChance)}%</span>
@@ -185,7 +193,11 @@ export function BattleCommandMenu({
   } else {
     cells = potions.map((p) => ({
       key: p.id,
-      label: `${p.emoji} ${p.name}`,
+      label: (
+        <span className="inline-flex items-center gap-1.5 align-middle">
+          <PixelIcon name={p.icon} size={16} />{p.name}
+        </span>
+      ),
       sub: p.effectLabel,
       hint: <span className="opacity-70">×{p.count}</span>,
       disabled: p.count <= 0,

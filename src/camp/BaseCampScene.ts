@@ -179,7 +179,6 @@ export default class BaseCampScene extends Phaser.Scene {
         gameEvents.emit(GAME_EVENT.ENTER_BATTLE, {
           from: "basecamp",
           portalId: "dungeon-entrance-1",
-          isCatchZone: false,
           floor: 1,
         });
       } else if (spot.id === "forest") {
@@ -346,6 +345,7 @@ export default class BaseCampScene extends Phaser.Scene {
       lines: result.lines,
       portraitPath: npc.portraitPath,
       setsFlag: result.setsFlag,
+      grantsMonsterId: result.grantsMonsterId,
       acceptQuestId: result.acceptQuestId,
       completeQuest: result.completeQuest,
     });

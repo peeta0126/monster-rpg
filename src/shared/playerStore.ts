@@ -176,10 +176,12 @@ export interface PersistedPlayerState {
 /** 새 게임 시작 시(혹은 마이그레이션 실패 폴백 시) 사용하는 기본 상태 */
 function createInitialState(): PersistedPlayerState {
   return {
-    party:       [monsterToOwned(monsters[0])],
+    // 시작 파티는 비어 있다. 첫 몬스터는 이장 오리온이 탑에 오르라고 하면서 준다
+    // (campDialogues 의 grantsMonsterId). 그 전에는 탑에도 숲에도 들어갈 수 없다.
+    party:       [],
     storage:     [],
-    dexSeen:     ["flameling"],
-    dexCaught:   ["flameling"],
+    dexSeen:     [],
+    dexCaught:   [],
     materials:   {},
     potions:     {},
     bestFloor:   0,
@@ -425,6 +427,8 @@ interface PlayerState {
   moveToStorage:    (partyIndex: number) => void;
   moveToParty:      (storageUid: string, partyIndex?: number) => void;
   swapPartySlots:   (indexA: number, indexB: number) => void;
+  /** 이야기로 받는 몬스터. 파티에 자리가 없으면 보관함으로 간다 */
+  grantMonster:         (id: string) => boolean;
   updatePartyMemberHp:  (uid: string, currentHp: number) => void;
   updatePartyMember:    (updated: OwnedMonster) => void;
   restorePartyHp:       () => void;
@@ -521,9 +525,33 @@ export const usePlayerStore = create<PlayerState>()(
             storage:   [...s.storage, monsterToOwned(monster)],
             dexSeen:   s.dexSeen.includes(monster.id)   ? s.dexSeen   : [...s.dexSeen, monster.id],
             dexCaught: s.dexCaught.includes(monster.id) ? s.dexCaught : [...s.dexCaught, monster.id],
+            // 이 플래그를 세우는 곳이 어디에도 없었다. 그래서 "숲에서 포획해 보세요"
+            // 안내가 영영 안 넘어가고, 첫 포획 뒤 대사도 아무도 못 봤다.
+            // 이장에게 받은 첫 몬스터(grantMonster)는 여기 해당하지 않는다 — 잡은 게 아니다.
+            storyFlags: s.storyFlags.first_capture
+              ? s.storyFlags
+              : { ...s.storyFlags, first_capture: true },
           };
         });
         return result;
+      },
+
+      grantMonster: (id) => {
+        const base = monsters.find((m) => m.id === id);
+        if (!base) return false;
+        let granted = false;
+        set((s) => {
+          const target = s.party.length < 3 ? "party" : s.storage.length < 30 ? "storage" : null;
+          if (!target) return {};
+          granted = true;
+          const owned = monsterToOwned(base);
+          return {
+            [target]: [...s[target], owned],
+            dexSeen:   s.dexSeen.includes(id)   ? s.dexSeen   : [...s.dexSeen, id],
+            dexCaught: s.dexCaught.includes(id) ? s.dexCaught : [...s.dexCaught, id],
+          };
+        });
+        return granted;
       },
 
       swapWithStorage: (partyIndex, storageUid) =>

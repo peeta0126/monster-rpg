@@ -1,4 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { PixelIcon } from "./PixelIcon";
+import type { IconName } from "./icons";
 
 /**
  * 우상단에 붙어 아래로 펼쳐지는 메뉴.
@@ -17,7 +19,7 @@ export type GameMenuTone = "default" | "accent" | "info" | "gold";
 
 export interface GameMenuItem {
   label: string;
-  emoji: string;
+  icon: IconName;
   onClick: () => void;
   tone?: GameMenuTone;
   /** 이 항목 위에 구분선을 긋는다 — 계정/설정처럼 성격이 다른 묶음 앞에 쓴다 */
@@ -99,10 +101,10 @@ export function GameMenu({
                       active:scale-[.98]"
                   >
                     <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border
-                        text-title-sm ${TONE_CHIP[it.tone ?? "default"]}`}
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border
+                        ${TONE_CHIP[it.tone ?? "default"]}`}
                     >
-                      {it.emoji}
+                      <PixelIcon name={it.icon} size={32} />
                     </span>
                     {it.label}
                   </button>

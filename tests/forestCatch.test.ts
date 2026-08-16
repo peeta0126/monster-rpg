@@ -189,7 +189,7 @@ test("시도별 소란은 0 / +5 / +10 이다", () => {
 
 /** 소란만 보기 위한 걸음 — 흔적은 포획이 없고 소란 델타가 고정이다 */
 function stepAlertAfter(outcome: Parameters<typeof resolveStep>[1]) {
-  const run = { ...startRun("shallow", 20, 555), current: "trace" as const, depth: 0 };
+  const run = { ...startRun("shallow", 20, { capLevel: 99, canCatch: true }, 555), current: "trace" as const, depth: 0 };
   return resolveStep(run, outcome).alert;
 }
 
@@ -213,7 +213,7 @@ test("한 번도 안 걸고 물러서면 소란이 전혀 안 오른다", () => 
 });
 
 test("물러서기는 짐도 안 흘린다 — 놓침만 흘린다", () => {
-  const run = { ...startRun("shallow", 10, 31337), current: "encounter" as const, depth: 0,
+  const run = { ...startRun("shallow", 10, { capLevel: 99, canCatch: true }, 31337), current: "encounter" as const, depth: 0,
     bag: [{ id: "herb", count: 6 }] };
   const retreat = resolveStep(run, { escaped: false, attemptAlert: attemptAlertTotal(3) });
   const missed = resolveStep(run, { escaped: true, attemptAlert: attemptAlertTotal(3) });

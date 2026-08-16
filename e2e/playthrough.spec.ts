@@ -10,7 +10,7 @@ import { playFloor, winOverlay } from "./autoBattle";
  * 게임 코드는 전혀 건드리지 않고, 세이브(localStorage)만 주입한 뒤 실제 UI를 클릭한다.
  * (밸런스 쪽 검증은 devPresetBoss.spec.ts가 담당한다.)
  *
- * 자세한 배경은 Handoff.md 5장 참고.
+ * 자세한 배경은 docs/notes/testing.md 참고.
  */
 
 const MAX_FLOOR = 50;
@@ -18,7 +18,7 @@ const MAX_FLOOR = 50;
 /**
  * 테스트 파티 레벨. 의도적으로 높게 잡았다 —
  * 50층 오름은 실효 HP 1870 / 공격 498 / 방어 319라, 정규 난이도로는 아티팩트 파밍이 전제다.
- * (Handoff.md 4장 참고) 밸런스를 보고 싶으면 이 값을 낮춰서 어디서 막히는지 확인하면 된다.
+ * (docs/notes/tower.md 참고) 밸런스를 보고 싶으면 이 값을 낮춰서 어디서 막히는지 확인하면 된다.
  */
 const PARTY_LEVEL = 250;
 

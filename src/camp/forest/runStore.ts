@@ -18,7 +18,7 @@ import type { RpsChoice } from "../../workshop/rps";
  * 숲 선택 화면으로 보낸다(`loadRun` 참조). 스키마가 자주 바뀌는 동안 마이그레이션
  * 코드를 쌓는 것보다 안전하고, 플레이어는 손해를 안 본다.
  */
-export const RUN_VERSION = 1;
+export const RUN_VERSION = 2;
 
 export interface RunBagEntry {
   id: string;
@@ -94,6 +94,13 @@ export interface ForestRun {
    * 정찰 등급이 정하지 정 이름이 정하는 게 아니다.
    */
   fork: { kinds: [ForestStepKind, ForestStepKind]; names: [string, string] } | null;
+  /**
+   * 이 원정에서 마주칠 수 있는 최고 레벨 — 들어설 때의 파티 최고 레벨이다.
+   *
+   * 굴림이 이 값을 보므로 스냅샷이어야 한다. 지금 파티를 그대로 읽으면 런 도중에
+   * 레벨이 움직이는 순간 이미 굴린 사건이 바뀐다(ownedChains 와 같은 이유).
+   */
+  capLevel: number;
   /** 지금 걸음을 어디까지 치렀는가. 새로고침이 리롤이 되지 않게 하는 자리다 */
   step: StepProgress;
   /** 다음 사건을 뽑을 시드. 걸음마다 굴러간다 */
@@ -124,7 +131,12 @@ export function randomSeed(): number {
 
 // ── 런 시작 ──────────────────────────────────────────────────────────────────
 
-export function startRun(areaId: ForestAreaId, startingAlert: number, seed = randomSeed()): ForestRun {
+export function startRun(
+  areaId: ForestAreaId,
+  startingAlert: number,
+  options: { capLevel: number; canCatch: boolean },
+  seed = randomSeed(),
+): ForestRun {
   const { rng, nextSeed } = makeRng(seed);
   const alert = clampAlert(startingAlert);
   return {
@@ -135,7 +147,8 @@ export function startRun(areaId: ForestAreaId, startingAlert: number, seed = ran
     alertPeak: alert,
     bag: [],
     caught: 0,
-    ...nextEncounter(alert, 0, rng),
+    capLevel: options.capLevel,
+    ...nextEncounter(alert, 0, rng, options.canCatch),
     step: NEW_STEP,
     seed: nextSeed(),
   };
@@ -147,15 +160,19 @@ export function startRun(areaId: ForestAreaId, startingAlert: number, seed = ran
  * 갈림길 비율(FORK_CHANCE)이 이 게임에서 "선택이 얼마나 자주 있는가"를 혼자 정한다 —
  * 예전 노드 그래프에서는 갈림길의 절반 이상이 외길이라 플레이어가 실려 갔다.
  */
-function nextEncounter(alert: number, depth: number, rng: Rng): Pick<ForestRun, "current" | "fork"> {
+function nextEncounter(
+  alert: number, depth: number, rng: Rng, canCatch: boolean,
+): Pick<ForestRun, "current" | "fork"> {
   if (rng() < FORK_CHANCE) {
-    const kinds = rollFork(alert, depth, rng);
+    const kinds = rollFork(alert, depth, rng, canCatch);
     const first = pathName(rng);
     let second = pathName(rng);
     if (second === first) second = `${second} 안쪽`;   // 같은 이름 둘은 고를 수가 없다
+    // 잡을 게 없는 구역은 후보가 좁아 두 갈래가 같아질 수 있다. 그러면 갈림길이 아니다
+    if (kinds[0] === kinds[1]) return { current: kinds[0], fork: null };
     return { current: kinds[0], fork: { kinds, names: [first, second] } };
   }
-  return { current: rollStep(alert, depth, rng), fork: null };
+  return { current: rollStep(alert, depth, rng, canCatch), fork: null };
 }
 
 /** 갈림길에서 한 갈래를 고른다. 아직 판정 전이라 소란은 움직이지 않는다 */
@@ -200,7 +217,7 @@ export interface StepOutcome {
  * 수확 배수는 이미 호출부가 judgeAlert() 로 계산했다 — 소란은 여기서 오른다.
  * 그 순서를 뒤집으면 방금 올린 소란으로 그 걸음의 수확을 불리게 된다.
  */
-export function resolveStep(run: ForestRun, outcome: StepOutcome): ForestRun {
+export function resolveStep(run: ForestRun, outcome: StepOutcome, canCatch = true): ForestRun {
   const { rng, nextSeed } = makeRng(run.seed);
 
   let bag = run.bag;
@@ -228,7 +245,7 @@ export function resolveStep(run: ForestRun, outcome: StepOutcome): ForestRun {
     alertPeak: Math.max(run.alertPeak, alert),
     bag,
     caught: run.caught + (outcome.caught ? 1 : 0),
-    ...nextEncounter(alert, depth, rng),
+    ...nextEncounter(alert, depth, rng, canCatch),
     step: NEW_STEP,
     seed: nextSeed(),
   };
@@ -374,6 +391,7 @@ export function parseRun(raw: unknown): { ok: true; run: ForestRun } | { ok: fal
     typeof r.caught === "number" &&
     typeof r.current === "string" &&
     typeof r.seed === "number" &&
+    typeof r.capLevel === "number" &&
     Array.isArray(r.bag);
   if (!okShape) return { ok: false, reason: "stale" };
 
@@ -393,6 +411,7 @@ export function parseRun(raw: unknown): { ok: true; run: ForestRun } | { ok: fal
       bag,
       caught: r.caught as number,
       current: r.current as ForestStepKind,
+      capLevel: Math.max(0, Math.floor(r.capLevel as number)),
       fork: parseFork(r.fork),
       step: parseStep(r.step),
       seed: (r.seed as number) >>> 0,

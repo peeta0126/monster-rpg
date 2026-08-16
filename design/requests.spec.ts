@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+import { FRESH_SAVE } from "./freshSave";
 
 /** 화면별로 실제 무엇을 받는지 나열한다. 추측 대신 목록을 본다. */
 const GUEST = JSON.stringify({ state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 });
@@ -6,10 +7,10 @@ const GUEST = JSON.stringify({ state: { token: null, username: null, isGuest: tr
 test("perf: 요청 목록", async ({ page, context }) => {
   const cdp = await context.newCDPSession(page);
   await cdp.send("Network.enable");
-  await page.addInitScript((g) => {
+  await page.addInitScript(({ g, fresh }) => {
     localStorage.setItem("monster-rpg-auth", g);
-    localStorage.removeItem("monster-rpg-player");
-  }, GUEST);
+    localStorage.setItem("monster-rpg-player", fresh);
+  }, { g: GUEST, fresh: FRESH_SAVE });
 
   for (const [name, url] of [["basecamp", "/"], ["forest", "/forest"], ["battle", "/battle"]] as const) {
     const seen: { url: string; bytes: number }[] = [];

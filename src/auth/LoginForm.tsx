@@ -4,6 +4,7 @@ import { useAuthStore } from "./authStore";
 import RegisterModal from "./RegisterModal";
 import DevCodeModal from "./DevCodeModal";
 import { sha256Hex } from "./sha256";
+import { PixelIcon } from "../shared/ui/PixelIcon";
 
 // "아이디:비밀번호"의 SHA-256 해시. 번들에 평문 계정을 남기지 않기 위해 해시로만 비교한다.
 const DEV_LOGIN_HASH = "590c783dce35634a13f99f7b25482678536c9a39cf153f1bb83554aa0362e5d1";
@@ -141,7 +142,8 @@ export default function LoginForm() {
           className="mt-0.5 text-center text-sand-300 underline decoration-dotted decoration-earth-400 underline-offset-2 transition hover:text-ember-500 hover:decoration-ember-500"
           style={{ fontSize: 12 }}
         >
-          🧭 게스트로 시작
+          <PixelIcon name="compass" size={16} className="mr-1 inline-block align-middle" />
+          게스트로 시작
         </button>
       </form>
 

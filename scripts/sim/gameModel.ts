@@ -19,6 +19,7 @@ import {
   appliesAlertOnArrival, stepAlertDelta,
 } from "../../src/camp/forest/alert";
 import { makeRng } from "../../src/camp/forest/runStore";
+import { canCatchIn, encounterLevelRange } from "../../src/camp/forest/catchLevel";
 import {
   CATCH_ATTEMPTS, attemptAlert, catchChance, getRpsResult,
 } from "../../src/camp/forest/catchRules";
@@ -413,12 +414,15 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
 // ─── 숲 (ForestPage 이식) ────────────────────────────────────────────────────
 
 
-function pickForestMonster(area: ForestArea, elite: boolean): Monster {
+function pickForestMonster(area: ForestArea, elite: boolean, capLevel: number): Monster | null {
+  const range = encounterLevelRange(area, capLevel);
+  if (range === null) return null;
   const pool = elite ? area.monsterPool.slice(-2) : area.monsterPool;
   const id = pool[Math.floor(Math.random() * pool.length)];
   const base = monsters.find((m) => m.id === id)!;
-  const lvMin = elite ? Math.floor((area.levelRange[0] + area.levelRange[1]) / 2) : area.levelRange[0];
-  const level = lvMin + Math.floor(Math.random() * (area.levelRange[1] - lvMin + 1));
+  const [areaMin, lvMax] = range;
+  const lvMin = elite ? Math.min(lvMax, Math.floor((area.levelRange[0] + area.levelRange[1]) / 2)) : areaMin;
+  const level = lvMin + Math.floor(Math.random() * (lvMax - lvMin + 1));
   return scaleToLevel(base, level);
 }
 
@@ -510,7 +514,10 @@ export function runForest(
   bankAlert = Infinity,
   /** 포획을 어떻게 두는가. 기본은 예전 행동(버릇 모름 · 3번 다 씀) */
   policy: CatchPolicy = CATCH_ALWAYS_THREE,
+  /** 파티 최고 레벨 — 숲이 내주는 레벨의 천장(catchLevel.ts). 기본은 천장 없음 */
+  capLevel = Infinity,
 ): ForestRunResult {
+  const canCatch = canCatchIn(area, capLevel);
   const drops: { id: string; count: number }[] = [];
   const encounters: Monster[] = [];
   const caughtMonsters: Monster[] = [];
@@ -538,11 +545,11 @@ export function runForest(
     // 갈림길이면 두 갈래 중 전략에 따라 고른다
     let kind: ForestStepKind;
     if (rng() < FORK_CHANCE) {
-      const [a, b] = rollFork(alert, depth, rng);
+      const [a, b] = rollFork(alert, depth, rng, canCatch);
       const [lo, hi] = STEP_ALERT[a] <= STEP_ALERT[b] ? [a, b] : [b, a];
       kind = strategy === "avoid" ? lo : strategy === "greedy" ? hi : (rng() < 0.5 ? a : b);
     } else {
-      kind = rollStep(alert, depth, rng);
+      kind = rollStep(alert, depth, rng, canCatch);
     }
 
     // 주인만 깨우는 순간(판정 전) 소란이 붙는다
@@ -553,8 +560,10 @@ export function runForest(
 
     // 수확 배수는 그렇게 정해진 소란도로 계산한다(게임과 같은 순서)
     drops.push(...rollStepRewards(area, kind, alert, rng));
-    if (hasCatch(kind)) {
-      const target = pickForestMonster(area, kind === "champion" || kind === "warden");
+    const target = hasCatch(kind)
+      ? pickForestMonster(area, kind === "champion" || kind === "warden", capLevel)
+      : null;
+    if (target) {
       encounters.push(target);
       catchSteps++;
 

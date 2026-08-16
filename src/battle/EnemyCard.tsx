@@ -1,14 +1,19 @@
-import type { Move } from "../shared/game";
+import type { ElementType, Move } from "../shared/game";
 import { getTypeMultiplier, type BattleMonster } from "./battleUtils";
-import { statusDetail } from "./statusInfo";
+import { statusDetail, STATUS_META } from "./statusInfo";
+import { PixelIcon } from "../shared/ui/PixelIcon";
 import { ELEMENT_CHIP_CLASS, ELEMENT_KO, HP_DANGER_PCT } from "../shared/palette";
 
 /**
  * 상대 정보 카드.
  *
  * 상성을 알려면 T 를 눌러 7×7 표를 열어야 했다. 표는 규칙을 보여주지만 지금 이 싸움의
- * 답은 안 보여준다 — 필요한 건 "내가 가진 기술 중 뭐가 제일 잘 먹히나" 한 줄이다.
- * 표는 그대로 T 에 남기고, 여기서는 **지금 파티의 기술로 계산한 최고 배율**만 말한다.
+ * 답은 안 보여준다 — 필요한 건 "이 상대를 어떻게 다루나" 두 줄이다.
+ *
+ * **양쪽을 다 적는다.** 한쪽만 적었을 때 실제로 이런 화면이 나왔다: 불꽃으로 물을
+ * 만나면 내 최고 배율이 1 이라 "상성 이득 없음"이라고만 떴는데, 정작 상대는 나를
+ * 2배로 때리고 있었다. 상성은 때릴 때와 맞을 때가 따로 굴러가므로 "바꿀까"는
+ * 받는 쪽을 봐야 정해진다.
  *
  * HP 는 숫자를 안 적는다. 정확한 수치는 캔버스 패널이 크게 보여주고 있어서, 여기까지
  * 숫자를 적으면 같은 정보가 화면에 세 번 나온다.
@@ -16,27 +21,42 @@ import { ELEMENT_CHIP_CLASS, ELEMENT_KO, HP_DANGER_PCT } from "../shared/palette
 
 export interface EnemyCardProps {
   enemy: BattleMonster;
-  /** 지금 나와 있는 몬스터의 기술 — 최고 상성을 여기서 고른다 */
+  /** 지금 나와 있는 몬스터의 기술 — 때릴 때의 배율을 여기서 고른다 */
   moves: Move[];
-  floorLabel: string;
+  /** 지금 나와 있는 몬스터의 속성 — 맞을 때의 배율을 여기서 고른다 */
+  playerType: ElementType | null;
 }
 
-export function EnemyCard({ enemy, moves, floorLabel }: EnemyCardProps) {
+/** 배율 표기. ×1.0 이나 ×0.50 처럼 늘어지면 12px 한 줄에서 숫자가 안 읽힌다 */
+const fmt = (n: number) => String(Number(n.toFixed(2)));
+
+/** 위력이 있는 기술 중 가장 큰 상성 배율. 상태기(위력 0)는 상성이 의미 없다 */
+function bestMultiplier(moves: readonly Move[], target: ElementType | null): number {
+  return moves
+    .filter((m) => m.power > 0)
+    .reduce((acc, m) => Math.max(acc, getTypeMultiplier(m.type, target)), 0);
+}
+
+export function EnemyCard({ enemy, moves, playerType }: EnemyCardProps) {
   const hpPct = enemy.maxHp > 0 ? Math.round((enemy.currentHp / enemy.maxHp) * 100) : 0;
   const element = enemy.type ? ELEMENT_KO[enemy.type] : "무속성";
   const chip = enemy.type
     ? ELEMENT_CHIP_CLASS[enemy.type]
     : "bg-shadow-700/80 text-sand-300 border-stone-600";
 
-  // 내 기술 중 가장 잘 먹히는 배율. 상태기(위력 0)는 상성이 의미 없으니 뺀다
-  const best = moves
-    .filter((m) => m.power > 0)
-    .reduce((acc, m) => Math.max(acc, getTypeMultiplier(m.type, enemy.type)), 0);
+  const outgoing = bestMultiplier(moves, enemy.type);
+  const incoming = bestMultiplier(enemy.moves, playerType);
 
-  const advice =
-    best >= 2 ? { text: `내 기술 중 ×${best} 가 있다`, tone: "text-moss-500" }
-    : best > 0 && best < 1 ? { text: "잘 먹히는 기술이 없다", tone: "text-ember-500" }
-    : { text: "상성 이득 없음", tone: "text-earth-400" };
+  // 때릴 때는 큰 게 좋고, 맞을 때는 작은 게 좋다 — 색이 반대로 간다
+  const attack = outgoing === 0
+    ? { text: "공격 기술이 없다", tone: "text-earth-400" }
+    : { text: `내 공격 ×${fmt(outgoing)}`,
+        tone: outgoing >= 2 ? "text-moss-500" : outgoing < 1 ? "text-ember-500" : "text-earth-400" };
+
+  const defense = incoming === 0
+    ? { text: "상대는 못 때린다", tone: "text-moss-500" }
+    : { text: `받는 피해 ×${fmt(incoming)}`,
+        tone: incoming >= 2 ? "text-ember-500" : incoming < 1 ? "text-moss-500" : "text-earth-400" };
 
   return (
     <div data-testid="enemy-card" className="flex min-w-0 flex-col gap-1">
@@ -52,13 +72,15 @@ export function EnemyCard({ enemy, moves, floorLabel }: EnemyCardProps) {
         </span>
       </div>
 
-      <p data-testid="enemy-advice" className={`text-pixel-sm ${advice.tone}`}>{advice.text}</p>
+      <p data-testid="enemy-advice" className={`text-pixel-sm ${attack.tone}`}>{attack.text}</p>
+      <p data-testid="enemy-threat" className={`text-pixel-sm ${defense.tone}`}>{defense.text}</p>
 
       {enemy.status && (
-        <p className="text-pixel-sm text-ember-500">{statusDetail(enemy.status, enemy.statusTurns)}</p>
+        <p className="flex items-center gap-1 text-pixel-sm text-ember-500">
+          <PixelIcon name={STATUS_META[enemy.status].icon} size={16} />
+          {statusDetail(enemy.status, enemy.statusTurns)}
+        </p>
       )}
-
-      <p className="mt-auto text-pixel-sm text-earth-400">{floorLabel}</p>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { rgba, PALETTE } from "../shared/palette";
 import { MONSTER_IMAGE_MAP } from "./monsterImages";
 import type { Monster } from "../shared/game";
 import { usePlayerStore } from "../shared/playerStore";
+import { withJosa } from "../shared/josa";
 import {
   chainKeyOf, imprintStatus, imprintStars, IMPRINT_ESSENCE_ID, MAX_IMPRINT_TIER,
 } from "./imprint";
@@ -44,7 +45,7 @@ export function CaptureOverflowPrompt({ monster, onAbsorb, onRelease }: {
         <div className="min-w-0 flex-1">
           <h2 className="text-title-sm font-black text-cream-100">보관함이 가득 찼다</h2>
           <p className="mt-1 text-pixel-sm text-sand-300">
-            {monster.name}을(를) 데려갈 자리가 없다.
+            {withJosa(monster.name, "을를")} 데려갈 자리가 없다.
           </p>
           <p className="mt-2 text-pixel-sm" style={{ color: PALETTE.earth400 }}>
             {status.label} {imprintStars(status.tier)} {status.tier}/{MAX_IMPRINT_TIER}

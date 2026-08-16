@@ -88,13 +88,14 @@ test("선택된 카드만 부가 정보와 탐험 버튼을 가진다", async ({
   const shallow = card(page, "shallow");
   await expect(shallow).toHaveAttribute("data-selected", "1");
   await expect(shallow).toContainText("SHALLOW WOODS");
-  await expect(shallow).toContainText("랜덤 생성");
+  // 노드 맵 시절의 "맵 구조 · 랜덤 생성" 자리다. 지금은 이 파티로 만날 수 있는 레벨대
+  await expect(shallow).toContainText("만나는 레벨");
   await expect(shallow).toContainText("탐험하기");
 
-  // 물러난 카드에는 영문 부제·플레이버·랜덤 생성 라벨이 없다
+  // 물러난 카드에는 영문 부제·플레이버·레벨대 라벨이 없다
   const deep = card(page, "deep");
   await expect(deep).not.toContainText("DEEP FOREST");
-  await expect(deep).not.toContainText("랜덤 생성");
+  await expect(deep).not.toContainText("만나는 레벨");
 
   // 호버하면 그 카드로 넘어간다
   await deep.hover();

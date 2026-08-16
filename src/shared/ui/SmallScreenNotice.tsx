@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PixelIcon } from "./PixelIcon";
 
 /**
  * 이 게임은 키보드(WASD/방향키/스페이스)로만 조작한다. 터치 입력 경로가 없어서
@@ -33,7 +34,7 @@ export function SmallScreenNotice() {
   return (
     <div className="fixed inset-0 z-[4000] flex flex-col items-center justify-center gap-5
       bg-shadow-900 px-8 text-center">
-      <p className="text-pixel-md">🖥️</p>
+      <PixelIcon name="screen" size={64} />
       <p className="text-title-sm font-black text-cream-100">
         화면이 작아 플레이할 수 없습니다
       </p>

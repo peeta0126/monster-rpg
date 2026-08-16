@@ -11,6 +11,7 @@ import {
 } from "./catchRules";
 import { rollHand, tellText, tellTypeOf, typeText, type TellReveal } from "./catchTells";
 import { BADGE_TONE, type NestBadge } from "./nest";
+import { withJosa } from "../../shared/josa";
 
 /**
  * 포획 미니게임.
@@ -42,7 +43,7 @@ const REVEAL_MS = 900;
 type Stage = "select" | "reveal" | "result";
 
 export function CatchMiniGame({
-  monster, alert, seed, attempts, pending, reveal, badge, onReveal, onResult, onDone,
+  monster, alert, seed, attempts, pending, reveal, badge, onReveal, onResult, onDone, onResolving,
 }: {
   monster: Monster;
   alert: number;
@@ -82,6 +83,13 @@ export function CatchMiniGame({
    * "물러선다"는 선택지가 아니라 버튼일 뿐이다.
    */
   onDone: (result: { caught: boolean; retreated: boolean }) => void;
+  /**
+   * 상대의 수를 공개하는 동안 알린다.
+   *
+   * 이 사이에는 화면에 아무 버튼도 없는데, 정작 하단 바의 "돌아간다"는 살아 있어서
+   * 굴림이 끝나기 전에 원정을 접을 수 있었다 — 시도 비용을 안 치르고 나가는 길이다.
+   */
+  onResolving: (busy: boolean) => void;
 }) {
   const type = tellTypeOf(monster);
   // 마운트 시점의 pending 으로 결과 화면을 복원한다. 상대의 수는 시드에서 다시 나온다
@@ -100,6 +108,12 @@ export function CatchMiniGame({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  // 공개 중에는 바깥의 귀환 버튼을 잠근다. 언마운트될 때는 반드시 풀어야 한다
+  useEffect(() => {
+    onResolving(stage === "reveal");
+    return () => onResolving(false);
+  }, [stage, onResolving]);
 
   const penalty = alertBand(alert).catchPenalty;
   const pct = (r: RpsResult) => Math.round(catchChance(r, alert) * 100);
@@ -194,7 +208,7 @@ export function CatchMiniGame({
           {caught ? (
             <p className="mt-3 text-pixel-md font-black text-moss-500">포획 성공!</p>
           ) : outOfTries ? (
-            <p className="mt-3 text-pixel-md font-black text-ember-500">{monster.name}이(가) 달아났다</p>
+            <p className="mt-3 text-pixel-md font-black text-ember-500">{withJosa(monster.name, "이가")} 달아났다</p>
           ) : (
             <p className="mt-3 text-pixel-sm text-sand-200">놓쳤다 — 아직 근처에 있다</p>
           )}

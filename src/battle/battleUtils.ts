@@ -1,4 +1,5 @@
 import { typeChart } from "./typeChart";
+import { withJosa } from "../shared/josa";
 import type { Monster, Move, StatusEffect, ElementType } from "../shared/game";
 
 // ─── BattleMonster 타입 ─────────────────────────────────────────────────────────
@@ -284,7 +285,7 @@ export function checkStatusEffects(monster: BattleMonster): {
       // 마비: 30% 확률로 턴 스킵
       if (Math.random() < 0.3) {
         skipTurn = true;
-        logs.push(`${monster.name}은(는) 마비로 인해 움직일 수 없다!`);
+        logs.push(`${withJosa(monster.name, "은는")} 마비로 인해 움직일 수 없다!`);
       }
       break;
 
@@ -293,14 +294,14 @@ export function checkStatusEffects(monster: BattleMonster): {
       {
         const poisonDmg = Math.max(1, Math.floor(monster.maxHp * STATUS_TICK_RATIO.poison));
         updated.currentHp = Math.max(0, updated.currentHp - poisonDmg);
-        logs.push(`${monster.name}은(는) 독 피해를 ${poisonDmg} 받았다.`);
+        logs.push(`${withJosa(monster.name, "은는")} 독 피해를 ${poisonDmg} 받았다.`);
       }
       break;
 
     case "freeze":
       // 빙결: 행동 불가
       skipTurn = true;
-      logs.push(`${monster.name}은(는) 빙결 상태라 움직일 수 없다!`);
+      logs.push(`${withJosa(monster.name, "은는")} 빙결 상태라 움직일 수 없다!`);
       break;
 
     case "burn":
@@ -308,7 +309,7 @@ export function checkStatusEffects(monster: BattleMonster): {
       {
         const burnDmg = Math.max(1, Math.floor(monster.maxHp * STATUS_TICK_RATIO.burn));
         updated.currentHp = Math.max(0, updated.currentHp - burnDmg);
-        logs.push(`${monster.name}은(는) 화상으로 ${burnDmg}의 피해를 받았다.`);
+        logs.push(`${withJosa(monster.name, "은는")} 화상으로 ${burnDmg}의 피해를 받았다.`);
       }
       break;
   }

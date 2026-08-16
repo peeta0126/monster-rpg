@@ -209,7 +209,7 @@ const shallow = FOREST_AREAS[0];
 test("둥지 후보에 같은 종이 두 번 나오지 않는다", () => {
   for (let seed = 0; seed < 200; seed++) {
     const { rng } = makeRng(seed);
-    const choices = rollNestChoices(shallow, 3, [], rng);
+    const choices = rollNestChoices(shallow, 3, [], rng, 99);
     const ids = new Set(choices.map((m) => m.id));
     assert.equal(ids.size, choices.length, `seed ${seed}: ${choices.map((m) => m.id).join(",")}`);
   }
@@ -221,7 +221,7 @@ test("가능하면 보유 계열과 미보유 계열이 섞인다", () => {
   const rounds = 200;
   for (let seed = 0; seed < rounds; seed++) {
     const { rng } = makeRng(seed);
-    const choices = rollNestChoices(shallow, 2, ownedChains, rng);
+    const choices = rollNestChoices(shallow, 2, ownedChains, rng, 99);
     const hasOwned = choices.some((m) => ownedChains.includes(chainKeyOf(m)));
     const hasNew   = choices.some((m) => !ownedChains.includes(chainKeyOf(m)));
     if (hasOwned && hasNew) mixed++;
@@ -232,22 +232,22 @@ test("가능하면 보유 계열과 미보유 계열이 섞인다", () => {
 test("풀이 좁아 대비를 못 만들면 중복 제거만 한다", () => {
   const narrow = { ...shallow, monsterPool: ["flameling", "burno"] };
   const { rng } = makeRng(7);
-  const choices = rollNestChoices(narrow, 2, ["flameling", "burno"], rng);
+  const choices = rollNestChoices(narrow, 2, ["flameling", "burno"], rng, 99);
   assert.equal(choices.length, 2);
   assert.equal(new Set(choices.map((m) => m.id)).size, 2);
 });
 
 test("같은 시드·같은 스냅샷이면 후보가 똑같이 나온다", () => {
   const key = (ms: { id: string; level: number }[]) => ms.map((m) => `${m.id}:${m.level}`).join("|");
-  const first  = rollNestChoices(shallow, 3, ["mossy"], makeRng(42).rng);
-  const second = rollNestChoices(shallow, 3, ["mossy"], makeRng(42).rng);
+  const first  = rollNestChoices(shallow, 3, ["mossy"], makeRng(42).rng, 99);
+  const second = rollNestChoices(shallow, 3, ["mossy"], makeRng(42).rng, 99);
   assert.equal(key(first), key(second));
 });
 
 test("후보 레벨은 구역 레벨대 안이다", () => {
   for (let seed = 0; seed < 50; seed++) {
     const { rng } = makeRng(seed);
-    for (const m of rollNestChoices(shallow, 3, [], rng)) {
+    for (const m of rollNestChoices(shallow, 3, [], rng, 99)) {
       assert.ok(m.level >= shallow.levelRange[0] && m.level <= shallow.levelRange[1],
         `${m.id} Lv.${m.level}`);
     }

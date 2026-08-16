@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { openWorkshop, walkTo } from "./workshopNav";
 import { CRAFTING_STATIONS } from "../src/workshop/workshopLayout";
+import { FRESH_SAVE } from "./freshSave";
 
 /**
  * 디자인 검증용 화면 캡처.
@@ -50,19 +51,24 @@ const SCREENS: Screen[] = [
   { name: "workshop", path: "/workshop", auth: true },
   // /battle 은 라우트 state 없이 들어가도 동작한다 — BattlePage 가 floor=1 로 폴백해
   // getFloorEnemy() 로 적을 만들고, setBattleInitData() 를 스스로 호출한 뒤 씬을 띄운다.
-  // 필요한 건 파티에 몬스터가 1마리 이상 있는 것뿐이고, 그건 신규 세이브 기본값이 보장한다.
+  // 필요한 건 파티에 몬스터가 1마리 이상 있는 것뿐이라 FRESH_SAVE 를 심는다 — 지금은
+  // 새 세이브의 파티가 비어 있고, 첫 몬스터를 이장에게서 받는다(campDialogues).
   { name: "battle",   path: "/battle",   auth: true, phaser: true },
 ];
 
 /** 페이지 첫 스크립트보다 먼저 localStorage 를 세팅한다 (AuthGate 하이드레이션 전에 들어가야 함) */
 async function seedStorage(page: Page, authed: boolean) {
   await page.addInitScript(
-    ({ authKey, playerKey, authState, authed }) => {
+    ({ authKey, playerKey, authState, authed, fresh }) => {
       window.localStorage.removeItem(authKey);
       window.localStorage.removeItem(playerKey);
-      if (authed) window.localStorage.setItem(authKey, authState);
+      if (authed) {
+        window.localStorage.setItem(authKey, authState);
+        window.localStorage.setItem(playerKey, fresh);
+      }
     },
-    { authKey: AUTH_STORAGE_KEY, playerKey: PLAYER_STORAGE_KEY, authState: GUEST_AUTH_STATE, authed },
+    { authKey: AUTH_STORAGE_KEY, playerKey: PLAYER_STORAGE_KEY, authState: GUEST_AUTH_STATE, authed,
+      fresh: FRESH_SAVE },
   );
 }
 
@@ -165,7 +171,7 @@ test("capture: workshop-rps", async ({ page }) => {
  */
 const catchRun = (step: Record<string, unknown>) => JSON.stringify({
   run: {
-    runVersion: 1, areaId: "shallow", depth: 3, alert: 20, alertPeak: 20,
+    runVersion: 2, capLevel: 99, areaId: "shallow", depth: 3, alert: 20, alertPeak: 20,
     bag: [{ id: "herb", count: 2 }], caught: 0,
     current: "encounter", fork: null,
     step: { entered: true, pick: null, attempts: 0, pending: null, done: null, ...step },
@@ -269,7 +275,7 @@ test("capture: forest-nest", async ({ page }) => {
     k: "monster-rpg-forest-run",
     v: JSON.stringify({
       run: {
-        runVersion: 1, areaId: "shallow", depth: 2, alert: 20, alertPeak: 20,
+        runVersion: 2, capLevel: 99, areaId: "shallow", depth: 2, alert: 20, alertPeak: 20,
         bag: [{ id: "herb", count: 3 }], caught: 0,
         current: "nest", fork: null,
         step: {
@@ -303,8 +309,9 @@ test("capture: battle-boss", async ({ page }) => {
   await page.reload();
 
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
-  // 층이 실제로 50 으로 들어갔는지 — 폴백(1층)으로 찍히면 확인할 게 없다
-  await expect(page.getByText("50F")).toBeVisible();
+  // 층이 실제로 50 으로 들어갔는지 — 폴백(1층)으로 찍히면 확인할 게 없다.
+  // 화면의 층 표시는 캔버스에 그려져 접근성 트리에 안 잡히므로 패널의 data-floor 로 본다.
+  await expect(page.getByTestId("battle-panel")).toHaveAttribute("data-floor", "50");
   await waitForVisualSettle(page);
   await page.screenshot({ path: path.join(OUT_DIR, "battle-boss.png"), fullPage: false });
 });
@@ -324,7 +331,7 @@ for (const floor of [5, 25, 45]) {
     await page.reload();
 
     await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
-    await expect(page.getByText(`${floor}F`)).toBeVisible();
+    await expect(page.getByTestId("battle-panel")).toHaveAttribute("data-floor", String(floor));
     await waitForVisualSettle(page);
     await page.screenshot({ path: path.join(OUT_DIR, `battle-room-${floor}f.png`), fullPage: false });
   });

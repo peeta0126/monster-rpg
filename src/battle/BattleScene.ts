@@ -51,6 +51,8 @@ type LogState = "idle" | "showing" | "result";
 export default class BattleScene extends Phaser.Scene {
   /** 이 층의 적 배치(자리·크기·패널). 50층 오름만 다른 값이 온다. */
   private enemy!: EnemyLayout;
+  /** 우상단에 적는 층 표시. 화면에서 층을 말하는 자리는 여기뿐이다 */
+  private floorLabel = "1층";
 
   // ── 스프라이트 ──
   private playerSprite!: Phaser.GameObjects.Image;
@@ -155,6 +157,7 @@ export default class BattleScene extends Phaser.Scene {
     const d = getBattleInitData();
     const floor = d?.floor ?? 1;
     const isBoss = d?.isBoss ?? false;
+    this.floorLabel = d?.floorLabel ?? `${floor}층`;
     // 배경·그림자·패널·트윈이 전부 이걸 본다. 무엇보다 먼저 정한다.
     this.enemy = getEnemyLayout(floor);
 
@@ -246,10 +249,13 @@ export default class BattleScene extends Phaser.Scene {
       fallback.fillRect(0, FLOOR_TOP, W, H - FLOOR_TOP);
     }
 
-    // ── 층 번호 ──
-    this.add.text(W - 30, 36, `${floor}F`, {
-      fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand300,
-    }).setOrigin(1, 0.5).setDepth(10).setAlpha(0.9);
+    // ── 층 표시 ──
+    // 화면에서 층을 적는 자리는 여기 하나뿐이다. 예전엔 캔버스·하단 칩·상대 카드
+    // 세 곳에 같은 숫자가 있었다. 무대 위가 "지금 어디에 서 있는가"의 자리다.
+    this.add.text(W - 30, 36, this.floorLabel, {
+      fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(),
+      color: PALETTE.cream100, stroke: PALETTE.shadow900, strokeThickness: 3,
+    }).setOrigin(1, 0.5).setDepth(10);
 
     this.buildFloorShadows();
   }

@@ -1,6 +1,7 @@
 import { StatBar } from "../shared/ui";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
-import { statusLabel } from "./statusInfo";
+import { statusLabel, STATUS_META } from "./statusInfo";
+import { PixelIcon } from "../shared/ui/PixelIcon";
 import type { StatusEffect } from "../shared/game";
 
 /**
@@ -96,7 +97,8 @@ export function PartyStrip({
               <StatBar value={m.currentHp} max={m.maxHp} height={8} className="mt-0.5" />
               <p className="font-mono text-pixel-sm text-earth-400">{m.currentHp}/{m.maxHp}</p>
               {m.status && (
-                <p className="text-pixel-sm text-ember-500">
+                <p className="flex items-center gap-1 text-pixel-sm text-ember-500">
+                  <PixelIcon name={STATUS_META[m.status].icon} size={16} />
                   {statusLabel(m.status)} {m.statusTurns > 0 ? `${m.statusTurns}턴` : ""}
                 </p>
               )}

@@ -85,13 +85,13 @@ test("화면에 적히는 지속 턴이 전투가 쓰는 값과 같다", () => {
 });
 
 test("상태이상 표시는 좁은 곳·넓은 곳이 같은 표를 쓴다", () => {
-  assert.equal(statusLabel("poison"), "☠독");
-  assert.equal(statusBadge("poison", 3), "☠독 3턴");
-  assert.equal(statusDetail("poison", 3), "☠독 3턴 · 매 턴 -6%");
+  assert.equal(statusLabel("poison"), "독");
+  assert.equal(statusBadge("poison", 3), "독 3턴");
+  assert.equal(statusDetail("poison", 3), "독 3턴 · 매 턴 -6%");
   // 남은 턴을 모르는 자리에서는 걸렸을 때의 총 지속을 적는다
-  assert.equal(statusBadge("poison"), `☠독 ${STATUS_DURATION.poison}턴`);
+  assert.equal(statusBadge("poison"), `독 ${STATUS_DURATION.poison}턴`);
   // 깎이지 않는 상태이상에는 피해율을 붙이지 않는다
-  assert.equal(statusDetail("paralysis", 2), "⚡마비 2턴");
+  assert.equal(statusDetail("paralysis", 2), "마비 2턴");
   assert.equal(statusLabel(null), "");
 });
 

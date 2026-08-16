@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { FRESH_SAVE } from "./freshSave";
 
 /**
  * 자동 진행이 실제로 Q 없이 굴러가는지. npm run design:autolog
@@ -10,11 +11,11 @@ import { test, expect } from "@playwright/test";
 const GUEST = JSON.stringify({ state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 });
 
 test("fx: 로그 자동 진행", async ({ page }) => {
-  await page.addInitScript((g) => {
+  await page.addInitScript(({ g, fresh }) => {
     localStorage.setItem("monster-rpg-auth", g);
-    localStorage.removeItem("monster-rpg-player");
+    localStorage.setItem("monster-rpg-player", fresh);
     localStorage.removeItem("monster-rpg-battle-settings");
-  }, GUEST);
+  }, { g: GUEST, fresh: FRESH_SAVE });
   await page.goto("/battle");
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);

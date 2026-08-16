@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { rgba } from "../../shared/palette";
 import { scaleToLevel } from "../../shared/floorTable";
 import { monsters } from "../../monster/monsters";
@@ -7,6 +7,7 @@ import { usePlayerStore } from "../../shared/playerStore";
 import { chainKeyOf, tierOf, MAX_IMPRINT_TIER } from "../../monster/imprint";
 import { CaptureOverflowPrompt } from "../../monster/CaptureOverflowPrompt";
 import { rollNestChoices, nestBadge } from "./nest";
+import { canCatchIn, encounterLevelRange } from "./catchLevel";
 import type { ForestArea } from "./areas";
 import { alertBand, stepAlertDelta } from "./alert";
 import {
@@ -42,7 +43,12 @@ interface StepDraft {
   choices: Monster[];
 }
 
-function pickMonsterFor(area: ForestArea, kind: ForestStepKind, rng: () => number): Monster {
+function pickMonsterFor(
+  area: ForestArea, kind: ForestStepKind, rng: () => number, capLevel: number,
+): Monster | null {
+  const range = encounterLevelRange(area, capLevel);
+  if (range === null) return null;   // 파티 최고 레벨이 구역 최저에도 못 미친다
+
   // 강한 사건일수록 풀 후반부에서, 레벨 하한도 위로
   const strong = kind === "champion" || kind === "warden" || kind === "anomaly";
   const pool = strong ? area.monsterPool.slice(-2) : area.monsterPool;
@@ -50,8 +56,10 @@ function pickMonsterFor(area: ForestArea, kind: ForestStepKind, rng: () => numbe
   // 매번 다른 id 와 비교하게 되어 대개 아무것도 못 찾는다
   const id = pool[Math.floor(rng() * pool.length)];
   const base = monsters.find((m) => m.id === id)!;
-  const lvMin = strong ? Math.floor((area.levelRange[0] + area.levelRange[1]) / 2) : area.levelRange[0];
-  const level = lvMin + Math.floor(rng() * (area.levelRange[1] - lvMin + 1));
+  // 천장이 낮으면 하한도 같이 내려온다 — 안 그러면 강한 사건에서 범위가 뒤집힌다
+  const [areaMin, lvMax] = range;
+  const lvMin = strong ? Math.min(lvMax, Math.floor((area.levelRange[0] + area.levelRange[1]) / 2)) : areaMin;
+  const level = lvMin + Math.floor(rng() * (lvMax - lvMin + 1));
   return scaleToLevel(base, level);
 }
 
@@ -101,14 +109,14 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
 
     if (kind === "nest") {
       const count = 2 + (rng() < 0.5 ? 1 : 0);
-      const choices = rollNestChoices(area, count, step.ownedChains ?? [], rng);
+      const choices = rollNestChoices(area, count, step.ownedChains ?? [], rng, run.capLevel);
       return { gained, choices, monster: step.pick === null ? null : choices[step.pick] ?? null };
     }
     if (hasCatch(kind)) {
-      return { gained, choices: [], monster: pickMonsterFor(area, kind, rng) };
+      return { gained, choices: [], monster: pickMonsterFor(area, kind, rng, run.capLevel) };
     }
     return { gained, choices: [], monster: null };
-  }, [area, kind, alertForJudge, run.seed, run.depth, step.entered, step.pick, step.ownedChains]);
+  }, [area, kind, alertForJudge, run.seed, run.depth, run.capLevel, step.entered, step.pick, step.ownedChains]);
 
   // 본 것은 도감에 남는다. 굴림이 순수해야 복원이 성립하므로 기록은 굴림 밖에서 한다
   useEffect(() => {
@@ -132,9 +140,19 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
       : { entered: true });
   }, [patchStep, kind, ownedChains]);
 
+  /**
+   * 내놓을 몬스터가 없으면 포획 화면으로 보내지 않는다.
+   *
+   * 지금은 그런 사건이 애초에 뽑히지 않지만(`steps.candidates` 의 `canCatch`), 여기서 한 번 더
+   * 막는다 — 포획 화면이 빈손으로 뜨면 버튼이 하나도 없어 걸음에 갇힌다. 이 게임에서 제일
+   * 나쁜 고장은 막다른 화면이다.
+   */
+  const catchable = kind === "nest" ? draft !== null && draft.choices.length > 0 : draft?.monster != null;
+
   const phase: StepPhase =
     !step.entered ? "event"
     : step.done ? "resolved"
+    : !catchable ? "resolved"
     : kind === "nest" && step.pick === null ? "nest"
     : hasCatch(kind) ? "catch"
     : "resolved";
@@ -149,13 +167,13 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
       escaped: step.done?.escaped,
       // 시도 비용은 걸음이 끝날 때 한 번에 붙는다. 물러섰어도 건 만큼은 치른다
       attemptAlert: attemptAlertTotal(step.attempts),
-    });
+    }, canCatchIn(area, run.capLevel));
 
     // 주인은 만나면 거기서 끝난다
     if (kind === "warden") { onSettle("warden", next.bag, next.caught, next.alertPeak); return; }
     if (runIsOver(next)) { onSettle("forced", next.bag, next.caught, next.alertPeak); return; }
     setRun(next);
-  }, [draft, run, step.done, step.overflow, step.attempts, kind, onSettle, setRun]);
+  }, [draft, run, area, step.done, step.overflow, step.attempts, kind, onSettle, setRun]);
 
   const onCatchDone = useCallback((
     result: { caught: boolean; retreated: boolean },
@@ -182,7 +200,9 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
     return parts.length > 0 ? parts.join(" · ") : "아직 빈손이다";
   }, [run.bag, run.caught]);
 
-  const goHome = () => onSettle("voluntary", run.bag, run.caught, run.alertPeak);
+  /** 상대의 수를 공개하는 동안은 굴림이 끝날 때까지 나갈 수 없다 */
+  const [resolving, setResolving] = useState(false);
+  const goHome = () => { if (!resolving) onSettle("voluntary", run.bag, run.caught, run.alertPeak); };
 
   // 정찰은 "다음 걸음"이 아니라 지금 눈앞의 사건에 대해 말한다 — 아직 안 들어갔으니 예고다
   const scout = scoutStep(kind, run.depth, band.scout);
@@ -262,6 +282,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
             onReveal={() => patchStep({ attempts: step.attempts + 1, pending: null })}
             onResult={(r) => patchStep({ pending: r })}
             onDone={(r) => onCatchDone(r, draft.monster!)}
+            onResolving={setResolving}
           />
         )}
 
@@ -289,8 +310,9 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
         )}
       </div>
 
-      {/* ── 하단 바 ── */}
-      <div className="px-6 pb-5 pt-3"
+      {/* ── 하단 바 ──
+          오른쪽 여백은 자동 저장 배지 자리다(화면 우하단 고정, SaveIndicator). */}
+      <div className="pb-5 pl-6 pr-44 pt-3"
         style={{ background: `linear-gradient(to top, ${rgba("shadow900", 0.92)}, transparent)` }}>
         <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
           <p className="text-pixel-sm text-sand-300" data-testid="forest-scout">
@@ -303,12 +325,14 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={goHome}
+          <button type="button" onClick={goHome} disabled={resolving}
             data-testid="forest-go-home"
-            className="rounded-xl px-5 py-2.5 text-left text-pixel-sm font-bold transition active:scale-95"
+            className="rounded-xl px-5 py-2.5 text-left text-pixel-sm font-bold transition active:scale-95 disabled:opacity-40 disabled:active:scale-100"
             style={{ background: rgba("shadow900", 0.85), border: `1px solid ${rgba("stone600", 0.9)}`, color: "var(--color-sand-200)" }}>
             돌아간다
-            <span className="ml-2 text-pixel-sm text-earth-400">수확 100% 회수</span>
+            <span className="ml-2 text-pixel-sm text-earth-400">
+              {resolving ? "결과를 보고 나서" : "수확 100% 회수"}
+            </span>
           </button>
 
           {/* 뱅킹 결정에 정보가 있어야 한다 — 지금 확정될 것을 늘 적어 둔다 */}
@@ -316,7 +340,16 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
             지금 돌아가면 <span className="font-bold text-cream-100">{banked}</span> 확정으로 가져간다
           </p>
 
-          <p className="ml-auto text-pixel-sm text-earth-400">
+          {/* 이 걸음의 값. 예전에는 ml-auto 로 오른쪽 끝에 붙어 있어서 자동 저장 배지
+              (화면 우하단 고정) 밑으로 들어가 가장 중요한 숫자가 가려졌다.
+              돌아갈 이유(위)와 나아갈 값(아래)을 나란히 두는 편이 읽기도 낫다. */}
+          <p data-testid="forest-step-cost"
+            className="rounded-lg px-2.5 py-1 text-pixel-sm font-bold"
+            style={{
+              background: rgba("shadow900", 0.85),
+              border: `1px solid ${rgba("stone600", 0.9)}`,
+              color: "var(--color-sand-200)",
+            }}>
             {run.fork ? "고른 쪽의 소란이 붙는다"
               : def.tier === "warden" ? "여기서 원정이 끝난다"
               : `이번 걸음 ${scout.alertText}`}

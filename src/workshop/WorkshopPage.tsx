@@ -21,6 +21,7 @@ import {
 import {
   isCollisionDebugOn, onCollisionDebugChange, bindCollisionDebugKey, DEBUG_LINE_CSS,
 } from "../shared/collisionDebug";
+import { PixelIcon } from "../shared/ui/PixelIcon";
 
 // --- 타입 -------------------------------------------------------------
 
@@ -259,11 +260,11 @@ export default function WorkshopPage() {
   // ─── 렌더 ──────────────────────────────────────────────────────────────────
 
   const menuItems: GameMenuItem[] = [
-    { label: "내 몬스터", emoji: "👾", tone: "info",   onClick: () => navigate("/monsters") },
-    { label: "가방",      emoji: "🎒", tone: "accent", onClick: () => navigate("/farm", { state: { from: "workshop" } }) },
+    { label: "내 몬스터", icon: "monsters", tone: "info",   onClick: () => navigate("/monsters") },
+    { label: "가방",      icon: "bag", tone: "accent", onClick: () => navigate("/farm", { state: { from: "workshop" } }) },
     {
       label: "제작 목록",
-      emoji: "📜",
+      icon: "quest",
       onClick: () => { setShowCraftedPanel((v) => !v); setMenuOpen(false); },
     },
   ];
@@ -458,7 +459,7 @@ export default function WorkshopPage() {
                     animation: isNear ? undefined : "workshopMarkerBob 1.8s ease-in-out infinite",
                   }}
                 >
-                  {s.type === "anvil" ? "🔨" : s.type === "potion" ? "⚗️" : "✦"}
+                  <PixelIcon name={s.type === "anvil" ? "anvil" : s.type === "potion" ? "alchemy" : "artifact"} size={32} />
                 </div>
                 <span
                   className="mt-1 whitespace-nowrap rounded px-1.5 py-0.5 text-pixel-sm font-bold"

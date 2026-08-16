@@ -15,6 +15,7 @@ import { getFullLearnset } from "../monster/learnset";
 import { ALL_QUESTS } from "./campDialogues";
 import type { QuestDef } from "./campDialogues";
 import { getMaterial } from "../shared/items";
+import { PixelIcon } from "../shared/ui/PixelIcon";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
 import { useAuthStore } from "../auth/authStore";
 
@@ -341,8 +342,10 @@ function DexModal({ onClose }: { onClose: () => void }) {
               ))}
             </div>
 
-            {/* 몬스터 그리드 */}
-            <div className="overflow-y-auto flex-1 p-5">
+            {/* 몬스터 그리드 — 아래를 흐리게 덮어 "더 있다"를 표시한다.
+                안 그러면 마지막 줄이 잘린 채 끝나 스크롤이 있는지 알 수 없다. */}
+            <div className="relative flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto p-5">
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                 {filteredMonsters.map((m) => {
                   const seen   = dexSeen.includes(m.id);
@@ -362,7 +365,8 @@ function DexModal({ onClose }: { onClose: () => void }) {
                       {/* 포획 뱃지 고정 높이 영역 - 없어도 공간 유지 */}
                       <span className={`self-end text-pixel-sm font-bold h-4 leading-none ${caught ? "text-moss-500" : "invisible"}`}>포획</span>
 
-                      <div className="relative h-20 w-20 flex items-center justify-center bg-cream-100 rounded-lg overflow-hidden">
+                      <div className={`relative h-20 w-20 flex items-center justify-center rounded-lg overflow-hidden
+                        ${seen ? "bg-cream-100" : "bg-shadow-700"}`}>
                         {seen ? (
                           <img
                             src={MONSTER_IMAGE_MAP[m.id]}
@@ -375,7 +379,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                             src={MONSTER_IMAGE_MAP[m.id]}
                             alt="???"
                             className="h-20 w-20 object-contain"
-                            style={{ filter: "brightness(0)", opacity: 0.5 }}
+                            style={{ filter: "brightness(0)", opacity: 0.35 }}
                           />
                         )}
                       </div>
@@ -399,12 +403,15 @@ function DexModal({ onClose }: { onClose: () => void }) {
                       </div>
 
                       {seen && (
-                        <span className="text-pixel-sm text-earth-400 mt-auto">탭하여 상세보기</span>
+                        <span className="text-pixel-sm text-sand-300 mt-auto">눌러서 상세보기</span>
                       )}
                     </button>
                   );
                 })}
+                </div>
               </div>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8"
+                style={{ background: "linear-gradient(to top, rgba(13, 18, 35, 1), rgba(13, 18, 35, 0))" }} />
             </div>
           </>
         )}
@@ -491,7 +498,10 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
                 {status === "in_progress" && (
                   <div className="mt-3">
                     <div className="flex items-center justify-between text-pixel-sm text-sand-300 mb-1">
-                      <span>{objMat?.emoji ?? ""} {objMat?.name ?? q.objective.itemId}</span>
+                      <span className="flex items-center gap-1.5">
+                        {objMat && <PixelIcon name={objMat.icon} size={16} />}
+                        {objMat?.name ?? q.objective.itemId}
+                      </span>
                       <span className="font-mono">{Math.min(have, need)} / {need}</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-shadow-700 overflow-hidden">
@@ -508,8 +518,10 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
                   {q.rewards.map((r) => {
                     const mat = getMaterial(r.itemId);
                     return (
-                      <span key={r.itemId} className="rounded bg-shadow-700/70 px-1.5 py-0.5 text-pixel-sm text-sand-300">
-                        {mat?.emoji ?? "?"} {mat?.name ?? r.itemId} ×{r.amount}
+                      <span key={r.itemId}
+                        className="flex items-center gap-1 rounded bg-shadow-700/70 px-1.5 py-0.5 text-pixel-sm text-sand-300">
+                        {mat && <PixelIcon name={mat.icon} size={16} />}
+                        {mat?.name ?? r.itemId} ×{r.amount}
                       </span>
                     );
                   })}
@@ -528,6 +540,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
 function TowerModal({
   bestFloor,
   cleared,
+  partyEmpty,
   onSelect,
   onClose,
   onHeal,
@@ -535,6 +548,7 @@ function TowerModal({
 }: {
   bestFloor: number;
   cleared: boolean;
+  partyEmpty: boolean;
   onSelect: (floor: number) => void;
   onClose: () => void;
   onHeal: () => void;
@@ -566,10 +580,17 @@ function TowerModal({
           {bestFloor > 0 ? `최고 도달 층: ${bestFloor}층` : "아직 탑에 오른 기록이 없습니다."}
         </p>
 
+        {/* 파티가 비어 있으면 층을 고를 수 없다 — 첫 몬스터는 이장에게서 받는다 */}
+        {partyEmpty && (
+          <p className="mb-4 rounded-xl border border-ember-500/50 bg-ember-700/12 px-3 py-2 text-pixel-sm text-ember-500">
+            함께 오를 몬스터가 없다. 마을 안쪽의 이장 오리온에게 말을 걸어 보자.
+          </p>
+        )}
+
         {/* 회복을 여기서 바로 — 예전에는 /monsters까지 갔다가 탑 앞까지 다시 걸어와야 했다 */}
         <button
           onClick={onHeal}
-          disabled={healed}
+          disabled={healed || partyEmpty}
           className="mb-3 w-full rounded-xl border border-mist-500/70 bg-mist-500/15 py-2 text-pixel-sm font-semibold text-mist-300 hover:bg-mist-500/25 disabled:opacity-40 transition"
         >
           {healed ? "✓ 파티 회복 완료" : "+ 파티 HP 전회복"}
@@ -578,12 +599,13 @@ function TowerModal({
         <div className="flex flex-col gap-2">
           <button
             onClick={() => onSelect(1)}
-            className="w-full rounded-xl border border-stone-600 bg-shadow-700/70 py-2.5 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600 transition"
+            disabled={partyEmpty}
+            className="w-full rounded-xl border border-stone-600 bg-shadow-700/70 py-2.5 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600 disabled:opacity-40 disabled:hover:bg-shadow-700/70 transition"
           >
             1층부터 시작
           </button>
 
-          {bestFloor >= 1 && (
+          {!partyEmpty && bestFloor >= 1 && (
             <>
               <div className="text-pixel-sm text-earth-400 text-center pt-1">— 이어하기 —</div>
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
@@ -654,23 +676,23 @@ function CampMenu({
 
   const items: GameMenuItem[] = [
     // 탑 재도전 때마다 캐릭터를 탑까지 걸어가게 하지 않기 위해 메뉴에서도 층 선택을 연다
-    { label: "무한의 탑", emoji: "🗼", tone: "info",   onClick: onOpenTower },
-    { label: "퀘스트",    emoji: "📜", tone: "accent", onClick: onOpenQuestLog },
-    { label: "내 몬스터", emoji: "👾", tone: "info",   onClick: onGoToMonsters },
-    { label: "가방",      emoji: "🎒", tone: "accent", onClick: onGoToFarm },
-    { label: "도감",      emoji: "📖",                 onClick: onOpenDex },
+    { label: "무한의 탑", icon: "tower", tone: "info",   onClick: onOpenTower },
+    { label: "퀘스트",    icon: "quest", tone: "accent", onClick: onOpenQuestLog },
+    { label: "내 몬스터", icon: "monsters", tone: "info",   onClick: onGoToMonsters },
+    { label: "가방",      icon: "bag", tone: "accent", onClick: onGoToFarm },
+    { label: "도감",      icon: "dex",                 onClick: onOpenDex },
     // 엔딩을 본 사람만 다시 볼 수 있다
     ...(towerCleared
-      ? [{ label: "엔딩 다시 보기", emoji: "🏆", tone: "gold" as const, onClick: onReplayEnding }]
+      ? [{ label: "엔딩 다시 보기", icon: "trophy" as const, tone: "gold" as const, onClick: onReplayEnding }]
       : []),
     {
       label: "소리",
-      emoji: "🔊",
+      icon: "sound",
       separated: true,
       onClick: () => setShowAudio((v) => !v),
       panel: showAudio ? <div className="px-2 py-2"><AudioSettings /></div> : null,
     },
-    { label: isGuest ? "로그인" : "로그아웃", emoji: "🚪", tone: "accent", onClick: logout },
+    { label: isGuest ? "로그인" : "로그아웃", icon: "door", tone: "accent", onClick: logout },
   ];
 
   return (
@@ -695,7 +717,7 @@ export default function BaseCampPage() {
   );
   const [dexOpen, setDexOpen]           = useState(false);
   const [questLogOpen, setQuestLogOpen] = useState(false);
-  const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string; isCatchZone: boolean } | null>(null);
+  const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string } | null>(null);
   const [healed, setHealed] = useState(false);
   const [npcDialogue, setNpcDialogue]   = useState<NpcDialoguePayload | null>(null);
   const [dialogueLineIndex, setDialogueLineIndex] = useState(0);
@@ -703,6 +725,8 @@ export default function BaseCampPage() {
   const towerCleared = usePlayerStore((s) => s.storyFlags.tower_cleared);
   const restorePartyHp = usePlayerStore((s) => s.restorePartyHp);
   const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
+  const grantMonster = usePlayerStore((s) => s.grantMonster);
+  const partySize = usePlayerStore((s) => s.party.length);
   const storyFlags = usePlayerStore((s) => s.storyFlags);
   const craftedPotions = usePlayerStore((s) => s.craftedPotions);
 
@@ -720,16 +744,10 @@ export default function BaseCampPage() {
 
     const game = createBaseCampGame(gameRef.current);
 
-    const handleEnterBattle = (payload?: {
-      from?: string;
-      portalId?: string;
-      isCatchZone?: boolean;
-      floor?: number;
-    }) => {
+    const handleEnterBattle = (payload?: { from?: string; portalId?: string }) => {
       setTowerPayload({
         from: payload?.from ?? "basecamp",
         portalId: payload?.portalId ?? "none",
-        isCatchZone: payload?.isCatchZone ?? false,
       });
     };
 
@@ -763,6 +781,7 @@ export default function BaseCampPage() {
       setDialogueLineIndex((i) => i + 1);
       return;
     }
+    if (npcDialogue.grantsMonsterId) grantMonster(npcDialogue.grantsMonsterId);
     if (npcDialogue.setsFlag) setStoryFlag(npcDialogue.setsFlag);
     if (npcDialogue.acceptQuestId) acceptQuest(npcDialogue.acceptQuestId);
     if (npcDialogue.completeQuest) {
@@ -771,7 +790,7 @@ export default function BaseCampPage() {
     }
     setNpcDialogue(null);
     setDialogueLineIndex(0);
-  }, [npcDialogue, dialogueLineIndex, setStoryFlag, acceptQuest, completeQuest]);
+  }, [npcDialogue, dialogueLineIndex, setStoryFlag, grantMonster, acceptQuest, completeQuest]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -801,7 +820,6 @@ export default function BaseCampPage() {
       state: {
         from: towerPayload.from,
         portalId: towerPayload.portalId,
-        isCatchZone: towerPayload.isCatchZone,
         floor,
       },
     });
@@ -834,7 +852,7 @@ export default function BaseCampPage() {
         onOpenTower={() => {
           setMenuOpen(false);
           setHealed(false);
-          setTowerPayload({ from: "menu", portalId: "none", isCatchZone: false });
+          setTowerPayload({ from: "menu", portalId: "none" });
         }}
       />
 
@@ -847,6 +865,7 @@ export default function BaseCampPage() {
         <TowerModal
           bestFloor={bestFloor}
           cleared={towerCleared}
+          partyEmpty={partySize === 0}
           onSelect={handleTowerSelect}
           onClose={() => { setTowerPayload(null); setHealed(false); }}
           onHeal={() => { restorePartyHp(); setHealed(true); }}

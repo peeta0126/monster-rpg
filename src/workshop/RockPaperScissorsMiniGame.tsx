@@ -207,7 +207,7 @@ export function RockPaperScissorsMiniGame({ craftingItemName, onFinish }: Props)
               boxShadow: `0 0 16px ${rgba("earth500", 0.421)}`,
             }}
           >
-            ⚒  제작 완료
+            제작 완료
           </button>
         </>
       )}

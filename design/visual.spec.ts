@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { FRESH_SAVE } from "./freshSave";
 
 /**
  * 비주얼 리그레션. 의도치 않은 화면 변화를 잡는다.
@@ -52,12 +53,18 @@ async function settle(page: Page, phaser: boolean) {
 for (const screen of SCREENS) {
   test(`visual: ${screen.name}`, async ({ page }) => {
     await page.addInitScript(
-      ({ authKey, playerKey, authState, authed }) => {
+      ({ authKey, playerKey, authState, authed, fresh }) => {
         window.localStorage.removeItem(authKey);
         window.localStorage.removeItem(playerKey);
-        if (authed) window.localStorage.setItem(authKey, authState);
+        if (authed) {
+          window.localStorage.setItem(authKey, authState);
+          // 새 세이브는 파티가 비어 있고 첫 몬스터를 이장에게서 받는다 — 그대로 두면
+          // /battle 이 베이스캠프로 되돌려져 전투 대신 마을이 찍힌다.
+          window.localStorage.setItem(playerKey, fresh);
+        }
       },
-      { authKey: AUTH_STORAGE_KEY, playerKey: PLAYER_STORAGE_KEY, authState: GUEST_AUTH_STATE, authed: screen.auth },
+      { authKey: AUTH_STORAGE_KEY, playerKey: PLAYER_STORAGE_KEY, authState: GUEST_AUTH_STATE,
+        authed: screen.auth, fresh: FRESH_SAVE },
     );
     await page.goto(screen.path);
     await settle(page, screen.phaser);

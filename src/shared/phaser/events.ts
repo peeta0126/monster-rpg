@@ -103,6 +103,8 @@ export interface NpcDialoguePayload {
   lines: string[];
   portraitPath: string;
   setsFlag?: PersistedStoryFlag;
+  /** 대사가 끝나면 건네주는 몬스터 (첫 파티원) */
+  grantsMonsterId?: string;
   acceptQuestId?: string;
   completeQuest?: {
     questId: string;
