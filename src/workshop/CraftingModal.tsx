@@ -16,8 +16,7 @@ import { ArrowKeyCraftingMiniGame, TOTAL_KEYS, GREAT_MAX_WRONG, GOOD_MAX_WRONG }
 import type { ArrowMiniGameResult } from "./ArrowKeyCraftingMiniGame";
 import { PALETTE } from "../shared/palette";
 import { PixelIcon } from "../shared/ui/PixelIcon";
-import { iconUrl } from "../shared/ui/icons";
-import type { IconName } from "../shared/ui/icons";
+import { isIconName, type IconName } from "../shared/ui/icons";
 
 // ─── 중세 공방 팔레트 ──────────────────────────────────────────────────────────
 const C = {
@@ -68,7 +67,6 @@ const STATION_ICON: Record<CraftingStationType, IconName> = {
  */
 function CostBox({ cost, have }: { cost: { itemId: string; name: string; amount: number }; have: number }) {
   const ok = have >= cost.amount;
-  const icon = iconUrl(cost.itemId);
   return (
     <span
       className="flex items-center gap-1.5 rounded-lg border px-2 py-1 text-pixel-sm"
@@ -77,8 +75,7 @@ function CostBox({ cost, have }: { cost: { itemId: string; name: string; amount:
         background:  ok ? "rgba(122, 132, 85, .1)"   : "rgba(168, 61, 31, .12)",
       }}
     >
-      {icon && <img src={icon} alt="" aria-hidden width={16} height={16}
-        style={{ imageRendering: "pixelated" }} />}
+      {isIconName(cost.itemId) && <PixelIcon name={cost.itemId} size={16} />}
       <span className="flex flex-col leading-tight">
         <span className="font-bold" style={{ color: PALETTE.cream100 }}>
           {cost.name} {cost.amount}

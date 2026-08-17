@@ -11,7 +11,7 @@ import type { ArtifactStatType, ArtifactInstance, CraftedPotionStack } from "../
 
 import { PALETTE } from "../shared/palette";
 import { PixelIcon } from "../shared/ui/PixelIcon";
-import { iconUrl, type IconName } from "../shared/ui/icons";
+import { isIconName, type IconName } from "../shared/ui/icons";
 import { SlotGrid, EmptySlot } from "../shared/ui/SlotGrid";
 import { GameBackground } from "../shared/ui/GameBackground";
 import { EmptyState } from "../shared/ui";
@@ -187,10 +187,9 @@ function PotionsSection({
                 boxShadow: `0 0 16px ${color}22`,
                 animation: `bagIn .35s ease ${i * .07}s both`,
               }}>
-              {/* 이미지 or 이모지 */}
               <div className="w-8 h-8 flex-shrink-0 relative">
-                <img src={iconUrl(stack.itemId) ?? iconUrl("potion")} alt={stack.name}
-                  className="w-8 h-8 pixel-img" />
+                <PixelIcon name={isIconName(stack.itemId) ? stack.itemId : "potion"} size={32}
+                  title={stack.name} />
                 <div className="absolute -top-1 -right-1 rounded-full w-5 h-5 flex items-center justify-center"
                   style={{ background: color, fontSize: 12, fontWeight: 900, color: PALETTE.shadow900, animation: "countPop .4s ease both" }}>
                   {stack.quantity}

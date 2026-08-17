@@ -98,11 +98,13 @@ export const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-export function iconUrl(name: string): string | undefined {
-  return ICONS[name as IconName];
-}
-
-/** 아이템 id 처럼 표 밖에서 온 문자열을 아이콘 이름으로 좁힌다. */
+/**
+ * 아이템 id 처럼 표 밖에서 온 문자열을 아이콘 이름으로 좁힌다.
+ *
+ * 예전엔 URL 을 바로 내주는 `iconUrl` 도 있었는데 걷어냈다. 그건 위 표(=SVG 폴백)를
+ * 가리키므로, 그걸로 `<img>` 를 만들면 그림 파일이 있어도 옛 SVG 가 나간다.
+ * 조용히 틀린 그림이 나오는 쪽이라 눈으로 잡히지 않는다. 아이콘은 PixelIcon 으로만 그린다.
+ */
 export function isIconName(name: string): name is IconName {
   return name in ICONS;
 }
