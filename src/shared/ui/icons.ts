@@ -49,7 +49,13 @@ import statusParalysisSvg  from "../../assets/ui/status-paralysis.svg";
 import statusFreezeSvg     from "../../assets/ui/status-freeze.svg";
 
 /**
- * 아이콘 한 벌.
+ * 아이콘 한 벌 — **폴백**이다.
+ *
+ * 재료·물약·아티팩트 21종은 이제 그림 파일(public/assets/icons/*.webp)로 나간다.
+ * 여기 적힌 SVG 는 그 파일이 없을 때 대신 그려진다. 지우지 말 것 — 굽지 않은 채로
+ * 클론한 곳에서도 화면이 비지 않아야 한다.
+ *
+ * 상태이상·메뉴·공방 탭은 그림 파일이 없어 계속 이 SVG 로 나간다.
  *
  * 예전에는 화면마다 이모지를 박아 뒀다. 이모지는 글꼴이 그리는 그림이라 픽셀아트와
  * 톤이 안 맞고, 같은 자리에 픽셀 SVG 와 이모지가 섞여 나왔다(가방의 약초는 픽셀아트,
@@ -94,4 +100,9 @@ export type IconName = keyof typeof ICONS;
 
 export function iconUrl(name: string): string | undefined {
   return ICONS[name as IconName];
+}
+
+/** 아이템 id 처럼 표 밖에서 온 문자열을 아이콘 이름으로 좁힌다. */
+export function isIconName(name: string): name is IconName {
+  return name in ICONS;
 }

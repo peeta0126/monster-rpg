@@ -60,3 +60,17 @@ export function towerBattleBg(zone: TowerZone, element: ElementType): string {
   const el = zone === "z50" ? "normal" : element;
   return `/assets/tower/${zone}_${el}.webp`;
 }
+
+/**
+ * 아이템 아이콘 (64x64, 재료·물약·아티팩트).
+ *
+ * 이름을 나열하지 않는다 — 파일명이 곧 아이템 id 다(shared/items.ts 가 `icon` 을 `id` 와
+ * 같게 둔다). 어느 id 에 그림이 있는지는 `shared/ui/rasterIcons.ts` 가 안다. 그 표는
+ * scripts/build-icons.mjs 가 art-src/icons/ 를 보고 쓴다.
+ *
+ * 그림이 없는 이름(상태이상·메뉴·공방 탭)은 여기 오지 않고 SVG 로 그려진다 —
+ * PixelIcon 이 갈라 준다.
+ */
+export function itemIconUrl(id: string): string {
+  return `/assets/icons/${id}.webp`;
+}
