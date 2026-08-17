@@ -86,8 +86,12 @@ const RECIPES = [
  * "레시피에 안 적었으니 안전하다"로 두지 않고 검사로 박아 둔 이유: 언젠가 누가
  * art-src/forest_deep.png 를 넣고 레시피 한 줄을 추가하면 그날 조용히 깎인다.
  * 그때 이 검사가 먼저 죽는다.
+ *
+ * assets/icons 도 같은 이유로 들어 있다. 아이템 아이콘은 scripts/build-icons.mjs 가
+ * art-src/icons/ 에서 64x64 무손실로 굽는다. 여기서 quality 82 로 다시 구우면 픽셀
+ * 테두리가 번진다 — 24px 로 보는 그림에서 그건 바로 보인다.
  */
-const PRESERVED_DIRS = ["assets/forest"];
+const PRESERVED_DIRS = ["assets/forest", "assets/icons"];
 
 /** 몬스터 일러스트 — art-src/monsters/*.png 를 512px 상한으로 줄여 내보낸다 */
 const MONSTER_SRC_DIR = "monsters";
