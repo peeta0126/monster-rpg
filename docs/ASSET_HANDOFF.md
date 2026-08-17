@@ -2,6 +2,9 @@
 
 플레이어 8방향 스프라이트를 받았을 때 무엇을 어디에 넣고 코드에서 뭘 켜는지.
 
+> 밖에서 받아 온 에셋의 출처·라이선스는 [ASSET_CREDITS.md](ASSET_CREDITS.md) 에 적는다.
+> 새 에셋을 넣었으면 그 표에도 한 줄 더할 것.
+
 ## 1. 파일 위치
 
 ```
@@ -143,3 +146,25 @@ playBgm(BGM.battle);        // 기본 loop, 400ms 페이드인
 `/^[a-zA-Z0-9_]{3,20}$/` 로 막고, 몬스터 `nickname` 은 읽기만 하며 설정 UI 가 없다.
 **닉네임 입력 기능을 추가한다면 이 전제가 깨진다** — 그때는 서브셋 범위를
 KS X 1001 상용 2,350자 이상으로 넓혀야 한다.
+
+---
+
+# 아이템 아이콘
+
+재료·물약·아티팩트 21종은 그림 파일로 나간다. 새 아이콘을 넣는 절차:
+
+1. `art-src/icons/<아이템 id>.png` 로 넣는다. 파일명이 곧 아이템 id 다
+   (`src/shared/items.ts` 가 `icon` 을 `id` 와 같게 둔다).
+2. `npm run build:icons:sheet`
+3. `design/screenshots/icons-sheet.png` 을 눈으로 확인한다. 체커 배경이 비쳐야 정상이고,
+   흰 네모가 보이면 배경이 안 지워진 것이다.
+4. `src/shared/ui/icons.ts` 에 같은 이름의 SVG 폴백을 하나 그려 둔다.
+5. [ASSET_CREDITS.md](ASSET_CREDITS.md) 표에 출처를 적는다.
+
+원본은 `art-src/` 에, 산출물은 `public/assets/icons/` 에 나온다. **원본을 `public/` 에 두지
+말 것** — `scripts/optimize-assets.mjs` 가 "출력은 어떤 레시피의 입력도 될 수 없다"를
+검사로 막고 있다. 그리고 `public/assets/icons` 는 그 스크립트의 보존 디렉터리다.
+64×64 무손실로 이미 구워진 것이라 quality 82 로 다시 구우면 픽셀 테두리가 번진다.
+
+굽는 규칙(합집합 틀·논리 격자·정수배 확대)은 `scripts/build-icons.mjs` 머리말에 있다.
+표시 크기는 **16 / 32 / 64** 만 쓴다.
