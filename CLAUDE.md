@@ -13,10 +13,16 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
 - 전투 몬스터의 좌우 방향은 `battleLayout.shouldFlipX` 로만 정한다. 왼쪽에 선 쪽만 뒤집는다.
 - 폰트 크기는 Galmuri 기준 크기의 정수배만 (12/24/36px). text-pixel-* / text-title-* 만 쓴다.
 - 몬스터 일러스트에 image-rendering: pixelated 를 적용하지 말 것.
-- **이모지를 쓰지 말 것.** 아이콘은 `shared/ui/icons.ts` 한 벌이고 `<PixelIcon>` 으로만 그린다.
-  새 아이콘은 `src/assets/{ui,materials,artifacts}` 에 32x32 픽셀 SVG 를 그려 넣고 그 표에 이름을
-  더한다. 표시 크기는 **16 / 32 / 64** 만 — 24·48 은 1.5배라 crispEdges 로 그린 칸이 들쭉날쭉해진다.
+- **이모지를 쓰지 말 것.** 아이콘은 `<PixelIcon>` 으로만 그린다 — 부품을 하나 더 만들지 말 것.
   이모지는 픽셀 폰트에 없어 그 글자만 다른 서체로 떨어지고, 플랫폼마다 다르게 그려진다.
+  표시 크기는 **16 / 32 / 64** 만 — 24·48 은 격자의 1.5·0.75배라 칸 폭이 들쭉날쭉해진다.
+  아이콘은 두 벌이 맞물려 있다:
+  · 재료·물약·아티팩트 21종 — `art-src/icons/*.png` 를 `npm run build:icons` 로 굽는다.
+    절차는 docs/ASSET_HANDOFF.md, 출처는 docs/ASSET_CREDITS.md.
+  · 그 밖(상태이상·메뉴·공방 탭) — `src/assets/{ui,materials,potions,artifacts}` 의 32x32
+    픽셀 SVG. `shared/ui/icons.ts` 표에 이름을 더한다.
+  SVG 표는 21종의 **폴백도 겸한다.** 굽지 않고 클론한 곳에서도 화면이 비지 않으려면 있어야
+  하니 지우지 말 것. 어긋나면 `tests/itemIcons.test.ts` 가 잡는다.
 - **조사를 괄호로 쓰지 말 것.** `shared/josa.ts` 의 `withJosa(이름, "은는")` 을 쓴다.
   전투 로그는 이 게임에서 제일 자주 읽는 글이라 "○○은(는)" 이 그대로 나가면 매 턴 괄호를 읽게 된다.
 - 여백은 4px 그리드. Tailwind 임의값(p-[13px]) 금지.
