@@ -13,9 +13,9 @@ import { AudioSettings } from "../shared/ui/AudioSettings";
 import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
 import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
-import { ALL_QUESTS } from "./campDialogues";
+import { ALL_QUESTS, activeQuestFor } from "./campDialogues";
 import type { QuestDef } from "./campDialogues";
-import { evaluateObjective } from "./questObjectives";
+import { evaluateObjective, objectiveWhere } from "./questObjectives";
 import type { QuestSnapshot } from "./questObjectives";
 import { monsterReward, grantedMonsterLevel, rewardDisplay } from "./questRewards";
 import type { QuestReward, RewardDisplay } from "./questRewards";
@@ -541,11 +541,48 @@ function useQuestSnapshot(): QuestSnapshot {
 
 function QuestLogModal({ onClose }: { onClose: () => void }) {
   const questStatus = usePlayerStore((s) => s.questStatus);
-  const snapshot = useQuestSnapshot();
+  const storyFlags  = usePlayerStore((s) => s.storyFlags);
+  const bestFloor   = usePlayerStore((s) => s.bestFloor);
+  const snapshot    = useQuestSnapshot();
+  const [showDone, setShowDone] = useState(false);
 
-  const visibleQuests = ALL_QUESTS.filter(
-    (q) => (questStatus[q.id] ?? "not_accepted") !== "not_accepted",
-  );
+  const status = (q: QuestDef) => questStatus[q.id] ?? "not_accepted";
+
+  const inProgress = ALL_QUESTS.filter((q) => status(q) === "in_progress");
+  const completed  = ALL_QUESTS.filter((q) => status(q) === "completed");
+  // 아직 수락하지 않았지만 지금 가면 받을 수 있는 것. 제목은 가린다 —
+  // 무슨 부탁인지는 만나서 듣는 게 맞다
+  const waiting = (["orion", "baros"] as const)
+    .map((npcId) => activeQuestFor(npcId, storyFlags, bestFloor, questStatus))
+    .filter((q): q is QuestDef => !!q && status(q) === "not_accepted");
+
+  // 맨 위 한 장 — 지금 뭘 해야 하는지. 진행 중인 것 중 첫째가 기본이고,
+  // 없으면 받으러 갈 사람을 가리킨다
+  const headline = (() => {
+    const doing = inProgress[0];
+    if (doing) {
+      const p = evaluateObjective(doing.objective, snapshot);
+      return {
+        fromQuestId: doing.id,
+        title: doing.title,
+        line: p.label,
+        where: p.done ? `${QUEST_NPC_KO[doing.npcId]}에게 돌아가기` : objectiveWhere(doing.objective),
+        rewards: doing.rewards,
+        progress: p,
+      };
+    }
+    if (waiting[0]) {
+      return {
+        fromQuestId: null,
+        title: "할 말이 있어 보인다",
+        line: `${QUEST_NPC_KO[waiting[0].npcId]}에게 말을 걸어 보세요`,
+        where: waiting[0].npcId === "baros" ? "탑 입구" : "마을 안쪽",
+        rewards: null,
+        progress: null,
+      };
+    }
+    return null;
+  })();
 
   return (
     <div
@@ -561,9 +598,9 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
           <div>
             <h2 className="text-pixel-md font-bold text-cream-100">퀘스트</h2>
             <p className="text-pixel-sm text-sand-300 mt-0.5">
-              진행중 {visibleQuests.filter((q) => questStatus[q.id] === "in_progress").length}
+              진행중 {inProgress.length}
               &nbsp;·&nbsp;
-              완료 {visibleQuests.filter((q) => questStatus[q.id] === "completed").length}
+              완료 {completed.length} / {ALL_QUESTS.length}
             </p>
           </div>
           <button
@@ -574,84 +611,156 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* 목록 */}
         <div className="overflow-y-auto flex-1 p-5 space-y-3">
-          {visibleQuests.length === 0 && (
-            <div className="text-center py-10 text-earth-400">
-              <p className="text-pixel-sm">아직 진행 중인 퀘스트가 없습니다.</p>
-              <p className="text-pixel-sm mt-1 text-shadow-800">마을 사람에게 말을 걸어보세요.</p>
-            </div>
-          )}
-
-          {visibleQuests.map((q) => {
-            const status = questStatus[q.id] ?? "not_accepted";
-            const badge  = QUEST_STATUS_BADGE[status];
-            // 목표가 넷으로 나뉘어 재료 수량만으로는 못 그린다. 종류마다 자기 진행도를 낸다
-            const progress = evaluateObjective(q.objective, snapshot);
-            const objMat = q.objective.kind === "material" ? getMaterial(q.objective.itemId) : undefined;
-            const pct = progress.need
-              ? Math.min(100, Math.round(((progress.have ?? 0) / progress.need) * 100))
-              : (progress.done ? 100 : 0);
-
-            return (
-              <div
-                key={q.id}
-                className={`rounded-xl border p-4 ${
-                  status === "completed"
-                    ? "border-shadow-700 bg-shadow-800/40 opacity-60"
-                    : "border-stone-600 bg-shadow-800"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="rounded border border-stone-600 bg-shadow-700 px-1.5 py-0.5 text-pixel-sm text-sand-300 shrink-0">
-                      {QUEST_NPC_KO[q.npcId]}
-                    </span>
-                    <p className="font-bold text-cream-100 text-pixel-sm truncate">{q.title}</p>
-                  </div>
-                  <span className={`shrink-0 rounded border px-2 py-0.5 text-pixel-sm font-semibold ${badge.className}`}>
-                    {badge.label}
+          {/* 지금 할 일 — 목록에 섞어 두면 여덟 개 사이에서 찾아야 한다 */}
+          {headline && (
+            <div className="rounded-xl border-2 border-ember-700/70 bg-ember-700/10 p-4"
+              data-testid="quest-headline">
+              <p className="text-pixel-sm text-ember-500 font-bold">지금 할 일</p>
+              <p className="mt-1 text-pixel-sm font-bold text-cream-100">{headline.title}</p>
+              <div className="mt-1 flex items-center justify-between gap-2 text-pixel-sm">
+                <span className="text-sand-300">{headline.line}</span>
+                {headline.progress && (
+                  <span className={headline.progress.done ? "text-moss-500 font-bold" : "font-mono text-sand-300"}>
+                    {headline.progress.need !== undefined
+                      ? `${headline.progress.have ?? 0} / ${headline.progress.need}`
+                      : (headline.progress.done ? "충족" : "아직")}
                   </span>
-                </div>
-
-                {status === "in_progress" && (
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-pixel-sm text-sand-300 mb-1">
-                      <span className="flex items-center gap-1.5">
-                        {objMat && <PixelIcon name={objMat.icon} size={16} />}
-                        {progress.label}
-                      </span>
-                      <span className="font-mono">
-                        {progress.need !== undefined
-                          ? `${progress.have ?? 0} / ${progress.need}`
-                          : (progress.done ? "완료" : "아직")}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-shadow-700 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-ember-500 transition-all duration-300"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
                 )}
-
-                <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+              </div>
+              {headline.progress?.need !== undefined && (
+                <div className="mt-1 h-1.5 w-full rounded-full bg-shadow-900/70 overflow-hidden">
+                  <div className="h-full rounded-full bg-ember-500 transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.round(((headline.progress.have ?? 0) / headline.progress.need) * 100))}%` }} />
+                </div>
+              )}
+              <p className="mt-1.5 text-pixel-sm text-earth-400">→ {headline.where}</p>
+              {headline.rewards && (
+                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                   <span className="text-pixel-sm text-earth-400">보상</span>
-                  {/* 아직 안 받은 것은 몬스터를 가린다 — 뭘 받을지 미리 알면 완료 대사가 죽는다 */}
-                  {q.rewards.map(
-                    (r) => rewardDisplay(r, status !== "completed")).map((d, i) => (
+                  {headline.rewards.map((r) => rewardDisplay(r, true)).map((d, i) => (
                     <span key={`${d.name}-${i}`}
-                      className="flex items-center gap-1 rounded bg-shadow-700/70 px-1.5 py-0.5 text-pixel-sm text-sand-300">
+                      className="flex items-center gap-1 rounded bg-shadow-900/60 px-1.5 py-0.5 text-pixel-sm text-sand-300">
                       {d.icon && <PixelIcon name={d.icon} size={16} />}
                       {d.name}{d.amount !== undefined ? ` ×${d.amount}` : ""}
                     </span>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          {!headline && inProgress.length === 0 && completed.length === 0 && (
+            <div className="text-center py-10 text-earth-400">
+              <p className="text-pixel-sm">아직 받은 부탁이 없습니다.</p>
+              <p className="text-pixel-sm mt-1 text-shadow-800">마을 사람에게 말을 걸어보세요.</p>
+            </div>
+          )}
+
+          {/* 진행 중 — 맨 위 판에 올린 하나는 뺀다. 같은 내용을 두 번 읽게 할 이유가 없다 */}
+          {inProgress.slice(headline?.fromQuestId ? 1 : 0).map((q) => (
+            <QuestCard key={q.id} quest={q} status="in_progress" snapshot={snapshot} />
+          ))}
+
+          {/* 받을 수 있는 것 — 제목을 가린다 */}
+          {waiting.map((q) => (
+            <div key={q.id}
+              className="rounded-xl border border-dashed border-stone-600 bg-shadow-800/50 p-4">
+              <div className="flex items-center gap-2">
+                <span className="rounded border border-stone-600 bg-shadow-700 px-1.5 py-0.5 text-pixel-sm text-sand-300">
+                  {QUEST_NPC_KO[q.npcId]}
+                </span>
+                <p className="text-pixel-sm text-sand-300">할 말이 있어 보인다</p>
               </div>
-            );
-          })}
+            </div>
+          ))}
+
+          {/* 완료 — 접어 둔다. 여덟 개가 다 펼쳐져 있으면 진행 중인 하나를 못 찾는다 */}
+          {completed.length > 0 && (
+            <div className="pt-1">
+              <button
+                onClick={() => setShowDone((v) => !v)}
+                className="w-full rounded-lg border border-shadow-700 bg-shadow-800/60 px-3 py-2 text-pixel-sm text-sand-300 hover:text-sand-200"
+              >
+                완료한 부탁 {completed.length}개 {showDone ? "접기" : "펼치기"}
+              </button>
+              {showDone && (
+                <div className="mt-2 space-y-2">
+                  {completed.map((q) => (
+                    <QuestCard key={q.id} quest={q} status="completed" snapshot={snapshot} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** 퀘스트 카드 한 장. 진행도는 목표 종류마다 다르게 그린다 */
+function QuestCard({ quest, status, snapshot }: {
+  quest: QuestDef;
+  status: QuestStatus;
+  snapshot: QuestSnapshot;
+}) {
+  const badge = QUEST_STATUS_BADGE[status];
+  const progress = evaluateObjective(quest.objective, snapshot);
+  const objMat = quest.objective.kind === "material" ? getMaterial(quest.objective.itemId) : undefined;
+  const done = status === "completed";
+
+  return (
+    <div className={`rounded-xl border p-4 ${
+      done ? "border-shadow-700 bg-shadow-800/40 opacity-60" : "border-stone-600 bg-shadow-800"
+    }`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="rounded border border-stone-600 bg-shadow-700 px-1.5 py-0.5 text-pixel-sm text-sand-300 shrink-0">
+            {QUEST_NPC_KO[quest.npcId]}
+          </span>
+          <p className="font-bold text-cream-100 text-pixel-sm truncate">{quest.title}</p>
+        </div>
+        <span className={`shrink-0 rounded border px-2 py-0.5 text-pixel-sm font-semibold ${badge.className}`}>
+          {badge.label}
+        </span>
+      </div>
+
+      {!done && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-pixel-sm text-sand-300 mb-1">
+            <span className="flex items-center gap-1.5">
+              {objMat && <PixelIcon name={objMat.icon} size={16} />}
+              {progress.label}
+            </span>
+            {/* 숫자로 셀 수 있는 목표만 개수를 적는다. "1/1" 은 아무 정보도 아니다 */}
+            <span className={progress.done ? "text-moss-500 font-bold" : "font-mono"}>
+              {progress.need !== undefined
+                ? `${progress.have ?? 0} / ${progress.need}`
+                : (progress.done ? "충족" : "아직")}
+            </span>
+          </div>
+          {progress.need !== undefined && (
+            <div className="h-1.5 w-full rounded-full bg-shadow-700 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-ember-500 transition-all duration-300"
+                style={{ width: `${Math.min(100, Math.round(((progress.have ?? 0) / progress.need) * 100))}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+        <span className="text-pixel-sm text-earth-400">보상</span>
+        {/* 아직 안 받은 것은 몬스터를 가린다 — 뭘 받을지 미리 알면 완료 대사가 죽는다 */}
+        {quest.rewards.map((r) => rewardDisplay(r, !done)).map((d, i) => (
+          <span key={`${d.name}-${i}`}
+            className="flex items-center gap-1 rounded bg-shadow-700/70 px-1.5 py-0.5 text-pixel-sm text-sand-300">
+            {d.icon && <PixelIcon name={d.icon} size={16} />}
+            {d.name}{d.amount !== undefined ? ` ×${d.amount}` : ""}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -855,11 +964,24 @@ export default function BaseCampPage() {
   const storyFlags = usePlayerStore((s) => s.storyFlags);
   const craftedPotions = usePlayerStore((s) => s.craftedPotions);
 
-  // 이 화면은 캔버스뿐이라 "다음에 뭘 하지"가 어디에도 안 적혀 있었다
+  // 이 화면은 캔버스뿐이라 "다음에 뭘 하지"가 어디에도 안 적혀 있었다.
+  // 진행 중인 부탁이 있으면 그게 앞선다 — 예전에는 1층 이후로 "N층에 도전해 보세요"만
+  // 반복해서, 벽에 부딪힌 사람에게 제작·강화를 한 번도 안 짚어 줬다.
+  const questSnapshot = useQuestSnapshot();
+  const questStatus = usePlayerStore((s) => s.questStatus);
+  const activeQuestLine = (() => {
+    const doing = ALL_QUESTS.find((q) => questStatus[q.id] === "in_progress");
+    if (!doing) return null;
+    const p = evaluateObjective(doing.objective, questSnapshot);
+    return p.done
+      ? { text: `${QUEST_NPC_KO[doing.npcId]}에게 돌아가 보세요`, where: doing.npcId === "baros" ? "탑 입구" : "마을 안쪽" }
+      : { text: `${doing.title} — ${p.label}`, where: objectiveWhere(doing.objective) };
+  })();
   const objective = getNextObjective({
     storyFlags,
     bestFloor,
     potionCount: craftedPotions.reduce((a, p) => a + p.quantity, 0),
+    activeQuest: activeQuestLine,
   });
   const acceptQuest = usePlayerStore((s) => s.acceptQuest);
   const completeQuest = usePlayerStore((s) => s.completeQuest);

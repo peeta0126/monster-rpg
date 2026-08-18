@@ -105,6 +105,18 @@ export function evaluateObjective(o: QuestObjective, s: QuestSnapshot): QuestPro
   }
 }
 
+/** 그 목표를 채우려면 어디로 가야 하는가. "지금 할 일" 한 줄이 이걸 쓴다 */
+export function objectiveWhere(o: QuestObjective): string {
+  switch (o.kind) {
+    case "material":      return "숲";
+    case "floor":         return "탑";
+    case "catchType":     return "숲";
+    case "equipped":      return "집";
+    case "artifactLevel": return "집";
+    case "potion":        return "집";
+  }
+}
+
 /**
  * 완료할 때 가져가는 것. **재료 목표만 차감한다.**
  *

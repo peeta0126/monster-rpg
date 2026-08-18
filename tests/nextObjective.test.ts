@@ -33,3 +33,36 @@ test("엔딩까지 봤으면 목표가 없다", () => {
   });
   assert.equal(getNextObjective({ storyFlags: done, bestFloor: 50, potionCount: 5 }), null);
 });
+
+test("진행 중인 부탁이 '다음 층에 도전' 보다 앞선다", () => {
+  // 예전에는 1층 이후로 층 안내만 반복해서, 벽에 부딪힌 사람이 갈 곳을 몰랐다
+  const flags = {
+    met_orion: true, met_baros: true, first_capture: true,
+    quest_baros_done: true, quest_orion_done: true, tower_cleared: false,
+  };
+  const withQuest = getNextObjective({
+    storyFlags: flags, bestFloor: 12, potionCount: 5,
+    activeQuest: { text: "맨몸으로는 안 된다 — 아티팩트를 만들어 장착하기", where: "집" },
+  });
+  assert.equal(withQuest?.where, "집");
+  assert.ok(withQuest?.text.includes("아티팩트"));
+
+  const without = getNextObjective({
+    storyFlags: flags, bestFloor: 12, potionCount: 5, activeQuest: null,
+  });
+  assert.equal(without?.text, "무한의 탑 13층에 도전해 보세요");
+});
+
+test("엔딩을 봤어도 남은 부탁이 있으면 그걸 가리킨다", () => {
+  const flags = {
+    met_orion: true, met_baros: true, first_capture: true,
+    quest_baros_done: true, quest_orion_done: true, tower_cleared: true,
+  };
+  assert.equal(getNextObjective({
+    storyFlags: flags, bestFloor: 50, potionCount: 5, activeQuest: null,
+  }), null);
+  assert.ok(getNextObjective({
+    storyFlags: flags, bestFloor: 50, potionCount: 5,
+    activeQuest: { text: "어머니의 치료약", where: "집" },
+  }));
+});
