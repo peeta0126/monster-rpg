@@ -120,12 +120,215 @@ export const ORION_MOTHERS_MEDICINE_QUEST: QuestDef = {
 };
 
 /**
+ * 5층 · 바로스 — 장비를 처음 만들어 끼게 한다.
+ *
+ * 5층 이야기 대사가 "슬슬 맨몸으로는 안 된다"고 짚는데 그걸 강제하는 게 아무것도 없었다.
+ * 보상이 강화석인 건 의도다 — **11층 위 전투와 고대 숲에만 있어서 이 시점에는 구할 길이
+ * 아예 없다.** 모루가 그때부터 돈다.
+ */
+export const BAROS_GEAR_UP_QUEST: QuestDef = {
+  id: "baros_gear_up",
+  title: "맨몸으로는 안 된다",
+  npcId: "baros",
+  requires: { flag: "floor_5", questDone: "baros_first_hunt" },
+  objective: { kind: "equipped" },
+  rewards: [
+    { kind: "material", itemId: "enhancement_stone", amount: 3 },
+    { kind: "material", itemId: "magic_dust", amount: 2 },
+  ],
+  acceptLines: [
+    "5층까지 맨몸으로 왔다지. 운이 좋았다.",
+    "공방 가서 아티팩트를 하나 만들어 채워라. 뭐든 좋다.",
+    "만들고 끝내지 마라. 끼워야 장비다.",
+  ],
+  progressLines: ["아직 맨몸이군. 만들어서 채우고 와라."],
+  completeLines: [
+    "그래. 그게 장비다.",
+    "강화석 셋이다. 모루에서 레벨을 올리는 데 쓴다.",
+    "지금은 그거 어디서도 못 구한다. 11층 위에 올라가야 나온다.",
+    "아껴 써라. 다음에 줄 일은 없다.",
+  ],
+};
+
+/**
+ * 10층 · 오리온 — 이야기가 "나도 10층에서 멈췄다"를 말하는 자리. 그 대사를 퀘스트가 받는다.
+ *
+ * **몬스터를 주는 유일한 퀘스트다.** 리피인 이유는 세 가지다.
+ *   · 로스터에서 풀은 리피 하나뿐이고, 리피가 나오는 얕은 숲은 레벨 상한이 8이다. 숲이
+ *     파티 최고 레벨을 천장으로 쓰므로 10층을 넘긴 파티는 **쓸 만한 레벨로 잡을 수단이
+ *     영영 없다.**
+ *   · 풀은 전기를 두 배로 때린다. 20층 격노한 모치와 40층 전설의 모왕이 둘 다 전기다.
+ *   · 진화가 없고 총합 능력치가 하위라 탑을 시시하게 만들지 않는다. 상성 조커다.
+ */
+export const ORION_WHERE_I_STOPPED_QUEST: QuestDef = {
+  id: "orion_where_i_stopped",
+  title: "내가 멈춘 자리",
+  npcId: "orion",
+  requires: { questDone: "orion_mothers_medicine", minFloor: 6 },
+  objective: { kind: "floor", floor: 10 },
+  rewards: [
+    // 레벨은 받는 시점 파티 최고 레벨보다 둘 아래. 고정 레벨은 일찍 온 사람에겐 과하고
+    // 늦게 온 사람에겐 짐이 된다
+    { kind: "monster", monsterId: "leafy", levelBelowParty: 2, minLevel: 8 },
+    { kind: "material", itemId: "crystal", amount: 2 },
+  ],
+  acceptLines: [
+    "10층에 뭐가 있는지 아느냐. 나는 안다. 거기서 돌아섰으니까.",
+    "부탁이라기도 뭣하다만… 넘어봐라.",
+    "넘고 오면 줄 게 있다. 오래 준비한 것이다.",
+  ],
+  progressLines: ["아직인가. 서두르지 마라. 나는 그 앞에서 이십 년을 기다렸다."],
+  completeLines: [
+    "넘었구나. …넘었어.",
+    "텃밭에 눌러앉은 녀석이 하나 있다. 잎사귀 달린 놈이다.",
+    "네 어머니가 아직 성하실 적에 주워다 기르신 거다. 이제는 내가 물을 주고 있고.",
+    "데려가라. 이름은 리피다.",
+    "하나 일러두마. 그 잎사귀는 번개를 땅으로 흘린다. 위에서 번개 쓰는 놈을 만나면 그때 내보내라.",
+  ],
+  noRoomLines: [
+    "데려갈 자리가 없구나.",
+    "자리를 비우고 다시 오너라. 도망갈 놈은 아니다.",
+  ],
+};
+
+/**
+ * 20층 · 바로스 — 상성을 갖추게 한다.
+ *
+ * 보상이 부적인 건 재료가 병목이라서다(빛의 수정 둘·정수 둘·마법 가루 둘). 20층 관문
+ * 앞에서 그걸 다 모으려면 고대 숲을 몇 번 다녀와야 하는데, 고대 숲은 21층 해금이다.
+ * 병목을 한 번 건너뛰게 하되 최고 등급은 주지 않는다.
+ */
+export const BAROS_TYPE_MATCHUP_QUEST: QuestDef = {
+  id: "baros_type_matchup",
+  title: "상성을 갖춰라",
+  npcId: "baros",
+  requires: { questDone: "baros_gear_up", minFloor: 15 },
+  objective: { kind: "catchType", elementType: "poison" },
+  rewards: [
+    { kind: "artifact", itemId: "spirit_amulet", quality: "rare", level: 10, enhancement: 0 },
+  ],
+  acceptLines: [
+    "20층까지 왔으면 하나 알겠지. 세기만 해선 안 된다.",
+    "독 쓰는 놈을 하나 잡아와라. 숲에 있다.",
+    "독은 풀과 노말을 두 배로 문다. 위에 그런 놈이 널렸다.",
+  ],
+  progressLines: ["독은 아직인가. 얕은 숲에도 있고 깊은 숲에도 있다. 골라 잡아라."],
+  completeLines: [
+    "잡아왔군. 이제 파티에 구멍이 하나 줄었다.",
+    "이건 가져가라. 부적이다. 내 것이었다.",
+    "재료가 빛의 수정 둘, 정수 둘, 마법 가루 둘이다. 지금 네가 모으려면 숲을 몇 번을 가야 하는지 세어봐라.",
+    "세지 마라. 그냥 받아라.",
+  ],
+};
+
+/**
+ * 30층 · 오리온 — 어머니 약을 다시 짓는다. 이야기는 "위에 뭔가 하나 있다"까지만 안다.
+ *
+ * 보상 둘 다 빛의 수정을 먹는 물약이다. 목표로 수정 넷을 내주고 나면 당분간 스스로는
+ * 못 만든다 — 35층 관문은 물약 운용을 전제로 한 층이라 그 자리를 메운다.
+ */
+export const ORION_ONCE_MORE_QUEST: QuestDef = {
+  id: "orion_once_more",
+  title: "다시 한 번",
+  npcId: "orion",
+  requires: { questDone: "orion_where_i_stopped", minFloor: 21 },
+  objective: { kind: "material", itemId: "crystal", amount: 4 },
+  rewards: [
+    { kind: "potion", potionId: "max_potion", name: "맥스 물약", icon: "max_potion", quality: "rare", amount: 5 },
+    { kind: "potion", potionId: "strong_attack_buff", name: "강화 전투 물약", icon: "strong_attack_buff", quality: "rare", amount: 3 },
+  ],
+  acceptLines: [
+    "부탁이 하나 더 있다. 이번에도 될지는 모른다.",
+    "빛의 수정이 넷 필요하다. 고대 숲에서 나온다더구나.",
+    "지난번 약은 통증만 눌렀다. 이번엔 다른 걸 해보려 한다.",
+    "네가 위에서 본 것을 듣고 나서 생각이 좀 바뀌었어.",
+  ],
+  progressLines: ["수정은 아직인가. 고대 숲은 위험하다고 들었다. 무리하지 마라."],
+  completeLines: [
+    "고맙다. 이걸로 해보마.",
+    "대신 이것들을 가져가라. 내가 쓸 것도 아니고.",
+    "맥스 물약 다섯에 강화 전투 물약 셋이다. 수정을 넷이나 내줬으니 당분간 못 만들 게다.",
+    "위에서 죽는 것보단 낫지 않겠느냐.",
+  ],
+};
+
+/**
+ * 40층 · 바로스 — 장비 레벨을 올리게 한다.
+ *
+ * 40층대의 벽은 레벨이 아니라 장비 레벨이다. 강화석 열은 고대 숲 열 번을 아껴 준다.
+ * 용이 이미 밝혀진 뒤지만 바로스는 그래도 장비 얘기만 한다. 그게 그 사람이다.
+ */
+export const BAROS_CHANGE_GEAR_QUEST: QuestDef = {
+  id: "baros_change_gear",
+  title: "갈아입어라",
+  npcId: "baros",
+  requires: { questDone: "baros_type_matchup", minFloor: 35 },
+  objective: { kind: "artifactLevel", level: 20 },
+  rewards: [
+    { kind: "material", itemId: "enhancement_stone", amount: 10 },
+    { kind: "material", itemId: "monster_essence", amount: 4 },
+  ],
+  acceptLines: [
+    "40층. 인정한다.",
+    "네 장비를 봤다. 만든 지 오래됐군.",
+    "하나라도 좋다. 레벨 스물까지 올려라. 그 전엔 그 위를 못 본다.",
+  ],
+  progressLines: ["아직 스물이 안 된다. 모루에 가라. 안 쓰는 장비를 분해하면 강화석이 나온다."],
+  completeLines: [
+    "됐다. 그게 45층을 넘기는 물건이다.",
+    "강화석 열이다. 내가 이십 년 모은 거다.",
+    "셋 다 올려라. 하나만 좋아봐야 나머지 둘이 죽는다.",
+    "…나는 여기까지다. 위에서는 네가 알아서 해라.",
+  ],
+};
+
+/**
+ * 엔딩 후 · 오리온 — 이야기를 닫는다.
+ *
+ * 50층 이야기 대사가 이미 "공방에 가져가라"고 말하는데, 그건 부탁의 형태였을 뿐 아무
+ * 기록도 보상도 없었다. 퀘스트로 만들면 로그에 남고 받을 것도 생긴다.
+ * 엔딩 후에 남는 건 재도전뿐이라, 보상은 트로피이자 다음 판의 밑천이다.
+ */
+export const ORION_MOTHERS_CURE_QUEST: QuestDef = {
+  id: "orion_mothers_cure",
+  title: "어머니의 치료약",
+  npcId: "orion",
+  requires: { flag: "tower_cleared", questDone: "orion_once_more" },
+  objective: { kind: "potion", potionId: "mothers_cure_potion", name: "어머니의 치료약" },
+  rewards: [
+    { kind: "artifact", itemId: "spirit_amulet", quality: "elite", level: 50, enhancement: 5 },
+    { kind: "material", itemId: "enhancement_stone", amount: 15 },
+  ],
+  acceptLines: [
+    "정수를 봤다. 이런 게 정말 있었구나.",
+    "공방에 가져가라. 연금술로 다뤄봐야겠다.",
+    "어머니의 치료약이라고 하더구나. 그런 이름이 붙은 게 있다는 것도 이제 알았다.",
+  ],
+  progressLines: ["아직인가. 서둘러라. …아니다, 미안하다. 서두를 사람은 나였구나."],
+  completeLines: [
+    "이게 그것이냐.",
+    "…오늘 밤에 드시게 하마.",
+    "이건 가져가라. 부적이다. 내가 오르던 시절엔 못 만들던 물건이지.",
+    "이제 네가 오를 이유는 없다. 그래도 오를 거면, 이걸 끼고 가라.",
+  ],
+};
+
+/**
  * 퀘스트 전부. **진행 순서대로** 적는다 — 한 사람이 한 번에 하나만 내놓을 때 무엇을 먼저
  * 내놓을지가 이 순서다. 퀘스트 로그의 표시 순서이기도 하다.
+ *
+ * 열 층에 하나 꼴이다. 다섯 층마다 심부름을 시키면 탑을 오르는 게 아니라 마을을 오가는
+ * 게임이 된다.
  */
 export const ALL_QUESTS: QuestDef[] = [
   BAROS_FIRST_HUNT_QUEST,
   ORION_MOTHERS_MEDICINE_QUEST,
+  BAROS_GEAR_UP_QUEST,
+  ORION_WHERE_I_STOPPED_QUEST,
+  BAROS_TYPE_MATCHUP_QUEST,
+  ORION_ONCE_MORE_QUEST,
+  BAROS_CHANGE_GEAR_QUEST,
+  ORION_MOTHERS_CURE_QUEST,
 ];
 
 /** 그 사람이 가진 퀘스트를 진행 순서대로. 표를 두 벌로 만들지 않으려고 여기서 갈라 낸다 */

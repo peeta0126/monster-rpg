@@ -4,7 +4,9 @@ import {
   talkStage, pickSmallTalk, smallTalkCandidates, LOADED_MATERIAL_COUNT,
   type TalkStage, type SmallTalkNpcId,
 } from "../src/camp/campSmallTalk.ts";
-import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction, satisfiedEntries } from "../src/camp/campDialogues.ts";
+import {
+  ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction, satisfiedEntries, ALL_QUESTS,
+} from "../src/camp/campDialogues.ts";
 import type { PersistedStoryFlag } from "../src/shared/storyFlags.ts";
 
 const CALM = { hurt: false, noPotion: false, loaded: false };
@@ -125,7 +127,10 @@ const ENDED = flags({
   met_orion: true, met_baros: true, first_capture: true,
   quest_baros_done: true, quest_orion_done: true, tower_cleared: true,
 });
-const DONE_QUESTS = { baros_first_hunt: "completed", orion_mothers_medicine: "completed" } as const;
+/** 퀘스트가 남아 있으면 그게 잡담을 가린다 — 여기서 보려는 건 그 다음이다 */
+const DONE_QUESTS = Object.fromEntries(
+  ALL_QUESTS.map((q) => [q.id, "completed" as const]),
+);
 
 test("엔딩까지 보고 대사를 다 읽으면 잡담이 나온다", () => {
   for (const [npcId, list] of [["orion", ORION_DIALOGUES], ["baros", BAROS_DIALOGUES]] as const) {

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction, satisfiedEntries,
+  ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction, satisfiedEntries, ALL_QUESTS,
 } from "../src/camp/campDialogues.ts";
 import type { PersistedStoryFlag } from "../src/shared/playerStore.ts";
 
@@ -11,7 +11,7 @@ const flags = (over: Partial<Record<PersistedStoryFlag, boolean>>): Record<Persi
 });
 
 /** 퀘스트 분기를 타지 않도록 완료 상태로 채워둔다 */
-const doneQuests = { baros_first_hunt: "completed", orion_mothers_medicine: "completed" } as const;
+const doneQuests = Object.fromEntries(ALL_QUESTS.map((q) => [q.id, "completed" as const]));
 
 /** 그 상태에서 조건을 만족하는 대사를 전부 읽은 사람 */
 const allSeen = (
