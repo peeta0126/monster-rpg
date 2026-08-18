@@ -399,7 +399,7 @@ interface PlayerState {
     questId: string,
     objective: { itemId: string; amount: number },
     rewards: { itemId: string; amount: number }[],
-    setsFlag: PersistedStoryFlag,
+    setsFlag?: PersistedStoryFlag,
   ) => boolean;
   addCapturedMonster: (monster: Monster) => "storage" | "full";
   swapWithStorage:  (partyIndex: number, storageUid: string) => void;
@@ -495,7 +495,10 @@ export const usePlayerStore = create<PlayerState>()(
         set({
           materials:   newMats,
           questStatus: { ...s.questStatus, [questId]: "completed" },
-          storyFlags:  { ...s.storyFlags, [setsFlag]: true },
+          // 플래그를 세우는 퀘스트는 그 플래그가 이야기 대사의 조건일 때뿐이다.
+          // 나머지는 완료 기록만으로 충분하다 — 퀘스트마다 플래그를 만들면 세이브에
+          // 새 값이 여섯 개 늘고, 늘어난 만큼 마이그레이션할 것도 늘어난다.
+          storyFlags:  setsFlag ? { ...s.storyFlags, [setsFlag]: true } : s.storyFlags,
         });
         return true;
       },

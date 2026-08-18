@@ -112,7 +112,7 @@ export interface NpcDialoguePayload {
     questId: string;
     objective: { itemId: string; amount: number };
     rewards: { itemId: string; amount: number }[];
-    setsFlag: PersistedStoryFlag;
+    setsFlag?: PersistedStoryFlag;
   };
 }
 

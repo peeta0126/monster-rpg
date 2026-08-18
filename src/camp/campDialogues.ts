@@ -6,16 +6,23 @@ import type { SmallTalkNpcId, TalkState } from "./campSmallTalk";
 export interface QuestDef {
   id: string;
   title: string;
-  npcId: "orion" | "baros";
-  /** 수락 조건: flag 충족 + (있다면) bestFloor 최소치 */
-  requires: { flag: StoryFlag; minFloor?: number };
+  npcId: SmallTalkNpcId;
+  /**
+   * 수락 조건. 셋 다 선택이고, 적은 것만 검사한다.
+   *
+   * `questDone` 이 있는 이유는 **새 퀘스트마다 스토리 플래그를 만들지 않으려는 것**이다.
+   * 퀘스트 완료 여부는 이미 저장되고 있으니, 앞 퀘스트를 가리키면 세이브에 새로 넣을
+   * 값이 없다.
+   */
+  requires: { flag?: StoryFlag; minFloor?: number; questDone?: string };
   objective: { itemId: string; amount: number };
   rewards: { itemId: string; amount: number }[];
   acceptLines: string[];
   completeLines: string[];
   /** 진행중 + 재료 부족일 때 재생하는 독촉 대사 */
   progressLines: string[];
-  setsFlag: PersistedStoryFlag;
+  /** 이야기 대사의 조건으로 쓰이는 퀘스트만 플래그를 세운다. 나머지는 완료 기록으로 충분하다 */
+  setsFlag?: PersistedStoryFlag;
 }
 
 export interface DialogueEntry {
@@ -102,8 +109,19 @@ export const ORION_MOTHERS_MEDICINE_QUEST: QuestDef = {
   setsFlag: "quest_orion_done",
 };
 
-/** 퀘스트 로그 UI 등에서 전체 목록이 필요할 때 사용하는 단일 소스 */
-export const ALL_QUESTS: QuestDef[] = [BAROS_FIRST_HUNT_QUEST, ORION_MOTHERS_MEDICINE_QUEST];
+/**
+ * 퀘스트 전부. **진행 순서대로** 적는다 — 한 사람이 한 번에 하나만 내놓을 때 무엇을 먼저
+ * 내놓을지가 이 순서다. 퀘스트 로그의 표시 순서이기도 하다.
+ */
+export const ALL_QUESTS: QuestDef[] = [
+  BAROS_FIRST_HUNT_QUEST,
+  ORION_MOTHERS_MEDICINE_QUEST,
+];
+
+/** 그 사람이 가진 퀘스트를 진행 순서대로. 표를 두 벌로 만들지 않으려고 여기서 갈라 낸다 */
+export function questsOf(npcId: SmallTalkNpcId): QuestDef[] {
+  return ALL_QUESTS.filter((q) => q.npcId === npcId);
+}
 
 // ─── 대사 ──────────────────────────────────────────────────────────────────────
 
@@ -367,7 +385,7 @@ export interface NpcInteractionResult {
     questId: string;
     objective: { itemId: string; amount: number };
     rewards: { itemId: string; amount: number }[];
-    setsFlag: PersistedStoryFlag;
+    setsFlag?: PersistedStoryFlag;
   };
 }
 
@@ -387,14 +405,36 @@ export interface NpcInteractionContext {
 }
 
 /** 그 퀘스트를 지금 내놓을 수 있는가 (완료 여부는 따로 본다) */
-function questUnlocked(
+export function questUnlocked(
   quest: QuestDef,
   storyFlags: Record<PersistedStoryFlag, boolean>,
   bestFloor: number,
+  questStatus: Record<string, QuestStatus>,
 ): boolean {
-  const flagOk = isStoryFlagSet(quest.requires.flag, storyFlags, bestFloor);
-  const floorOk = quest.requires.minFloor === undefined || bestFloor >= quest.requires.minFloor;
-  return flagOk && floorOk;
+  const { flag, minFloor, questDone } = quest.requires;
+  if (flag && !isStoryFlagSet(flag, storyFlags, bestFloor)) return false;
+  if (minFloor !== undefined && bestFloor < minFloor) return false;
+  if (questDone && (questStatus[questDone] ?? "not_accepted") !== "completed") return false;
+  return true;
+}
+
+/**
+ * 지금 이 사람이 내놓을 퀘스트 하나.
+ *
+ * **한 번에 하나만 내놓는다.** 엔딩까지 본 옛 세이브를 열면 뒤쪽 퀘스트의 조건이 한꺼번에
+ * 충족되는데, 다 내놓으면 로그가 한 번에 여덟 줄로 불어난다. 낮은 층 것부터 하나씩 흐르면
+ * "돌아온 사람에게 마을이 밀린 부탁을 한다"로 읽힌다.
+ */
+export function activeQuestFor(
+  npcId: SmallTalkNpcId,
+  storyFlags: Record<PersistedStoryFlag, boolean>,
+  bestFloor: number,
+  questStatus: Record<string, QuestStatus>,
+): QuestDef | undefined {
+  return questsOf(npcId).find(
+    (q) => (questStatus[q.id] ?? "not_accepted") !== "completed"
+      && questUnlocked(q, storyFlags, bestFloor, questStatus),
+  );
 }
 
 /**
@@ -416,12 +456,11 @@ export function resolveNpcInteraction(
 ): NpcInteractionResult | undefined {
   const { storyFlags, bestFloor, materials, questStatus, seenDialogues } = ctx;
   const seen = new Set(seenDialogues);
-  const quest = dialogues.find((e) => e.quest)?.quest;
+  const quest = activeQuestFor(ctx.npcId, storyFlags, bestFloor, questStatus);
   const status = quest ? questStatus[quest.id] ?? "not_accepted" : "completed";
-  const unlocked = quest ? questUnlocked(quest, storyFlags, bestFloor) : false;
 
   // 1) 완료 가능
-  if (quest && unlocked && status === "in_progress") {
+  if (quest && status === "in_progress") {
     const have = materials[quest.objective.itemId] ?? 0;
     if (have >= quest.objective.amount) {
       return {
@@ -454,9 +493,9 @@ export function resolveNpcInteraction(
   }
 
   // 3) 미수락 · 4) 진행중
-  if (quest && unlocked) {
+  if (quest) {
     if (status === "not_accepted") return { lines: quest.acceptLines, acceptQuestId: quest.id };
-    if (status === "in_progress") return { lines: quest.progressLines };
+    return { lines: quest.progressLines };
   }
 
   // 4.5) 메우는 줄. 이야기가 **하나도** 열리지 않은 사람에게만 쓴다.
