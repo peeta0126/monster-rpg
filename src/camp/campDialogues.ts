@@ -4,6 +4,8 @@ import { pickSmallTalk, talkStage } from "./campSmallTalk";
 import type { SmallTalkNpcId, TalkState } from "./campSmallTalk";
 import type { QuestObjective, QuestSnapshot } from "./questObjectives";
 import { evaluateObjective } from "./questObjectives";
+import type { QuestReward } from "./questRewards";
+import { monsterReward } from "./questRewards";
 
 export interface QuestDef {
   id: string;
@@ -18,11 +20,17 @@ export interface QuestDef {
    */
   requires: { flag?: StoryFlag; minFloor?: number; questDone?: string };
   objective: QuestObjective;
-  rewards: { itemId: string; amount: number }[];
+  rewards: QuestReward[];
   acceptLines: string[];
   completeLines: string[];
   /** 진행중 + 재료 부족일 때 재생하는 독촉 대사 */
   progressLines: string[];
+  /**
+   * 몬스터를 주는데 파티도 보관함도 찼을 때. **이때는 완료 처리를 미룬다** —
+   * 지급 경로는 자리가 없으면 조용히 실패하는데, 건네받은 게 소리 없이 사라지는 것보다
+   * 자리를 비우고 다시 오라고 하는 편이 낫다.
+   */
+  noRoomLines?: string[];
   /** 이야기 대사의 조건으로 쓰이는 퀘스트만 플래그를 세운다. 나머지는 완료 기록으로 충분하다 */
   setsFlag?: PersistedStoryFlag;
 }
@@ -64,9 +72,9 @@ export const BAROS_FIRST_HUNT_QUEST: QuestDef = {
   requires: { flag: "met_baros" },
   objective: { kind: "material", itemId: "herb", amount: 3 },
   rewards: [
-    { itemId: "herb", amount: 2 },
-    { itemId: "root", amount: 2 },
-    { itemId: "magic_dust", amount: 1 },
+    { kind: "material", itemId: "herb", amount: 2 },
+    { kind: "material", itemId: "root", amount: 2 },
+    { kind: "material", itemId: "magic_dust", amount: 1 },
   ],
   acceptLines: [
     "말로 들어선 모른다. 직접 해봐라.",
@@ -89,9 +97,9 @@ export const ORION_MOTHERS_MEDICINE_QUEST: QuestDef = {
   requires: { flag: "quest_baros_done", minFloor: 3 },
   objective: { kind: "material", itemId: "slime_extract", amount: 2 },
   rewards: [
-    { itemId: "crystal", amount: 1 },
-    { itemId: "monster_essence", amount: 1 },
-    { itemId: "iron_fragment", amount: 2 },
+    { kind: "material", itemId: "crystal", amount: 1 },
+    { kind: "material", itemId: "monster_essence", amount: 1 },
+    { kind: "material", itemId: "iron_fragment", amount: 2 },
   ],
   acceptLines: [
     "부탁이 하나 있다.",
@@ -385,8 +393,9 @@ export interface NpcInteractionResult {
   acceptQuestId?: string;
   completeQuest?: {
     questId: string;
+    questTitle: string;
     objective: QuestObjective;
-    rewards: { itemId: string; amount: number }[];
+    rewards: QuestReward[];
     setsFlag?: PersistedStoryFlag;
   };
 }
@@ -464,10 +473,17 @@ export function resolveNpcInteraction(
 
   // 1) 완료 가능
   if (quest && status === "in_progress" && evaluateObjective(quest.objective, snapshot).done) {
+    // 몬스터를 주는데 데려갈 자리가 없으면 완료를 미룬다. 건네받은 게 소리 없이
+    // 사라지는 것보다 자리를 비우고 다시 오라는 편이 낫다
+    const wantsRoom = monsterReward(quest.rewards);
+    if (wantsRoom && snapshot.partyCount >= 3 && snapshot.storageCount >= 30) {
+      return { lines: quest.noRoomLines ?? ["자리가 없구나. 비우고 다시 오너라."] };
+    }
     return {
       lines: quest.completeLines,
       completeQuest: {
-        questId:   quest.id,
+        questId:    quest.id,
+        questTitle: quest.title,
         objective: quest.objective,
         rewards:   quest.rewards,
         setsFlag:  quest.setsFlag,

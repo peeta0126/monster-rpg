@@ -29,7 +29,7 @@ const talk = (
   npcId: list === ORION_DIALOGUES ? "orion" : "baros",
   storyFlags: flags(on),
   bestFloor: opts.bestFloor ?? 0,
-  snapshot: { materials: opts.materials ?? {}, potions: {}, bestFloor: opts.bestFloor ?? 0, dexCaught: [], equippedArtifacts: {}, craftedArtifacts: [] },
+  snapshot: { materials: opts.materials ?? {}, potions: {}, bestFloor: opts.bestFloor ?? 0, dexCaught: [], equippedArtifacts: {}, craftedArtifacts: [], partyCount: 0, storageCount: 0 },
   questStatus: opts.questStatus ?? {},
   seenDialogues: opts.seen ?? [],
   talkState: { hurt: false, noPotion: false, loaded: false },

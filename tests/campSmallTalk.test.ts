@@ -132,7 +132,7 @@ test("엔딩까지 보고 대사를 다 읽으면 잡담이 나온다", () => {
     const seen = satisfiedEntries(list, ENDED, 50).map((e) => e.id);
     const r = resolveNpcInteraction(list, {
       npcId, storyFlags: ENDED, bestFloor: 50,
-      snapshot: { materials: {}, potions: {}, bestFloor: 50, dexCaught: [], equippedArtifacts: {}, craftedArtifacts: [] },
+      snapshot: { materials: {}, potions: {}, bestFloor: 50, dexCaught: [], equippedArtifacts: {}, craftedArtifacts: [], partyCount: 0, storageCount: 0 },
       questStatus: { ...DONE_QUESTS }, seenDialogues: seen,
       talkState: CALM, random: () => 0,
     });
@@ -145,7 +145,7 @@ test("엔딩까지 보고 대사를 다 읽으면 잡담이 나온다", () => {
 test("안 본 이야기가 남아 있으면 잡담이 그걸 덮지 않는다", () => {
   const r = resolveNpcInteraction(ORION_DIALOGUES, {
     npcId: "orion", storyFlags: ENDED, bestFloor: 50,
-    snapshot: { materials: {}, potions: {}, bestFloor: 50, dexCaught: [], equippedArtifacts: {}, craftedArtifacts: [] },
+    snapshot: { materials: {}, potions: {}, bestFloor: 50, dexCaught: [], equippedArtifacts: {}, craftedArtifacts: [], partyCount: 0, storageCount: 0 },
     questStatus: { ...DONE_QUESTS },
     seenDialogues: satisfiedEntries(ORION_DIALOGUES, ENDED, 50)
       .map((e) => e.id).filter((id) => id !== "orion_cleared"),

@@ -20,6 +20,8 @@ import { DEFAULT_STORY_FLAGS } from "./storyFlags";
 import { backfillSeenDialogues } from "../camp/dialogueBackfill";
 import type { QuestObjective } from "../camp/questObjectives";
 import { objectiveCost } from "../camp/questObjectives";
+import type { QuestReward, RewardDisplay } from "../camp/questRewards";
+import { rewardDisplay } from "../camp/questRewards";
 
 // ─── 스토리 플래그 · 퀘스트 상태 ─────────────────────────────────────────────────
 //
@@ -397,12 +399,15 @@ interface PlayerState {
   markDialogueSeen: (dialogueId: string) => void;
   acceptQuest: (questId: string) => void;
   /** 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 한 번의 set()으로 원자적으로 수행 */
-  completeQuest: (
-    questId: string,
-    objective: QuestObjective,
-    rewards: { itemId: string; amount: number }[],
-    setsFlag?: PersistedStoryFlag,
-  ) => boolean;
+  /** 지급한 것들을 돌려준다(화면에 보여줄 목록). 재료가 모자라거나 자리가 없으면 null */
+  completeQuest: (payload: {
+    questId: string;
+    objective: QuestObjective;
+    rewards: QuestReward[];
+    setsFlag?: PersistedStoryFlag;
+    /** 몬스터 보상일 때 미리 만들어 넘긴다 — 진화·기술 습득 경로가 비동기라 여기서 못 만든다 */
+    monster?: OwnedMonster;
+  }) => RewardDisplay[] | null;
   addCapturedMonster: (monster: Monster) => "storage" | "full";
   swapWithStorage:  (partyIndex: number, storageUid: string) => void;
   moveToStorage:    (partyIndex: number) => void;
@@ -486,27 +491,96 @@ export const usePlayerStore = create<PlayerState>()(
       acceptQuest: (questId) =>
         set((s) => ({ questStatus: { ...s.questStatus, [questId]: "in_progress" } })),
 
-      completeQuest: (questId, objective, rewards, setsFlag) => {
+      /**
+       * 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 한 번의 set()으로 처리한다.
+       *
+       * 보상이 네 갈래로 늘면서 손대는 칸도 늘었다. 물약은 **전투 재고와 가방 표시 스택
+       * 양쪽**을 같이 올려야 한다 — 한쪽만 올리면 개수가 어긋난다(예전에 소모 쪽에서 이미
+       * 한 번 물렸다). 몬스터는 미리 만들어 넘겨받는다. 기술 습득과 진화를 태우는 경로가
+       * 비동기라 여기서 만들 수가 없다.
+       */
+      completeQuest: ({ questId, objective, rewards, setsFlag, monster }) => {
         const s = get();
         // 가져가는 건 재료 목표뿐이다. 층을 도로 내리거나 잡은 몬스터를 도감에서 지울 수는 없다
         const cost = objectiveCost(objective);
         const newMats = { ...s.materials };
         if (cost) {
-          if ((newMats[cost.itemId] ?? 0) < cost.amount) return false;
+          if ((newMats[cost.itemId] ?? 0) < cost.amount) return null;
           newMats[cost.itemId] = (newMats[cost.itemId] ?? 0) - cost.amount;
         }
+
+        const newPotions = { ...s.potions };
+        let newCraftedPotions = s.craftedPotions;
+        let newCraftedArtifacts = s.craftedArtifacts;
+        let newParty = s.party;
+        let newStorage = s.storage;
+        let dexSeen = s.dexSeen;
+        let dexCaught = s.dexCaught;
+        const granted: RewardDisplay[] = [];
+
         for (const reward of rewards) {
-          newMats[reward.itemId] = (newMats[reward.itemId] ?? 0) + reward.amount;
+          if (reward.kind === "material") {
+            newMats[reward.itemId] = (newMats[reward.itemId] ?? 0) + reward.amount;
+            granted.push(rewardDisplay(reward));
+          } else if (reward.kind === "potion") {
+            newPotions[reward.potionId] = (newPotions[reward.potionId] ?? 0) + reward.amount;
+            const stackId = `${reward.potionId}_${reward.quality}`;
+            const idx = newCraftedPotions.findIndex((p) => p.stackId === stackId);
+            newCraftedPotions = idx >= 0
+              ? newCraftedPotions.map((p, i) =>
+                  i === idx ? { ...p, quantity: p.quantity + reward.amount } : p)
+              : [...newCraftedPotions, {
+                  stackId, itemId: reward.potionId, name: reward.name,
+                  quality: reward.quality, quantity: reward.amount,
+                }];
+            granted.push(rewardDisplay(reward));
+          } else if (reward.kind === "artifact") {
+            const recipe = ARTIFACT_RECIPES.find((r) => r.resultItemId === reward.itemId);
+            if (!recipe) continue;
+            newCraftedArtifacts = [...newCraftedArtifacts, {
+              instanceId: makeUid(),
+              itemId:      recipe.resultItemId,
+              name:        recipe.resultItemName,
+              quality:     reward.quality,
+              description: recipe.description,
+              statBonuses: applyArtifactQualityStats(recipe.baseStats ?? [], reward.quality),
+              createdAt:   Date.now(),
+              level:       reward.level,
+              enhancement: reward.enhancement,
+              source:      "quest",
+              // 레벨에 맞는 부가 능력치를 같이 굴려 넣는다. 안 그러면 레벨 10짜리인데
+              // 부가 능력치만 비어 있는 반쪽이 나간다
+              bonusStats:  rollBonusStats(recipe.resultItemId, 1, reward.level, []),
+            }];
+            granted.push(rewardDisplay(reward));
+          } else if (reward.kind === "monster" && monster) {
+            // 자리는 부르는 쪽이 미리 봤다. 그래도 여기서 한 번 더 확인한다 —
+            // 넘치면 조용히 사라지는 게 제일 나쁘다
+            if (newParty.length < 3) newParty = [...newParty, monster];
+            else if (newStorage.length < 30) newStorage = [...newStorage, monster];
+            else return null;
+            dexSeen   = dexSeen.includes(monster.id)   ? dexSeen   : [...dexSeen, monster.id];
+            dexCaught = dexCaught.includes(monster.id) ? dexCaught : [...dexCaught, monster.id];
+            granted.push({
+              ...rewardDisplay(reward),
+              detail: `Lv.${monster.level} · ${newParty.includes(monster) ? "파티에 들어왔다" : "보관함으로 갔다"}`,
+            });
+          }
         }
+
         set({
           materials:   newMats,
+          potions:     newPotions,
+          craftedPotions:   newCraftedPotions,
+          craftedArtifacts: newCraftedArtifacts,
+          party: newParty, storage: newStorage, dexSeen, dexCaught,
           questStatus: { ...s.questStatus, [questId]: "completed" },
           // 플래그를 세우는 퀘스트는 그 플래그가 이야기 대사의 조건일 때뿐이다.
           // 나머지는 완료 기록만으로 충분하다 — 퀘스트마다 플래그를 만들면 세이브에
           // 새 값이 여섯 개 늘고, 늘어난 만큼 마이그레이션할 것도 늘어난다.
           storyFlags:  setsFlag ? { ...s.storyFlags, [setsFlag]: true } : s.storyFlags,
         });
-        return true;
+        return granted;
       },
 
       addCapturedMonster: (monster) => {

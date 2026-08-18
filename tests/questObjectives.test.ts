@@ -8,6 +8,7 @@ import {
 const EMPTY: QuestSnapshot = {
   materials: {}, potions: {}, bestFloor: 0,
   dexCaught: [], equippedArtifacts: {}, craftedArtifacts: [],
+  partyCount: 0, storageCount: 0,
 };
 
 const snap = (over: Partial<QuestSnapshot>): QuestSnapshot => ({ ...EMPTY, ...over });

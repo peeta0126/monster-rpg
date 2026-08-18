@@ -36,6 +36,9 @@ export interface QuestSnapshot {
   dexCaught: string[];
   equippedArtifacts: Record<string, { level?: number }[]>;
   craftedArtifacts: { level?: number }[];
+  /** 몬스터를 건네줄 자리가 있는지 보려고 같이 든다. 목표 판정에는 안 쓰인다 */
+  partyCount: number;
+  storageCount: number;
 }
 
 export interface QuestProgress {

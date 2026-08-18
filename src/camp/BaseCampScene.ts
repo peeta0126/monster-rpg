@@ -343,13 +343,14 @@ export default class BaseCampScene extends Phaser.Scene {
   private showNpcDialogue(npc: BaseCampNpc) {
     const {
       storyFlags, bestFloor, materials, questStatus, seenDialogues, party, potions,
-      dexCaught, equippedArtifacts, craftedArtifacts,
+      dexCaught, equippedArtifacts, craftedArtifacts, storage,
     } = usePlayerStore.getState();
     const result = resolveNpcInteraction(npc.dialogues, {
       npcId: npc.id,
       storyFlags, bestFloor, questStatus, seenDialogues,
       snapshot: {
         materials, potions, bestFloor, dexCaught, equippedArtifacts, craftedArtifacts,
+        partyCount: party.length, storageCount: storage.length,
       },
       talkState: {
         hurt:     party.some((m) => m.currentHp < m.maxHp * 0.5),

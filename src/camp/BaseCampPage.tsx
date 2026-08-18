@@ -6,6 +6,7 @@ import type { NpcDialoguePayload } from "../shared/phaser/events";
 import { monsters } from "../monster/monsters";
 import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { usePlayerStore } from "../shared/playerStore";
+import type { OwnedMonster } from "../shared/playerStore";
 import { getNextObjective } from "../shared/nextObjective";
 import { ObjectiveBanner } from "../shared/ui/ObjectiveBanner";
 import { AudioSettings } from "../shared/ui/AudioSettings";
@@ -16,10 +17,16 @@ import { ALL_QUESTS } from "./campDialogues";
 import type { QuestDef } from "./campDialogues";
 import { evaluateObjective } from "./questObjectives";
 import type { QuestSnapshot } from "./questObjectives";
+import { monsterReward, grantedMonsterLevel, rewardDisplay } from "./questRewards";
+import type { QuestReward, RewardDisplay } from "./questRewards";
+import { scaleToLevel } from "../shared/floorTable";
+import { applyLevelGrowth } from "../monster/growth";
 import { getMaterial } from "../shared/items";
 import { PixelIcon } from "../shared/ui/PixelIcon";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
 import { useAuthStore } from "../auth/authStore";
+import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
+import { PALETTE } from "../shared/palette";
 
 // ── 속성 한글/색상 ──────────────────────────────────────────────────────────────
 
@@ -422,7 +429,94 @@ function DexModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ── 받은 것 화면 ─────────────────────────────────────────────────────────────────
+
+/**
+ * 퀘스트 보상을 받은 직후 한 장.
+ *
+ * 예전에는 대사만 흐르고 조용히 가방에 들어갔다. 뭘 받았는지 모른 채 대화가 끝나니
+ * 보상이 아무리 좋아도 밋밋했다. 제목에 퀘스트 이름을 그대로 쓴다 — 뭘 하고 받은
+ * 건지가 붙어 있어야 기억에 남는다.
+ */
+function RewardScreen({ title, items, onClose }: {
+  title: string;
+  items: RewardDisplay[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-shadow-900/85 backdrop-blur-sm"
+      data-testid="quest-rewards" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border-2 border-ember-700/60 bg-shadow-900 shadow-2xl overflow-hidden"
+        style={{ boxShadow: "0 0 40px rgba(233,148,65,0.25)" }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="border-b border-shadow-700 px-6 py-4">
+          <p className="text-pixel-sm text-earth-400">{title}</p>
+          <h2 className="text-title-sm font-black text-cream-100 mt-0.5">받은 것</h2>
+        </div>
+
+        <div className="p-5 space-y-2">
+          {items.map((it, i) => (
+            <div key={`${it.name}-${i}`}
+              className="flex items-center gap-3 rounded-xl border border-stone-600 bg-shadow-800 p-3">
+              {it.monsterId
+                ? <img src={MONSTER_IMAGE_MAP[it.monsterId]} alt={it.name}
+                    className="h-16 w-16 shrink-0 object-contain" />
+                : it.icon && <PixelIcon name={it.icon} size={32} />}
+              <div className="min-w-0 flex-1">
+                <p className="text-pixel-sm font-bold text-cream-100">
+                  {it.name}
+                  {it.amount !== undefined && <span className="text-sand-300"> ×{it.amount}</span>}
+                </p>
+                {(it.quality || it.detail) && (
+                  <p className="text-pixel-sm mt-0.5" style={{ color: it.quality ? QUALITY_COLOR[it.quality] : PALETTE.earth400 }}>
+                    {it.quality && QUALITY_LABEL[it.quality]}
+                    {it.quality && it.detail ? " · " : ""}
+                    {it.detail}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-shadow-700 px-5 py-4">
+          <button onClick={onClose}
+            className="w-full rounded-xl border border-ember-700 bg-ember-700/20 py-2 text-pixel-sm font-bold text-ember-500 hover:bg-ember-700/30">
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 퀘스트 로그 모달 ──────────────────────────────────────────────────────────────
+
+/**
+ * 퀘스트로 받는 몬스터 한 마리를 만든다.
+ *
+ * 레벨을 정해 주는 게 핵심이다. 이야기로 받는 몬스터는 지금까지 늘 1레벨이었는데, 시작
+ * 몬스터라 문제가 없었을 뿐이다. 10층에서 1레벨을 주면 안 주느니만 못하다.
+ *
+ * 그 레벨까지의 기술 습득과 진화를 반드시 태운다 — 숲의 포획이 쓰는 경로와 같은 것이다.
+ * 빼먹으면 레벨만 높고 기술이 둘뿐인 개체가 나간다.
+ */
+async function buildQuestMonster(
+  reward: Extract<QuestReward, { kind: "monster" }>,
+): Promise<OwnedMonster | undefined> {
+  const base = monsters.find((m) => m.id === reward.monsterId);
+  if (!base) return undefined;
+  const partyTop = usePlayerStore.getState().party.reduce((max, m) => Math.max(max, m.level), 0);
+  const level = grantedMonsterLevel(reward, partyTop);
+  const scaled = scaleToLevel(base, level);
+  const owned: OwnedMonster = {
+    ...scaled,
+    uid: `quest-${reward.monsterId}-${Date.now().toString(36)}`,
+    currentHp: scaled.maxHp,
+  };
+  const grown = (await applyLevelGrowth(owned, 1)).monster;
+  return { ...grown, currentHp: grown.maxHp };
+}
 
 /**
  * 퀘스트 목표 판정에 필요한 것만 추린 지금 상태.
@@ -437,7 +531,12 @@ function useQuestSnapshot(): QuestSnapshot {
   const dexCaught         = usePlayerStore((s) => s.dexCaught);
   const equippedArtifacts = usePlayerStore((s) => s.equippedArtifacts);
   const craftedArtifacts  = usePlayerStore((s) => s.craftedArtifacts);
-  return { materials, potions, bestFloor, dexCaught, equippedArtifacts, craftedArtifacts };
+  const partyCount        = usePlayerStore((s) => s.party.length);
+  const storageCount      = usePlayerStore((s) => s.storage.length);
+  return {
+    materials, potions, bestFloor, dexCaught, equippedArtifacts, craftedArtifacts,
+    partyCount, storageCount,
+  };
 }
 
 function QuestLogModal({ onClose }: { onClose: () => void }) {
@@ -539,16 +638,15 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
 
                 <div className="mt-3 flex items-center gap-1.5 flex-wrap">
                   <span className="text-pixel-sm text-earth-400">보상</span>
-                  {q.rewards.map((r) => {
-                    const mat = getMaterial(r.itemId);
-                    return (
-                      <span key={r.itemId}
-                        className="flex items-center gap-1 rounded bg-shadow-700/70 px-1.5 py-0.5 text-pixel-sm text-sand-300">
-                        {mat && <PixelIcon name={mat.icon} size={16} />}
-                        {mat?.name ?? r.itemId} ×{r.amount}
-                      </span>
-                    );
-                  })}
+                  {/* 아직 안 받은 것은 몬스터를 가린다 — 뭘 받을지 미리 알면 완료 대사가 죽는다 */}
+                  {q.rewards.map(
+                    (r) => rewardDisplay(r, status !== "completed")).map((d, i) => (
+                    <span key={`${d.name}-${i}`}
+                      className="flex items-center gap-1 rounded bg-shadow-700/70 px-1.5 py-0.5 text-pixel-sm text-sand-300">
+                      {d.icon && <PixelIcon name={d.icon} size={16} />}
+                      {d.name}{d.amount !== undefined ? ` ×${d.amount}` : ""}
+                    </span>
+                  ))}
                 </div>
               </div>
             );
@@ -744,6 +842,8 @@ export default function BaseCampPage() {
   const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string } | null>(null);
   const [healed, setHealed] = useState(false);
   const [npcDialogue, setNpcDialogue]   = useState<NpcDialoguePayload | null>(null);
+  /** 방금 받은 것들. 대사가 끝난 뒤 한 장 띄운다 */
+  const [rewardScreen, setRewardScreen] = useState<{ title: string; items: RewardDisplay[] } | null>(null);
   const [dialogueLineIndex, setDialogueLineIndex] = useState(0);
   const bestFloor = usePlayerStore((s) => s.bestFloor);
   const towerCleared = usePlayerStore((s) => s.storyFlags.tower_cleared);
@@ -800,23 +900,50 @@ export default function BaseCampPage() {
   // 키 핸들러 effect가 이 함수를 참조하므로 useCallback으로 고정한다.
   // 매 렌더 새로 만들면 effect 의존성에 넣을 수 없고(리스너를 매번 재등록하게 된다),
   // 빼면 오래된 클로저를 잡아 대화가 엉뚱한 줄에서 멈출 수 있다.
+  /**
+   * 대사가 끝났을 때 실제로 벌어지는 일. **대화창을 어떻게 닫든 한 번은 지나가야 한다.**
+   *
+   * 예전에는 마지막 줄까지 넘겨야만 여기 왔다. ESC 로 닫으면 플래그도 보상도 안 들어가서,
+   * 완료 대사를 보고 ESC 를 누른 사람은 재료만 그대로 든 채 아무것도 못 받았다. 재료 몇
+   * 개일 땐 티가 안 났지만 몬스터를 주기 시작하면 사고다.
+   */
+  const applyDialogueOutcome = useCallback(async (payload: NpcDialoguePayload) => {
+    if (payload.dialogueId) markDialogueSeen(payload.dialogueId);
+    if (payload.grantsMonsterId) grantMonster(payload.grantsMonsterId);
+    if (payload.setsFlag) setStoryFlag(payload.setsFlag);
+    if (payload.acceptQuestId) acceptQuest(payload.acceptQuestId);
+    if (payload.completeQuest) {
+      const { questId, objective, rewards, setsFlag } = payload.completeQuest;
+      const wanted = monsterReward(rewards);
+      // 몬스터는 여기서 만들어 넘긴다. 기술 습득과 진화를 태우는 경로가 비동기라
+      // 스토어 안에서는 만들 수가 없다 — 숲의 포획도 같은 경로를 쓴다
+      const monster = wanted ? await buildQuestMonster(wanted) : undefined;
+      const granted = completeQuest({ questId, objective, rewards, setsFlag, monster });
+      if (granted?.length) {
+        setRewardScreen({ title: payload.completeQuest.questTitle, items: granted });
+      }
+    }
+  }, [markDialogueSeen, setStoryFlag, grantMonster, acceptQuest, completeQuest]);
+
+  const closeNpcDialogue = useCallback(() => {
+    if (!npcDialogue) return;
+    const payload = npcDialogue;
+    setNpcDialogue(null);
+    setDialogueLineIndex(0);
+    void applyDialogueOutcome(payload);
+  }, [npcDialogue, applyDialogueOutcome]);
+
+  // 키 핸들러 effect가 이 함수를 참조하므로 useCallback으로 고정한다.
+  // 매 렌더 새로 만들면 effect 의존성에 넣을 수 없고(리스너를 매번 재등록하게 된다),
+  // 빼면 오래된 클로저를 잡아 대화가 엉뚱한 줄에서 멈출 수 있다.
   const advanceNpcDialogue = useCallback(() => {
     if (!npcDialogue) return;
     if (dialogueLineIndex < npcDialogue.lines.length - 1) {
       setDialogueLineIndex((i) => i + 1);
       return;
     }
-    if (npcDialogue.dialogueId) markDialogueSeen(npcDialogue.dialogueId);
-    if (npcDialogue.grantsMonsterId) grantMonster(npcDialogue.grantsMonsterId);
-    if (npcDialogue.setsFlag) setStoryFlag(npcDialogue.setsFlag);
-    if (npcDialogue.acceptQuestId) acceptQuest(npcDialogue.acceptQuestId);
-    if (npcDialogue.completeQuest) {
-      const { questId, objective, rewards, setsFlag } = npcDialogue.completeQuest;
-      completeQuest(questId, objective, rewards, setsFlag);
-    }
-    setNpcDialogue(null);
-    setDialogueLineIndex(0);
-  }, [npcDialogue, dialogueLineIndex, setStoryFlag, markDialogueSeen, grantMonster, acceptQuest, completeQuest]);
+    closeNpcDialogue();
+  }, [npcDialogue, dialogueLineIndex, closeNpcDialogue]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -828,7 +955,8 @@ export default function BaseCampPage() {
         return;
       }
       if (e.key === "Escape") {
-        if (npcDialogue) { setNpcDialogue(null); setDialogueLineIndex(0); return; }
+        // ESC 로 닫아도 지급은 된다. 안 읽고 넘긴 것과 못 받은 것은 다르다
+        if (npcDialogue) { closeNpcDialogue(); return; }
         if (dexOpen) { setDexOpen(false); setMenuOpen(true); return; }
         if (questLogOpen) { setQuestLogOpen(false); setMenuOpen(true); return; }
         if (towerPayload) { setTowerPayload(null); return; }
@@ -837,7 +965,7 @@ export default function BaseCampPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dexOpen, questLogOpen, towerPayload, npcDialogue, dialogueLineIndex, menuOpen, advanceNpcDialogue]);
+  }, [dexOpen, questLogOpen, towerPayload, npcDialogue, dialogueLineIndex, menuOpen, advanceNpcDialogue, closeNpcDialogue]);
 
   const handleTowerSelect = (floor: number) => {
     if (!towerPayload) return;
@@ -886,6 +1014,14 @@ export default function BaseCampPage() {
       {dexOpen && <DexModal onClose={() => setDexOpen(false)} />}
 
       {questLogOpen && <QuestLogModal onClose={() => setQuestLogOpen(false)} />}
+
+      {rewardScreen && (
+        <RewardScreen
+          title={rewardScreen.title}
+          items={rewardScreen.items}
+          onClose={() => setRewardScreen(null)}
+        />
+      )}
 
       {towerPayload && (
         <TowerModal

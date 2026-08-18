@@ -1,5 +1,6 @@
 import type { PersistedStoryFlag } from "../playerStore";
 import type { QuestObjective } from "../../camp/questObjectives";
+import type { QuestReward } from "../../camp/questRewards";
 
 /**
  * React ↔ Phaser 공용 이벤트 버스.
@@ -111,8 +112,10 @@ export interface NpcDialoguePayload {
   acceptQuestId?: string;
   completeQuest?: {
     questId: string;
+    /** 받은 것 화면의 제목. 뭘 하고 받은 건지가 붙어 있어야 기억에 남는다 */
+    questTitle: string;
     objective: QuestObjective;
-    rewards: { itemId: string; amount: number }[];
+    rewards: QuestReward[];
     setsFlag?: PersistedStoryFlag;
   };
 }
