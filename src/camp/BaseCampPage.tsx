@@ -14,6 +14,8 @@ import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
 import { ALL_QUESTS } from "./campDialogues";
 import type { QuestDef } from "./campDialogues";
+import { evaluateObjective } from "./questObjectives";
+import type { QuestSnapshot } from "./questObjectives";
 import { getMaterial } from "../shared/items";
 import { PixelIcon } from "../shared/ui/PixelIcon";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
@@ -422,9 +424,25 @@ function DexModal({ onClose }: { onClose: () => void }) {
 
 // ── 퀘스트 로그 모달 ──────────────────────────────────────────────────────────────
 
+/**
+ * 퀘스트 목표 판정에 필요한 것만 추린 지금 상태.
+ *
+ * 목표가 넷으로 나뉘면서 재료 말고도 층·도감·장비를 봐야 한다. 화면마다 따로 모으면
+ * 판정 기준이 화면 수만큼 생기므로 여기 한 곳에서 만든다.
+ */
+function useQuestSnapshot(): QuestSnapshot {
+  const materials         = usePlayerStore((s) => s.materials);
+  const potions           = usePlayerStore((s) => s.potions);
+  const bestFloor         = usePlayerStore((s) => s.bestFloor);
+  const dexCaught         = usePlayerStore((s) => s.dexCaught);
+  const equippedArtifacts = usePlayerStore((s) => s.equippedArtifacts);
+  const craftedArtifacts  = usePlayerStore((s) => s.craftedArtifacts);
+  return { materials, potions, bestFloor, dexCaught, equippedArtifacts, craftedArtifacts };
+}
+
 function QuestLogModal({ onClose }: { onClose: () => void }) {
   const questStatus = usePlayerStore((s) => s.questStatus);
-  const materials    = usePlayerStore((s) => s.materials);
+  const snapshot = useQuestSnapshot();
 
   const visibleQuests = ALL_QUESTS.filter(
     (q) => (questStatus[q.id] ?? "not_accepted") !== "not_accepted",
@@ -469,10 +487,12 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
           {visibleQuests.map((q) => {
             const status = questStatus[q.id] ?? "not_accepted";
             const badge  = QUEST_STATUS_BADGE[status];
-            const have   = materials[q.objective.itemId] ?? 0;
-            const need   = q.objective.amount;
-            const pct    = Math.min(100, Math.round((have / need) * 100));
-            const objMat = getMaterial(q.objective.itemId);
+            // 목표가 넷으로 나뉘어 재료 수량만으로는 못 그린다. 종류마다 자기 진행도를 낸다
+            const progress = evaluateObjective(q.objective, snapshot);
+            const objMat = q.objective.kind === "material" ? getMaterial(q.objective.itemId) : undefined;
+            const pct = progress.need
+              ? Math.min(100, Math.round(((progress.have ?? 0) / progress.need) * 100))
+              : (progress.done ? 100 : 0);
 
             return (
               <div
@@ -500,9 +520,13 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
                     <div className="flex items-center justify-between text-pixel-sm text-sand-300 mb-1">
                       <span className="flex items-center gap-1.5">
                         {objMat && <PixelIcon name={objMat.icon} size={16} />}
-                        {objMat?.name ?? q.objective.itemId}
+                        {progress.label}
                       </span>
-                      <span className="font-mono">{Math.min(have, need)} / {need}</span>
+                      <span className="font-mono">
+                        {progress.need !== undefined
+                          ? `${progress.have ?? 0} / ${progress.need}`
+                          : (progress.done ? "완료" : "아직")}
+                      </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-shadow-700 overflow-hidden">
                       <div

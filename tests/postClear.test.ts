@@ -30,7 +30,8 @@ const talk = (
   seenDialogues: string[],
 ) => resolveNpcInteraction(list, {
   npcId: list === ORION_DIALOGUES ? "orion" : "baros",
-  storyFlags, bestFloor, materials: {}, questStatus: { ...doneQuests }, seenDialogues,
+  storyFlags, bestFloor, questStatus: { ...doneQuests }, seenDialogues,
+  snapshot: { materials: {}, potions: {}, bestFloor, dexCaught: [], equippedArtifacts: {}, craftedArtifacts: [] },
   talkState: { hurt: false, noPotion: false, loaded: false },
 });
 

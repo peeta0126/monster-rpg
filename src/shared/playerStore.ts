@@ -18,6 +18,8 @@ import { ARTIFACT_RECIPES } from "../workshop/craftingRecipes";
 import type { PersistedStoryFlag, QuestStatus } from "./storyFlags";
 import { DEFAULT_STORY_FLAGS } from "./storyFlags";
 import { backfillSeenDialogues } from "../camp/dialogueBackfill";
+import type { QuestObjective } from "../camp/questObjectives";
+import { objectiveCost } from "../camp/questObjectives";
 
 // ─── 스토리 플래그 · 퀘스트 상태 ─────────────────────────────────────────────────
 //
@@ -397,7 +399,7 @@ interface PlayerState {
   /** 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 한 번의 set()으로 원자적으로 수행 */
   completeQuest: (
     questId: string,
-    objective: { itemId: string; amount: number },
+    objective: QuestObjective,
     rewards: { itemId: string; amount: number }[],
     setsFlag?: PersistedStoryFlag,
   ) => boolean;
@@ -486,9 +488,13 @@ export const usePlayerStore = create<PlayerState>()(
 
       completeQuest: (questId, objective, rewards, setsFlag) => {
         const s = get();
-        if ((s.materials[objective.itemId] ?? 0) < objective.amount) return false;
+        // 가져가는 건 재료 목표뿐이다. 층을 도로 내리거나 잡은 몬스터를 도감에서 지울 수는 없다
+        const cost = objectiveCost(objective);
         const newMats = { ...s.materials };
-        newMats[objective.itemId] = (newMats[objective.itemId] ?? 0) - objective.amount;
+        if (cost) {
+          if ((newMats[cost.itemId] ?? 0) < cost.amount) return false;
+          newMats[cost.itemId] = (newMats[cost.itemId] ?? 0) - cost.amount;
+        }
         for (const reward of rewards) {
           newMats[reward.itemId] = (newMats[reward.itemId] ?? 0) + reward.amount;
         }

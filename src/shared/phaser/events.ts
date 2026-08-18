@@ -1,4 +1,5 @@
 import type { PersistedStoryFlag } from "../playerStore";
+import type { QuestObjective } from "../../camp/questObjectives";
 
 /**
  * React ↔ Phaser 공용 이벤트 버스.
@@ -110,7 +111,7 @@ export interface NpcDialoguePayload {
   acceptQuestId?: string;
   completeQuest?: {
     questId: string;
-    objective: { itemId: string; amount: number };
+    objective: QuestObjective;
     rewards: { itemId: string; amount: number }[];
     setsFlag?: PersistedStoryFlag;
   };

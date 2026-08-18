@@ -2,6 +2,8 @@ import type { PersistedStoryFlag, QuestStatus, StoryFlag } from "../shared/story
 import { isStoryFlagSet } from "../shared/storyFlags";
 import { pickSmallTalk, talkStage } from "./campSmallTalk";
 import type { SmallTalkNpcId, TalkState } from "./campSmallTalk";
+import type { QuestObjective, QuestSnapshot } from "./questObjectives";
+import { evaluateObjective } from "./questObjectives";
 
 export interface QuestDef {
   id: string;
@@ -15,7 +17,7 @@ export interface QuestDef {
    * 값이 없다.
    */
   requires: { flag?: StoryFlag; minFloor?: number; questDone?: string };
-  objective: { itemId: string; amount: number };
+  objective: QuestObjective;
   rewards: { itemId: string; amount: number }[];
   acceptLines: string[];
   completeLines: string[];
@@ -60,7 +62,7 @@ export const BAROS_FIRST_HUNT_QUEST: QuestDef = {
   title: "첫 사냥",
   npcId: "baros",
   requires: { flag: "met_baros" },
-  objective: { itemId: "herb", amount: 3 },
+  objective: { kind: "material", itemId: "herb", amount: 3 },
   rewards: [
     { itemId: "herb", amount: 2 },
     { itemId: "root", amount: 2 },
@@ -85,7 +87,7 @@ export const ORION_MOTHERS_MEDICINE_QUEST: QuestDef = {
   title: "어머니의 약",
   npcId: "orion",
   requires: { flag: "quest_baros_done", minFloor: 3 },
-  objective: { itemId: "slime_extract", amount: 2 },
+  objective: { kind: "material", itemId: "slime_extract", amount: 2 },
   rewards: [
     { itemId: "crystal", amount: 1 },
     { itemId: "monster_essence", amount: 1 },
@@ -383,7 +385,7 @@ export interface NpcInteractionResult {
   acceptQuestId?: string;
   completeQuest?: {
     questId: string;
-    objective: { itemId: string; amount: number };
+    objective: QuestObjective;
     rewards: { itemId: string; amount: number }[];
     setsFlag?: PersistedStoryFlag;
   };
@@ -393,7 +395,8 @@ export interface NpcInteractionContext {
   npcId: SmallTalkNpcId;
   storyFlags: Record<PersistedStoryFlag, boolean>;
   bestFloor: number;
-  materials: Record<string, number>;
+  /** 퀘스트 목표 판정에 필요한 것만 추린 지금 상태 */
+  snapshot: QuestSnapshot;
   questStatus: Record<string, QuestStatus>;
   seenDialogues: string[];
   /** 잡담 조건 — 다쳤나 · 물약이 없나 · 재료를 쌓아뒀나 */
@@ -454,25 +457,22 @@ export function resolveNpcInteraction(
   dialogues: DialogueEntry[],
   ctx: NpcInteractionContext,
 ): NpcInteractionResult | undefined {
-  const { storyFlags, bestFloor, materials, questStatus, seenDialogues } = ctx;
+  const { storyFlags, bestFloor, snapshot, questStatus, seenDialogues } = ctx;
   const seen = new Set(seenDialogues);
   const quest = activeQuestFor(ctx.npcId, storyFlags, bestFloor, questStatus);
   const status = quest ? questStatus[quest.id] ?? "not_accepted" : "completed";
 
   // 1) 완료 가능
-  if (quest && status === "in_progress") {
-    const have = materials[quest.objective.itemId] ?? 0;
-    if (have >= quest.objective.amount) {
-      return {
-        lines: quest.completeLines,
-        completeQuest: {
-          questId:   quest.id,
-          objective: quest.objective,
-          rewards:   quest.rewards,
-          setsFlag:  quest.setsFlag,
-        },
-      };
-    }
+  if (quest && status === "in_progress" && evaluateObjective(quest.objective, snapshot).done) {
+    return {
+      lines: quest.completeLines,
+      completeQuest: {
+        questId:   quest.id,
+        objective: quest.objective,
+        rewards:   quest.rewards,
+        setsFlag:  quest.setsFlag,
+      },
+    };
   }
 
   // 2) 안 본 이야기 대사.
