@@ -12,6 +12,7 @@
  * 실행: npx tsx scripts/sim/gateCheck.ts [판수]
  */
 import { installSeededRandom, fightFloor, type SimState } from "./gameModel";
+import { DEFAULT_STORY_FLAGS } from "../../src/shared/storyFlags";
 import { getFloorEnemy, isBossFloor } from "../../src/shared/floorTable";
 import type { ArtifactInstance } from "../../src/shared/crafting";
 import {
@@ -57,7 +58,7 @@ async function winRate(
       party, imprint: imprintAt(party, tier), materials: {},
       potions: freshPotions(floor),
       artifacts: [], equipped, bestFloor: floor - 1,
-      questBarosDone: true, questOrionDone: true,
+      dexCaught: [], storyFlags: { ...DEFAULT_STORY_FLAGS, met_orion: true, met_baros: true, quest_baros_done: true, quest_orion_done: true }, questStatus: {},
     };
     if ((await fightFloor(s, floor)).win) wins++;
     restore();

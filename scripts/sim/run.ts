@@ -27,6 +27,13 @@ import type { ArtifactInstance } from "../../src/shared/crafting";
 
 const canSynth = (a: ArtifactInstance, b: ArtifactInstance) => canSynthesizeArtifacts(a, b);
 import type { ItemQuality } from "../../src/shared/crafting";
+import { collectQuests, type QuestLogEntry } from "./quests";
+
+/**
+ * 퀘스트 보상을 받는가. 보상 수량을 정하려면 "받았을 때와 안 받았을 때"를 나란히 재야 한다.
+ * SIM_QUESTS=0 으로 끈다.
+ */
+const USE_QUESTS = process.env.SIM_QUESTS !== "0";
 
 // ─── 플레이어 숙련도 ─────────────────────────────────────────────────────────
 // 미니게임을 곧잘 하는 플레이어 가정 (아티팩트 QTE에서 great 정도)
@@ -70,6 +77,8 @@ interface RunStats {
   forcedRetreats: number;
   /** 캠프로 내려가 회복한 횟수 — 이게 0 이면 소모 관리가 없다는 뜻이다 */
   campReturns: number;
+  /** 받은 퀘스트와 받은 시점의 층 */
+  questsDone: QuestLogEntry[];
 }
 
 /**
@@ -100,7 +109,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
     finalLevels: [], finalParty: [], materialsLeft: {}, blockedRecipes: {},
     lossByFloor: {}, battlesByFloor: {}, leadLevelAtFloor: {},
     bossParty: {}, bossRetries: {},
-    imprintFed: 0, forcedRetreats: 0, campReturns: 0,
+    imprintFed: 0, forcedRetreats: 0, campReturns: 0, questsDone: [],
   };
 
   /** 보관함 — 각인 재료가 된다. 전투에는 안 나오므로 능력치는 필요 없다 */
@@ -136,6 +145,9 @@ async function simulateRun(seed: number): Promise<RunStats> {
     // 잡아 온 것: 파티가 비면 채우고, 더 좋으면 갈아타고, 나머지는 각인 재료로 남긴다
     for (const wild of res.caughtMonsters) {
       const caught: OwnedMon = { ...wild, uid: `c${uid++}`, currentHp: wild.maxHp };
+      // 도감과 첫 포획 플래그 — 퀘스트 조건과 목표가 이 둘을 읽는다
+      if (!s.dexCaught.includes(caught.id)) s.dexCaught.push(caught.id);
+      s.storyFlags.first_capture = true;
       if (partySlots(s) < 3) { s.party.push(caught); continue; }
       const weakest = s.party.reduce((a, b) => (power(a) <= power(b) ? a : b));
       // 키워둔 몬스터를 레벨이 훨씬 낮은 신규 포획으로 갈아타지는 않는다.
@@ -247,8 +259,15 @@ async function simulateRun(seed: number): Promise<RunStats> {
     }
   };
 
+  /** 마을에 들러 받을 것을 받고 낼 것을 낸다. 사람은 층을 넘길 때마다 들른다 */
+  const doQuests = async () => {
+    if (!USE_QUESTS) return;
+    await collectQuests(s, storage, () => `q${uid++}`, st.questsDone);
+  };
+
   // ── 본 루프 ─────────────────────────────────────────────────────────────
   doForest(); doForest(); doForest();   // 파티 확보 + 초기 재료
+  await doQuests();
   doCrafting(); doAnvil();
 
   let floor = 1;
@@ -289,6 +308,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
       if (floor === MAX_TOWER_FLOOR) { st.cleared = true; break; }
       floor++;
       // 층을 넘길 때마다 자원 정비
+      await doQuests();
       if (floor % 3 === 0) { doCrafting(); doAnvil(); }
       continue;
     }
@@ -301,6 +321,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
 
     goHomeAndRest();
     doForest();
+    await doQuests();
     doCrafting();
     doAnvil();
     const farmFloor = Math.max(1, s.bestFloor);
@@ -412,6 +433,23 @@ console.log(`\n── 보스 벽 (${RUNS}판) ──`);
       `${String(f).padStart(3)} | ${mean.toFixed(1).padStart(6)} | ` +
       `${String(e.maxHp).padStart(4)}/${String(e.attack).padStart(3)}/${String(e.defense).padStart(3)} | ${party}`,
     );
+  }
+}
+
+console.log(`\n── 퀘스트 (${USE_QUESTS ? "보상 받음" : "보상 안 받음 · SIM_QUESTS=0"}) ──`);
+{
+  const done = results.map((r) => r.questsDone.length);
+  console.log(`평균 완료 ${(done.reduce((a, b) => a + b, 0) / RUNS).toFixed(1)}개`);
+  const byQuest = new Map<string, { n: number; floors: number[] }>();
+  for (const r of results) {
+    for (const q of r.questsDone) {
+      const v = byQuest.get(q.questId) ?? { n: 0, floors: [] };
+      v.n++; v.floors.push(q.atFloor); byQuest.set(q.questId, v);
+    }
+  }
+  for (const [id, v] of byQuest) {
+    const mean = v.floors.reduce((a, b) => a + b, 0) / v.floors.length;
+    console.log(`  ${id.padEnd(24)} ${String(v.n).padStart(3)}/${RUNS}판 · 평균 ${mean.toFixed(1)}층에서 받음`);
   }
 }
 

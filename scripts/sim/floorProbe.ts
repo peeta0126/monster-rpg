@@ -17,6 +17,7 @@
  *    같은 설정이 73% 로도 15% 로도 나온다(실제로 한 시간 태웠다).
  */
 import { installSeededRandom, fightFloor, type SimState } from "./gameModel";
+import { DEFAULT_STORY_FLAGS } from "../../src/shared/storyFlags";
 import { getFloorEnemy } from "../../src/shared/floorTable";
 import type { ArtifactInstance } from "../../src/shared/crafting";
 import {
@@ -46,7 +47,7 @@ async function main() {
       materials: {},
       potions: freshPotions(floor),
       artifacts: [], equipped, bestFloor: floor - 1,
-      questBarosDone: true, questOrionDone: true,
+      dexCaught: [], storyFlags: { ...DEFAULT_STORY_FLAGS, met_orion: true, met_baros: true, quest_baros_done: true, quest_orion_done: true }, questStatus: {},
     };
     const r = await fightFloor(s, floor);
     if (r.win) wins++;

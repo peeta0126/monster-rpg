@@ -12,6 +12,7 @@
  *          **아래로 가는 폭이 오른쪽으로 8칸 가는 폭보다 커야 한다.**
  */
 import { installSeededRandom, fightFloor, type SimState } from "./gameModel";
+import { DEFAULT_STORY_FLAGS } from "../../src/shared/storyFlags";
 import { getFloorEnemy } from "../../src/shared/floorTable";
 import type { ArtifactInstance } from "../../src/shared/crafting";
 import {
@@ -92,7 +93,7 @@ async function winRate(
       materials: {},
       potions: freshPotions(floor),          // 시행마다 새로
       artifacts: [], equipped, bestFloor: floor - 1,
-      questBarosDone: true, questOrionDone: true,
+      dexCaught: [], storyFlags: { ...DEFAULT_STORY_FLAGS, met_orion: true, met_baros: true, quest_baros_done: true, quest_orion_done: true }, questStatus: {},
     };
     if ((await fightFloor(s, floor)).win) wins++;
     restore();
