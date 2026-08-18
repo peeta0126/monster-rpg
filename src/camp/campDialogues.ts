@@ -1,5 +1,7 @@
 import type { PersistedStoryFlag, QuestStatus, StoryFlag } from "../shared/storyFlags";
 import { isStoryFlagSet } from "../shared/storyFlags";
+import { pickSmallTalk, talkStage } from "./campSmallTalk";
+import type { SmallTalkNpcId, TalkState } from "./campSmallTalk";
 
 export interface QuestDef {
   id: string;
@@ -356,6 +358,8 @@ export interface NpcInteractionResult {
   lines: string[];
   /** 이야기 대사일 때만. 끝까지 읽으면 이 이름표가 "본 대사"로 기록된다 */
   dialogueId?: string;
+  /** 잡담일 때만. 다음에 같은 말을 연달아 하지 않으려고 화면이 기억한다 */
+  smallTalkLine?: string;
   setsFlag?: PersistedStoryFlag;
   grantsMonsterId?: string;
   acceptQuestId?: string;
@@ -368,11 +372,18 @@ export interface NpcInteractionResult {
 }
 
 export interface NpcInteractionContext {
+  npcId: SmallTalkNpcId;
   storyFlags: Record<PersistedStoryFlag, boolean>;
   bestFloor: number;
   materials: Record<string, number>;
   questStatus: Record<string, QuestStatus>;
   seenDialogues: string[];
+  /** 잡담 조건 — 다쳤나 · 물약이 없나 · 재료를 쌓아뒀나 */
+  talkState: TalkState;
+  /** 이 사람이 바로 앞에 한 잡담. 연달아 같은 말을 안 하려고 뺀다 (저장하지 않는다) */
+  lastSmallTalk?: string;
+  /** 시험에서 무작위를 고정하려고 열어 둔 자리 */
+  random?: () => number;
 }
 
 /** 그 퀘스트를 지금 내놓을 수 있는가 (완료 여부는 따로 본다) */
@@ -448,8 +459,27 @@ export function resolveNpcInteraction(
     if (status === "in_progress") return { lines: quest.progressLines };
   }
 
-  // 5) 잡담 — 아직 없다. 다 본 사람에게는 마지막 대사를 되풀이한다.
+  // 4.5) 메우는 줄. 이야기가 **하나도** 열리지 않은 사람에게만 쓴다.
+  //      바로스의 "이장 영감한테 먼저 가봐라"가 그렇다 — 아직 이야기가 시작도 안 됐는데
+  //      날씨 얘기를 시킬 수는 없다. 이야기가 하나라도 열렸으면 그 줄은 역할이 끝난 것이라
+  //      잡담으로 넘어간다.
+  const reachable = satisfiedEntries(dialogues, storyFlags, bestFloor);
+  if (!reachable.some((e) => !e.fallback)) {
+    const gate = reachable[reachable.length - 1];
+    if (gate) return { lines: gate.lines };
+  }
+
+  // 5) 잡담
+  const chat = pickSmallTalk(
+    ctx.npcId,
+    talkStage(bestFloor, storyFlags.tower_cleared),
+    ctx.talkState,
+    ctx.lastSmallTalk,
+    ctx.random,
+  );
+  if (chat) return { lines: [chat], smallTalkLine: chat };
+
+  // 구간 표가 비어 있을 때의 마지막 안전망. 아무것도 못 내면 대화 자체가 안 뜬다
   const last = selectDialogueEntry(dialogues, storyFlags, bestFloor);
-  if (!last) return undefined;
-  return { lines: last.lines, setsFlag: last.setsFlag, grantsMonsterId: last.grantsMonsterId };
+  return last ? { lines: last.lines } : undefined;
 }

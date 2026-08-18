@@ -26,11 +26,13 @@ const talk = (
     seen?: string[];
   } = {},
 ) => resolveNpcInteraction(list, {
+  npcId: list === ORION_DIALOGUES ? "orion" : "baros",
   storyFlags: flags(on),
   bestFloor: opts.bestFloor ?? 0,
   materials: opts.materials ?? {},
   questStatus: opts.questStatus ?? {},
   seenDialogues: opts.seen ?? [],
+  talkState: { hurt: false, noPotion: false, loaded: false },
 });
 
 test("이장의 첫 대화가 첫 몬스터를 준다", () => {

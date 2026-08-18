@@ -11,6 +11,8 @@ import {
 } from "../shared/playerSprite";
 import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
+import { LOADED_MATERIAL_COUNT } from "./campSmallTalk";
+import type { SmallTalkNpcId } from "./campSmallTalk";
 import type { DialogueEntry } from "./campDialogues";
 import {
   CAMP_COLLISION_BOXES, CAMP_PROP_BOXES, CAMP_MAP_W, CAMP_MAP_H,
@@ -31,7 +33,7 @@ const NPC_DISPLAY_HEIGHT = 192;   // 플레이어(160) × 1.2배
 const NPC_INTERACT_DISTANCE = 160; // 디스플레이 절반(160)에 맞춰 조정
 
 type BaseCampNpc = {
-  id: string;
+  id: SmallTalkNpcId;
   name: string;
   spriteTexture: string;  // 월드에 표시되는 픽셀아트 스프라이트 텍스처 키
   portraitPath: string;   // 대화창에 표시되는 초상화 이미지 경로
@@ -67,6 +69,8 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
 export default class BaseCampScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private npcSprites: BaseCampNpcInstance[] = [];
+  /** NPC 별로 바로 앞에 한 잡담. 화면 상태라 저장하지 않는다 */
+  private lastSmallTalk: Record<string, string> = {};
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
@@ -337,11 +341,23 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   private showNpcDialogue(npc: BaseCampNpc) {
-    const { storyFlags, bestFloor, materials, questStatus, seenDialogues } = usePlayerStore.getState();
+    const {
+      storyFlags, bestFloor, materials, questStatus, seenDialogues, party, potions,
+    } = usePlayerStore.getState();
     const result = resolveNpcInteraction(npc.dialogues, {
+      npcId: npc.id,
       storyFlags, bestFloor, materials, questStatus, seenDialogues,
+      talkState: {
+        hurt:     party.some((m) => m.currentHp < m.maxHp * 0.5),
+        noPotion: Object.values(potions).every((n) => n <= 0),
+        loaded:   Object.values(materials).reduce((a, n) => a + n, 0) >= LOADED_MATERIAL_COUNT,
+      },
+      // 바로 앞에 한 잡담만 기억한다. 세이브에 넣지 않는다 — 새로고침하면 같은 말이 한 번
+      // 더 나올 수 있지만, 그 정도를 저장 구조에 얹을 값어치는 없다.
+      lastSmallTalk: this.lastSmallTalk[npc.id],
     });
     if (!result) return;
+    if (result.smallTalkLine) this.lastSmallTalk[npc.id] = result.smallTalkLine;
     gameEvents.emit(GAME_EVENT.SHOW_NPC_DIALOGUE, {
       name: npc.name,
       lines: result.lines,

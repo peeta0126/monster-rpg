@@ -29,7 +29,9 @@ const talk = (
   bestFloor: number,
   seenDialogues: string[],
 ) => resolveNpcInteraction(list, {
+  npcId: list === ORION_DIALOGUES ? "orion" : "baros",
   storyFlags, bestFloor, materials: {}, questStatus: { ...doneQuests }, seenDialogues,
+  talkState: { hurt: false, noPotion: false, loaded: false },
 });
 
 test("엔딩 전에는 클리어 대사가 안 나온다", () => {
