@@ -1,5 +1,5 @@
-import type { PersistedStoryFlag, QuestStatus, StoryFlag } from "../shared/playerStore";
-import { isStoryFlagSet } from "../shared/playerStore";
+import type { PersistedStoryFlag, QuestStatus, StoryFlag } from "../shared/storyFlags";
+import { isStoryFlagSet } from "../shared/storyFlags";
 
 export interface QuestDef {
   id: string;
@@ -17,6 +17,14 @@ export interface QuestDef {
 }
 
 export interface DialogueEntry {
+  /**
+   * 이 대사를 가리키는 이름표. **세이브에 이 문자열이 그대로 들어간다** — 한 번 정한 뒤에는
+   * 바꾸지 말 것. 바꾸면 이미 본 사람이 그 대사를 다시 본다.
+   *
+   * 플래그로 대신할 수 없다. 플래그는 "그 일이 일어났는가"고 여기 필요한 건 "그 글을
+   * 읽었는가"라, 한 플래그에 대사가 둘 붙는 순간 구분이 사라진다.
+   */
+  id: string;
   requires: StoryFlag;
   /** requires 외에 bestFloor 최소치까지 함께 걸어야 할 때 사용 (퀘스트의 minFloor와 짝을 맞추는 용도) */
   minFloor?: number;
@@ -91,6 +99,7 @@ export const ALL_QUESTS: QuestDef[] = [BAROS_FIRST_HUNT_QUEST, ORION_MOTHERS_MED
 export const ORION_DIALOGUES: DialogueEntry[] = [
   // 3-1. 첫 만남 (start)
   {
+    id: "orion_intro",
     requires: "always",
     setsFlag: "met_orion",
     grantsMonsterId: "flameling",
@@ -112,6 +121,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-2. 바로스를 만난 후
   {
+    id: "orion_after_baros",
     requires: "met_baros",
     lines: [
       "바로스가 통과시켰나. …그자가 사람을 쉽게 들여보내지 않는데.",
@@ -122,6 +132,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-3. 첫 포획 후
   {
+    id: "orion_first_capture",
     requires: "first_capture",
     lines: [
       "몬스터를 데려왔구나.",
@@ -134,6 +145,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   // minFloor를 quest.requires.minFloor와 맞춰서, 3층 도달 전에는 이 fallback이 뜨지 않고
   // 바로 위 met_baros/first_capture 대사로 자연스럽게 빠지도록 한다.
   {
+    id: "orion_quest_medicine",
     requires: "quest_orion_done",
     minFloor: ORION_MOTHERS_MEDICINE_QUEST.requires.minFloor,
     quest: ORION_MOTHERS_MEDICINE_QUEST,
@@ -141,6 +153,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-4. 10층 도달 — 2막
   {
+    id: "orion_floor_10",
     requires: "floor_10",
     lines: [
       "10층이라고? …정말 오르고 있구나.",
@@ -152,6 +165,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-5. 20층 도달 — 3막
   {
+    id: "orion_floor_20",
     requires: "floor_20",
     lines: [
       "20층. 내가 본 것보다 위구나.",
@@ -164,6 +178,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-6. 40층 도달 — 4막 · 정체
   {
+    id: "orion_floor_40",
     requires: "floor_40",
     lines: [
       "40층….",
@@ -181,6 +196,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-7. 50층 · 오름 처치 — 만물의 정수
   {
+    id: "orion_floor_50",
     requires: "floor_50",
     lines: [
       "…이게 뭐냐.",
@@ -193,6 +209,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-8. 엔딩 이후 — 어머니가 나은 뒤
   {
+    id: "orion_cleared",
     requires: "tower_cleared",
     lines: [
       "어머니는 어제 마당까지 나오셨다.",
@@ -207,6 +224,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
 export const BAROS_DIALOGUES: DialogueEntry[] = [
   // met_orion 이전 게이팅
   {
+    id: "baros_gate",
     requires: "always",
     lines: ["이장 영감한테 먼저 가봐라."],
   },
@@ -214,6 +232,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   // 예전엔 여기서 포획·육성·제작·분해를 19줄에 몰아넣었다. 그 시점에 못 하는 일까지
   // 설명하니 아무것도 안 남았고, 없어진 탑 포획 규칙까지 그대로 읊고 있었다.
   {
+    id: "baros_intro",
     requires: "met_orion",
     setsFlag: "met_baros",
     lines: [
@@ -230,12 +249,14 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 첫 사냥 (met_baros 이후) — 미수락/진행중/완료는 QuestDef가 처리, 이 lines는 완료 후 필터
   {
+    id: "baros_quest_first_hunt",
     requires: "met_baros",
     quest: BAROS_FIRST_HUNT_QUEST,
     lines: ["탑에 오르기 전에 준비를 단단히 해라."],
   },
   // 4-2. 첫 포획 후 — 파티와 재료 이야기는 실제로 잡아 온 다음에 한다
   {
+    id: "baros_first_capture",
     requires: "first_capture",
     lines: [
       "데려왔군. 키워라. 묵혀두면 아무 소용 없다.",
@@ -248,6 +269,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 4-3. 5층 도달 — 장비 이야기는 맨몸이 슬슬 안 먹히는 이 시점에
   {
+    id: "baros_floor_5",
     requires: "floor_5",
     lines: [
       "5층. …인정하마.",
@@ -260,6 +282,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 4-5. 10층 도달 — 2막 · 복선
   {
+    id: "baros_floor_10",
     requires: "floor_10",
     lines: [
       "10층 지켰나. 놀랍군.",
@@ -274,6 +297,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 4-6. 20층 도달 — 3막
   {
+    id: "baros_floor_20",
     requires: "floor_20",
     lines: [
       "20층 보스를 넘었다고. 격노한 모치였나.",
@@ -285,6 +309,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 4-7. 엔딩 이후 — 탑을 넘긴 뒤
   {
+    id: "baros_cleared",
     requires: "tower_cleared",
     lines: [
       "…네가 그 위까지 갔다는 게 아직도 안 믿긴다.",
@@ -295,20 +320,26 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
 ];
 
+/** 조건(requires + minFloor)을 만족하는 항목을 정의 순서 그대로 모은다 */
+export function satisfiedEntries(
+  entries: DialogueEntry[],
+  storyFlags: Record<PersistedStoryFlag, boolean>,
+  bestFloor: number,
+): DialogueEntry[] {
+  return entries.filter((entry) => {
+    const floorOk = entry.minFloor === undefined || bestFloor >= entry.minFloor;
+    return floorOk && isStoryFlagSet(entry.requires, storyFlags, bestFloor);
+  });
+}
+
 /** requires를 만족하는 항목 중 배열에서 가장 마지막 것을 반환 */
 export function selectDialogueEntry(
   entries: DialogueEntry[],
   storyFlags: Record<PersistedStoryFlag, boolean>,
   bestFloor: number,
 ): DialogueEntry | undefined {
-  let selected: DialogueEntry | undefined;
-  for (const entry of entries) {
-    const floorOk = entry.minFloor === undefined || bestFloor >= entry.minFloor;
-    if (floorOk && isStoryFlagSet(entry.requires, storyFlags, bestFloor)) {
-      selected = entry;
-    }
-  }
-  return selected;
+  const ok = satisfiedEntries(entries, storyFlags, bestFloor);
+  return ok[ok.length - 1];
 }
 
 export interface NpcInteractionResult {

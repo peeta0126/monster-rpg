@@ -13,8 +13,11 @@ export const FRESH_SAVE = JSON.stringify({
     storage: [], dexSeen: ["flameling"], dexCaught: ["flameling"],
     materials: {}, potions: {}, bestFloor: 0,
     storyFlags: { met_orion: true }, questStatus: {},
+    // 이장의 첫 대화는 이미 들은 상태다 — 그래서 플레미가 파티에 있다. 이걸 안 적으면
+    // 다음에 이장에게 말을 걸 때 그 대사가 처음부터 다시 나온다.
+    seenDialogues: ["orion_intro"],
     craftedItems: [], craftedArtifacts: [], craftedPotions: [], equippedArtifacts: {},
     imprint: {},
   },
-  version: 1,
+  version: 2,
 });
