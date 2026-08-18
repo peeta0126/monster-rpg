@@ -337,13 +337,16 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   private showNpcDialogue(npc: BaseCampNpc) {
-    const { storyFlags, bestFloor, materials, questStatus } = usePlayerStore.getState();
-    const result = resolveNpcInteraction(npc.dialogues, storyFlags, bestFloor, materials, questStatus);
+    const { storyFlags, bestFloor, materials, questStatus, seenDialogues } = usePlayerStore.getState();
+    const result = resolveNpcInteraction(npc.dialogues, {
+      storyFlags, bestFloor, materials, questStatus, seenDialogues,
+    });
     if (!result) return;
     gameEvents.emit(GAME_EVENT.SHOW_NPC_DIALOGUE, {
       name: npc.name,
       lines: result.lines,
       portraitPath: npc.portraitPath,
+      dialogueId: result.dialogueId,
       setsFlag: result.setsFlag,
       grantsMonsterId: result.grantsMonsterId,
       acceptQuestId: result.acceptQuestId,

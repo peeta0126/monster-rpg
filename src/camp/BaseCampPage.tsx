@@ -725,6 +725,7 @@ export default function BaseCampPage() {
   const towerCleared = usePlayerStore((s) => s.storyFlags.tower_cleared);
   const restorePartyHp = usePlayerStore((s) => s.restorePartyHp);
   const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
+  const markDialogueSeen = usePlayerStore((s) => s.markDialogueSeen);
   const grantMonster = usePlayerStore((s) => s.grantMonster);
   const partySize = usePlayerStore((s) => s.party.length);
   const storyFlags = usePlayerStore((s) => s.storyFlags);
@@ -781,6 +782,7 @@ export default function BaseCampPage() {
       setDialogueLineIndex((i) => i + 1);
       return;
     }
+    if (npcDialogue.dialogueId) markDialogueSeen(npcDialogue.dialogueId);
     if (npcDialogue.grantsMonsterId) grantMonster(npcDialogue.grantsMonsterId);
     if (npcDialogue.setsFlag) setStoryFlag(npcDialogue.setsFlag);
     if (npcDialogue.acceptQuestId) acceptQuest(npcDialogue.acceptQuestId);
@@ -790,7 +792,7 @@ export default function BaseCampPage() {
     }
     setNpcDialogue(null);
     setDialogueLineIndex(0);
-  }, [npcDialogue, dialogueLineIndex, setStoryFlag, grantMonster, acceptQuest, completeQuest]);
+  }, [npcDialogue, dialogueLineIndex, setStoryFlag, markDialogueSeen, grantMonster, acceptQuest, completeQuest]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

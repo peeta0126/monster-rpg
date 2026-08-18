@@ -26,6 +26,15 @@ export interface DialogueEntry {
    */
   id: string;
   requires: StoryFlag;
+  /**
+   * 이야기 한 대목이 아니라 "지금은 할 말이 없다"를 메우는 줄. 안 본 이야기 대사를 찾을 때
+   * 후보에서 빠진다.
+   *
+   * 바로스의 "이장 영감한테 먼저 가봐라"가 그렇다. 조건이 `always` 라 늘 만족하는데,
+   * 이장을 먼저 만나고 온 사람에게 그 줄이 이야기 순번으로 끼면 이미 만난 사람을 만나러
+   * 가라고 한다. 예전 로직은 "만족하는 것 중 마지막"을 골라서 이게 드러나지 않았다.
+   */
+  fallback?: boolean;
   /** requires 외에 bestFloor 최소치까지 함께 걸어야 할 때 사용 (퀘스트의 minFloor와 짝을 맞추는 용도) */
   minFloor?: number;
   lines: string[];
@@ -226,6 +235,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   {
     id: "baros_gate",
     requires: "always",
+    fallback: true,
     lines: ["이장 영감한테 먼저 가봐라."],
   },
   // 4-1. 첫 대면 — 탑의 규칙과 "혼자로는 안 된다"까지만.
@@ -344,6 +354,8 @@ export function selectDialogueEntry(
 
 export interface NpcInteractionResult {
   lines: string[];
+  /** 이야기 대사일 때만. 끝까지 읽으면 이 이름표가 "본 대사"로 기록된다 */
+  dialogueId?: string;
   setsFlag?: PersistedStoryFlag;
   grantsMonsterId?: string;
   acceptQuestId?: string;
@@ -355,53 +367,89 @@ export interface NpcInteractionResult {
   };
 }
 
+export interface NpcInteractionContext {
+  storyFlags: Record<PersistedStoryFlag, boolean>;
+  bestFloor: number;
+  materials: Record<string, number>;
+  questStatus: Record<string, QuestStatus>;
+  seenDialogues: string[];
+}
+
+/** 그 퀘스트를 지금 내놓을 수 있는가 (완료 여부는 따로 본다) */
+function questUnlocked(
+  quest: QuestDef,
+  storyFlags: Record<PersistedStoryFlag, boolean>,
+  bestFloor: number,
+): boolean {
+  const flagOk = isStoryFlagSet(quest.requires.flag, storyFlags, bestFloor);
+  const floorOk = quest.requires.minFloor === undefined || bestFloor >= quest.requires.minFloor;
+  return flagOk && floorOk;
+}
+
 /**
- * 퀘스트가 걸린 NPC는 미수락/진행중/완료 상태에 따라 acceptLines·progressLines·completeLines를
- * 우선 재생한다. 조건 미충족이거나 이미 완료된 퀘스트는 기존 대사 선택 로직(selectDialogueEntry)으로 넘긴다.
+ * 말을 걸었을 때 무엇을 재생할지 고른다. 위에서부터 하나만 고른다.
+ *
+ *   1. 완료 가능한 퀘스트 — 재료를 다 모아 온 사람은 그 자리에서 보상을 받는다.
+ *      이 하나만 이야기보다 앞이다. 손에 든 것을 건네러 온 사람을 돌려세우지 않는다.
+ *   2. 아직 **안 본** 이야기 대사 — 조건을 만족하는 것 중 가장 앞선 것부터 하나씩
+ *   3. 미수락 퀘스트 (수락 대사)
+ *   4. 진행중 퀘스트 (독촉 대사)
+ *   5. 잡담
+ *
+ * 예전에는 2번이 "조건을 만족하는 것 중 마지막"이었다. 플래그는 쌓이기만 하니 진행할수록
+ * 마지막 대사에 고정됐고, 놓친 이야기는 영영 못 봤다.
  */
 export function resolveNpcInteraction(
   dialogues: DialogueEntry[],
-  storyFlags: Record<PersistedStoryFlag, boolean>,
-  bestFloor: number,
-  materials: Record<string, number>,
-  questStatus: Record<string, QuestStatus>,
+  ctx: NpcInteractionContext,
 ): NpcInteractionResult | undefined {
+  const { storyFlags, bestFloor, materials, questStatus, seenDialogues } = ctx;
+  const seen = new Set(seenDialogues);
   const quest = dialogues.find((e) => e.quest)?.quest;
-  if (quest) {
-    const flagOk = isStoryFlagSet(quest.requires.flag, storyFlags, bestFloor);
-    const floorOk = quest.requires.minFloor === undefined || bestFloor >= quest.requires.minFloor;
-    const status = questStatus[quest.id] ?? "not_accepted";
+  const status = quest ? questStatus[quest.id] ?? "not_accepted" : "completed";
+  const unlocked = quest ? questUnlocked(quest, storyFlags, bestFloor) : false;
 
-    if (flagOk && floorOk && status !== "completed") {
-      if (status === "not_accepted") {
-        return { lines: quest.acceptLines, acceptQuestId: quest.id };
-      }
-      const have = materials[quest.objective.itemId] ?? 0;
-      if (have >= quest.objective.amount) {
-        return {
-          lines: quest.completeLines,
-          completeQuest: {
-            questId:   quest.id,
-            objective: quest.objective,
-            rewards:   quest.rewards,
-            setsFlag:  quest.setsFlag,
-          },
-        };
-      }
-      const questEntry = dialogues.find((e) => e.quest === quest);
-      const storyEntry = selectDialogueEntry(dialogues, storyFlags, bestFloor);
-      if (storyEntry && storyEntry !== questEntry) {
-        return {
-          lines: storyEntry.lines,
-          setsFlag: storyEntry.setsFlag,
-          grantsMonsterId: storyEntry.grantsMonsterId,
-        };
-      }
-      return { lines: quest.progressLines };
+  // 1) 완료 가능
+  if (quest && unlocked && status === "in_progress") {
+    const have = materials[quest.objective.itemId] ?? 0;
+    if (have >= quest.objective.amount) {
+      return {
+        lines: quest.completeLines,
+        completeQuest: {
+          questId:   quest.id,
+          objective: quest.objective,
+          rewards:   quest.rewards,
+          setsFlag:  quest.setsFlag,
+        },
+      };
     }
   }
 
-  const entry = selectDialogueEntry(dialogues, storyFlags, bestFloor);
-  if (!entry) return undefined;
-  return { lines: entry.lines, setsFlag: entry.setsFlag, grantsMonsterId: entry.grantsMonsterId };
+  // 2) 안 본 이야기 대사.
+  //    퀘스트가 달린 항목의 lines 는 "그 퀘스트를 이미 끝냈다"는 뒷정리 대사라, 퀘스트가
+  //    끝나기 전에는 후보가 아니다. 아니면 수락 대사보다 먼저 나와 퀘스트를 밀어낸다.
+  const story = satisfiedEntries(dialogues, storyFlags, bestFloor).find((e) => {
+    if (e.fallback || seen.has(e.id)) return false;
+    if (e.quest && (questStatus[e.quest.id] ?? "not_accepted") !== "completed") return false;
+    return true;
+  });
+  if (story) {
+    return {
+      lines: story.lines,
+      dialogueId: story.id,
+      setsFlag: story.setsFlag,
+      grantsMonsterId: story.grantsMonsterId,
+    };
+  }
+
+  // 3) 미수락 · 4) 진행중
+  if (quest && unlocked) {
+    if (status === "not_accepted") return { lines: quest.acceptLines, acceptQuestId: quest.id };
+    if (status === "in_progress") return { lines: quest.progressLines };
+  }
+
+  // 5) 잡담 — 아직 없다. 다 본 사람에게는 마지막 대사를 되풀이한다.
+  const last = selectDialogueEntry(dialogues, storyFlags, bestFloor);
+  if (!last) return undefined;
+  return { lines: last.lines, setsFlag: last.setsFlag, grantsMonsterId: last.grantsMonsterId };
 }

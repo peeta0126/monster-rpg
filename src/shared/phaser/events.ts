@@ -102,6 +102,8 @@ export interface NpcDialoguePayload {
   name: string;
   lines: string[];
   portraitPath: string;
+  /** 이야기 대사일 때만. 끝까지 읽으면 "본 대사"로 기록된다 */
+  dialogueId?: string;
   setsFlag?: PersistedStoryFlag;
   /** 대사가 끝나면 건네주는 몬스터 (첫 파티원) */
   grantsMonsterId?: string;
