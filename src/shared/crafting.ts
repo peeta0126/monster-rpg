@@ -44,7 +44,7 @@ export interface ArtifactInstance {
   // ── 장비 성장 시스템 (기본값: level 1, enhancement 0) ──────────────────────
   level?: number;        // 현재 레벨
   enhancement?: number;  // 강화 수치 (0 ~ MAX_EQUIPMENT_ENHANCEMENT)
-  source?: "crafting" | "synthesis"; // 획득 경로
+  source?: "crafting" | "synthesis" | "quest"; // 획득 경로
   // ── 부가 능력치 (레벨 10마다 랜덤 해제) ──────────────────────────────────────
   bonusStats?: ArtifactBonusStat[]; // 해제된 부가 능력치 목록
 }

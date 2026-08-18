@@ -15,68 +15,22 @@ import {
 } from "../monster/imprint";
 import type { RpsResult } from "./craftingUtils";
 import { ARTIFACT_RECIPES } from "../workshop/craftingRecipes";
+import type { PersistedStoryFlag, QuestStatus } from "./storyFlags";
+import { DEFAULT_STORY_FLAGS } from "./storyFlags";
+import { backfillSeenDialogues } from "../camp/dialogueBackfill";
+import type { QuestObjective } from "../camp/questObjectives";
+import { objectiveCost } from "../camp/questObjectives";
+import type { QuestReward, RewardDisplay } from "../camp/questRewards";
+import { rewardDisplay } from "../camp/questRewards";
 
-// ─── 스토리 플래그 ──────────────────────────────────────────────────────────────
+// ─── 스토리 플래그 · 퀘스트 상태 ─────────────────────────────────────────────────
+//
+// 정의는 shared/storyFlags.ts 로 내렸다 — 세이브 마이그레이션이 대사 표를 읽어야 해서
+// 이 파일과 campDialogues 가 서로를 부르게 됐고, 둘 다 필요한 건 그 정의들뿐이었다.
+// 기존 import 경로가 살아 있도록 여기서 그대로 다시 내보낸다.
 
-/** always: 항상 충족되는 sentinel. floor_*: bestFloor에서 파생(저장 안 함). 나머지는 저장 대상. */
-export type StoryFlag =
-  | "always"
-  | "met_orion"
-  | "met_baros"
-  | "first_capture"
-  | "quest_baros_done"
-  | "quest_orion_done"
-  | "tower_cleared"
-  | "floor_5"
-  | "floor_10"
-  | "floor_20"
-  | "floor_40"
-  | "floor_50";
-
-export type PersistedStoryFlag =
-  | "met_orion"
-  | "met_baros"
-  | "first_capture"
-  | "quest_baros_done"
-  | "quest_orion_done"
-  /** 오름을 쓰러뜨리고 엔딩까지 본 상태. bestFloor >= 50(floor_50)과 달리 "엔딩을 봤는가"를 가린다. */
-  | "tower_cleared";
-
-const DEFAULT_STORY_FLAGS: Record<PersistedStoryFlag, boolean> = {
-  met_orion: false,
-  met_baros: false,
-  first_capture: false,
-  quest_baros_done: false,
-  quest_orion_done: false,
-  tower_cleared: false,
-};
-
-export function isStoryFlagSet(
-  flag: StoryFlag,
-  storyFlags: Record<PersistedStoryFlag, boolean>,
-  bestFloor: number,
-): boolean {
-  switch (flag) {
-    case "always":   return true;
-    case "floor_5":  return bestFloor >= 5;
-    case "floor_10": return bestFloor >= 10;
-    case "floor_20": return bestFloor >= 20;
-    case "floor_40": return bestFloor >= 40;
-    case "floor_50": return bestFloor >= 50;
-    default:         return storyFlags[flag];
-  }
-}
-
-// ─── 퀘스트 상태 ────────────────────────────────────────────────────────────────
-
-export type QuestStatus = "not_accepted" | "in_progress" | "completed";
-
-export function getQuestStatus(
-  questId: string,
-  questStatus: Record<string, QuestStatus>,
-): QuestStatus {
-  return questStatus[questId] ?? "not_accepted";
-}
+export type { StoryFlag, PersistedStoryFlag, QuestStatus } from "./storyFlags";
+export { isStoryFlagSet, getQuestStatus } from "./storyFlags";
 
 // ─── OwnedMonster ────────────────────────────────────────────────────────────────
 
@@ -165,6 +119,15 @@ export interface PersistedPlayerState {
   bestFloor: number;
   storyFlags: Record<PersistedStoryFlag, boolean>;
   questStatus: Record<string, QuestStatus>;
+  /**
+   * 끝까지 읽은 이야기 대사의 이름표. 플래그와는 다른 값이다 — 플래그는 "그 일이
+   * 일어났는가"고 이건 "그 글을 읽었는가"다. 이게 있어야 다 본 사람에게 잡담을 낼 수 있다.
+   *
+   * 빈 배열과 "필드 자체가 없음"의 뜻이 다르다. 없음은 이 기록이 생기기 전의 세이브라
+   * 지금까지 지나온 대사를 채워 넣어야 하고, 빈 배열은 새로 시작해 아직 아무것도 안 본
+   * 상태라 손대면 안 된다.
+   */
+  seenDialogues: string[];
   craftedItems: CraftedItem[];
   craftedArtifacts: ArtifactInstance[];
   craftedPotions: CraftedPotionStack[];
@@ -187,6 +150,7 @@ function createInitialState(): PersistedPlayerState {
     bestFloor:   0,
     storyFlags:  { ...DEFAULT_STORY_FLAGS },
     questStatus: {},
+    seenDialogues: [],
     craftedItems: [],
     craftedArtifacts: [],
     craftedPotions: [],
@@ -202,7 +166,7 @@ function createInitialState(): PersistedPlayerState {
 // 열었을 때 없는 필드를 읽다가 깨지는 걸 막기 위한 버전 관리 + 필드 단위 보정.
 
 /** 현재 저장 스키마 버전. 구조를 또 바꾸면 이 값을 올리고 아래 migrate에 분기 추가 */
-const PERSIST_VERSION = 1;
+const PERSIST_VERSION = 2;
 
 function normalizeRecord(raw: unknown): Record<string, number> {
   return raw && typeof raw === "object" && !Array.isArray(raw)
@@ -311,6 +275,12 @@ export function normalizeState(input: object): PersistedPlayerState {
   const raw = input as Record<string, unknown>;
   const fallback = createInitialState();
   const party = normalizeOwnedMonsterArray(raw.party);
+  const storyFlags = {
+    ...DEFAULT_STORY_FLAGS,
+    ...(raw.storyFlags && typeof raw.storyFlags === "object" ? raw.storyFlags : {}),
+  };
+  const bestFloor =
+    typeof raw.bestFloor === "number" && Number.isFinite(raw.bestFloor) ? raw.bestFloor : 0;
 
   return {
     // 파티가 완전히 비면(구버전 손상 등) 최소 1마리는 있어야 게임 진행이 가능하므로 폴백
@@ -320,13 +290,16 @@ export function normalizeState(input: object): PersistedPlayerState {
     dexCaught: normalizeStringArray(raw.dexCaught, fallback.dexCaught),
     materials: normalizeRecord(raw.materials),
     potions:   normalizeRecord(raw.potions),
-    bestFloor: typeof raw.bestFloor === "number" && Number.isFinite(raw.bestFloor) ? raw.bestFloor : 0,
-    storyFlags: {
-      ...DEFAULT_STORY_FLAGS,
-      ...(raw.storyFlags && typeof raw.storyFlags === "object" ? raw.storyFlags : {}),
-    },
+    bestFloor,
+    storyFlags,
     questStatus: (raw.questStatus && typeof raw.questStatus === "object"
       ? raw.questStatus : {}) as PersistedPlayerState["questStatus"],
+    // 필드가 아예 없을 때만 지금까지 지나온 대사를 채운다. 빈 배열은 "새로 시작해서 아직
+    // 아무것도 안 봤다"는 뜻이라 손대면 안 된다 — 이 함수는 저장할 때마다도 돌기 때문에,
+    // 무조건 채우면 새 플레이어가 첫 저장에서 전 대사를 본 것으로 찍힌다.
+    seenDialogues: Array.isArray(raw.seenDialogues)
+      ? raw.seenDialogues.filter((x): x is string => typeof x === "string")
+      : backfillSeenDialogues(storyFlags, bestFloor),
     craftedItems:      (Array.isArray(raw.craftedItems) ? raw.craftedItems : []) as PersistedPlayerState["craftedItems"],
     craftedArtifacts:  (Array.isArray(raw.craftedArtifacts) ? raw.craftedArtifacts : []) as PersistedPlayerState["craftedArtifacts"],
     craftedPotions:    (Array.isArray(raw.craftedPotions) ? raw.craftedPotions : []) as PersistedPlayerState["craftedPotions"],
@@ -370,6 +343,13 @@ function migrate(persistedState: unknown, version: number): PersistedPlayerState
       // 값의 "형태"가 바뀐 필드는 아직 없어 별도 변환 없음.
     }
 
+    if (version < 2) {
+      // v1 → v2: 본 대사 기록(seenDialogues)이 생겼다. 아래 normalizeState가 "필드 없음"을
+      // 보고 지금까지 지나온 대사를 채운다 — 안 채우면 엔딩까지 본 사람이 첫 만남 대사부터
+      // 다시 듣는다. 여기서 따로 손댈 게 없는 이유는 그 판단이 필드 존재 여부만으로
+      // 결정되기 때문이고, 그래야 버전이 없는 서버 세이브도 같은 처리를 받는다.
+    }
+
     return normalizeState(raw);
   } catch (err) {
     console.warn("[playerStore] 세이브 마이그레이션 중 오류가 발생해 초기 상태로 시작합니다.", err);
@@ -398,6 +378,7 @@ interface PlayerState {
   bestFloor: number;
   storyFlags: Record<PersistedStoryFlag, boolean>;
   questStatus: Record<string, QuestStatus>;
+  seenDialogues: string[];
 
   // ── 제작 공방 ─────────────────────────────────────────────────────────────────
   craftedItems: CraftedItem[];
@@ -414,14 +395,19 @@ interface PlayerState {
   addToDexCaught: (id: string) => void;
   updateBestFloor: (floor: number) => void;
   setStoryFlag: (flag: PersistedStoryFlag) => void;
+  /** 대사를 끝까지 읽었다고 표시한다. 같은 이름표를 두 번 넣지 않는다 */
+  markDialogueSeen: (dialogueId: string) => void;
   acceptQuest: (questId: string) => void;
   /** 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 한 번의 set()으로 원자적으로 수행 */
-  completeQuest: (
-    questId: string,
-    objective: { itemId: string; amount: number },
-    rewards: { itemId: string; amount: number }[],
-    setsFlag: PersistedStoryFlag,
-  ) => boolean;
+  /** 지급한 것들을 돌려준다(화면에 보여줄 목록). 재료가 모자라거나 자리가 없으면 null */
+  completeQuest: (payload: {
+    questId: string;
+    objective: QuestObjective;
+    rewards: QuestReward[];
+    setsFlag?: PersistedStoryFlag;
+    /** 몬스터 보상일 때 미리 만들어 넘긴다 — 진화·기술 습득 경로가 비동기라 여기서 못 만든다 */
+    monster?: OwnedMonster;
+  }) => RewardDisplay[] | null;
   addCapturedMonster: (monster: Monster) => "storage" | "full";
   swapWithStorage:  (partyIndex: number, storageUid: string) => void;
   moveToStorage:    (partyIndex: number) => void;
@@ -497,23 +483,104 @@ export const usePlayerStore = create<PlayerState>()(
       setStoryFlag: (flag) =>
         set((s) => ({ storyFlags: { ...s.storyFlags, [flag]: true } })),
 
+      markDialogueSeen: (dialogueId) =>
+        set((s) => (s.seenDialogues.includes(dialogueId)
+          ? {}
+          : { seenDialogues: [...s.seenDialogues, dialogueId] })),
+
       acceptQuest: (questId) =>
         set((s) => ({ questStatus: { ...s.questStatus, [questId]: "in_progress" } })),
 
-      completeQuest: (questId, objective, rewards, setsFlag) => {
+      /**
+       * 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 한 번의 set()으로 처리한다.
+       *
+       * 보상이 네 갈래로 늘면서 손대는 칸도 늘었다. 물약은 **전투 재고와 가방 표시 스택
+       * 양쪽**을 같이 올려야 한다 — 한쪽만 올리면 개수가 어긋난다(예전에 소모 쪽에서 이미
+       * 한 번 물렸다). 몬스터는 미리 만들어 넘겨받는다. 기술 습득과 진화를 태우는 경로가
+       * 비동기라 여기서 만들 수가 없다.
+       */
+      completeQuest: ({ questId, objective, rewards, setsFlag, monster }) => {
         const s = get();
-        if ((s.materials[objective.itemId] ?? 0) < objective.amount) return false;
+        // 가져가는 건 재료 목표뿐이다. 층을 도로 내리거나 잡은 몬스터를 도감에서 지울 수는 없다
+        const cost = objectiveCost(objective);
         const newMats = { ...s.materials };
-        newMats[objective.itemId] = (newMats[objective.itemId] ?? 0) - objective.amount;
-        for (const reward of rewards) {
-          newMats[reward.itemId] = (newMats[reward.itemId] ?? 0) + reward.amount;
+        if (cost) {
+          if ((newMats[cost.itemId] ?? 0) < cost.amount) return null;
+          newMats[cost.itemId] = (newMats[cost.itemId] ?? 0) - cost.amount;
         }
+
+        const newPotions = { ...s.potions };
+        let newCraftedPotions = s.craftedPotions;
+        let newCraftedArtifacts = s.craftedArtifacts;
+        let newParty = s.party;
+        let newStorage = s.storage;
+        let dexSeen = s.dexSeen;
+        let dexCaught = s.dexCaught;
+        const granted: RewardDisplay[] = [];
+
+        for (const reward of rewards) {
+          if (reward.kind === "material") {
+            newMats[reward.itemId] = (newMats[reward.itemId] ?? 0) + reward.amount;
+            granted.push(rewardDisplay(reward));
+          } else if (reward.kind === "potion") {
+            newPotions[reward.potionId] = (newPotions[reward.potionId] ?? 0) + reward.amount;
+            const stackId = `${reward.potionId}_${reward.quality}`;
+            const idx = newCraftedPotions.findIndex((p) => p.stackId === stackId);
+            newCraftedPotions = idx >= 0
+              ? newCraftedPotions.map((p, i) =>
+                  i === idx ? { ...p, quantity: p.quantity + reward.amount } : p)
+              : [...newCraftedPotions, {
+                  stackId, itemId: reward.potionId, name: reward.name,
+                  quality: reward.quality, quantity: reward.amount,
+                }];
+            granted.push(rewardDisplay(reward));
+          } else if (reward.kind === "artifact") {
+            const recipe = ARTIFACT_RECIPES.find((r) => r.resultItemId === reward.itemId);
+            if (!recipe) continue;
+            newCraftedArtifacts = [...newCraftedArtifacts, {
+              instanceId: makeUid(),
+              itemId:      recipe.resultItemId,
+              name:        recipe.resultItemName,
+              quality:     reward.quality,
+              description: recipe.description,
+              statBonuses: applyArtifactQualityStats(recipe.baseStats ?? [], reward.quality),
+              createdAt:   Date.now(),
+              level:       reward.level,
+              enhancement: reward.enhancement,
+              source:      "quest",
+              // 레벨에 맞는 부가 능력치를 같이 굴려 넣는다. 안 그러면 레벨 10짜리인데
+              // 부가 능력치만 비어 있는 반쪽이 나간다
+              bonusStats:  rollBonusStats(recipe.resultItemId, 1, reward.level, []),
+            }];
+            granted.push(rewardDisplay(reward));
+          } else if (reward.kind === "monster" && monster) {
+            // 자리는 부르는 쪽이 미리 봤다. 그래도 여기서 한 번 더 확인한다 —
+            // 넘치면 조용히 사라지는 게 제일 나쁘다
+            if (newParty.length < 3) newParty = [...newParty, monster];
+            else if (newStorage.length < 30) newStorage = [...newStorage, monster];
+            else return null;
+            dexSeen   = dexSeen.includes(monster.id)   ? dexSeen   : [...dexSeen, monster.id];
+            dexCaught = dexCaught.includes(monster.id) ? dexCaught : [...dexCaught, monster.id];
+            granted.push({
+              ...rewardDisplay(reward),
+              detail: `Lv.${monster.level} · ${newParty.includes(monster) ? "파티에 들어왔다" : "보관함으로 갔다"}`,
+            });
+          }
+        }
+
         set({
           materials:   newMats,
+          potions:     newPotions,
+          craftedPotions:   newCraftedPotions,
+          craftedArtifacts: newCraftedArtifacts,
+          party: newParty, storage: newStorage, dexSeen, dexCaught,
           questStatus: { ...s.questStatus, [questId]: "completed" },
-          storyFlags:  { ...s.storyFlags, [setsFlag]: true },
+          // 플래그를 세우는 퀘스트는 그 플래그가 이야기 대사의 조건일 때뿐이다.
+          // 나머지는 완료 기록만으로 충분하다 — 퀘스트마다 플래그를 만들면 세이브에
+          // 새 값이 여섯 개 늘고, 늘어난 만큼 마이그레이션할 것도 늘어난다.
+          storyFlags:  setsFlag ? { ...s.storyFlags, [setsFlag]: true } : s.storyFlags,
         });
-        return true;
+        return granted;
       },
 
       addCapturedMonster: (monster) => {

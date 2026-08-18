@@ -1,23 +1,59 @@
-import type { PersistedStoryFlag, QuestStatus, StoryFlag } from "../shared/playerStore";
-import { isStoryFlagSet } from "../shared/playerStore";
+import type { PersistedStoryFlag, QuestStatus, StoryFlag } from "../shared/storyFlags";
+import { isStoryFlagSet } from "../shared/storyFlags";
+import { pickSmallTalk, talkStage } from "./campSmallTalk";
+import type { SmallTalkNpcId, TalkState } from "./campSmallTalk";
+import type { QuestObjective, QuestSnapshot } from "./questObjectives";
+import { evaluateObjective } from "./questObjectives";
+import type { QuestReward } from "./questRewards";
+import { monsterReward } from "./questRewards";
 
 export interface QuestDef {
   id: string;
   title: string;
-  npcId: "orion" | "baros";
-  /** 수락 조건: flag 충족 + (있다면) bestFloor 최소치 */
-  requires: { flag: StoryFlag; minFloor?: number };
-  objective: { itemId: string; amount: number };
-  rewards: { itemId: string; amount: number }[];
+  npcId: SmallTalkNpcId;
+  /**
+   * 수락 조건. 셋 다 선택이고, 적은 것만 검사한다.
+   *
+   * `questDone` 이 있는 이유는 **새 퀘스트마다 스토리 플래그를 만들지 않으려는 것**이다.
+   * 퀘스트 완료 여부는 이미 저장되고 있으니, 앞 퀘스트를 가리키면 세이브에 새로 넣을
+   * 값이 없다.
+   */
+  requires: { flag?: StoryFlag; minFloor?: number; questDone?: string };
+  objective: QuestObjective;
+  rewards: QuestReward[];
   acceptLines: string[];
   completeLines: string[];
   /** 진행중 + 재료 부족일 때 재생하는 독촉 대사 */
   progressLines: string[];
-  setsFlag: PersistedStoryFlag;
+  /**
+   * 몬스터를 주는데 파티도 보관함도 찼을 때. **이때는 완료 처리를 미룬다** —
+   * 지급 경로는 자리가 없으면 조용히 실패하는데, 건네받은 게 소리 없이 사라지는 것보다
+   * 자리를 비우고 다시 오라고 하는 편이 낫다.
+   */
+  noRoomLines?: string[];
+  /** 이야기 대사의 조건으로 쓰이는 퀘스트만 플래그를 세운다. 나머지는 완료 기록으로 충분하다 */
+  setsFlag?: PersistedStoryFlag;
 }
 
 export interface DialogueEntry {
+  /**
+   * 이 대사를 가리키는 이름표. **세이브에 이 문자열이 그대로 들어간다** — 한 번 정한 뒤에는
+   * 바꾸지 말 것. 바꾸면 이미 본 사람이 그 대사를 다시 본다.
+   *
+   * 플래그로 대신할 수 없다. 플래그는 "그 일이 일어났는가"고 여기 필요한 건 "그 글을
+   * 읽었는가"라, 한 플래그에 대사가 둘 붙는 순간 구분이 사라진다.
+   */
+  id: string;
   requires: StoryFlag;
+  /**
+   * 이야기 한 대목이 아니라 "지금은 할 말이 없다"를 메우는 줄. 안 본 이야기 대사를 찾을 때
+   * 후보에서 빠진다.
+   *
+   * 바로스의 "이장 영감한테 먼저 가봐라"가 그렇다. 조건이 `always` 라 늘 만족하는데,
+   * 이장을 먼저 만나고 온 사람에게 그 줄이 이야기 순번으로 끼면 이미 만난 사람을 만나러
+   * 가라고 한다. 예전 로직은 "만족하는 것 중 마지막"을 골라서 이게 드러나지 않았다.
+   */
+  fallback?: boolean;
   /** requires 외에 bestFloor 최소치까지 함께 걸어야 할 때 사용 (퀘스트의 minFloor와 짝을 맞추는 용도) */
   minFloor?: number;
   lines: string[];
@@ -34,11 +70,11 @@ export const BAROS_FIRST_HUNT_QUEST: QuestDef = {
   title: "첫 사냥",
   npcId: "baros",
   requires: { flag: "met_baros" },
-  objective: { itemId: "herb", amount: 3 },
+  objective: { kind: "material", itemId: "herb", amount: 3 },
   rewards: [
-    { itemId: "herb", amount: 2 },
-    { itemId: "root", amount: 2 },
-    { itemId: "magic_dust", amount: 1 },
+    { kind: "material", itemId: "herb", amount: 2 },
+    { kind: "material", itemId: "root", amount: 2 },
+    { kind: "material", itemId: "magic_dust", amount: 1 },
   ],
   acceptLines: [
     "말로 들어선 모른다. 직접 해봐라.",
@@ -59,11 +95,11 @@ export const ORION_MOTHERS_MEDICINE_QUEST: QuestDef = {
   title: "어머니의 약",
   npcId: "orion",
   requires: { flag: "quest_baros_done", minFloor: 3 },
-  objective: { itemId: "slime_extract", amount: 2 },
+  objective: { kind: "material", itemId: "slime_extract", amount: 2 },
   rewards: [
-    { itemId: "crystal", amount: 1 },
-    { itemId: "monster_essence", amount: 1 },
-    { itemId: "iron_fragment", amount: 2 },
+    { kind: "material", itemId: "crystal", amount: 1 },
+    { kind: "material", itemId: "monster_essence", amount: 1 },
+    { kind: "material", itemId: "iron_fragment", amount: 2 },
   ],
   acceptLines: [
     "부탁이 하나 있다.",
@@ -83,14 +119,229 @@ export const ORION_MOTHERS_MEDICINE_QUEST: QuestDef = {
   setsFlag: "quest_orion_done",
 };
 
-/** 퀘스트 로그 UI 등에서 전체 목록이 필요할 때 사용하는 단일 소스 */
-export const ALL_QUESTS: QuestDef[] = [BAROS_FIRST_HUNT_QUEST, ORION_MOTHERS_MEDICINE_QUEST];
+/**
+ * 5층 · 바로스 — 장비를 처음 만들어 끼게 한다.
+ *
+ * 5층 이야기 대사가 "슬슬 맨몸으로는 안 된다"고 짚는데 그걸 강제하는 게 아무것도 없었다.
+ * 보상이 강화석인 건 의도다 — **11층 위 전투와 고대 숲에만 있어서 이 시점에는 구할 길이
+ * 아예 없다.** 모루가 그때부터 돈다.
+ */
+export const BAROS_GEAR_UP_QUEST: QuestDef = {
+  id: "baros_gear_up",
+  title: "맨몸으로는 안 된다",
+  npcId: "baros",
+  requires: { flag: "floor_5", questDone: "baros_first_hunt" },
+  objective: { kind: "equipped" },
+  rewards: [
+    { kind: "material", itemId: "enhancement_stone", amount: 3 },
+    { kind: "material", itemId: "magic_dust", amount: 2 },
+  ],
+  acceptLines: [
+    "5층까지 맨몸으로 왔다지. 운이 좋았다.",
+    "공방 가서 아티팩트를 하나 만들어 채워라. 뭐든 좋다.",
+    "만들고 끝내지 마라. 끼워야 장비다.",
+  ],
+  progressLines: ["아직 맨몸이군. 만들어서 채우고 와라."],
+  completeLines: [
+    "그래. 그게 장비다.",
+    "강화석 셋이다. 모루에서 레벨을 올리는 데 쓴다.",
+    "지금은 그거 어디서도 못 구한다. 11층 위에 올라가야 나온다.",
+    "아껴 써라. 다음에 줄 일은 없다.",
+  ],
+};
+
+/**
+ * 10층 · 오리온 — 이야기가 "나도 10층에서 멈췄다"를 말하는 자리. 그 대사를 퀘스트가 받는다.
+ *
+ * **몬스터를 주는 유일한 퀘스트다.** 리피인 이유는 세 가지다.
+ *   · 로스터에서 풀은 리피 하나뿐이고, 리피가 나오는 얕은 숲은 레벨 상한이 8이다. 숲이
+ *     파티 최고 레벨을 천장으로 쓰므로 10층을 넘긴 파티는 **쓸 만한 레벨로 잡을 수단이
+ *     영영 없다.**
+ *   · 풀은 전기를 두 배로 때린다. 20층 격노한 모치와 40층 전설의 모왕이 둘 다 전기다.
+ *   · 진화가 없고 총합 능력치가 하위라 탑을 시시하게 만들지 않는다. 상성 조커다.
+ */
+export const ORION_WHERE_I_STOPPED_QUEST: QuestDef = {
+  id: "orion_where_i_stopped",
+  title: "내가 멈춘 자리",
+  npcId: "orion",
+  requires: { questDone: "orion_mothers_medicine", minFloor: 6 },
+  objective: { kind: "floor", floor: 10 },
+  rewards: [
+    // 레벨은 받는 시점 파티 최고 레벨보다 둘 아래. 고정 레벨은 일찍 온 사람에겐 과하고
+    // 늦게 온 사람에겐 짐이 된다
+    { kind: "monster", monsterId: "leafy", levelBelowParty: 2, minLevel: 8 },
+    { kind: "material", itemId: "crystal", amount: 2 },
+  ],
+  acceptLines: [
+    "10층에 뭐가 있는지 아느냐. 나는 안다. 거기서 돌아섰으니까.",
+    "부탁이라기도 뭣하다만… 넘어봐라.",
+    "넘고 오면 줄 게 있다. 오래 준비한 것이다.",
+  ],
+  progressLines: ["아직인가. 서두르지 마라. 나는 그 앞에서 이십 년을 기다렸다."],
+  completeLines: [
+    "넘었구나. …넘었어.",
+    "텃밭에 눌러앉은 녀석이 하나 있다. 잎사귀 달린 놈이다.",
+    "네 어머니가 아직 성하실 적에 주워다 기르신 거다. 이제는 내가 물을 주고 있고.",
+    "데려가라. 이름은 리피다.",
+    "하나 일러두마. 그 잎사귀는 번개를 땅으로 흘린다. 위에서 번개 쓰는 놈을 만나면 그때 내보내라.",
+  ],
+  noRoomLines: [
+    "데려갈 자리가 없구나.",
+    "자리를 비우고 다시 오너라. 도망갈 놈은 아니다.",
+  ],
+};
+
+/**
+ * 20층 · 바로스 — 상성을 갖추게 한다.
+ *
+ * 보상이 부적인 건 재료가 병목이라서다(빛의 수정 둘·정수 둘·마법 가루 둘). 20층 관문
+ * 앞에서 그걸 다 모으려면 고대 숲을 몇 번 다녀와야 하는데, 고대 숲은 21층 해금이다.
+ * 병목을 한 번 건너뛰게 하되 최고 등급은 주지 않는다.
+ */
+export const BAROS_TYPE_MATCHUP_QUEST: QuestDef = {
+  id: "baros_type_matchup",
+  title: "상성을 갖춰라",
+  npcId: "baros",
+  requires: { questDone: "baros_gear_up", minFloor: 15 },
+  objective: { kind: "catchType", elementType: "poison" },
+  rewards: [
+    { kind: "artifact", itemId: "spirit_amulet", quality: "rare", level: 10, enhancement: 0 },
+  ],
+  acceptLines: [
+    "20층까지 왔으면 하나 알겠지. 세기만 해선 안 된다.",
+    "독 쓰는 놈을 하나 잡아와라. 숲에 있다.",
+    "독은 풀과 노말을 두 배로 문다. 위에 그런 놈이 널렸다.",
+  ],
+  progressLines: ["독은 아직인가. 얕은 숲에도 있고 깊은 숲에도 있다. 골라 잡아라."],
+  completeLines: [
+    "잡아왔군. 이제 파티에 구멍이 하나 줄었다.",
+    "이건 가져가라. 부적이다. 내 것이었다.",
+    "재료가 빛의 수정 둘, 정수 둘, 마법 가루 둘이다. 지금 네가 모으려면 숲을 몇 번을 가야 하는지 세어봐라.",
+    "세지 마라. 그냥 받아라.",
+  ],
+};
+
+/**
+ * 30층 · 오리온 — 어머니 약을 다시 짓는다. 이야기는 "위에 뭔가 하나 있다"까지만 안다.
+ *
+ * 보상 둘 다 빛의 수정을 먹는 물약이다. 목표로 수정 넷을 내주고 나면 당분간 스스로는
+ * 못 만든다 — 35층 관문은 물약 운용을 전제로 한 층이라 그 자리를 메운다.
+ */
+export const ORION_ONCE_MORE_QUEST: QuestDef = {
+  id: "orion_once_more",
+  title: "다시 한 번",
+  npcId: "orion",
+  requires: { questDone: "orion_where_i_stopped", minFloor: 21 },
+  objective: { kind: "material", itemId: "crystal", amount: 4 },
+  rewards: [
+    { kind: "potion", potionId: "max_potion", name: "맥스 물약", icon: "max_potion", quality: "rare", amount: 5 },
+    { kind: "potion", potionId: "strong_attack_buff", name: "강화 전투 물약", icon: "strong_attack_buff", quality: "rare", amount: 3 },
+  ],
+  acceptLines: [
+    "부탁이 하나 더 있다. 이번에도 될지는 모른다.",
+    "빛의 수정이 넷 필요하다. 고대 숲에서 나온다더구나.",
+    "지난번 약은 통증만 눌렀다. 이번엔 다른 걸 해보려 한다.",
+    "네가 위에서 본 것을 듣고 나서 생각이 좀 바뀌었어.",
+  ],
+  progressLines: ["수정은 아직인가. 고대 숲은 위험하다고 들었다. 무리하지 마라."],
+  completeLines: [
+    "고맙다. 이걸로 해보마.",
+    "대신 이것들을 가져가라. 내가 쓸 것도 아니고.",
+    "맥스 물약 다섯에 강화 전투 물약 셋이다. 수정을 넷이나 내줬으니 당분간 못 만들 게다.",
+    "위에서 죽는 것보단 낫지 않겠느냐.",
+  ],
+};
+
+/**
+ * 40층 · 바로스 — 장비 레벨을 올리게 한다.
+ *
+ * 40층대의 벽은 레벨이 아니라 장비 레벨이다. 강화석 열은 고대 숲 열 번을 아껴 준다.
+ * 용이 이미 밝혀진 뒤지만 바로스는 그래도 장비 얘기만 한다. 그게 그 사람이다.
+ */
+export const BAROS_CHANGE_GEAR_QUEST: QuestDef = {
+  id: "baros_change_gear",
+  title: "갈아입어라",
+  npcId: "baros",
+  requires: { questDone: "baros_type_matchup", minFloor: 35 },
+  objective: { kind: "artifactLevel", level: 20 },
+  rewards: [
+    { kind: "material", itemId: "enhancement_stone", amount: 10 },
+    { kind: "material", itemId: "monster_essence", amount: 4 },
+  ],
+  acceptLines: [
+    "40층. 인정한다.",
+    "네 장비를 봤다. 만든 지 오래됐군.",
+    "하나라도 좋다. 레벨 스물까지 올려라. 그 전엔 그 위를 못 본다.",
+  ],
+  progressLines: ["아직 스물이 안 된다. 모루에 가라. 안 쓰는 장비를 분해하면 강화석이 나온다."],
+  completeLines: [
+    "됐다. 그게 45층을 넘기는 물건이다.",
+    "강화석 열이다. 내가 이십 년 모은 거다.",
+    "셋 다 올려라. 하나만 좋아봐야 나머지 둘이 죽는다.",
+    "…나는 여기까지다. 위에서는 네가 알아서 해라.",
+  ],
+};
+
+/**
+ * 엔딩 후 · 오리온 — 이야기를 닫는다.
+ *
+ * 50층 이야기 대사가 이미 "공방에 가져가라"고 말하는데, 그건 부탁의 형태였을 뿐 아무
+ * 기록도 보상도 없었다. 퀘스트로 만들면 로그에 남고 받을 것도 생긴다.
+ * 엔딩 후에 남는 건 재도전뿐이라, 보상은 트로피이자 다음 판의 밑천이다.
+ */
+export const ORION_MOTHERS_CURE_QUEST: QuestDef = {
+  id: "orion_mothers_cure",
+  title: "어머니의 치료약",
+  npcId: "orion",
+  requires: { flag: "tower_cleared", questDone: "orion_once_more" },
+  objective: { kind: "potion", potionId: "mothers_cure_potion", name: "어머니의 치료약" },
+  rewards: [
+    { kind: "artifact", itemId: "spirit_amulet", quality: "elite", level: 50, enhancement: 5 },
+    { kind: "material", itemId: "enhancement_stone", amount: 15 },
+  ],
+  acceptLines: [
+    "정수를 봤다. 이런 게 정말 있었구나.",
+    "공방에 가져가라. 연금술로 다뤄봐야겠다.",
+    "어머니의 치료약이라고 하더구나. 그런 이름이 붙은 게 있다는 것도 이제 알았다.",
+  ],
+  progressLines: ["아직인가. 서둘러라. …아니다, 미안하다. 서두를 사람은 나였구나."],
+  completeLines: [
+    "이게 그것이냐.",
+    "…오늘 밤에 드시게 하마.",
+    "이건 가져가라. 부적이다. 내가 오르던 시절엔 못 만들던 물건이지.",
+    "이제 네가 오를 이유는 없다. 그래도 오를 거면, 이걸 끼고 가라.",
+  ],
+};
+
+/**
+ * 퀘스트 전부. **진행 순서대로** 적는다 — 한 사람이 한 번에 하나만 내놓을 때 무엇을 먼저
+ * 내놓을지가 이 순서다. 퀘스트 로그의 표시 순서이기도 하다.
+ *
+ * 열 층에 하나 꼴이다. 다섯 층마다 심부름을 시키면 탑을 오르는 게 아니라 마을을 오가는
+ * 게임이 된다.
+ */
+export const ALL_QUESTS: QuestDef[] = [
+  BAROS_FIRST_HUNT_QUEST,
+  ORION_MOTHERS_MEDICINE_QUEST,
+  BAROS_GEAR_UP_QUEST,
+  ORION_WHERE_I_STOPPED_QUEST,
+  BAROS_TYPE_MATCHUP_QUEST,
+  ORION_ONCE_MORE_QUEST,
+  BAROS_CHANGE_GEAR_QUEST,
+  ORION_MOTHERS_CURE_QUEST,
+];
+
+/** 그 사람이 가진 퀘스트를 진행 순서대로. 표를 두 벌로 만들지 않으려고 여기서 갈라 낸다 */
+export function questsOf(npcId: SmallTalkNpcId): QuestDef[] {
+  return ALL_QUESTS.filter((q) => q.npcId === npcId);
+}
 
 // ─── 대사 ──────────────────────────────────────────────────────────────────────
 
 export const ORION_DIALOGUES: DialogueEntry[] = [
   // 3-1. 첫 만남 (start)
   {
+    id: "orion_intro",
     requires: "always",
     setsFlag: "met_orion",
     grantsMonsterId: "flameling",
@@ -112,6 +363,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-2. 바로스를 만난 후
   {
+    id: "orion_after_baros",
     requires: "met_baros",
     lines: [
       "바로스가 통과시켰나. …그자가 사람을 쉽게 들여보내지 않는데.",
@@ -122,6 +374,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-3. 첫 포획 후
   {
+    id: "orion_first_capture",
     requires: "first_capture",
     lines: [
       "몬스터를 데려왔구나.",
@@ -134,6 +387,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   // minFloor를 quest.requires.minFloor와 맞춰서, 3층 도달 전에는 이 fallback이 뜨지 않고
   // 바로 위 met_baros/first_capture 대사로 자연스럽게 빠지도록 한다.
   {
+    id: "orion_quest_medicine",
     requires: "quest_orion_done",
     minFloor: ORION_MOTHERS_MEDICINE_QUEST.requires.minFloor,
     quest: ORION_MOTHERS_MEDICINE_QUEST,
@@ -141,6 +395,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-4. 10층 도달 — 2막
   {
+    id: "orion_floor_10",
     requires: "floor_10",
     lines: [
       "10층이라고? …정말 오르고 있구나.",
@@ -152,6 +407,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-5. 20층 도달 — 3막
   {
+    id: "orion_floor_20",
     requires: "floor_20",
     lines: [
       "20층. 내가 본 것보다 위구나.",
@@ -164,6 +420,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-6. 40층 도달 — 4막 · 정체
   {
+    id: "orion_floor_40",
     requires: "floor_40",
     lines: [
       "40층….",
@@ -181,6 +438,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-7. 50층 · 오름 처치 — 만물의 정수
   {
+    id: "orion_floor_50",
     requires: "floor_50",
     lines: [
       "…이게 뭐냐.",
@@ -193,6 +451,7 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   },
   // 3-8. 엔딩 이후 — 어머니가 나은 뒤
   {
+    id: "orion_cleared",
     requires: "tower_cleared",
     lines: [
       "어머니는 어제 마당까지 나오셨다.",
@@ -207,13 +466,16 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
 export const BAROS_DIALOGUES: DialogueEntry[] = [
   // met_orion 이전 게이팅
   {
+    id: "baros_gate",
     requires: "always",
+    fallback: true,
     lines: ["이장 영감한테 먼저 가봐라."],
   },
   // 4-1. 첫 대면 — 탑의 규칙과 "혼자로는 안 된다"까지만.
   // 예전엔 여기서 포획·육성·제작·분해를 19줄에 몰아넣었다. 그 시점에 못 하는 일까지
   // 설명하니 아무것도 안 남았고, 없어진 탑 포획 규칙까지 그대로 읊고 있었다.
   {
+    id: "baros_intro",
     requires: "met_orion",
     setsFlag: "met_baros",
     lines: [
@@ -230,12 +492,14 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 첫 사냥 (met_baros 이후) — 미수락/진행중/완료는 QuestDef가 처리, 이 lines는 완료 후 필터
   {
+    id: "baros_quest_first_hunt",
     requires: "met_baros",
     quest: BAROS_FIRST_HUNT_QUEST,
     lines: ["탑에 오르기 전에 준비를 단단히 해라."],
   },
   // 4-2. 첫 포획 후 — 파티와 재료 이야기는 실제로 잡아 온 다음에 한다
   {
+    id: "baros_first_capture",
     requires: "first_capture",
     lines: [
       "데려왔군. 키워라. 묵혀두면 아무 소용 없다.",
@@ -248,6 +512,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 4-3. 5층 도달 — 장비 이야기는 맨몸이 슬슬 안 먹히는 이 시점에
   {
+    id: "baros_floor_5",
     requires: "floor_5",
     lines: [
       "5층. …인정하마.",
@@ -260,6 +525,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 4-5. 10층 도달 — 2막 · 복선
   {
+    id: "baros_floor_10",
     requires: "floor_10",
     lines: [
       "10층 지켰나. 놀랍군.",
@@ -274,6 +540,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 4-6. 20층 도달 — 3막
   {
+    id: "baros_floor_20",
     requires: "floor_20",
     lines: [
       "20층 보스를 넘었다고. 격노한 모치였나.",
@@ -285,6 +552,7 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
   // 4-7. 엔딩 이후 — 탑을 넘긴 뒤
   {
+    id: "baros_cleared",
     requires: "tower_cleared",
     lines: [
       "…네가 그 위까지 갔다는 게 아직도 안 믿긴다.",
@@ -295,82 +563,181 @@ export const BAROS_DIALOGUES: DialogueEntry[] = [
   },
 ];
 
+/** 조건(requires + minFloor)을 만족하는 항목을 정의 순서 그대로 모은다 */
+export function satisfiedEntries(
+  entries: DialogueEntry[],
+  storyFlags: Record<PersistedStoryFlag, boolean>,
+  bestFloor: number,
+): DialogueEntry[] {
+  return entries.filter((entry) => {
+    const floorOk = entry.minFloor === undefined || bestFloor >= entry.minFloor;
+    return floorOk && isStoryFlagSet(entry.requires, storyFlags, bestFloor);
+  });
+}
+
 /** requires를 만족하는 항목 중 배열에서 가장 마지막 것을 반환 */
 export function selectDialogueEntry(
   entries: DialogueEntry[],
   storyFlags: Record<PersistedStoryFlag, boolean>,
   bestFloor: number,
 ): DialogueEntry | undefined {
-  let selected: DialogueEntry | undefined;
-  for (const entry of entries) {
-    const floorOk = entry.minFloor === undefined || bestFloor >= entry.minFloor;
-    if (floorOk && isStoryFlagSet(entry.requires, storyFlags, bestFloor)) {
-      selected = entry;
-    }
-  }
-  return selected;
+  const ok = satisfiedEntries(entries, storyFlags, bestFloor);
+  return ok[ok.length - 1];
 }
 
 export interface NpcInteractionResult {
   lines: string[];
+  /** 이야기 대사일 때만. 끝까지 읽으면 이 이름표가 "본 대사"로 기록된다 */
+  dialogueId?: string;
+  /** 잡담일 때만. 다음에 같은 말을 연달아 하지 않으려고 화면이 기억한다 */
+  smallTalkLine?: string;
   setsFlag?: PersistedStoryFlag;
   grantsMonsterId?: string;
   acceptQuestId?: string;
   completeQuest?: {
     questId: string;
-    objective: { itemId: string; amount: number };
-    rewards: { itemId: string; amount: number }[];
-    setsFlag: PersistedStoryFlag;
+    questTitle: string;
+    objective: QuestObjective;
+    rewards: QuestReward[];
+    setsFlag?: PersistedStoryFlag;
   };
 }
 
+export interface NpcInteractionContext {
+  npcId: SmallTalkNpcId;
+  storyFlags: Record<PersistedStoryFlag, boolean>;
+  bestFloor: number;
+  /** 퀘스트 목표 판정에 필요한 것만 추린 지금 상태 */
+  snapshot: QuestSnapshot;
+  questStatus: Record<string, QuestStatus>;
+  seenDialogues: string[];
+  /** 잡담 조건 — 다쳤나 · 물약이 없나 · 재료를 쌓아뒀나 */
+  talkState: TalkState;
+  /** 이 사람이 바로 앞에 한 잡담. 연달아 같은 말을 안 하려고 뺀다 (저장하지 않는다) */
+  lastSmallTalk?: string;
+  /** 시험에서 무작위를 고정하려고 열어 둔 자리 */
+  random?: () => number;
+}
+
+/** 그 퀘스트를 지금 내놓을 수 있는가 (완료 여부는 따로 본다) */
+export function questUnlocked(
+  quest: QuestDef,
+  storyFlags: Record<PersistedStoryFlag, boolean>,
+  bestFloor: number,
+  questStatus: Record<string, QuestStatus>,
+): boolean {
+  const { flag, minFloor, questDone } = quest.requires;
+  if (flag && !isStoryFlagSet(flag, storyFlags, bestFloor)) return false;
+  if (minFloor !== undefined && bestFloor < minFloor) return false;
+  if (questDone && (questStatus[questDone] ?? "not_accepted") !== "completed") return false;
+  return true;
+}
+
 /**
- * 퀘스트가 걸린 NPC는 미수락/진행중/완료 상태에 따라 acceptLines·progressLines·completeLines를
- * 우선 재생한다. 조건 미충족이거나 이미 완료된 퀘스트는 기존 대사 선택 로직(selectDialogueEntry)으로 넘긴다.
+ * 지금 이 사람이 내놓을 퀘스트 하나.
+ *
+ * **한 번에 하나만 내놓는다.** 엔딩까지 본 옛 세이브를 열면 뒤쪽 퀘스트의 조건이 한꺼번에
+ * 충족되는데, 다 내놓으면 로그가 한 번에 여덟 줄로 불어난다. 낮은 층 것부터 하나씩 흐르면
+ * "돌아온 사람에게 마을이 밀린 부탁을 한다"로 읽힌다.
+ */
+export function activeQuestFor(
+  npcId: SmallTalkNpcId,
+  storyFlags: Record<PersistedStoryFlag, boolean>,
+  bestFloor: number,
+  questStatus: Record<string, QuestStatus>,
+): QuestDef | undefined {
+  return questsOf(npcId).find(
+    (q) => (questStatus[q.id] ?? "not_accepted") !== "completed"
+      && questUnlocked(q, storyFlags, bestFloor, questStatus),
+  );
+}
+
+/**
+ * 말을 걸었을 때 무엇을 재생할지 고른다. 위에서부터 하나만 고른다.
+ *
+ *   1. 완료 가능한 퀘스트 — 재료를 다 모아 온 사람은 그 자리에서 보상을 받는다.
+ *      이 하나만 이야기보다 앞이다. 손에 든 것을 건네러 온 사람을 돌려세우지 않는다.
+ *   2. 아직 **안 본** 이야기 대사 — 조건을 만족하는 것 중 가장 앞선 것부터 하나씩
+ *   3. 미수락 퀘스트 (수락 대사)
+ *   4. 진행중 퀘스트 (독촉 대사)
+ *   5. 잡담
+ *
+ * 예전에는 2번이 "조건을 만족하는 것 중 마지막"이었다. 플래그는 쌓이기만 하니 진행할수록
+ * 마지막 대사에 고정됐고, 놓친 이야기는 영영 못 봤다.
  */
 export function resolveNpcInteraction(
   dialogues: DialogueEntry[],
-  storyFlags: Record<PersistedStoryFlag, boolean>,
-  bestFloor: number,
-  materials: Record<string, number>,
-  questStatus: Record<string, QuestStatus>,
+  ctx: NpcInteractionContext,
 ): NpcInteractionResult | undefined {
-  const quest = dialogues.find((e) => e.quest)?.quest;
-  if (quest) {
-    const flagOk = isStoryFlagSet(quest.requires.flag, storyFlags, bestFloor);
-    const floorOk = quest.requires.minFloor === undefined || bestFloor >= quest.requires.minFloor;
-    const status = questStatus[quest.id] ?? "not_accepted";
+  const { storyFlags, bestFloor, snapshot, questStatus, seenDialogues } = ctx;
+  const seen = new Set(seenDialogues);
+  const quest = activeQuestFor(ctx.npcId, storyFlags, bestFloor, questStatus);
+  const status = quest ? questStatus[quest.id] ?? "not_accepted" : "completed";
 
-    if (flagOk && floorOk && status !== "completed") {
-      if (status === "not_accepted") {
-        return { lines: quest.acceptLines, acceptQuestId: quest.id };
-      }
-      const have = materials[quest.objective.itemId] ?? 0;
-      if (have >= quest.objective.amount) {
-        return {
-          lines: quest.completeLines,
-          completeQuest: {
-            questId:   quest.id,
-            objective: quest.objective,
-            rewards:   quest.rewards,
-            setsFlag:  quest.setsFlag,
-          },
-        };
-      }
-      const questEntry = dialogues.find((e) => e.quest === quest);
-      const storyEntry = selectDialogueEntry(dialogues, storyFlags, bestFloor);
-      if (storyEntry && storyEntry !== questEntry) {
-        return {
-          lines: storyEntry.lines,
-          setsFlag: storyEntry.setsFlag,
-          grantsMonsterId: storyEntry.grantsMonsterId,
-        };
-      }
-      return { lines: quest.progressLines };
+  // 1) 완료 가능
+  if (quest && status === "in_progress" && evaluateObjective(quest.objective, snapshot).done) {
+    // 몬스터를 주는데 데려갈 자리가 없으면 완료를 미룬다. 건네받은 게 소리 없이
+    // 사라지는 것보다 자리를 비우고 다시 오라는 편이 낫다
+    const wantsRoom = monsterReward(quest.rewards);
+    if (wantsRoom && snapshot.partyCount >= 3 && snapshot.storageCount >= 30) {
+      return { lines: quest.noRoomLines ?? ["자리가 없구나. 비우고 다시 오너라."] };
     }
+    return {
+      lines: quest.completeLines,
+      completeQuest: {
+        questId:    quest.id,
+        questTitle: quest.title,
+        objective: quest.objective,
+        rewards:   quest.rewards,
+        setsFlag:  quest.setsFlag,
+      },
+    };
   }
 
-  const entry = selectDialogueEntry(dialogues, storyFlags, bestFloor);
-  if (!entry) return undefined;
-  return { lines: entry.lines, setsFlag: entry.setsFlag, grantsMonsterId: entry.grantsMonsterId };
+  // 2) 안 본 이야기 대사.
+  //    퀘스트가 달린 항목의 lines 는 "그 퀘스트를 이미 끝냈다"는 뒷정리 대사라, 퀘스트가
+  //    끝나기 전에는 후보가 아니다. 아니면 수락 대사보다 먼저 나와 퀘스트를 밀어낸다.
+  const story = satisfiedEntries(dialogues, storyFlags, bestFloor).find((e) => {
+    if (e.fallback || seen.has(e.id)) return false;
+    if (e.quest && (questStatus[e.quest.id] ?? "not_accepted") !== "completed") return false;
+    return true;
+  });
+  if (story) {
+    return {
+      lines: story.lines,
+      dialogueId: story.id,
+      setsFlag: story.setsFlag,
+      grantsMonsterId: story.grantsMonsterId,
+    };
+  }
+
+  // 3) 미수락 · 4) 진행중
+  if (quest) {
+    if (status === "not_accepted") return { lines: quest.acceptLines, acceptQuestId: quest.id };
+    return { lines: quest.progressLines };
+  }
+
+  // 4.5) 메우는 줄. 이야기가 **하나도** 열리지 않은 사람에게만 쓴다.
+  //      바로스의 "이장 영감한테 먼저 가봐라"가 그렇다 — 아직 이야기가 시작도 안 됐는데
+  //      날씨 얘기를 시킬 수는 없다. 이야기가 하나라도 열렸으면 그 줄은 역할이 끝난 것이라
+  //      잡담으로 넘어간다.
+  const reachable = satisfiedEntries(dialogues, storyFlags, bestFloor);
+  if (!reachable.some((e) => !e.fallback)) {
+    const gate = reachable[reachable.length - 1];
+    if (gate) return { lines: gate.lines };
+  }
+
+  // 5) 잡담
+  const chat = pickSmallTalk(
+    ctx.npcId,
+    talkStage(bestFloor, storyFlags.tower_cleared),
+    ctx.talkState,
+    ctx.lastSmallTalk,
+    ctx.random,
+  );
+  if (chat) return { lines: [chat], smallTalkLine: chat };
+
+  // 구간 표가 비어 있을 때의 마지막 안전망. 아무것도 못 내면 대화 자체가 안 뜬다
+  const last = selectDialogueEntry(dialogues, storyFlags, bestFloor);
+  return last ? { lines: last.lines } : undefined;
 }

@@ -418,3 +418,55 @@ for (const screen of SCREENS) {
     }
   });
 }
+
+/**
+ * 퀘스트 로그 — 여덟 개로 늘었을 때 "지금 뭘 해야 하는지"가 한눈에 보이는지 본다.
+ * 진행 중 하나 · 받을 수 있는 것 하나 · 완료 여럿이 섞인 중반 상태를 심는다.
+ */
+const QUEST_LOG_SAVE = JSON.stringify({
+  state: {
+    party: [
+      { id: "mossevo", level: 24, uid: "p0" },
+      { id: "frostorb", level: 22, uid: "p1" },
+      { id: "toxadon", level: 21, uid: "p2" },
+    ],
+    storage: [],
+    dexSeen: ["mossevo", "frostorb", "toxadon"],
+    dexCaught: ["mossevo", "frostorb", "toxadon"],
+    materials: { crystal: 2, herb: 12, iron_fragment: 5 },
+    potions: { potion: 4 },
+    bestFloor: 22,
+    storyFlags: {
+      met_orion: true, met_baros: true, first_capture: true,
+      quest_baros_done: true, quest_orion_done: true,
+    },
+    questStatus: {
+      baros_first_hunt: "completed",
+      orion_mothers_medicine: "completed",
+      baros_gear_up: "completed",
+      orion_where_i_stopped: "completed",
+      baros_type_matchup: "completed",
+      orion_once_more: "in_progress",
+    },
+    seenDialogues: [],
+    craftedItems: [], craftedArtifacts: [], craftedPotions: [], equippedArtifacts: {},
+    imprint: {},
+  },
+  version: 2,
+});
+
+test("capture: quest-log", async ({ page }) => {
+  await seedStorage(page, true);
+  await page.addInitScript(({ k, v }) => localStorage.setItem(k as string, v as string),
+    { k: PLAYER_STORAGE_KEY, v: QUEST_LOG_SAVE });
+  await page.goto("/");
+  // 캔버스가 붙기 전에 Tab 을 누르면 아무 일도 안 일어난다. 메뉴 버튼이 뜰 때까지 기다린다
+  const menu = page.getByRole("button", { name: /메뉴/ });
+  await expect(menu).toBeVisible({ timeout: 20_000 });
+  await menu.click();
+  await page.getByRole("menuitem", { name: "퀘스트" }).click();
+  await expect(page.locator('[data-testid="quest-headline"]')).toBeVisible({ timeout: 20_000 });
+  await page.mouse.move(40, 600);
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "quest-log.png"), fullPage: false });
+});

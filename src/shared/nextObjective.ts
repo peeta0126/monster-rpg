@@ -19,14 +19,26 @@ interface ObjectiveInput {
   storyFlags: Record<PersistedStoryFlag, boolean>;
   bestFloor: number;
   potionCount: number;
+  /**
+   * 지금 진행 중인 부탁 한 줄. 퀘스트 표를 여기서 읽지 않고 받아 오는 건, 이 함수가
+   * 화면 없이도 시험되는 순수 함수로 남아야 해서다.
+   *
+   * 이게 앞에 서는 이유 — 예전에는 1층 이후로 "N층에 도전해 보세요"만 반복했다.
+   * 난이도 설계가 "장비로만 넘는다"인데 제작·강화·각인을 한 번도 안 짚어서, 벽에
+   * 부딪힌 사람이 갈 곳을 몰랐다. 부탁은 그 자리를 정확히 가리킨다.
+   */
+  activeQuest?: { text: string; where?: string } | null;
 }
 
-export function getNextObjective({ storyFlags, bestFloor, potionCount }: ObjectiveInput): Objective | null {
+export function getNextObjective(
+  { storyFlags, bestFloor, potionCount, activeQuest }: ObjectiveInput,
+): Objective | null {
   if (!storyFlags.met_orion)     return { text: "이장 오리온에게 말을 걸어 보세요", where: "마을 안쪽" };
   if (!storyFlags.met_baros)     return { text: "탑 앞의 바로스에게 말을 걸어 보세요", where: "탑 입구" };
   if (!storyFlags.first_capture) return { text: "숲에서 몬스터를 포획해 보세요", where: "숲" };
   if (bestFloor === 0)           return { text: "무한의 탑 1층에 도전해 보세요", where: "탑" };
   if (potionCount === 0)         return { text: "공방에서 물약을 만들어 보세요", where: "집" };
+  if (activeQuest)               return activeQuest;
   if (!storyFlags.tower_cleared) return { text: `무한의 탑 ${bestFloor + 1}층에 도전해 보세요`, where: "탑" };
-  return null;   // 엔딩까지 봤으면 더 시킬 것이 없다
+  return null;   // 엔딩까지 봤고 남은 부탁도 없으면 더 시킬 것이 없다
 }

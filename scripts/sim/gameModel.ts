@@ -6,6 +6,8 @@
  * React 컴포넌트 안에 갇혀 있어 import할 수 없는 것(전투 턴 루프, 숲 노드, 드랍 테이블)만
  * 원본과 1:1로 옮겨 적는다. 옮겨 적은 곳에는 출처를 주석으로 남긴다.
  */
+import type { PersistedStoryFlag, QuestStatus } from "../../src/shared/storyFlags";
+import { DEFAULT_STORY_FLAGS } from "../../src/shared/storyFlags";
 import {
   getFloorEnemy, getFloorEnemySkill, isHardFloor, MAX_TOWER_FLOOR, scaleToLevel,
 } from "../../src/shared/floorTable";
@@ -80,8 +82,10 @@ export interface SimState {
   artifacts: ArtifactInstance[];                    // 가방
   equipped: Record<string, ArtifactInstance[]>;     // uid → 장착
   bestFloor: number;
-  questBarosDone: boolean;
-  questOrionDone: boolean;
+  /** 도감의 포획 기록 — 퀘스트 목표(특정 속성 포획)가 이걸 읽는다 */
+  dexCaught: string[];
+  storyFlags: Record<PersistedStoryFlag, boolean>;
+  questStatus: Record<string, QuestStatus>;
 }
 
 export function createInitialSim(): SimState {
@@ -94,8 +98,10 @@ export function createInitialSim(): SimState {
     artifacts: [],
     equipped: {},
     bestFloor: 0,
-    questBarosDone: false,
-    questOrionDone: false,
+    dexCaught: ["flameling"],
+    // 시뮬의 플레이어는 늘 두 사람에게 말을 건다. 첫 포획은 숲을 한 번 돌면 선다
+    storyFlags: { ...DEFAULT_STORY_FLAGS, met_orion: true, met_baros: true },
+    questStatus: {},
   };
 }
 
