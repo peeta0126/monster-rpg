@@ -62,8 +62,13 @@ export const INITIAL_POS: Point = { x: 50, y: 91 };
 /** 스테이지 밖으로 나가지 못하게 하는 외곽 제한 */
 export const PLAYER_BOUNDS = { minX: 5, maxX: 96.5, minY: 28, maxY: 96 };
 
-/** 64x64 스프라이트의 정확히 2배. 비정수 배율은 픽셀을 깨뜨린다 */
-export const PLAYER_DISPLAY = 128;
+/**
+ * 플레이어 한 칸의 크기 — 무대 높이의 백분율이다.
+ *
+ * 고정 px 로 두면 창을 줄였을 때 방만 작아지고 사람은 그대로라 비율이 깨진다.
+ * 값은 배경 원화(높이 1792px)에서 잰 것이다: 한 칸 441px, 그 안의 인물이 430px.
+ */
+export const PLAYER_DISPLAY_RATIO = 441 / BG_H;
 
 // ─── 충돌 박스 ───────────────────────────────────────────────────────────────
 

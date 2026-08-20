@@ -15,7 +15,7 @@ import {
   WORKSHOP_BACKGROUND_IMAGE,
 } from "../shared/assetPaths";
 import {
-  BG_RATIO, INITIAL_POS, PLAYER_BOUNDS, PLAYER_DISPLAY, PLAYER_FOOT,
+  BG_RATIO, INITIAL_POS, PLAYER_BOUNDS, PLAYER_DISPLAY_RATIO, PLAYER_FOOT,
   COLLISION_BOXES, CRAFTING_STATIONS, EXIT_ZONE,
   SHOW_COLLISION_DEBUG, SHOW_INTERACTION_DEBUG,
   clamp, isPlayerBlocked, findInteractable,
@@ -38,12 +38,12 @@ type PlayerPos = Point;
 /** %/frame (16ms 기준) — deltaTime 으로 보정한다 */
 const SPEED = 0.4;
 
-// --- 카메라 -----------------------------------------------------------
-// 배경을 "화면에 맞춘 크기 × CAMERA_ZOOM" 으로 키우고 카메라가 플레이어를 따라간다.
-// 예전에는 방 전체가 늘 보여서, 카메라가 따라다니는 베이스캠프와 체감이 달랐다.
+// --- 무대 -------------------------------------------------------------
+// 공방은 화면 고정이다. 방 하나가 통째로 들어오고 화면은 움직이지 않는다 —
+// 걸어 다녀도 배경은 제자리다. 확대해서 따라다니던 때는 어느 방향으로 가든
+// 벽이 눈앞에 있어서, 방이 몇 칸짜리인지 알 수 없었다.
 //
-// ⚠ 스테이지 내부 좌표계는 그대로 % 다. 확대·이동은 스테이지 컨테이너에서만 일어난다.
-const CAMERA_ZOOM = 1.5;
+// ⚠ 스테이지 내부 좌표계는 % 다. 스테이지는 화면에 맞춘 크기로 가운데 놓인다.
 
 /** 방향키 입력 → 8방향. 지금은 4방향 에셋으로 폴백되지만 호출부는 이미 8방향 기준이다. */
 function directionToDir8(dir: Direction): Dir8 {
@@ -124,18 +124,15 @@ export default function WorkshopPage() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 화면에 꽉 채웠을 때의 크기(= 예전 동작)에 배율을 곱한 것이 실제 스테이지 크기다
-  const fitW   = Math.min(viewport.w, viewport.h * BG_RATIO);
-  const fitH   = Math.min(viewport.h, viewport.w / BG_RATIO);
-  const stageW = fitW * CAMERA_ZOOM;
-  const stageH = fitH * CAMERA_ZOOM;
+  // 비율을 지킨 채 화면에 꽉 채우고, 남는 쪽 여백만큼 가운데로 민다
+  const stageW = Math.min(viewport.w, viewport.h * BG_RATIO);
+  const stageH = Math.min(viewport.h, viewport.w / BG_RATIO);
+  const offsetX = (viewport.w - stageW) / 2;
+  const offsetY = (viewport.h - stageH) / 2;
 
-  // 플레이어를 화면 중앙에 두되, 스테이지 가장자리를 넘어가지 않게 클램프
-  const camX = clamp((pos.x / 100) * stageW - viewport.w / 2, 0, Math.max(0, stageW - viewport.w));
-  const camY = clamp((pos.y / 100) * stageH - viewport.h / 2, 0, Math.max(0, stageH - viewport.h));
-  // 스테이지가 화면보다 작으면(배율 1 등) 가운데 정렬
-  const offsetX = stageW < viewport.w ? (viewport.w - stageW) / 2 : -camX;
-  const offsetY = stageH < viewport.h ? (viewport.h - stageH) / 2 : -camY;
+  // 플레이어도 무대에 맞춰 커지고 작아진다. 고정 px 이면 창을 줄였을 때
+  // 방만 작아지고 사람은 그대로라 통·침대와 견준 키가 어긋난다.
+  const playerDisplay = stageH * PLAYER_DISPLAY_RATIO;
 
   // ── 마우스 좌표 (디버그용, stage 기준 %) ─────────────────────────────────────
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -297,18 +294,18 @@ export default function WorkshopPage() {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-shadow-900/35 via-transparent to-shadow-900/45" />
 
       {/* ══════════════════════════════════════════════════════════════════════
-          레이어 3 — 게임 스테이지 (원본 이미지 비율 2400:1792 고정)
+          레이어 3 — 게임 스테이지 (원본 이미지 비율 2400:1792 고정, 화면 가운데 붙박이)
           ══════════════════════════════════════════════════════════════════════ */}
       <div className="absolute inset-0 overflow-hidden">
         <div
-          className="absolute left-0 top-0 overflow-hidden will-change-transform"
+          className="absolute left-0 top-0 overflow-hidden"
           onMouseMove={handleStageMouseMove}
           onMouseLeave={handleStageMouseLeave}
           style={{
             width:  stageW,
             height: stageH,
-            // translate3d로 GPU 합성에 태운다 (left/top 애니메이션은 매 프레임 레이아웃을 다시 계산한다)
-            transform: `translate3d(${offsetX}px, ${offsetY}px, 0)`,
+            // 창 크기가 바뀔 때만 움직인다. 걸어 다니는 동안은 제자리다.
+            transform: `translate(${offsetX}px, ${offsetY}px)`,
             cursor: SHOW_INTERACTION_DEBUG ? "crosshair" : "default",
           }}
         >
@@ -345,7 +342,7 @@ export default function WorkshopPage() {
                 bottom: 2,
                 left: "50%",
                 transform: "translateX(-50%)",
-                width: PLAYER_DISPLAY * 0.55,
+                width: playerDisplay * 0.55,
                 height: 7,
                 background: "rgba(13, 18, 35, .45)",
                 filter: "blur(5px)",
@@ -360,11 +357,11 @@ export default function WorkshopPage() {
               className="pixel-img"
               style={{
                 transform: playerFrame.flipX ? "scaleX(-1)" : undefined,
-                width:  PLAYER_DISPLAY,
-                height: PLAYER_DISPLAY,
+                width:  playerDisplay,
+                height: playerDisplay,
                 backgroundImage: `url(${PLAYER_ATLAS_PNG})`,
-                backgroundSize: `${PLAYER_DISPLAY * PLAYER_ATLAS_COLS}px ${PLAYER_DISPLAY * PLAYER_ATLAS_ROWS}px`,
-                backgroundPosition: `${-playerCell.col * PLAYER_DISPLAY}px ${-playerCell.row * PLAYER_DISPLAY}px`,
+                backgroundSize: `${playerDisplay * PLAYER_ATLAS_COLS}px ${playerDisplay * PLAYER_ATLAS_ROWS}px`,
+                backgroundPosition: `${-playerCell.col * playerDisplay}px ${-playerCell.row * playerDisplay}px`,
                 backgroundRepeat: "no-repeat",
                 filter: "drop-shadow(0 5px 10px rgba(13, 18, 35, .9))",
                 display: "block",
