@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dirFromVector, getPlayerFrame, DIRS_8, DIR8_TO_DIR4 } from "../src/shared/playerSprite.ts";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  dirFromVector, getPlayerFrame, atlasFrameCell, resolveDir,
+  DIRS_8, DIR8_TO_DIR4, PLAYER_ATLAS_ROW_DIRS, PLAYER_WALK_FRAMES, PLAYER_FRAME_SIZE,
+} from "../src/shared/playerSprite.ts";
 
 test("dirFromVector: 축 방향 4개", () => {
   assert.equal(dirFromVector(0, 1), "S");    // 화면 좌표라 +y가 아래(남)
@@ -44,23 +49,71 @@ test("dirFromVector: 8방향 전부 자기 자신으로 되돌아온다", () => 
   });
 });
 
-test("getPlayerFrame: 4방향 에셋만 있어도 8방향 요청이 깨지지 않는다", () => {
+test("getPlayerFrame: 8방향 전부 아틀라스에 있는 프레임으로 떨어진다", () => {
   for (const dir of DIRS_8) {
     const f = getPlayerFrame(dir, 0);
-    assert.match(f.source, /^\/assets\/player\/player-(up|down|left|right)\.png$/);
-    assert.equal(f.flipX, false, "4방향 폴백에서는 반전을 쓰지 않는다");
+    const cell = atlasFrameCell(f.source);
+    assert.equal(cell.col, 0, `${dir} 정지는 첫 칸`);
+    assert.ok(cell.row >= 0 && cell.row < PLAYER_ATLAS_ROW_DIRS.length, `${dir} 줄 번호`);
   }
 });
 
-test("getPlayerFrame: 걷기 프레임은 1과 2를 순환한다", () => {
-  const frames = [1, 2, 3, 4, 5].map((n) => getPlayerFrame("S", n).source);
+test("getPlayerFrame: 서쪽 셋만 반전으로 만든다", () => {
+  const flipped = DIRS_8.filter((d) => getPlayerFrame(d, 0).flipX);
+  assert.deepEqual([...flipped], ["NW", "W", "SW"]);
+  // 반전해서 쓰는 방향은 아틀라스에 자기 줄이 없다
+  for (const dir of flipped) assert.equal(PLAYER_ATLAS_ROW_DIRS.includes(dir), false);
+});
+
+test("getPlayerFrame: 걷기 프레임은 네 장을 순환한다", () => {
+  const frames = [1, 2, 3, 4, 5, 6].map((n) => getPlayerFrame("S", n).source);
   assert.deepEqual(frames, [
-    "/assets/player/player-down-1.png",
-    "/assets/player/player-down-2.png",
-    "/assets/player/player-down-1.png",
-    "/assets/player/player-down-2.png",
-    "/assets/player/player-down-1.png",
+    "walk_S_00", "walk_S_01", "walk_S_02", "walk_S_03", "walk_S_00", "walk_S_01",
   ]);
+});
+
+test("getPlayerFrame: 왼쪽 대각선은 오른쪽 프레임을 뒤집어 쓴다", () => {
+  const sw = getPlayerFrame("SW", 2);
+  assert.deepEqual(sw, { source: "walk_SE_01", flipX: true });
+  assert.deepEqual(getPlayerFrame("W", 0), { source: "idle_E", flipX: true });
+});
+
+test("atlasFrameCell: 이름에서 격자 칸이 나온다", () => {
+  assert.deepEqual(atlasFrameCell("idle_S"), { col: 0, row: 0 });
+  assert.deepEqual(atlasFrameCell("walk_S_00"), { col: 1, row: 0 });
+  assert.deepEqual(atlasFrameCell("walk_N_03"), { col: PLAYER_WALK_FRAMES, row: 4 });
+  assert.throws(() => atlasFrameCell("/assets/player/player-down.png"));
+  assert.throws(() => atlasFrameCell("idle_SW"), /아틀라스에 없는 방향/);
+});
+
+test("resolveDir: 반전 규칙이 getPlayerFrame 과 같다", () => {
+  for (const dir of DIRS_8) {
+    assert.equal(resolveDir(dir).flipX, getPlayerFrame(dir, 0).flipX, dir);
+  }
+});
+
+/**
+ * 코드가 부르는 이름이 아틀라스에 실제로 있는지 본다.
+ *
+ * 이름이 하나만 어긋나도 Phaser 는 조용히 빈 프레임을 그린다 — 화면에서는
+ * 캐릭터가 사라진 것처럼 보이는데 오류는 안 난다.
+ */
+test("아틀라스에 코드가 부르는 프레임이 전부 있다", () => {
+  const atlas = JSON.parse(
+    fs.readFileSync(path.resolve(import.meta.dirname, "../public/assets/player/player.json"), "utf8"),
+  ) as { frames: Array<{ filename: string; frame: { w: number; h: number } }> };
+  const names = new Set(atlas.frames.map((f) => f.filename));
+
+  for (const dir of DIRS_8) {
+    for (let frame = 0; frame <= PLAYER_WALK_FRAMES; frame++) {
+      const { source } = getPlayerFrame(dir, frame);
+      assert.ok(names.has(source), `${source} 없음`);
+    }
+  }
+  for (const f of atlas.frames) {
+    assert.equal(f.frame.w, PLAYER_FRAME_SIZE, `${f.filename} 폭`);
+    assert.equal(f.frame.h, PLAYER_FRAME_SIZE, `${f.filename} 높이`);
+  }
 });
 
 test("DIR8_TO_DIR4: 8방향이 빠짐없이 매핑돼 있다", () => {

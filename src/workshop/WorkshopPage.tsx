@@ -7,7 +7,10 @@ import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
 import { PALETTE, withAlpha } from "../shared/palette";
 import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
-import { getPlayerFrame, type Dir8 } from "../shared/playerSprite";
+import {
+  getPlayerFrame, atlasFrameCell, PLAYER_ATLAS_PNG,
+  PLAYER_ATLAS_COLS, PLAYER_ATLAS_ROWS, PLAYER_WALK_FRAMES, type Dir8,
+} from "../shared/playerSprite";
 import {
   WORKSHOP_BACKGROUND_IMAGE,
 } from "../shared/assetPaths";
@@ -61,7 +64,7 @@ export default function WorkshopPage() {
   // ── 플레이어 상태 ─────────────────────────────────────────────────────────────
   const [pos, setPos]           = useState<PlayerPos>(INITIAL_POS);
   const [direction, setDirection] = useState<Direction>("down");
-  const [walkFrame, setWalkFrame] = useState<0 | 1 | 2>(0);
+  const [walkFrame, setWalkFrame] = useState(0);
 
   const keysRef      = useRef(new Set<string>());
   const rafRef       = useRef<number | null>(null);
@@ -108,6 +111,7 @@ export default function WorkshopPage() {
   // 잠긴 동안에는 서 있는 자세로 그린다. walkFrame 상태를 effect 로 되돌리지 않고
   // 그릴 때 정하는 이유는, 모달을 닫는 순간 한 프레임 걷는 자세가 스치는 걸 막기 위해서다.
   const playerFrame = getPlayerFrame(directionToDir8(direction), inputLocked ? 0 : walkFrame);
+  const playerCell = atlasFrameCell(playerFrame.source);
 
   // ── 뷰포트 크기 (카메라 계산용) ──────────────────────────────────────────────
   const [viewport, setViewport] = useState(() => ({
@@ -241,8 +245,8 @@ export default function WorkshopPage() {
         else             setDirection("down");
 
         walkTimerRef.current += dt;
-        if (walkTimerRef.current >= 180) {
-          setWalkFrame((f) => (f === 1 ? 2 : 1));
+        if (walkTimerRef.current >= 130) {
+          setWalkFrame((f) => (f % PLAYER_WALK_FRAMES) + 1);
           walkTimerRef.current = 0;
         }
       } else {
@@ -347,15 +351,21 @@ export default function WorkshopPage() {
                 filter: "blur(5px)",
               }}
             />
-            <img
-              src={playerFrame.source}
-              alt="player"
-              draggable={false}
+            {/* 아틀라스 한 칸을 배경으로 잘라 쓴다. <img src> 로는 시트에서 한 칸만
+                떼어낼 수 없다 — 프레임마다 파일을 나누면 아틀라스를 쓰는 뜻이 없다. */}
+            <div
+              role="img"
+              aria-label="player"
+              data-frame={playerFrame.source}
               className="pixel-img"
               style={{
                 transform: playerFrame.flipX ? "scaleX(-1)" : undefined,
                 width:  PLAYER_DISPLAY,
                 height: PLAYER_DISPLAY,
+                backgroundImage: `url(${PLAYER_ATLAS_PNG})`,
+                backgroundSize: `${PLAYER_DISPLAY * PLAYER_ATLAS_COLS}px ${PLAYER_DISPLAY * PLAYER_ATLAS_ROWS}px`,
+                backgroundPosition: `${-playerCell.col * PLAYER_DISPLAY}px ${-playerCell.row * PLAYER_DISPLAY}px`,
+                backgroundRepeat: "no-repeat",
                 filter: "drop-shadow(0 5px 10px rgba(13, 18, 35, .9))",
                 display: "block",
               }}

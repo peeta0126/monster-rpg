@@ -184,13 +184,13 @@ async function openWorkshopAsDev(page: Page) {
     ["monster-rpg-auth", DEV_AUTH],
   );
   await page.goto("/workshop");
-  await expect(page.locator('img[alt="player"]')).toBeVisible();
+  await expect(page.locator('[aria-label="player"]')).toBeVisible();
   await page.waitForTimeout(300);
 }
 
 function readPos(page: Page) {
   return page.evaluate(() => {
-    const el = document.querySelector<HTMLElement>('img[alt="player"]')!.parentElement!;
+    const el = document.querySelector<HTMLElement>('[aria-label="player"]')!.parentElement!;
     return { x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
   });
 }

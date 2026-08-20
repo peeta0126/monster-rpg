@@ -38,10 +38,10 @@ test.describe("rendering:", () => {
 
   test("공방 플레이어 스프라이트는 pixelated 를 유지한다", async ({ page }) => {
     await asGuest(page, "/workshop");
-    await expect(page.locator('img[alt="player"]')).toBeVisible();
+    await expect(page.locator('[aria-label="player"]')).toBeVisible();
     // index.css 가 pixelated 와 crisp-edges 를 함께 선언한다(브라우저별 지원 차이).
     // 어느 쪽으로 계산되는지는 브라우저 사정이라, "auto 가 아니다"만 지킨다.
-    expect(await renderingOf(page, 'img[alt="player"]')).not.toBe("auto");
+    expect(await renderingOf(page, '[aria-label="player"]')).not.toBe("auto");
   });
 
   test("로그인 배경은 부드럽게 축소된다", async ({ page }) => {

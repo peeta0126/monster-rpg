@@ -30,17 +30,17 @@ test.describe("workshop:", () => {
   test("방향키로 움직이고 걷기 프레임이 바뀐다", async ({ page }) => {
     await openWorkshop(page);
     const before = await readPos(page);
-    const srcBefore = await page.locator('img[alt="player"]').getAttribute("src");
+    const frameBefore = await page.locator('[aria-label="player"]').getAttribute("data-frame");
 
     await page.keyboard.down("ArrowUp");
     await page.waitForTimeout(400);
-    const srcWalking = await page.locator('img[alt="player"]').getAttribute("src");
+    const frameWalking = await page.locator('[aria-label="player"]').getAttribute("data-frame");
     await page.keyboard.up("ArrowUp");
     await page.waitForTimeout(100);
 
     const after = await readPos(page);
     expect(after.y).toBeLessThan(before.y);            // 위로 갔다
-    expect(srcWalking).not.toBe(srcBefore);            // 걷기 프레임으로 바뀌었다
+    expect(frameWalking).not.toBe(frameBefore);        // 걷기 프레임으로 바뀌었다
 
     // 네 방향 모두 스프라이트가 달라지는지
     const seen = new Set<string>();
@@ -48,8 +48,8 @@ test.describe("workshop:", () => {
       await page.keyboard.down(key);
       await page.waitForTimeout(200);
       await page.keyboard.up(key);
-      const s = await page.locator('img[alt="player"]').getAttribute("src");
-      const flip = await page.locator('img[alt="player"]').evaluate((e) => (e as HTMLElement).style.transform);
+      const s = await page.locator('[aria-label="player"]').getAttribute("data-frame");
+      const flip = await page.locator('[aria-label="player"]').evaluate((e) => (e as HTMLElement).style.transform);
       seen.add(`${s}|${flip}`);
       await page.waitForTimeout(80);
     }
@@ -144,7 +144,7 @@ test.describe("workshop:", () => {
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
 
     const before = await readPos(page);
-    const facingBefore = await page.locator('img[alt="player"]').getAttribute("src");
+    const facingBefore = await page.locator('[aria-label="player"]').getAttribute("data-frame");
 
     for (const key of ["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"]) {
       await page.keyboard.down(key);
@@ -156,7 +156,7 @@ test.describe("workshop:", () => {
     expect(after.x, "모달 중에 x 가 움직였다").toBeCloseTo(before.x, 1);
     expect(after.y, "모달 중에 y 가 움직였다").toBeCloseTo(before.y, 1);
     // 방향 전환도 막혀야 한다 — 뒤에서 캐릭터가 빙글빙글 돌면 안 된다
-    expect(await page.locator('img[alt="player"]').getAttribute("src")).toBe(facingBefore);
+    expect(await page.locator('[aria-label="player"]').getAttribute("data-frame")).toBe(facingBefore);
 
     await page.keyboard.press("Escape");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeHidden();
@@ -271,7 +271,7 @@ test.describe("workshop:", () => {
     await page.getByRole("button", { name: /바깥으로/ }).click();
     await expect(page).toHaveURL(/\/$/);
     await page.goto("/workshop");
-    await expect(page.locator('img[alt="player"]')).toBeVisible();
+    await expect(page.locator('[aria-label="player"]')).toBeVisible();
 
     const p = await readPos(page);
     expect(p.x).toBeCloseTo(INITIAL_POS.x, 1);

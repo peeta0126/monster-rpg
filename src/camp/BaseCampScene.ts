@@ -7,7 +7,9 @@ import { getCampPosition, setCampPosition } from "./campPositionStore";
 import { PALETTE, withAlpha } from "../shared/palette";
 import { BASECAMP_BACKGROUND_IMAGE } from "../shared/assetPaths";
 import {
-  dirFromVector, getPlayerTextureKey, DIRS_8, PLAYER_ATLAS_KEY, type Dir8,
+  dirFromVector, resolveDir, atlasFrameName, PLAYER_WALK_FRAMES,
+  PLAYER_ATLAS_ROW_DIRS, PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON,
+  type Dir8,
 } from "../shared/playerSprite";
 import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
@@ -79,8 +81,6 @@ export default class BaseCampScene extends Phaser.Scene {
     D: Phaser.Input.Keyboard.Key;
   };
   private facing: Dir8 = "S";
-  private walkFrame: 1 | 2 = 1;
-  private walkTimer = 0;
   private debugGfx?: Phaser.GameObjects.Graphics;
   private playerBodyGfx?: Phaser.GameObjects.Graphics;
   private cleanupDebug?: () => void;
@@ -92,23 +92,12 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   preload() {
-    // 8방향 아틀라스가 들어오면 아래 player-* 개별 PNG 목록을 지우고 이 줄을 켠다.
-    // playerSprite.ts 의 ASSET_MODE 를 "atlas" 로 바꾸는 것과 한 세트다.
-    // this.load.aseprite(PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON);
+    // JSON Array 형식(Aseprite 내보내기)이라 load.atlas 로 읽는다. load.aseprite 는
+    // meta.frameTags 를 요구하는데 이 파일에는 태그가 없다 — 애니메이션은 아래
+    // registerPlayerAnimations 가 프레임 이름 규칙에서 직접 만든다.
+    this.load.atlas(PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON);
     this.load.image("basecamp-bg", BASECAMP_BACKGROUND_IMAGE);
     this.load.image("basecamp-bg-1", "/assets/basecamp/basecamp-bg-1.webp");
-    this.load.image("player-up", "/assets/player/player-up.png");
-    this.load.image("player-up-1", "/assets/player/player-up-1.png");
-    this.load.image("player-up-2", "/assets/player/player-up-2.png");
-    this.load.image("player-down", "/assets/player/player-down.png");
-    this.load.image("player-down-1", "/assets/player/player-down-1.png");
-    this.load.image("player-down-2", "/assets/player/player-down-2.png");
-    this.load.image("player-left", "/assets/player/player-left.png");
-    this.load.image("player-left-1", "/assets/player/player-left-1.png");
-    this.load.image("player-left-2", "/assets/player/player-left-2.png");
-    this.load.image("player-right", "/assets/player/player-right.png");
-    this.load.image("player-right-1", "/assets/player/player-right-1.png");
-    this.load.image("player-right-2", "/assets/player/player-right-2.png");
     BASECAMP_NPCS.forEach((npc) => {
       this.load.image(npc.spriteTexture, `/assets/player/${npc.spriteTexture}.png`);
     });
@@ -144,14 +133,14 @@ export default class BaseCampScene extends Phaser.Scene {
     // 벽 안에서 시작하면 그대로 갇힌다 — 정적 바디는 이미 겹쳐 있는 것을 밀어내지 않는다.
     // 형상을 고치는 중에 실제로 걸렸다. 들어올 자리는 테스트가 지키지만, 여기서도 한 번 본다.
     const initPos = safeSpawn(getCampPosition());
-    this.player = this.physics.add.sprite(initPos.x, initPos.y, "player-down");
+    this.player = this.physics.add.sprite(initPos.x, initPos.y, PLAYER_ATLAS_KEY, atlasFrameName("S", 0));
     this.player.setCollideWorldBounds(true);
     this.player.setScale(PLAYER_SCALE);
     this.player.setDepth(footYFromSpriteY(initPos.y));
 
     // 바디는 발밑에 둔다. 예전에는 스프라이트 한가운데(offset 27,27)에 있어서,
     // 벽 앞에 서면 발이 화단·좌판 안으로 80px 씩 파고들어 있었다.
-    // texture 좌표 → 월드 = ×PLAYER_SCALE. 64×64 스프라이트의 아래쪽에 맞춘다.
+    // texture 좌표 → 월드 = ×PLAYER_SCALE. 아틀라스 한 칸의 아래쪽에 맞춘다.
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setSize(PLAYER_BODY.w / PLAYER_SCALE, PLAYER_BODY.h / PLAYER_SCALE);
     body.setOffset(PLAYER_BODY_OFFSET.x, PLAYER_BODY_OFFSET.y);
@@ -256,23 +245,21 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   /**
-   * 8방향 걷기 애니메이션 등록.
+   * 걷기 애니메이션 등록.
    *
-   * 아틀라스가 아직 없어서 지금은 아무 것도 하지 않는다. 에셋이 들어오면 preload 의
-   * load.aseprite 주석을 풀고, update() 에서 setTexture 대신 play(`walk_${dir}`) 를
-   * 쓰도록 한 줄만 바꾸면 된다. 절차는 docs/ASSET_HANDOFF.md 참고.
+   * 아틀라스에 든 방향은 다섯이다(S·SE·E·NE·N). 나머지 셋은 좌우 반전이라
+   * 애니메이션을 따로 만들지 않는다 — resolveDir 이 어느 쪽을 뒤집을지 정한다.
    */
   private registerPlayerAnimations() {
     if (!this.textures.exists(PLAYER_ATLAS_KEY)) return;
 
-    this.anims.createFromAseprite(PLAYER_ATLAS_KEY);
-    for (const dir of DIRS_8) {
+    for (const dir of PLAYER_ATLAS_ROW_DIRS) {
       const key = `walk_${dir}`;
       if (this.anims.exists(key)) continue;
       this.anims.create({
         key,
         frames: this.anims.generateFrameNames(PLAYER_ATLAS_KEY, {
-          prefix: `walk_${dir}_`, start: 0, end: 3, zeroPad: 2,
+          prefix: `walk_${dir}_`, start: 0, end: PLAYER_WALK_FRAMES - 1, zeroPad: 2,
         }),
         frameRate: 8,
         repeat: -1,
@@ -383,7 +370,7 @@ export default class BaseCampScene extends Phaser.Scene {
     }
   }
 
-  private updateImpl(_time: number, delta: number) {
+  private updateImpl(_time: number, _delta: number) {
     //좌표 확인용
     const pointer = this.input.activePointer;
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -417,19 +404,17 @@ export default class BaseCampScene extends Phaser.Scene {
     body.velocity.normalize().scale(speed);
 
     // 방향은 실제 이동 벡터에서 뽑는다. 대각선 입력도 8방향 중 하나로 떨어지고,
-    // 에셋이 4방향뿐인 지금은 getPlayerTextureKey가 가장 가까운 4방향으로 접어준다.
+    // 서쪽 셋은 resolveDir 이 동쪽 프레임을 뒤집어 쓰라고 알려 준다.
+    if (isMoving) this.facing = dirFromVector(body.velocity.x, body.velocity.y);
+    const { dir, flipX } = resolveDir(this.facing);
+    this.player.setFlipX(flipX);
     if (isMoving) {
-      this.facing = dirFromVector(body.velocity.x, body.velocity.y);
-      this.walkTimer += delta;
-      if (this.walkTimer >= 160) {
-        this.walkTimer = 0;
-        this.walkFrame = this.walkFrame === 1 ? 2 : 1;
-      }
-      this.player.setTexture(getPlayerTextureKey(this.facing, this.walkFrame));
+      // play 의 두 번째 인자(ignoreIfPlaying)로 같은 애니메이션 재시작을 막는다.
+      // 매 프레임 처음부터 다시 틀면 첫 장에서 멈춘 것처럼 보인다.
+      this.player.anims.play(`walk_${dir}`, true);
     } else {
-      this.walkTimer = 0;
-      this.walkFrame = 1;
-      this.player.setTexture(getPlayerTextureKey(this.facing, 0));
+      this.player.anims.stop();
+      this.player.setFrame(atlasFrameName(dir, 0));
     }
 
     // ── depth: 발끝 y = depth → 건물·NPC 뒤/앞 자동 처리 ──────────────────────

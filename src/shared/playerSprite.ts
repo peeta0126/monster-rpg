@@ -44,6 +44,17 @@ export const DIR8_TO_DIR4: Record<Dir8, Dir4> = {
  */
 const MIRROR: Partial<Record<Dir8, Dir8>> = { SW: "SE", W: "E", NW: "NE" };
 
+/**
+ * 그릴 때 실제로 쓸 방향과 반전 여부.
+ *
+ * Phaser 는 프레임 이름 대신 애니메이션 키가 필요해서 `getPlayerFrame` 만으로는
+ * 부족하다. 반전 규칙이 두 벌이 되지 않도록 여기 한 번만 적는다.
+ */
+export function resolveDir(dir: Dir8): { dir: Dir8; flipX: boolean } {
+  const mirrored = MIRROR[dir];
+  return { dir: mirrored ?? dir, flipX: mirrored !== undefined };
+}
+
 export interface PlayerFrame {
   /** <img src> 또는 Phaser 텍스처 키 */
   source: string;
@@ -52,17 +63,48 @@ export interface PlayerFrame {
 }
 
 /** 현재 보유 에셋. 8방향 아틀라스를 넣으면 "atlas" 로 바꾼다. */
-const ASSET_MODE: "legacy4" | "atlas" = "legacy4";
+const ASSET_MODE: "legacy4" | "atlas" = "atlas";
 
 export const PLAYER_ATLAS_KEY = "player-atlas";
 export const PLAYER_ATLAS_PNG = "/assets/player/player.png";
 export const PLAYER_ATLAS_JSON = "/assets/player/player.json";
+
+/** 아틀라스 한 칸(px). 바디 오프셋·발끝 계산이 전부 이 값에 걸려 있다. */
+export const PLAYER_FRAME_SIZE = 80;
+
+/** 걷기 프레임 수. 아틀라스 한 줄은 idle 1 + walk 4 칸이다. */
+export const PLAYER_WALK_FRAMES = 4;
+
+/** 아틀라스 격자. 줄 순서가 곧 방향 순서다(반전으로 만드는 3방향은 없다). */
+export const PLAYER_ATLAS_ROW_DIRS: readonly Dir8[] = ["S", "SE", "E", "NE", "N"];
+export const PLAYER_ATLAS_COLS = 1 + PLAYER_WALK_FRAMES;
+export const PLAYER_ATLAS_ROWS = PLAYER_ATLAS_ROW_DIRS.length;
 
 /** 아틀라스 프레임 이름 규칙. Aseprite 태그명과 일치해야 한다. */
 export function atlasFrameName(dir: Dir8, frame: number): string {
   return frame === 0
     ? `idle_${dir}`
     : `walk_${dir}_${String(frame - 1).padStart(2, "0")}`;
+}
+
+/** 걷기 프레임 번호를 아틀라스가 가진 4장 안으로 접는다. 0(정지)은 그대로 둔다. */
+export function walkFrameIndex(frame: number): number {
+  return frame === 0 ? 0 : ((frame - 1) % PLAYER_WALK_FRAMES) + 1;
+}
+
+/**
+ * 프레임 이름 → 아틀라스 격자 칸.
+ *
+ * <img> 로 그리는 공방은 Phaser 처럼 이름으로 프레임을 찾을 수 없어서 좌표가 필요하다.
+ * 이름에서 되짚는 이유는, 이미 반전까지 적용된 `getPlayerFrame().source` 를 그대로
+ * 넘겨 받기 위해서다 — 방향을 두 번 해석하면 한쪽만 어긋난다.
+ */
+export function atlasFrameCell(source: string): { col: number; row: number } {
+  const m = /^(idle|walk)_([A-Z]+)(?:_(\d+))?$/.exec(source);
+  if (!m) throw new Error(`아틀라스 프레임 이름이 아니다: ${source}`);
+  const row = PLAYER_ATLAS_ROW_DIRS.indexOf(m[2] as Dir8);
+  if (row < 0) throw new Error(`아틀라스에 없는 방향이다: ${source}`);
+  return { col: m[1] === "idle" ? 0 : Number(m[3]) + 1, row };
 }
 
 /**
@@ -74,10 +116,10 @@ export function atlasFrameName(dir: Dir8, frame: number): string {
  */
 export function getPlayerFrame(dir: Dir8, frame: number): PlayerFrame {
   if (ASSET_MODE === "atlas") {
-    const mirrored = MIRROR[dir];
+    const resolved = resolveDir(dir);
     return {
-      source: atlasFrameName(mirrored ?? dir, frame),
-      flipX: mirrored !== undefined,
+      source: atlasFrameName(resolved.dir, walkFrameIndex(frame)),
+      flipX: resolved.flipX,
     };
   }
 

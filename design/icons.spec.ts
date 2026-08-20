@@ -120,7 +120,7 @@ test.describe("공방", () => {
   test("capture: icons-craft", async ({ page }) => {
     await seed(page);
     await page.goto("/workshop");
-    await expect(page.locator('img[alt="player"]')).toBeVisible();
+    await expect(page.locator('[aria-label="player"]')).toBeVisible();
     await page.waitForTimeout(300);
     const bench = CRAFTING_STATIONS.find((s) => s.id === "artifact-workbench")!;
     expect(await walkTo(page, bench, APPROACH * bench.radius)).toBe(true);
@@ -135,7 +135,7 @@ test.describe("공방", () => {
   test("capture: icons-anvil", async ({ page }) => {
     await seed(page);
     await page.goto("/workshop");
-    await expect(page.locator('img[alt="player"]')).toBeVisible();
+    await expect(page.locator('[aria-label="player"]')).toBeVisible();
     await page.waitForTimeout(300);
     const anvil = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
     expect(await walkTo(page, anvil, APPROACH * anvil.radius)).toBe(true);

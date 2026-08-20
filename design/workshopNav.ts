@@ -21,7 +21,7 @@ export interface Pt { x: number; y: number }
 /** 플레이어 스프라이트의 stage 기준 % 좌표 */
 export async function readPos(page: Page): Promise<Pt> {
   return page.evaluate(() => {
-    const el = document.querySelector<HTMLElement>('img[alt="player"]')?.parentElement;
+    const el = document.querySelector<HTMLElement>('[aria-label="player"]')?.parentElement;
     if (!el) throw new Error("플레이어 스프라이트를 찾을 수 없다");
     return { x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
   });
@@ -114,13 +114,13 @@ export async function asGuest(page: Page, path: string) {
 /** 공방으로 들어가 플레이어가 그려질 때까지 기다린다 */
 export async function openWorkshop(page: Page) {
   await asGuest(page, "/workshop");
-  await expect(page.locator('img[alt="player"]')).toBeVisible();
+  await expect(page.locator('[aria-label="player"]')).toBeVisible();
   await page.waitForTimeout(300);
 }
 
 /** 이미 게스트 세션이 있는 상태에서 공방으로 되돌아간다 */
 export async function reenterWorkshop(page: Page) {
   await page.goto("/workshop");
-  await expect(page.locator('img[alt="player"]')).toBeVisible();
+  await expect(page.locator('[aria-label="player"]')).toBeVisible();
   await page.waitForTimeout(300);
 }
