@@ -1,17 +1,14 @@
 /**
  * 플레이어 스프라이트의 단일 출처.
  *
- * 지금까지 BaseCampScene(Phaser)과 WorkshopPage(React <img>)가 각자 다른 방식으로
- * 파일명을 조립하고 있었다. 8방향 에셋으로 갈아끼울 때 두 곳을 따로 고치면 반드시
- * 한쪽이 어긋나므로 여기로 모은다.
+ * BaseCampScene(Phaser)과 WorkshopPage(React)가 각자 프레임을 고르면 반드시
+ * 한쪽이 어긋난다. 방향·반전·프레임 번호를 여기서만 정한다.
  *
- * 현재 에셋은 4방향 3프레임 개별 PNG다. 8방향 아틀라스가 도착하면
- * ASSET_MODE 를 "atlas" 로 바꾸고 아래 아틀라스 경로만 맞추면 된다 —
- * 호출부는 손대지 않는다. 교체 절차는 docs/ASSET_HANDOFF.md 참고.
+ * 에셋은 8방향 아틀라스 한 장이다. 실제로 그려진 방향은 다섯 줄(S·SE·E·NE·N)이고
+ * 서쪽 셋은 좌우 반전으로 만든다. 규격은 docs/ASSET_HANDOFF.md 참고.
  */
 
 export type Dir8 = "S" | "SE" | "E" | "NE" | "N" | "NW" | "W" | "SW";
-export type Dir4 = "down" | "right" | "up" | "left";
 
 /** 시계 방향. dirFromVector 의 각도 버킷 순서와 같아야 한다. */
 export const DIRS_8: readonly Dir8[] = ["S", "SE", "E", "NE", "N", "NW", "W", "SW"];
@@ -32,12 +29,6 @@ export function dirFromVector(dx: number, dy: number): Dir8 {
   return DIRS_8[idx];
 }
 
-/** 8방향 → 가장 가까운 4방향. 대각선은 세로를 우선한다(걷는 모습이 덜 어색하다). */
-export const DIR8_TO_DIR4: Record<Dir8, Dir4> = {
-  S: "down", SE: "down", E: "right", NE: "up",
-  N: "up",   NW: "up",   W: "left",  SW: "down",
-};
-
 /**
  * 좌우 반전으로 대체 가능한 방향.
  * SW/W/NW 는 SE/E/NE 를 뒤집어 쓴다 — 에셋 작업량이 40% 줄어든다.
@@ -56,14 +47,11 @@ export function resolveDir(dir: Dir8): { dir: Dir8; flipX: boolean } {
 }
 
 export interface PlayerFrame {
-  /** <img src> 또는 Phaser 텍스처 키 */
+  /** 아틀라스 프레임 이름 */
   source: string;
   /** true 면 좌우 반전해서 그린다 */
   flipX: boolean;
 }
-
-/** 현재 보유 에셋. 8방향 아틀라스를 넣으면 "atlas" 로 바꾼다. */
-const ASSET_MODE: "legacy4" | "atlas" = "atlas";
 
 export const PLAYER_ATLAS_KEY = "player-atlas";
 export const PLAYER_ATLAS_PNG = "/assets/player/player.png";
@@ -108,35 +96,13 @@ export function atlasFrameCell(source: string): { col: number; row: number } {
 }
 
 /**
- * 방향과 프레임에 해당하는 스프라이트.
- * frame 0 = 정지, 1 이상 = 걷기 프레임.
- *
- * 4방향 에셋만 있는 지금은 가장 가까운 4방향으로 접어서 돌려준다. 그래서 8방향을
- * 요청해도 화면이 깨지지 않는다 — 에셋을 넣기 전에 호출부를 먼저 바꿔도 안전하다.
+ * 방향과 프레임에 해당하는 아틀라스 프레임.
+ * frame 0 = 정지, 1 이상 = 걷기 프레임(네 장을 순환한다).
  */
 export function getPlayerFrame(dir: Dir8, frame: number): PlayerFrame {
-  if (ASSET_MODE === "atlas") {
-    const resolved = resolveDir(dir);
-    return {
-      source: atlasFrameName(resolved.dir, walkFrameIndex(frame)),
-      flipX: resolved.flipX,
-    };
-  }
-
-  const d4 = DIR8_TO_DIR4[dir];
-  // 4방향 에셋은 walk 프레임이 1, 2 두 장뿐이라 그 안에서 순환시킨다
-  const legacyFrame = frame === 0 ? 0 : ((frame - 1) % 2) + 1;
+  const resolved = resolveDir(dir);
   return {
-    source: legacyFrame === 0
-      ? `/assets/player/player-${d4}.png`
-      : `/assets/player/player-${d4}-${legacyFrame}.png`,
-    flipX: false,
+    source: atlasFrameName(resolved.dir, walkFrameIndex(frame)),
+    flipX: resolved.flipX,
   };
-}
-
-/** Phaser 텍스처 키(개별 PNG를 키로 미리 로드해 둔 경우). */
-export function getPlayerTextureKey(dir: Dir8, frame: number): string {
-  const d4 = DIR8_TO_DIR4[dir];
-  const legacyFrame = frame === 0 ? 0 : ((frame - 1) % 2) + 1;
-  return legacyFrame === 0 ? `player-${d4}` : `player-${d4}-${legacyFrame}`;
 }

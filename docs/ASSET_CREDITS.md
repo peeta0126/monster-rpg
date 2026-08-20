@@ -46,7 +46,10 @@
 픽셀 SVG 다. 위 21종의 **폴백**이자, 그림 파일이 없는 것들(상태이상·메뉴·공방 탭)의
 본체다. 출처 표기가 필요 없다.
 
-## 아직 정리되지 않은 것
+## 플레이어 스프라이트
 
-⚠️ `public/assets/player/player-*.png` 는 포켓몬 리핑 에셋이다. **이 상태로 공개 배포하면
-안 된다.** 교체 절차는 [ASSET_HANDOFF.md](ASSET_HANDOFF.md) 에 있다.
+`public/assets/player/player.png` · `player.json` 은 이 게임을 위해 그린 8방향 아틀라스다.
+
+그 전에 쓰던 `player-{down,up,left,right}{,-1,-2}.png` 16장은 포켓몬 리핑 에셋이라
+지웠다. 되살리지 말 것 — 그 상태로는 공개 배포를 할 수 없다. 규격은
+[ASSET_HANDOFF.md](ASSET_HANDOFF.md) 에 있다.

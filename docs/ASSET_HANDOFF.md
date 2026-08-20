@@ -1,6 +1,6 @@
 # 에셋 넣는 곳
 
-플레이어 8방향 스프라이트를 받았을 때 무엇을 어디에 넣고 코드에서 뭘 켜는지.
+플레이어 8방향 스프라이트를 무엇을 어디에 넣고 코드가 뭘 읽는지.
 
 > 밖에서 받아 온 에셋의 출처·라이선스는 [ASSET_CREDITS.md](ASSET_CREDITS.md) 에 적는다.
 > 새 에셋을 넣었으면 그 표에도 한 줄 더할 것.
@@ -12,19 +12,25 @@ public/assets/player/player.png     스프라이트시트
 public/assets/player/player.json    Aseprite JSON (Array 형식, "Output File" 옆의 JSON Data 체크)
 ```
 
-기존 `player-{down,up,left,right}{,-1,-2}.png` 16장은 아틀라스로 대체된 뒤 지운다.
+이 두 장이 전부다. 방향마다 PNG 를 따로 두던 `player-{down,up,left,right}{,-1,-2}.png`
+16장은 지웠다 — 되살리지 말 것.
 
 ## 2. 규격
 
 | 항목 | 값 |
 | --- | --- |
-| 프레임 크기 | 64×64 |
+| 프레임 크기 | 80×80 |
 | 방향 | 8방향 — S, SE, E, NE, N, NW, W, SW |
 | 프레임 | 방향당 idle 1장 + walk 4장 |
-| 시트 크기 | 2048×2048 이하 |
+| 시트 크기 | 2048×2048 이하 (지금 400×400) |
+
+인물은 칸에 꽉 차 있고 **발끝은 아래에서 두 번째 줄**이다. 이 값이 곧 발밑 충돌
+박스의 기준이라(`campCollision.ts` 의 `PLAYER_FOOT_INSET`), 여백을 바꾼 시트를
+넣으면 벽을 뚫거나 화단 위에 올라선다.
 
 **좌우 반전을 쓴다.** SW / W / NW 는 그리지 않는다 — 코드가 SE / E / NE 를 뒤집어 쓴다
 (`playerSprite.ts` 의 `MIRROR`). 실제로 그려야 하는 방향은 **S, SE, E, NE, N 다섯 개**다.
+시트의 **줄 순서가 곧 이 순서**고(`PLAYER_ATLAS_ROW_DIRS`), 칸 순서는 idle → walk 00~03 이다.
 
 ## 3. 프레임 이름 규칙
 
@@ -39,33 +45,40 @@ walk_S_02
 walk_S_03
 ```
 
-번호는 2자리 0 패딩(`00`~`03`).
+번호는 2자리 0 패딩(`00`~`03`). 이름이 하나만 어긋나도 Phaser 는 오류 없이 빈 칸을
+그린다 — 화면에서는 캐릭터가 사라진 것처럼 보인다. `tests/playerSprite.test.ts` 가
+시트를 직접 열어 이름과 칸 크기를 맞춰 본다.
 
-## 4. 코드에서 켜는 것 — 3곳
+## 4. 코드가 읽는 곳
 
-1. `src/shared/playerSprite.ts` — `ASSET_MODE` 를 `"legacy4"` → `"atlas"`
-2. `src/camp/BaseCampScene.ts` `preload()` — `this.load.aseprite(...)` 주석 해제,
-   `player-*` 개별 `load.image` 16줄 삭제
-3. `src/camp/BaseCampScene.ts` `updateImpl()` — `setTexture(getPlayerTextureKey(...))` 를
-   `play(\`walk_${this.facing}\`, true)` 로. 정지 상태는 `stop()` 후 `idle_${dir}` 프레임.
-
-공방(`WorkshopPage.tsx`)은 고칠 게 없다. `getPlayerFrame()` 이 아틀라스 프레임명과
-`flipX` 를 같이 돌려주고, 이미 `transform: scaleX(-1)` 로 반전을 처리하고 있다.
+- `src/shared/playerSprite.ts` — 방향·반전·프레임 번호·칸 크기(`PLAYER_FRAME_SIZE`)의
+  단일 출처. 시트를 갈면 여기만 고친다.
+- `src/camp/BaseCampScene.ts` — `load.atlas` 로 읽고 줄마다 `walk_*` 애니메이션을 만든다.
+  `load.aseprite` 는 못 쓴다(이 JSON 에 `meta.frameTags` 가 없다).
+- `src/workshop/WorkshopPage.tsx` — `<img>` 로는 시트에서 한 칸만 뗄 수 없어
+  배경 이미지로 잘라 쓴다. 프레임 이름과 `flipX` 는 `getPlayerFrame()` 이 같이 준다.
 
 ## 5. 확인
 
 ```
-npm test              # 방향 판정 단위 테스트
-npm run design:shot   # 베이스캠프·공방 캡처
+npm test                    # 방향 판정 · 시트 이름 대조
+npm run design:shot         # 베이스캠프·공방 캡처
+npm run design:collision    # 발밑 충돌 박스 + 인물 배치
 ```
 
 베이스캠프에서 대각선으로 걸어 SE/NE 프레임이 나오는지, 좌측 대각선에서 좌우 반전이
-어색하지 않은지(그림자·소지품 위치) 본다.
+어색하지 않은지(그림자·소지품 위치) 본다. 칸 크기를 바꿨으면
+`node scripts/gen-camp-collision.mjs` 를 다시 돌려야 한다 — 지형 마스크가 스프라이트
+실루엣으로 가시성을 재기 때문이다.
 
 ## 6. 표시 크기
 
-64×64 원본은 화면에서 **128px**(정확히 2배)로만 쓴다. 110px 같은 비정수 배율은
-`image-rendering: pixelated` 와 만나면 픽셀이 1px/2px로 들쭉날쭉해진다.
+베이스캠프는 정수배만 쓴다 — 80×80 을 **2배(160px)** 로 그린다. 2.5배 같은 비정수
+배율은 `image-rendering: pixelated` 와 만나면 픽셀이 1px/2px로 들쭉날쭉해진다.
+
+공방은 방 전체가 한 화면에 들어오는 붙박이 화면이라 px 을 고정하면 창을 줄였을 때
+사람만 커 보인다. 그래서 **무대 높이의 비율**로 잡는다(`PLAYER_DISPLAY_RATIO`,
+원화 1792px 안에서 한 칸 441px).
 
 ---
 

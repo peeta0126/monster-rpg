@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   dirFromVector, getPlayerFrame, atlasFrameCell, resolveDir,
-  DIRS_8, DIR8_TO_DIR4, PLAYER_ATLAS_ROW_DIRS, PLAYER_WALK_FRAMES, PLAYER_FRAME_SIZE,
+  DIRS_8, PLAYER_ATLAS_ROW_DIRS, PLAYER_WALK_FRAMES, PLAYER_FRAME_SIZE,
 } from "../src/shared/playerSprite.ts";
 
 test("dirFromVector: 축 방향 4개", () => {
@@ -82,7 +82,7 @@ test("atlasFrameCell: 이름에서 격자 칸이 나온다", () => {
   assert.deepEqual(atlasFrameCell("idle_S"), { col: 0, row: 0 });
   assert.deepEqual(atlasFrameCell("walk_S_00"), { col: 1, row: 0 });
   assert.deepEqual(atlasFrameCell("walk_N_03"), { col: PLAYER_WALK_FRAMES, row: 4 });
-  assert.throws(() => atlasFrameCell("/assets/player/player-down.png"));
+  assert.throws(() => atlasFrameCell("player-down.png"), /아틀라스 프레임 이름이 아니다/);
   assert.throws(() => atlasFrameCell("idle_SW"), /아틀라스에 없는 방향/);
 });
 
@@ -113,12 +113,6 @@ test("아틀라스에 코드가 부르는 프레임이 전부 있다", () => {
   for (const f of atlas.frames) {
     assert.equal(f.frame.w, PLAYER_FRAME_SIZE, `${f.filename} 폭`);
     assert.equal(f.frame.h, PLAYER_FRAME_SIZE, `${f.filename} 높이`);
-  }
-});
-
-test("DIR8_TO_DIR4: 8방향이 빠짐없이 매핑돼 있다", () => {
-  for (const dir of DIRS_8) {
-    assert.ok(DIR8_TO_DIR4[dir], `${dir} 매핑 없음`);
   }
 });
 
