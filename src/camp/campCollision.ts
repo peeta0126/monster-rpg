@@ -1,5 +1,5 @@
 import { CAMP_GROUND_RECTS } from "./campGroundMask";
-import { PLAYER_FRAME_SIZE } from "../shared/playerSprite";
+import { PLAYER_FRAME_SIZE, PLAYER_FOOT_INSET } from "../shared/playerSprite";
 
 /**
  * 베이스캠프 충돌.
@@ -41,13 +41,6 @@ export interface CampBox {
  * 탑다운 반투시 배경이라 머리는 물체 뒤로 지나가야 자연스럽다.
  */
 export const PLAYER_BODY = { w: 60, h: 30 };
-
-/**
- * 프레임 아래쪽의 빈 여백(texture px). 인물이 칸에 꽉 차 있어서 발끝은 아래에서
- * 두 번째 줄이다. 한 칸 크기는 playerSprite 의 PLAYER_FRAME_SIZE 한 곳에서만 온다 —
- * 여기에 숫자를 적으면 에셋을 갈 때 발밑만 옛 규격으로 남는다.
- */
-export const PLAYER_FOOT_INSET = 2;
 
 /** 스프라이트 한 칸의 절반. 씬이 쓰는 원점(중심)에서 위아래로 이만큼이다. */
 const HALF_FRAME = PLAYER_FRAME_SIZE / 2;

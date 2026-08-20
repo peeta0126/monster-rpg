@@ -60,6 +60,15 @@ export const PLAYER_ATLAS_JSON = "/assets/player/player.json";
 /** 아틀라스 한 칸(px). 바디 오프셋·발끝 계산이 전부 이 값에 걸려 있다. */
 export const PLAYER_FRAME_SIZE = 80;
 
+/**
+ * 프레임 아래쪽의 빈 여백(texture px). 인물이 칸에 꽉 차 있어서 발끝은 아래에서
+ * 두 번째 줄이다. 발밑 충돌 박스와 그림자가 이 값에 걸려 있다.
+ */
+export const PLAYER_FOOT_INSET = 2;
+
+/** 프레임 위에서 발끝이 있는 높이(0~1). 발밑을 좌표 기준점으로 삼을 때 쓴다. */
+export const PLAYER_FOOT_ANCHOR = (PLAYER_FRAME_SIZE - PLAYER_FOOT_INSET) / PLAYER_FRAME_SIZE;
+
 /** 걷기 프레임 수. 아틀라스 한 줄은 idle 1 + walk 4 칸이다. */
 export const PLAYER_WALK_FRAMES = 4;
 

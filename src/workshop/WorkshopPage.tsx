@@ -9,7 +9,8 @@ import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
 import {
   getPlayerFrame, atlasFrameCell, PLAYER_ATLAS_PNG,
-  PLAYER_ATLAS_COLS, PLAYER_ATLAS_ROWS, PLAYER_WALK_FRAMES, type Dir8,
+  PLAYER_ATLAS_COLS, PLAYER_ATLAS_ROWS, PLAYER_WALK_FRAMES, PLAYER_FOOT_ANCHOR,
+  type Dir8,
 } from "../shared/playerSprite";
 import {
   WORKSHOP_BACKGROUND_IMAGE,
@@ -331,8 +332,10 @@ export default function WorkshopPage() {
             style={{
               left: `${pos.x}%`,
               top:  `${pos.y}%`,
-              // 발밑이 좌표 기준점이 되도록 위로 올림
-              transform: "translate(-50%, -90%)",
+              // 발밑이 좌표 기준점이 되도록 위로 올림. 프레임 안에서 발끝이 어디인지는
+              // 시트가 정하므로 여기 백분율을 손으로 적지 말 것 — 64px 시절의 90% 를
+              // 그대로 뒀더니 발이 판정보다 17px 아래에 붙어 있었다.
+              transform: `translate(-50%, ${-PLAYER_FOOT_ANCHOR * 100}%)`,
             }}
           >
             {/* 발밑 그림자 */}

@@ -101,7 +101,7 @@ const PLAYER_IDLE_FRAME = "idle_S";
 const PLAYER_FRAME = 80;     // playerSprite.ts PLAYER_FRAME_SIZE
 const PLAYER_SCALE = 2;      // campCollision.ts PLAYER_SCALE
 const PLAYER_BODY_H = 30;    // campCollision.ts PLAYER_BODY.h
-const PLAYER_FOOT_INSET = 2; // campCollision.ts PLAYER_FOOT_INSET
+const PLAYER_FOOT_INSET = 2; // playerSprite.ts PLAYER_FOOT_INSET
 
 const PLAYER_DISPLAY = PLAYER_FRAME * PLAYER_SCALE;
 
