@@ -10,6 +10,7 @@ import {
 } from "../src/camp/campCollision";
 import { getCampPosition } from "../src/camp/campPositionStore";
 import { GROUND_MASK_SOURCE } from "../src/camp/campGroundMask";
+import { atlasFrameName } from "../src/shared/playerSprite";
 
 /**
  * 베이스캠프 충돌 형상 검증.
@@ -164,7 +165,14 @@ test("걸어 닿는 어느 칸에서도 플레이어가 사라지지 않는다",
     .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width: W, height: H, channels: C } = fg.info;
 
-  const pl = await sharp(path.join(root, "public/assets/player/player-down.png"))
+  // 씬이 서 있을 때 그리는 프레임을 아틀라스에서 그대로 떼어 쓴다
+  const atlas = JSON.parse(
+    fs.readFileSync(path.join(root, "public/assets/player/player.json"), "utf8"),
+  ) as { frames: Array<{ filename: string; frame: { x: number; y: number; w: number; h: number } }> };
+  const idle = atlas.frames.find((f) => f.filename === atlasFrameName("S", 0));
+  assert.ok(idle, "아틀라스에 정면 정지 프레임이 없다");
+  const pl = await sharp(path.join(root, "public/assets/player/player.png"))
+    .extract({ left: idle.frame.x, top: idle.frame.y, width: idle.frame.w, height: idle.frame.h })
     .resize(display, display, { kernel: "nearest" })
     .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const half = display / 2;

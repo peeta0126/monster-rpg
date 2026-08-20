@@ -8,6 +8,21 @@ import {
   reachableCells, bodyYFromSpriteY,
 } from "../src/camp/campCollision";
 import { getCampPosition } from "../src/camp/campPositionStore";
+import { PLAYER_SCALE } from "../src/camp/campCollision";
+import {
+  atlasFrameName, atlasFrameCell, PLAYER_ATLAS_PNG, PLAYER_FRAME_SIZE,
+  PLAYER_ATLAS_COLS, PLAYER_ATLAS_ROWS,
+} from "../src/shared/playerSprite";
+
+/** 씬이 그리는 것과 같은 크기의 정면 정지 스프라이트 한 칸. */
+const PLAYER_DISPLAY = PLAYER_FRAME_SIZE * PLAYER_SCALE;
+const IDLE_CELL = atlasFrameCell(atlasFrameName("S", 0));
+const playerHtml = (left: number, top: number) => `
+  <div class="pixel-img" style="position:absolute;left:${left}px;top:${top}px;
+    width:${PLAYER_DISPLAY}px;height:${PLAYER_DISPLAY}px;image-rendering:pixelated;
+    background-image:url(${PLAYER_ATLAS_PNG});background-repeat:no-repeat;
+    background-size:${PLAYER_DISPLAY * PLAYER_ATLAS_COLS}px ${PLAYER_DISPLAY * PLAYER_ATLAS_ROWS}px;
+    background-position:${-IDLE_CELL.col * PLAYER_DISPLAY}px ${-IDLE_CELL.row * PLAYER_DISPLAY}px"></div>`;
 
 /**
  * 충돌 형상을 배경 원화 위에 그대로 겹쳐 찍는다.
@@ -152,10 +167,9 @@ test("collision: 베이스캠프 인물 배치", async ({ page }) => {
   await page.setContent(shell(CAMP_MAP_W, CAMP_MAP_H, `
     <img src="/assets/basecamp/basecamp-bg.webp"
       style="position:absolute;left:0;top:0;width:${CAMP_MAP_W}px;height:${CAMP_MAP_H}px">
-    ${[...best.values()].map((p) => `
-      <img src="/assets/player/player-down.png" class="pixel-img"
-        style="position:absolute;left:${Math.round(p.x) - 80}px;top:${Math.round(p.y) - 80}px;
-          width:160px;height:160px;image-rendering:pixelated">`).join("")}
+    ${[...best.values()].map((p) =>
+      playerHtml(Math.round(p.x) - PLAYER_DISPLAY / 2, Math.round(p.y) - PLAYER_DISPLAY / 2),
+    ).join("")}
     <img src="/assets/basecamp/basecamp-bg-1.webp"
       style="position:absolute;left:0;top:0;width:${CAMP_MAP_W}px;height:${CAMP_MAP_H}px">
   `));

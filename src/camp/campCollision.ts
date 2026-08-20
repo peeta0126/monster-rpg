@@ -1,4 +1,5 @@
 import { CAMP_GROUND_RECTS } from "./campGroundMask";
+import { PLAYER_FRAME_SIZE } from "../shared/playerSprite";
 
 /**
  * 베이스캠프 충돌.
@@ -36,21 +37,28 @@ export interface CampBox {
 }
 
 /**
- * 플레이어 물리 바디(월드 px). 스프라이트는 160×160 이지만 막히는 건 발밑뿐이다 —
+ * 플레이어 물리 바디(월드 px). 스프라이트는 한 칸을 통째로 그리지만 막히는 건 발밑뿐이다 —
  * 탑다운 반투시 배경이라 머리는 물체 뒤로 지나가야 자연스럽다.
  */
 export const PLAYER_BODY = { w: 60, h: 30 };
 
-/** 64px 스프라이트 아래쪽의 빈 여백(texture px). 발끝은 y=58 이라 6px 이 남는다. */
-export const PLAYER_FOOT_INSET = 6;
+/**
+ * 프레임 아래쪽의 빈 여백(texture px). 인물이 칸에 꽉 차 있어서 발끝은 아래에서
+ * 두 번째 줄이다. 한 칸 크기는 playerSprite 의 PLAYER_FRAME_SIZE 한 곳에서만 온다 —
+ * 여기에 숫자를 적으면 에셋을 갈 때 발밑만 옛 규격으로 남는다.
+ */
+export const PLAYER_FOOT_INSET = 2;
+
+/** 스프라이트 한 칸의 절반. 씬이 쓰는 원점(중심)에서 위아래로 이만큼이다. */
+const HALF_FRAME = PLAYER_FRAME_SIZE / 2;
 
 /** 씬이 스프라이트에 먹이는 배율. 여기 두는 이유는 바디 오프셋 계산이 이 값에 걸려서다. */
 export const PLAYER_SCALE = 2.5;
 
-/** 64×64 원본 기준 바디 오프셋. 씬의 `body.setOffset` 이 그대로 쓴다. */
+/** 한 칸 원본 기준 바디 오프셋. 씬의 `body.setOffset` 이 그대로 쓴다. */
 export const PLAYER_BODY_OFFSET = {
-  x: (64 - PLAYER_BODY.w / PLAYER_SCALE) / 2,
-  y: 64 - PLAYER_BODY.h / PLAYER_SCALE - PLAYER_FOOT_INSET,
+  x: (PLAYER_FRAME_SIZE - PLAYER_BODY.w / PLAYER_SCALE) / 2,
+  y: PLAYER_FRAME_SIZE - PLAYER_BODY.h / PLAYER_SCALE - PLAYER_FOOT_INSET,
 };
 
 /**
@@ -60,18 +68,18 @@ export const PLAYER_BODY_OFFSET = {
  * 오갈 일이 테스트·오버레이 양쪽에 있어서 변환을 여기 한 번만 적어 둔다.
  */
 export function bodyYFromSpriteY(spriteY: number): number {
-  return spriteY + (PLAYER_BODY_OFFSET.y + PLAYER_BODY.h / PLAYER_SCALE / 2 - 32) * PLAYER_SCALE;
+  return spriteY + (PLAYER_BODY_OFFSET.y + PLAYER_BODY.h / PLAYER_SCALE / 2 - HALF_FRAME) * PLAYER_SCALE;
 }
 
 /**
  * 스프라이트 중심 y → 발끝 y. depth 정렬 기준이다.
  *
  * NPC 는 원점이 (0.5, 1) 이라 npc.y 가 곧 발끝이다. 플레이어만 스프라이트 중심을
- * 쓰면 기준이 어긋난다 — 스프라이트 아래 6px(=월드 15px)이 빈 여백이라, 아래쪽 끝을
- * depth 로 쓰면 발이 NPC 뒤에 있는데도 앞으로 그려진다.
+ * 쓰면 기준이 어긋난다 — 스프라이트 아래쪽이 빈 여백이라, 그 끝을 depth 로 쓰면
+ * 발이 NPC 뒤에 있는데도 앞으로 그려진다.
  */
 export function footYFromSpriteY(spriteY: number): number {
-  return spriteY + (32 - PLAYER_FOOT_INSET) * PLAYER_SCALE;
+  return spriteY + (HALF_FRAME - PLAYER_FOOT_INSET) * PLAYER_SCALE;
 }
 
 /**

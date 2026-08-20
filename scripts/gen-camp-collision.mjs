@@ -86,17 +86,28 @@ const CELL = 16;
 /** 바닥이 이어져 있는지 판정할 시작점 — 씬의 기본 스폰(발밑 기준) */
 const SEED = { x: 794, y: 1280 };
 
-/** 가시성을 잴 때 세우는 스프라이트. 씬이 쓰는 것과 같은 크기여야 한다. */
-const PLAYER_PNG = path.join(ROOT, "public/assets/player/player-down.png");
-const PLAYER_DISPLAY = 160;
+/**
+ * 가시성을 잴 때 세우는 스프라이트. 씬이 쓰는 것과 같은 크기여야 한다.
+ * 정면 정지 프레임을 아틀라스에서 떼어 쓴다.
+ */
+const PLAYER_ATLAS = path.join(ROOT, "public/assets/player/player.png");
+const PLAYER_ATLAS_JSON = path.join(ROOT, "public/assets/player/player.json");
+const PLAYER_IDLE_FRAME = "idle_S";
 
 /**
- * 스프라이트 중심 → 발밑 바디 중심의 y 차이(px).
- *
- * campCollision.ts 의 `bodyYFromSpriteY(0)` 과 같아야 한다. 여기는 TS 를 못 읽는
- * 독립 스크립트라 값을 적어 두고, 어긋나면 tests/campCollision.test.ts 가 잡는다.
+ * 씬이 쓰는 스프라이트 규격. 여기는 TS 를 못 읽는 독립 스크립트라 값을 적어 두고,
+ * campCollision.ts 와 어긋나면 tests/campCollision.test.ts 가 잡는다.
  */
-const BODY_TO_SPRITE_Y = 50;
+const PLAYER_FRAME = 80;     // playerSprite.ts PLAYER_FRAME_SIZE
+const PLAYER_SCALE = 2.5;    // campCollision.ts PLAYER_SCALE
+const PLAYER_BODY_H = 30;    // campCollision.ts PLAYER_BODY.h
+const PLAYER_FOOT_INSET = 2; // campCollision.ts PLAYER_FOOT_INSET
+
+const PLAYER_DISPLAY = PLAYER_FRAME * PLAYER_SCALE;
+
+/** 스프라이트 중심 → 발밑 바디 중심의 y 차이(px). campCollision 의 bodyYFromSpriteY(0). */
+const BODY_TO_SPRITE_Y =
+  (PLAYER_DISPLAY - PLAYER_BODY_H) / 2 - PLAYER_FOOT_INSET * PLAYER_SCALE;
 
 const buf = fs.readFileSync(SRC);
 const sha = crypto.createHash("sha256").update(buf).digest("hex");
@@ -172,7 +183,11 @@ const candidate = (() => {
 // 스프라이트 불투명 픽셀을 행별 구간으로 쪼개 두고, 전경 불투명 픽셀의 적분 이미지로
 // 한 자리당 구간 수만큼만 조회한다. 픽셀마다 스프라이트를 겹쳐 세는 것보다 수백 배 빠르다.
 const spriteRuns = await (async () => {
-  const { data, info } = await sharp(PLAYER_PNG)
+  const atlas = JSON.parse(fs.readFileSync(PLAYER_ATLAS_JSON, "utf8"));
+  const cell = atlas.frames.find((f) => f.filename === PLAYER_IDLE_FRAME);
+  if (!cell) throw new Error(`아틀라스에 ${PLAYER_IDLE_FRAME} 이 없다`);
+  const { data, info } = await sharp(PLAYER_ATLAS)
+    .extract({ left: cell.frame.x, top: cell.frame.y, width: cell.frame.w, height: cell.frame.h })
     .resize(PLAYER_DISPLAY, PLAYER_DISPLAY, { kernel: "nearest" })
     .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const S = info.width, ch = info.channels, half = S / 2;
