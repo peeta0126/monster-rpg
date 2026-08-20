@@ -99,7 +99,7 @@ const PLAYER_IDLE_FRAME = "idle_S";
  * campCollision.ts 와 어긋나면 tests/campCollision.test.ts 가 잡는다.
  */
 const PLAYER_FRAME = 80;     // playerSprite.ts PLAYER_FRAME_SIZE
-const PLAYER_SCALE = 2.5;    // campCollision.ts PLAYER_SCALE
+const PLAYER_SCALE = 2;      // campCollision.ts PLAYER_SCALE
 const PLAYER_BODY_H = 30;    // campCollision.ts PLAYER_BODY.h
 const PLAYER_FOOT_INSET = 2; // campCollision.ts PLAYER_FOOT_INSET
 

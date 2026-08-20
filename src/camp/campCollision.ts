@@ -52,8 +52,13 @@ export const PLAYER_FOOT_INSET = 2;
 /** 스프라이트 한 칸의 절반. 씬이 쓰는 원점(중심)에서 위아래로 이만큼이다. */
 const HALF_FRAME = PLAYER_FRAME_SIZE / 2;
 
-/** 씬이 스프라이트에 먹이는 배율. 여기 두는 이유는 바디 오프셋 계산이 이 값에 걸려서다. */
-export const PLAYER_SCALE = 2.5;
+/**
+ * 씬이 스프라이트에 먹이는 배율. 여기 두는 이유는 바디 오프셋 계산이 이 값에 걸려서다.
+ *
+ * 정수배여야 픽셀이 안 뭉개진다. 64px 시절에는 화면 크기를 맞추려고 2.5배를 썼는데,
+ * 한 칸이 80 이 되면서 2배로 같은 160px 이 나온다 — 칸 크기는 그대로고 인물만 커진다.
+ */
+export const PLAYER_SCALE = 2;
 
 /** 한 칸 원본 기준 바디 오프셋. 씬의 `body.setOffset` 이 그대로 쓴다. */
 export const PLAYER_BODY_OFFSET = {
