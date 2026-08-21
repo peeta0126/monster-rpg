@@ -15,7 +15,7 @@ import {
   waterPulse,
   zap, boltStrike, thunder,
   leafBlade, sporeCloud, seedBomb, rootSpear,
-  frostMist, crystalLance,
+  frostMist, crystalLance, sheerCold,
   poisonSting, acidSpray, poisonFog, poisonJab, venomFang,
 } from "../monster/moves";
 
@@ -319,16 +319,21 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["volt-crash", "thunder", "body-slam", "volt-crash"],
   },
   48: {
-    monsterId: "frostorb",
-    moves: [blizzard, crystalLance, crystalBurst, bodySlam],
-    skillOrder: ["blizzard", "crystal-lance", "body-slam", "blizzard"],
+    monsterId: "venomcrow",
+    moves: [venomStorm, venomFang, poisonFog, toxic],
+    skillOrder: ["venom-storm", "venom-fang", "poison-fog", "venom-storm"],
   },
-  // 정상 바로 아래. 이름 없는 모왕이 문지기처럼 선다 — 40층에서 이긴 그 종이
-  // 여기서는 층의 일부일 뿐이라는 게, 오름이 무엇인지 말하지 않고 말하는 방법이다
+  // 정상 바로 아래는 벽이다. 프리로는 이 게임에서 가장 단단한 종이고, Lv49 에 절대영도를
+  // 배운다 — 이 층에서만 나오는 기술이다.
+  //
+  // 여기 모왕을 세웠다가 물렸다. 후반 파티는 거의 항상 모왕을 선봉에 세우는데,
+  // getFloorEnemy 는 거울 싸움을 피하려고 같은 종이면 풀에서 다시 뽑는다. 그래서 정작
+  // 실제 플레이에서는 이 층의 구성이 거의 안 나왔다. **플레이어가 흔히 데려가는 종은
+  // 고정 구성에 두지 말 것.**
   49: {
-    monsterId: "mossyfinal",
-    moves: [thunder, boltStrike, hyperBeam, heavyBlow],
-    skillOrder: ["thunder", "bolt-strike", "hyper-beam", "heavy-blow"],
+    monsterId: "frostorb",
+    moves: [sheerCold, blizzard, crystalLance, bodySlam],
+    skillOrder: ["sheer-cold", "blizzard", "crystal-lance", "body-slam"],
   },
 };
 
