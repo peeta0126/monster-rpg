@@ -19,7 +19,7 @@ import { settleBag } from "../../src/camp/forest/runStore";
 import {
   chainKeyOf, essenceCostFor, imprintTier, IMPRINT_ESSENCE_ID, MAX_IMPRINT_TIER,
 } from "../../src/monster/imprint";
-import { getFloorEnemy } from "../../src/shared/floorTable";
+import { imprintTier, chainKeyOf } from "../../src/monster/imprint";
 import {
   ARTIFACT_SLOT_MAP, MAX_EQUIPMENT_ENHANCEMENT, canSynthesizeArtifacts,
 } from "../../src/shared/craftingUtils";
@@ -69,6 +69,20 @@ interface RunStats {
   battlesByFloor: Record<number, number>;
   /** 보스층을 처음 시도할 때의 파티 — 벽의 원인을 보려면 레벨만으로는 부족하다 */
   bossParty: Record<number, { name: string; level: number; atk: number; hp: number; pow: number }[]>;
+  /**
+   * 보스 앞에 설 때 **실제로** 들고 있는 장비와 각인.
+   *
+   * gateCheck 의 합격선이 오래 가정으로 서 있었다 — "정규 장비" 를 손으로 적은
+   * elite:40:5 같은 값으로 두었는데, 실제 판이 거기 못 미치면 그 표는 아무도 겪지
+   * 않는 상황을 재게 된다. 그 표를 이 값으로 채우려고 여기서 뽑는다.
+   */
+  bossKit: Record<number, { quality: string; level: number; enh: number; tier: number }>;
+  /** 그 층 **첫 도전**의 승패. gateCheck 의 한 열과 직접 비교되는 유일한 값이다 */
+  bossFirstTry: Record<number, boolean>;
+  /** 첫 도전에 들어설 때의 파티 평균 HP 비율. 만렙 회복을 가정하는 검사와의 차이를 잰다 */
+  bossHpRatio: Record<number, number>;
+  /** 첫 도전에 들어설 때 가방에 있던 물약. 소모 축이 이 게임 난이도의 절반이다 */
+  bossPotions: Record<number, Record<string, number>>;
   /** 보스층을 깨기까지 실제로 몇 번 죽었나 (그 층에서 소모한 재도전 사이클) */
   bossRetries: Record<number, number>;
   /** 각인에 먹인 중복 수 */
@@ -108,7 +122,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
     artifactEnhances: 0, artifactSynths: 0, artifactDisassembles: 0,
     finalLevels: [], finalParty: [], materialsLeft: {}, blockedRecipes: {},
     lossByFloor: {}, battlesByFloor: {}, leadLevelAtFloor: {},
-    bossParty: {}, bossRetries: {},
+    bossParty: {}, bossRetries: {}, bossKit: {}, bossFirstTry: {}, bossHpRatio: {}, bossPotions: {},
     imprintFed: 0, forcedRetreats: 0, campReturns: 0, questsDone: [],
   };
 
@@ -289,14 +303,30 @@ async function simulateRun(seed: number): Promise<RunStats> {
 
     if (st.leadLevelAtFloor[floor] === undefined) {
       st.leadLevelAtFloor[floor] = Math.max(...s.party.map((m) => m.level));
-      if (floor % 10 === 0) {
+      if (floor % 5 === 0) {
         st.bossParty[floor] = s.party.map((m) => ({
           name: m.name, level: m.level, atk: m.attack, hp: m.maxHp,
           pow: Math.max(...m.moves.map((mv) => mv.power), 0),
         }));
+        // 선봉이 낀 장비 세 칸의 중앙값 격이 곧 "이 층에서의 정규 장비"다
+        const lead = s.party.reduce((b, m) => (m.level > b.level ? m : b), s.party[0]);
+        const gear = (s.equipped[lead.uid] ?? []);
+        const rank = { normal: 0, rare: 1, elite: 2 } as Record<string, number>;
+        const best = gear.reduce<typeof gear[number] | null>(
+          (b, a) => (!b || rank[a.quality] > rank[b.quality] ? a : b), null);
+        st.bossKit[floor] = {
+          quality: best?.quality ?? "-",
+          level: gear.length ? Math.round(gear.reduce((n, a) => n + a.level, 0) / gear.length) : 0,
+          enh: gear.length ? Math.round(gear.reduce((n, a) => n + a.enhancement, 0) / gear.length) : 0,
+          tier: imprintTier(s.imprint[chainKeyOf(lead)] ?? 0),
+        };
+        st.bossHpRatio[floor] = s.party.reduce((n, m) => n + m.currentHp / m.maxHp, 0) / s.party.length;
+        st.bossPotions[floor] = { ...s.potions };
       }
     }
+    const firstTry = floor % 5 === 0 && st.bossFirstTry[floor] === undefined;
     const r = await fightFloor(s, floor);
+    if (firstTry) st.bossFirstTry[floor] = r.win;
     st.towerBattles++;
     st.battlesByFloor[floor] = (st.battlesByFloor[floor] ?? 0) + 1;
     st.totalTurns += r.turns;
@@ -421,17 +451,37 @@ console.log(`\n── 층 도달 시점의 파티 레벨 (${RUNS}판 평균) ─
 
 console.log(`\n── 보스 벽 (${RUNS}판) ──`);
 {
-  console.log("층  | 재도전 | 보스: HP/공/방 | 첫 도전 파티 (1판 기준)");
-  for (const f of [10, 20, 30, 40, 50]) {
+  console.log("층  | 재도전 | 첫도전승률 | 입장HP | 실제 장비(평균) | 각인 | 물약(평균) | 첫 도전 파티 (1판 기준)");
+  for (const f of [10, 15, 20, 25, 30, 35, 40, 45, 50]) {
+    // ⚠️ 재도전은 n0층만 센다(bossRetries). 관문의 0.0 은 "안 졌다"가 아니라 "안 센다"다 —
+    //    첫도전 승률 열을 볼 것.
     const retries = results.map((r) => r.bossRetries[f] ?? 0);
     if (!results.some((r) => r.bossParty[f])) continue;
     const mean = retries.reduce((a, b) => a + b, 0) / RUNS;
-    const e = getFloorEnemy(f, "none");
     const party = (results.find((r) => r.bossParty[f])!.bossParty[f])
       .map((m) => `${m.name} Lv${m.level}(공${m.atk}/HP${m.hp}/위력${m.pow})`).join(" ");
+    // 장비·각인은 판마다 다르므로 평균을 낸다 — 합격선은 한 판이 아니라 이 평균 위에 서야 한다
+    const tries = results.map((r) => r.bossFirstTry[f]).filter((v) => v !== undefined);
+    const firstWin = tries.length ? Math.round((tries.filter(Boolean).length / tries.length) * 100) : 0;
+    const hps = results.map((r) => r.bossHpRatio[f]).filter((v) => v !== undefined);
+    const hpAvg = hps.length ? hps.reduce((a, b) => a + b, 0) / hps.length : 1;
+    const pots = results.map((r) => r.bossPotions[f]).filter(Boolean);
+    const potAvg: Record<string, number> = {};
+    for (const p of pots) for (const [k, v] of Object.entries(p)) potAvg[k] = (potAvg[k] ?? 0) + v / pots.length;
+    const potStr = Object.entries(potAvg).filter(([, v]) => v >= 0.5)
+      .map(([k, v]) => `${k.replace("_potion", "").replace("strong_", "s")}${v.toFixed(0)}`).join(" ") || "-";
+    const kits = results.map((r) => r.bossKit[f]).filter(Boolean);
+    const rank = ["normal", "rare", "elite"];
+    const qAvg = kits.length
+      ? rank[Math.round(kits.reduce((n, k) => n + Math.max(0, rank.indexOf(k.quality)), 0) / kits.length)]
+      : "-";
+    const lAvg = kits.length ? kits.reduce((n, k) => n + k.level, 0) / kits.length : 0;
+    const eAvg = kits.length ? kits.reduce((n, k) => n + k.enh, 0) / kits.length : 0;
+    const tAvg = kits.length ? kits.reduce((n, k) => n + k.tier, 0) / kits.length : 0;
     console.log(
       `${String(f).padStart(3)} | ${mean.toFixed(1).padStart(6)} | ` +
-      `${String(e.maxHp).padStart(4)}/${String(e.attack).padStart(3)}/${String(e.defense).padStart(3)} | ${party}`,
+      `${`${firstWin}%`.padStart(10)} | ${`${(hpAvg * 100).toFixed(0)}%`.padStart(6)} | ` +
+      `${`${qAvg}:${lAvg.toFixed(0)}:${eAvg.toFixed(1)}`.padStart(15)} | ${tAvg.toFixed(1).padStart(4)} | ${potStr.padStart(22)} | ${party}`,
     );
   }
 }
