@@ -451,15 +451,29 @@ console.log(`\n── 층 도달 시점의 파티 레벨 (${RUNS}판 평균) ─
 
 console.log(`\n── 보스 벽 (${RUNS}판) ──`);
 {
-  console.log("층  | 재도전 | 첫도전승률 | 입장HP | 실제 장비(평균) | 각인 | 물약(평균) | 첫 도전 파티 (1판 기준)");
+  console.log("층  | 재도전 | 첫도전승률 | 입장HP | 실제 장비(평균) | 각인 | 물약(평균) | 첫 도전 파티(평균)");
   for (const f of [10, 15, 20, 25, 30, 35, 40, 45, 50]) {
     // ⚠️ 재도전은 n0층만 센다(bossRetries). 관문의 0.0 은 "안 졌다"가 아니라 "안 센다"다 —
     //    첫도전 승률 열을 볼 것.
     const retries = results.map((r) => r.bossRetries[f] ?? 0);
     if (!results.some((r) => r.bossParty[f])) continue;
     const mean = retries.reduce((a, b) => a + b, 0) / RUNS;
-    const party = (results.find((r) => r.bossParty[f])!.bossParty[f])
-      .map((m) => `${m.name} Lv${m.level}(공${m.atk}/HP${m.hp}/위력${m.pow})`).join(" ");
+    // ⚠️ 파티도 **평균**을 낸다. 예전엔 `results.find(...)` 로 한 판만 뽑아 적었는데,
+    // 나머지 열은 40판 평균이라 표가 판마다 흔들렸다. gateCheck 이 이 값을 그대로
+    // 받아 쓰므로, 한 칸만 표본이면 그 검사 전체가 같이 흔들린다.
+    const parties = results.map((r) => r.bossParty[f]).filter(Boolean);
+    const slots = Math.max(...parties.map((p) => p.length));
+    const party = Array.from({ length: slots }, (_, i) => {
+      const slot = parties.map((p) => p[i]).filter(Boolean);
+      if (!slot.length) return "";
+      // 종족은 최빈값, 레벨은 평균 — "그 자리에 대개 누가 몇 레벨로 서는가"
+      const byName: Record<string, number> = {};
+      for (const m of slot) byName[m.name] = (byName[m.name] ?? 0) + 1;
+      const name = Object.entries(byName).sort((a, b) => b[1] - a[1])[0][0];
+      const lv = slot.reduce((n, m) => n + m.level, 0) / slot.length;
+      const atk = slot.reduce((n, m) => n + m.atk, 0) / slot.length;
+      return `${name} Lv${lv.toFixed(0)}(공${atk.toFixed(0)})`;
+    }).filter(Boolean).join(" ");
     // 장비·각인은 판마다 다르므로 평균을 낸다 — 합격선은 한 판이 아니라 이 평균 위에 서야 한다
     const tries = results.map((r) => r.bossFirstTry[f]).filter((v) => v !== undefined);
     const firstWin = tries.length ? Math.round((tries.filter(Boolean).length / tries.length) * 100) : 0;

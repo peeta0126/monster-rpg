@@ -10,8 +10,24 @@
  * 가방의 물약. 그렇게 맞추자 어려운 층이 실제와 겹쳤다(20층 10%↔10% · 25층 100%↔100% ·
  * 45층 100%↔95%).
  *
+ * ⚠️ **지금 이 검사는 대부분 빨간불이다. 그게 게임의 실제 상태다.**
+ * 실측 열이 25층 100% · 40층 1% · 45층 100% · 50층 8% 로 톱니처럼 튄다 — 평균적인
+ * 플레이어에게 어떤 층은 공짜고 어떤 층은 벽이다. 예전 표는 이걸 매끈한 계단으로
+ * 보여 주고 있었다(정규 60~78% 가 나란히).
+ *
+ * 초록불로 만들려면 배수를 만지면 되는데, **그렇게 하면 수렴하지 않는다.** 보스를
+ * 올리면 플레이어가 그 앞에서 더 파밍하게 되고, 그러면 뒷층의 실측 입력이 통째로
+ * 바뀐다. 실제로 세 바퀴 돌려 봤더니 이 표는 아홉 층 전부 초록이 됐는데 실제 판은
+ * 30층 재도전 6.4회 · 탑 전투 206회(기준선 136)로 나빠졌다. 그래서 배수는 되돌렸다.
+ *
+ * 고치려면 배수가 아니라 **입력 쪽**이어야 한다 — 40·50층에 회복 물약이 없는 것,
+ * 파티가 모시 계열 하나로 수렴하는 것(로스터가 14종뿐), 관문 앞에서 정비를 안 하는 것.
+ * 그게 풀리면 그때 배수는 저절로 좁은 범위에 들어온다.
+ *
  * 실행: npx tsx scripts/sim/gateCheck.ts [판수]
- * 실측 갱신: npx tsx scripts/sim/run.ts 40 → "보스 벽" 절의 값을 아래 표에 옮긴다
+ * 실측 갱신: npx tsx scripts/sim/run.ts 40 → "보스 벽" 절의 값을 아래 표에 옮긴다.
+ *   ⚠️ 밸런스를 만졌으면 **반드시** 다시 뜬다. 안 그러면 옛 밸런스가 만든 파티로
+ *   새 밸런스를 재게 되고, 그 값은 아무 뜻이 없다.
  */
 import { installSeededRandom, fightFloor, type SimState } from "./gameModel";
 import { DEFAULT_STORY_FLAGS } from "../../src/shared/storyFlags";
@@ -62,6 +78,10 @@ interface GateSpec {
  *
  * 이제 가운데 열을 실측에 못 박고, 그 위아래로 한 발씩 둔다. 세 열의 뜻이 이렇다:
  *
+ * ⚠️ 실측 열의 장비 등급이 늘 rare 인 것은 `scripts/sim/run.ts` 의 `CRAFT_QUALITY` 가
+ * rare 로 못 박혀 있어서다 — 미니게임을 보통으로 하는 플레이어를 가정한 값이다. 그래서
+ * 이 표의 세 열은 "장비를 얼마나 모았나" 가 아니라 **어떤 플레이어인가** 로 갈린다.
+ *
  *   맨몸        — 같은 파티인데 장비·각인이 없는 사람
  *   실측        — **평균적인 판**. 이 열이 곧 사람들이 겪는 난이도다
  *   한 발 앞선  — 제작대에 한 번 더 다녀온 사람(장비 레벨 +10 · 강화 +1)
@@ -72,23 +92,28 @@ interface GateSpec {
  * 또 옛 가정을 재게 된다.
  */
 const GATES: GateSpec[] = [
-  { floor: 10, party: "mossy:9,mossy:7,aquabe:7",                  actual: "rare:2:2",   actualTier: 2, entryHp: 0.84, potions: { potion: 8, attack_buff: 5, antidote: 16 } },
-  { floor: 15, party: "mossy:15,mossy:12,mossy:12",                actual: "rare:3:3",   actualTier: 2, entryHp: 0.82, potions: { attack_buff: 5, antidote: 14 } },
-  { floor: 20, party: "mossevo:20,mossy:19,mossy:18",              actual: "rare:5:4",   actualTier: 2, entryHp: 0.76, potions: { attack_buff: 4, antidote: 16 } },
-  { floor: 25, party: "mossevo:26,mossevo:24,mossevo:24",          actual: "rare:8:2",   actualTier: 3, entryHp: 0.78, potions: { attack_buff: 3, antidote: 14, max_potion: 5, strong_attack_buff: 3 } },
-  { floor: 30, party: "mossevo:30,mossevo:27,mossevo:27",          actual: "rare:7:2",   actualTier: 3, entryHp: 0.80, potions: { attack_buff: 3, antidote: 13, max_potion: 2, strong_attack_buff: 2 } },
-  { floor: 35, party: "mossevo:35,mossevo:31,mossevo:31",          actual: "rare:10:3",  actualTier: 3, entryHp: 0.73, potions: { attack_buff: 3, antidote: 12, max_potion: 1, strong_attack_buff: 1 } },
-  { floor: 40, party: "mossyfinal:39,mossevo:34,mossevo:34",       actual: "rare:15:3",  actualTier: 4, entryHp: 0.75, potions: { attack_buff: 3, antidote: 4 } },
+  { floor: 10, party: "mossy:8,mossy:7,mossy:7", actual: "rare:3:2", actualTier: 2, entryHp: 0.85, potions: { potion: 9, attack_buff: 5, antidote: 16, strong_attack_buff: 1 } },
+  { floor: 15, party: "mossy:13,mossy:12,mossy:12", actual: "rare:3:3", actualTier: 2, entryHp: 0.83, potions: { potion: 1, attack_buff: 5, antidote: 14 } },
+  { floor: 20, party: "mossevo:20,mossy:18,mossy:19", actual: "rare:6:4", actualTier: 2, entryHp: 0.81, potions: { attack_buff: 5, antidote: 15, strong_attack_buff: 1 } },
+  { floor: 25, party: "mossevo:25,mossevo:24,mossevo:24", actual: "rare:6:2", actualTier: 3, entryHp: 0.74, potions: { attack_buff: 5, antidote: 12, max_potion: 4, strong_attack_buff: 3 } },
+  { floor: 30, party: "mossevo:28,mossevo:27,mossevo:27", actual: "rare:6:2", actualTier: 3, entryHp: 0.79, potions: { attack_buff: 5, antidote: 11, max_potion: 2, strong_attack_buff: 2 } },
+  { floor: 35, party: "mossevo:33,mossevo:32,mossevo:31", actual: "rare:10:3", actualTier: 3, entryHp: 0.81, potions: { potion: 1, attack_buff: 5, antidote: 10, max_potion: 1, strong_attack_buff: 1 } },
+  { floor: 40, party: "mossyfinal:37,mossevo:36,mossevo:36", actual: "rare:13:3", actualTier: 3, entryHp: 0.82, potions: { potion: 1, attack_buff: 5, antidote: 4 } },
   // 45층이 40층보다 장비가 얇은 건 오타가 아니다 — 40층 보스를 넘느라 분해로 재료를
   // 끌어 쓴 직후라 실제로 그렇게 나온다(rare:8:0.6). 관문이 관문 노릇을 하는 자리다.
-  { floor: 45, party: "mossyfinal:44,mossyfinal:40,mossyfinal:45", actual: "rare:8:1",   actualTier: 4, entryHp: 0.75, potions: { attack_buff: 2, antidote: 1 } },
-  { floor: 50, party: "mossyfinal:49,mossyfinal:44,mossyfinal:45", actual: "elite:25:2", actualTier: 4, entryHp: 0.78, potions: { attack_buff: 2, antidote: 1 } },
+  { floor: 45, party: "mossyfinal:42,mossyfinal:42,mossyfinal:43", actual: "rare:8:1", actualTier: 4, entryHp: 0.78, potions: { potion: 1, attack_buff: 5, antidote: 1 } },
+  { floor: 50, party: "mossyfinal:46,mossyfinal:45,mossyfinal:46", actual: "rare:21:2", actualTier: 4, entryHp: 0.79, potions: { attack_buff: 5, antidote: 1 } },
 ];
 
-/** 실측에서 제작대에 한 번 더 다녀온 상태 — 장비 레벨 +10 · 강화 +1 */
+/**
+ * 실측에서 제작대에 한 번 더 다녀온 상태 — 장비 레벨 1.6배 +2 · 강화 +1.
+ *
+ * 비례로 두는 게 중요하다. 고정 +10 으로 뒀더니 10층(레벨 3 → 13)에서는 네 배가 되고
+ * 50층(21 → 31)에서는 1.5배가 돼서, 같은 열이 층마다 다른 뜻이 됐다.
+ */
 function oneStepUp(spec: string): string {
   const [q, lv, en] = spec.split(":");
-  return `${q}:${Number(lv) + 10}:${Number(en) + 1}`;
+  return `${q}:${Math.round(Number(lv) * 1.6) + 2}:${Number(en) + 1}`;
 }
 
 /** 그 층에서 가능한 최선 */
@@ -126,20 +151,25 @@ async function winRate(
  * 가운데 열이 실측이 된 뒤로 숫자가 통째로 바뀌었다. 예전 표의 "정규 60~78%" 는 손으로
  * 적은 장비를 재던 값이라 지금 열들과 비교하면 안 된다.
  *
- * 보스는 **재도전 2~3회**가 설계값이다. 승률로 옮기면 1/(1+재도전) = 25~33% 다.
- * 관문은 "장비 없으면 아픈 검문" 이라 대부분 한 번에 넘어야 하고, 그래서 60~85% 다.
- * 완비 열만 90% 위여야 한다 — 그게 "완비하면 넘는다" 는 이 게임의 약속이다.
+ * 보스는 **재도전 2~3회**가 설계값이다. 승률로 옮기면 1/(1+재도전) = 25~33% 이고,
+ * 여유를 둬서 25~45% 로 잡는다. 관문은 "제작대까지 돌아갈 일은 아닌 검문" 이라
+ * 대부분 한 번에 넘어야 하고, 그래서 60~88% 다.
+ * 완비 열만 90%(관문 95%) 위여야 한다 — 그게 "완비하면 넘는다" 는 이 게임의 약속이다.
  */
 function verdict(floor: number, bare: number, real: number, ahead: number, full: number): string {
   const fails: string[] = [];
+  // 맨몸에는 **상한만** 건다. 예전에는 관문에 "35~60%" 로 하한도 걸어 뒀는데, 그건
+  // 파티가 과대평가돼 있던 시절의 값이다. 25층까지 아티팩트를 하나도 안 만든 사람은
+  // 실재하지 않으므로, 그 사람이 관문을 절반쯤 넘어야 할 이유도 없다.
   if (isBossFloor(floor)) {
     if (bare > 25) fails.push(`맨몸 ${bare}%>25`);
     if (real < 25 || real > 45) fails.push(`실측 ${real}%∉25~45`);
-    if (ahead < 60 || ahead > 85) fails.push(`앞선 ${ahead}%∉60~85`);
+    if (ahead < 60 || ahead > 90) fails.push(`앞선 ${ahead}%∉60~90`);
     if (full < 90) fails.push(`완비 ${full}%<90`);
   } else {
-    if (bare < 35 || bare > 60) fails.push(`맨몸 ${bare}%∉35~60`);
+    if (bare > 60) fails.push(`맨몸 ${bare}%>60`);
     if (real < 60 || real > 88) fails.push(`실측 ${real}%∉60~88`);
+    if (ahead < 85) fails.push(`앞선 ${ahead}%<85`);
     if (full < 95) fails.push(`완비 ${full}%<95`);
   }
   return fails.length ? `✗ ${fails.join(" · ")}` : "✓";
