@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -143,7 +143,19 @@ export default function BattlePage() {
   );
 
   const initialPlayer = initialParty[0] ?? usePlayerStore.getState().party[0];
-  const initialEnemy  = getFloorEnemy(floor, initialPlayer.id);
+  /**
+   * ⚠️ **한 전투에 한 번만 굴린다.** 맨몸으로 두면 렌더마다 다시 굴러서, 적이 랜덤으로
+   * 정해지는 층에서 캔버스와 하단 UI 가 서로 다른 굴림을 잡는다 — 49층에서 캔버스는
+   * 크리샤를, 상대 카드는 모시를 보여줬다. 첫 렌더의 굴림은 아래 useState 초기화가,
+   * 나중 렌더의 굴림은 씬 초기 데이터가 가져갔기 때문이다.
+   *
+   * 지금은 층마다 구성이 정해져 있지만 랜덤 갈래가 사라진 건 아니다 — 내 선봉과 그 층의
+   * 적이 같은 종이면 거울 싸움을 피하려고 풀에서 다시 뽑는다(getFloorEnemy 의 excludeId).
+   */
+  const initialEnemy = useMemo(
+    () => getFloorEnemy(floor, initialPlayer.id),
+    [floor, initialPlayer.id],
+  );
 
   const [player,       setPlayer]       = useState<BattleMonster>(() => createBattleMonsterFromOwned(initialPlayer));
   const [enemyState,   setEnemyState]   = useState<BattleMonster>(() => createBattleMonster(initialEnemy));

@@ -7,6 +7,16 @@ import {
   voltCrash, crystalBurst, aquaWhirl,
   quickAttack, icePunch, tidalCrash, solarBeam, overheat, thunderStrike,
   hydroPump, venomStorm, gigaImpact,
+  // 26~49층 고정 구성이 쓰는 것들. 전부 그 종의 학습표에 실존하는 기술이라야 한다 —
+  // 없는 기술을 주면 isAnomalyMove 가 "쓸 수 있는 기술이 아니다"를 띄우고, 그건
+  // n0층 보스에게만 허락된 연출이다.
+  twister, headbutt, heavyBlow, hyperBeam,
+  firePunch, cinderToss, flameSlash,
+  waterPulse,
+  zap, boltStrike, thunder,
+  leafBlade, sporeCloud, seedBomb, rootSpear,
+  frostMist, crystalLance, sheerCold,
+  poisonSting, acidSpray, poisonFog, poisonJab, venomFang,
 } from "../monster/moves";
 
 // ─── 오름(Ormr) 전용 기술 풀 ──────────────────────────────────────────────────────
@@ -26,7 +36,7 @@ function pickOrmrMoves(): Move[] {
   return pool.slice(0, 4);
 }
 
-// ─── 1~25층 고정 구성 ─────────────────────────────────────────────────────────────
+// ─── 층별 고정 구성 (n0층 보스와 50층 제외한 전 층) ────────────────────────────────
 
 interface FloorFixedConfig {
   monsterId: string;
@@ -60,10 +70,15 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     moves: [tackle, ember],
     skillOrder: ["tackle", "ember", "ember", "tackle"],
   },
+  // 독가시(toxic)를 들고 있었는데 아쿠비는 그 기술을 어느 레벨에도 배우지 않는다.
+  // 그러면 도감에 아쿠비가 있는 사람에게 6층에서 "쓸 수 있는 기술이 아니다"가 뜬다 —
+  // n0층 보스가 탑의 비밀을 흘리는 연출이 평범한 층에서 새는 것이다.
+  // 산성분사는 아쿠비의 정식 교차 기술이고 위력이 물총과 같아, 독을 흘린다는 성격만
+  // 남고 숫자는 거의 안 움직인다. 확정 독은 두 층 뒤 버블릿이 그대로 맡는다.
   6: {
     monsterId: "aquabe",
-    moves: [tackle, waterGun, toxic],
-    skillOrder: ["water-gun", "water-gun", "toxic", "water-gun"],
+    moves: [tackle, waterGun, acidSpray],
+    skillOrder: ["water-gun", "water-gun", "acid-spray", "water-gun"],
   },
   7: {
     monsterId: "leafy",
@@ -76,9 +91,11 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["water-gun", "toxic", "water-gun", "water-gun"],
   },
   9: {
+    // 전격탄도 같은 이유로 뺐다(버노는 전기를 spark·boltStrike 로만 배운다).
+    // 화염권은 Lv11 정식 기술이고 자속이라, 위력 55 로도 옛 전격탄 60 만큼 들어간다.
     monsterId: "burno",
-    moves: [tackle, ember, thunderbolt],
-    skillOrder: ["ember", "ember", "thunderbolt", "ember"],
+    moves: [tackle, ember, firePunch],
+    skillOrder: ["ember", "ember", "fire-punch", "ember"],
   },
   // 10층은 보스: getFloorEnemy에서 처리
   11: {
@@ -86,10 +103,19 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     moves: [tackle, spark, thunderbolt],
     skillOrder: ["spark", "tackle", "thunderbolt", "spark"],
   },
+  // ── 11~25층에 노비(노말)와 독 두 종을 들였다 ──────────────────────────────
+  // 이 구간에 서던 종이 아홉뿐이라 물·풀·전기·불·얼음만 돌았다. 노비는 어느 티어
+  // 풀에도 없어 탑 전체에서 한 번도 안 나왔고, 베노까·톡사룡도 이 구간이 전부 고정
+  // 구성이라 닿지 못했다. 그래서 이 구간의 노말·독 방이 통째로 잠들어 있었고,
+  // 새로 넣은 상성(독 → 노말 2배)도 쓸 자리가 없는 규칙이었다.
+  //
+  // 1~10층은 건드리지 않는다. 첫 보스까지의 곡선은 이미 재 놓은 값이고, 거기에
+  // 탱커와 지속 피해를 넣으면 시작 30분의 체감이 곧장 느려진다. z01 의 노말·독 방
+  // 두 개는 쓰지 않는 채로 남겨 둔다 — 파일은 그대로 있으니 나중에 열면 된다.
   12: {
-    monsterId: "crystafox",
-    moves: [tackle, iceBeam],
-    skillOrder: ["ice-beam", "tackle", "ice-beam", "ice-beam"],
+    monsterId: "nobi",
+    moves: [tackle, twister, headbutt],
+    skillOrder: ["headbutt", "twister", "headbutt", "tackle"],
   },
   13: {
     monsterId: "leafy",
@@ -97,33 +123,41 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["tackle", "vine-whip", "ice-leaf", "vine-whip"],
   },
   14: {
-    // 아쿠사(22레벨 진화체)가 서 있던 자리다. 플레이어 쪽은 아직 진화 전인데 상대만
+    // 원래 아쿠사(22레벨 진화체)가 서 있던 자리다. 플레이어 쪽은 아직 진화 전인데 상대만
     // 최종 진화체라 14층만 난이도가 튀었다 — 예전 시뮬에서도 이 층 패배율이 45% 로
-    // 20층 보스와 비슷했다. 같은 물 계열의 미진화체로 되돌린다.
-    monsterId: "bubblet",
-    moves: [tackle, waterGun, surf],
-    skillOrder: ["surf", "water-gun", "tackle", "surf"],
+    // 20층 보스와 비슷했다. 그래서 미진화체로 내렸고, 지금은 여기가 이 구간의 불이다
+    // (11~20 에 불이 한 층도 없어 z11 의 불 방이 잠겨 있었다).
+    monsterId: "burno",
+    moves: [tackle, ember, firePunch],
+    skillOrder: ["fire-punch", "ember", "fire-punch", "tackle"],
   },
   15: {
     monsterId: "frostorb",
     moves: [tackle, iceBeam, blizzard],
     skillOrder: ["ice-beam", "blizzard", "ice-beam", "tackle"],
   },
+  // 11·16·19 가 전부 전기였다. 넷 중 둘을 덜어내면 이 구간에서 전기는 11층과
+  // 20층 보스 둘로 줄고, 20층 보스의 전기가 다시 특별해진다.
   16: {
-    monsterId: "mossy",
-    moves: [tackle, spark, thunderbolt, voltCrash],
-    skillOrder: ["thunderbolt", "spark", "volt-crash", "tackle"],
+    monsterId: "nobi",
+    moves: [tackle, headbutt, twister, poisonSting],
+    skillOrder: ["headbutt", "poison-sting", "twister", "headbutt"],
   },
+  // 확정 독(독가시)을 든 첫 층. 10층 보스의 답이 해독제였는데 그 뒤로 쓸 자리가
+  // 없었다 — 여기서 한 번 더 필요해진다.
   17: {
-    monsterId: "crystafox",
-    moves: [tackle, iceBeam, crystalBurst],
-    skillOrder: ["crystal-burst", "ice-beam", "crystal-burst", "tackle"],
+    monsterId: "venomcrow",
+    moves: [acidSpray, poisonSting, toxic, quickAttack],
+    skillOrder: ["acid-spray", "toxic", "acid-spray", "poison-sting"],
   },
   18: {
     monsterId: "aquavern",
     moves: [tackle, aquaWhirl, surf],
     skillOrder: ["surf", "aqua-whirl", "surf", "tackle"],
   },
+  // ⚠️ 여기는 진화체 자리다. 한 번 버노로 내렸더니 맨몸 등반이 20층 보스를 넘어
+  // 30층까지 갔다(e2e/balanceRun). 이 구간의 난이도는 **진화체가 몇 층에 서 있는가**로
+  // 정해진다 — 18(아쿠사)·19(모치)·23(아쿠사)이 그 셋이고, 하나만 내려도 벽이 무너진다.
   19: {
     monsterId: "mossevo",
     moves: [tackle, spark, thunderbolt],
@@ -136,24 +170,173 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["flamethrower", "ember", "flamethrower", "tackle"],
   },
   22: {
-    monsterId: "bubblet",
-    moves: [tackle, waterGun, surf],
-    skillOrder: ["surf", "water-gun", "surf", "tackle"],
+    monsterId: "nobi",
+    moves: [tackle, headbutt, bodySlam, twister],
+    skillOrder: ["headbutt", "body-slam", "twister", "headbutt"],
   },
+  // 23·25 가 둘 다 모치였다. 25층 관문이 「관문의 모치」라 바로 앞 층에 같은 종을 세우면
+  // 관문이 그냥 조금 더 센 23층이 된다. 종만 바꾸고 **진화체라는 것은 유지한다** —
+  // 아쿠사는 총합이 모치와 거의 같아(336 대 343) 이 자리의 무게가 안 바뀐다.
   23: {
-    monsterId: "mossevo",
-    moves: [tackle, thunderbolt, voltCrash],
-    skillOrder: ["volt-crash", "thunderbolt", "volt-crash", "tackle"],
+    monsterId: "aquavern",
+    moves: [tackle, aquaWhirl, surf, icePunch],
+    skillOrder: ["surf", "aqua-whirl", "ice-punch", "surf"],
   },
   24: {
-    monsterId: "frostorb",
-    moves: [tackle, blizzard, iceBeam],
-    skillOrder: ["blizzard", "blizzard", "ice-beam", "tackle"],
+    monsterId: "toxadon",
+    moves: [poisonJab, headbutt, toxic, poisonSting],
+    skillOrder: ["poison-jab", "headbutt", "toxic", "poison-jab"],
   },
   25: {
     monsterId: "mossevo",
     moves: [tackle, thunderbolt, voltCrash],
     skillOrder: ["volt-crash", "thunderbolt", "tackle", "volt-crash"],
+  },
+
+  // ─── 26~49층 ───────────────────────────────────────────────────────────────
+  // 여기부터는 예전에 티어 풀 랜덤이었다. 31~39층은 네 종이 아홉 층을 돌았고, 45층
+  // 관문은 뽑기에 따라 「관문의 플레미」가 될 수 있었다.
+  //
+  // 배정 규칙 셋:
+  //  ① **구간마다 7속성을 한 번씩 채운다.** 배경은 towerBattleBg(구간, 적 속성)이라
+  //     층의 속성을 정하는 것이 곧 방을 고르는 것이다. 랜덤일 때는 어떤 방이 거의
+  //     안 나왔다.
+  //  ② **기술은 그 종의 학습표에서, 그 층 레벨까지 배우는 것만.** 층 레벨 = 층수라
+  //     "그 레벨의 야생 개체"로 읽힌다. 학습표 밖 기술은 이상 기술 연출을 켜 버린다.
+  //  ③ **skillOrder 의 id 는 moves 에 전부 있어야 한다.** 하나라도 빠지면
+  //     getFloorEnemySkill 이 통째로 null 을 주고 AI 로 넘어간다(19층 사고와 같은 길).
+  //
+  // 관문 35·45층에도 구성을 둔다. getFloorEnemy 가 「관문의 {그 층 적}」 을 만들므로
+  // 이름이 고정된다 — 「관문의 톡사룡」·「관문의 아쿠사」.
+
+  // ── z21 구간(21~30)의 나머지. 21 불 · 22 물 · 23 노말 · 24 독 · 25 전기 뒤이므로
+  //    여기서 풀과 얼음을 채우면 이 구간의 방 일곱이 모두 열린다.
+  26: {
+    monsterId: "leafy",
+    moves: [vineWhip, leafBlade, seedBomb, sporeCloud],
+    skillOrder: ["seed-bomb", "leaf-blade", "spore-cloud", "seed-bomb"],
+  },
+  27: {
+    monsterId: "crystafox",
+    moves: [icePunch, iceBeam, crystalBurst, frostMist],
+    skillOrder: ["crystal-burst", "ice-beam", "frost-mist", "ice-punch"],
+  },
+  28: {
+    monsterId: "venomcrow",
+    moves: [acidSpray, twister, poisonFog, toxic],
+    skillOrder: ["poison-fog", "twister", "acid-spray", "poison-fog"],
+  },
+  // 30층 보스(고대의 프리로) 직전. 때리는 힘보다 버티는 힘이 앞서는 층이라,
+  // 물약을 얼마나 남기고 들어갈지를 여기서 정하게 된다.
+  29: {
+    monsterId: "nobi",
+    moves: [headbutt, bodySlam, leafBlade, twister],
+    skillOrder: ["body-slam", "leaf-blade", "body-slam", "headbutt"],
+  },
+
+  // ── z31 구간(31~40). 31 불 · 32 물 · 33 노말 · 34 얼음 · 35 독 · 36 전기 · 39 풀
+  31: {
+    monsterId: "burno",
+    moves: [firePunch, flameSlash, spark, cinderToss],
+    skillOrder: ["flame-slash", "fire-punch", "spark", "flame-slash"],
+  },
+  32: {
+    monsterId: "aquavern",
+    moves: [surf, aquaWhirl, icePunch, waterPulse],
+    skillOrder: ["surf", "aqua-whirl", "ice-punch", "surf"],
+  },
+  33: {
+    monsterId: "nobi",
+    moves: [heavyBlow, bodySlam, leafBlade, headbutt],
+    skillOrder: ["heavy-blow", "body-slam", "leaf-blade", "heavy-blow"],
+  },
+  34: {
+    monsterId: "frostorb",
+    moves: [crystalBurst, iceBeam, bodySlam, frostMist],
+    skillOrder: ["crystal-burst", "body-slam", "ice-beam", "frost-mist"],
+  },
+  // 관문의 톡사룡. 확정 독(toxic)을 들고 있어 해독제 없이 오래 끌면 그대로 녹는다
+  35: {
+    monsterId: "toxadon",
+    moves: [venomFang, poisonJab, bodySlam, toxic],
+    skillOrder: ["venom-fang", "body-slam", "poison-jab", "toxic"],
+  },
+  36: {
+    monsterId: "mossevo",
+    moves: [voltCrash, thunderbolt, zap, headbutt],
+    skillOrder: ["volt-crash", "thunderbolt", "zap", "volt-crash"],
+  },
+  37: {
+    monsterId: "crystafox",
+    moves: [crystalLance, crystalBurst, waterPulse, iceBeam],
+    skillOrder: ["crystal-lance", "crystal-burst", "water-pulse", "crystal-lance"],
+  },
+  38: {
+    monsterId: "venomcrow",
+    moves: [venomFang, poisonJab, poisonFog, twister],
+    skillOrder: ["venom-fang", "poison-fog", "poison-jab", "venom-fang"],
+  },
+  // 40층 보스는 전설의 모왕(전기)이다. 그 앞 층을 풀로 두는 건 의도다 — 풀이 전기를
+  // 2배로 찌른다는 걸 보스를 만나기 전에 한 번 보게 된다.
+  39: {
+    monsterId: "leafy",
+    moves: [rootSpear, seedBomb, poisonJab, iceLeaf],
+    skillOrder: ["root-spear", "seed-bomb", "ice-leaf", "root-spear"],
+  },
+
+  // ── z41 구간(41~49). 41 불 · 42 노말 · 43 풀 · 44 얼음 · 45 물 · 46 독 · 47 전기
+  41: {
+    monsterId: "burno",
+    moves: [flamethrower, flameSlash, boltStrike, firePunch],
+    skillOrder: ["flamethrower", "flame-slash", "bolt-strike", "flamethrower"],
+  },
+  42: {
+    monsterId: "nobi",
+    moves: [hyperBeam, heavyBlow, icePunch, bodySlam],
+    skillOrder: ["heavy-blow", "ice-punch", "hyper-beam", "body-slam"],
+  },
+  43: {
+    monsterId: "leafy",
+    moves: [solarBeam, rootSpear, poisonJab, seedBomb],
+    skillOrder: ["solar-beam", "root-spear", "poison-jab", "solar-beam"],
+  },
+  44: {
+    monsterId: "crystafox",
+    moves: [blizzard, crystalLance, crystalBurst, waterPulse],
+    skillOrder: ["blizzard", "crystal-lance", "water-pulse", "blizzard"],
+  },
+  // 관문의 아쿠사. 물리·특수를 겸하는 만능 진화체라 한쪽만 막아서는 안 넘어간다
+  45: {
+    monsterId: "aquavern",
+    moves: [crystalLance, surf, bodySlam, aquaWhirl],
+    skillOrder: ["crystal-lance", "surf", "body-slam", "aqua-whirl"],
+  },
+  46: {
+    monsterId: "toxadon",
+    moves: [venomFang, poisonFog, bodySlam, poisonJab],
+    skillOrder: ["venom-fang", "poison-fog", "body-slam", "venom-fang"],
+  },
+  47: {
+    monsterId: "mossevo",
+    moves: [thunder, voltCrash, bodySlam, thunderbolt],
+    skillOrder: ["volt-crash", "thunder", "body-slam", "volt-crash"],
+  },
+  48: {
+    monsterId: "venomcrow",
+    moves: [venomStorm, venomFang, poisonFog, toxic],
+    skillOrder: ["venom-storm", "venom-fang", "poison-fog", "venom-storm"],
+  },
+  // 정상 바로 아래는 벽이다. 프리로는 이 게임에서 가장 단단한 종이고, Lv49 에 절대영도를
+  // 배운다 — 이 층에서만 나오는 기술이다.
+  //
+  // 여기 모왕을 세웠다가 물렸다. 후반 파티는 거의 항상 모왕을 선봉에 세우는데,
+  // getFloorEnemy 는 거울 싸움을 피하려고 같은 종이면 풀에서 다시 뽑는다. 그래서 정작
+  // 실제 플레이에서는 이 층의 구성이 거의 안 나왔다. **플레이어가 흔히 데려가는 종은
+  // 고정 구성에 두지 말 것.**
+  49: {
+    monsterId: "frostorb",
+    moves: [sheerCold, blizzard, crystalLance, bodySlam],
+    skillOrder: ["sheer-cold", "blizzard", "crystal-lance", "body-slam"],
   },
 };
 
@@ -238,8 +421,8 @@ export function isGateFloor(floor: number): boolean {
 const GATE_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number }> = {
   15: { hp: 1.55, attack: 1.28, defense: 1.62 },
   25: { hp: 1.95, attack: 1.45, defense: 2.00 },
-  35: { hp: 1.36, attack: 1.15, defense: 1.45 },
-  45: { hp: 2.00, attack: 1.50, defense: 2.00 },
+  35: { hp: 1.88, attack: 1.40, defense: 1.92 },
+  45: { hp: 1.88, attack: 1.44, defense: 1.88 },
 };
 
 export function gateMultiplier(floor: number) {
@@ -249,9 +432,13 @@ export function gateMultiplier(floor: number) {
 /**
  * 26층부터의 일반 층에 붙는 배수.
  *
- * 1~25층은 손으로 짠 구성인데 26층부터는 랜덤 풀만 돌아서, 무장비·자연 레벨로도
- * 승률 100% / 6턴이었다. 45개 층이 복도였다는 뜻이다. 1.4 를 넘기지 말 것 —
- * 그 위는 소모가 아니라 벽이 된다(43층 실측: ×1.5 에서 무장비 승률 85%).
+ * 예전엔 26층부터가 랜덤 풀뿐이라 무장비·자연 레벨로도 승률 100% / 6턴이었다.
+ * 지금은 층마다 구성이 있지만 이 배수는 그대로 둔다 — 구성이 정해 주는 건 "무엇과
+ * 싸우는가"이고, 층이 올라갈수록 무거워지는 건 여전히 여기서만 나온다.
+ * 1.4 를 넘기지 말 것 — 그 위는 소모가 아니라 벽이 된다(43층 실측: ×1.5 에서 무장비 승률 85%).
+ *
+ * ⚠️ 적용은 `applyCorridor` 한 곳에서만 한다. 고정 구성 갈래와 랜덤 갈래 둘 다 그걸
+ * 부른다 — 한쪽만 부르면 그 갈래의 층들이 소리 없이 약해진다.
  */
 export function corridorMultiplier(floor: number): number {
   if (floor >= 41) return 1.40;
@@ -379,8 +566,62 @@ function liftLevels(m: Monster, n: number): Monster {
   };
 }
 
+/**
+ * 26층부터의 일반 층에 붙는 구간 배수를 적용한다.
+ *
+ * ⚠️ **고정 구성 갈래와 랜덤 갈래 양쪽에서 불러야 한다.** buildFloorEnemy 는 고정 구성이
+ * 있으면 거기서 바로 반환하는데, 예전엔 이 배수가 랜덤 갈래에만 붙어 있었다. 그 상태로
+ * 26~49층에 고정 구성을 채우면 스물두 층이 한꺼번에 15~40% 약해진다 — 아무도 에러를
+ * 보지 않고, 시뮬을 돌려야만 보인다.
+ *
+ * 올리는 건 패배율이 아니라 **소모율**이다. 층이 길어져 물약과 HP 가 닳는다.
+ */
+function applyCorridor(m: Monster, floor: number): Monster {
+  const zone = corridorMultiplier(floor);
+  if (zone <= 1) return m;
+  return {
+    ...m,
+    maxHp: Math.floor(m.maxHp * zone),
+    // 방어는 조금 더, 공격은 조금만. 공격을 같이 올리면 소모가 아니라 사고가 된다
+    defense: Math.floor(m.defense * (1 + (zone - 1) * 1.15)),
+    attack: Math.floor(m.attack * (1 + (zone - 1) * 0.4)),
+  };
+}
+
+/**
+ * 이름 있는 보스의 능력치 배수. **여기 한 벌뿐이다.**
+ *
+ * 예전엔 다섯 덩이가 `buildFloorEnemy` 안에 흩어져 있어서, 승률을 맞추려면 함수 본문을
+ * 다섯 군데 뒤져야 했고 무엇이 무엇에 대응하는지 한눈에 안 보였다. 관문 배수
+ * (`GATE_MULT_BY_FLOOR`)와 같은 모양으로 맞춰 둔다.
+ *
+ * 배수가 층마다 다른 이유는 관문과 같다 — 기반 종족의 성향과 그 시점 파티의 화력
+ * 곡선이 둘 다 균일하지 않다. 만질 때는 종족 기본 스탯과 `scripts/sim/gateCheck.ts` 를
+ * 함께 볼 것.
+ *
+ * `exp` 는 보상 경험치 배수다. 벽 뒤에 보상이 없으면 벽이 아니라 통행세가 된다.
+ */
+const BOSS_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number; exp: number }> = {
+  10: { hp: 1.50, attack: 1.25, defense: 1.15, exp: 2.4 },
+  20: { hp: 1.38, attack: 1.15, defense: 1.50, exp: 2.4 },
+  30: { hp: 1.95, attack: 1.78, defense: 1.95, exp: 2.4 },
+  40: { hp: 1.70, attack: 1.37, defense: 1.94, exp: 2.8 },
+  50: { hp: 2.15, attack: 1.38, defense: 1.75, exp: 3.5 },
+};
+
+/** 그 층의 보스 배수를 스케일된 능력치에 얹는다 */
+function applyBoss(scaled: Monster, floor: number): Pick<Monster, "maxHp" | "attack" | "defense" | "rewardExp"> {
+  const m = BOSS_MULT_BY_FLOOR[floor];
+  return {
+    maxHp: Math.floor(scaled.maxHp * m.hp),
+    attack: Math.floor(scaled.attack * m.attack),
+    defense: Math.floor(scaled.defense * m.defense),
+    rewardExp: Math.floor(scaled.rewardExp * m.exp),
+  };
+}
+
 function buildFloorEnemy(floor: number, excludeId?: string): Monster {
-  // ── 고정 구성 층 (1~9, 11~25) ──
+  // ── 고정 구성 층 (n0층 보스와 50층을 뺀 전 층) ──
   // 예전에 조건이 `floor <= 9` 라서 11~25층 구성 15개가 통째로 죽어 있었다. 그 층들은
   // 랜덤 풀에서 뽑혔는데, getFloorEnemySkill 쪽에는 같은 제한이 없어 없는 몬스터의
   // 스킬 순서를 뒤졌다. 그러다 이름이 겹치는 몸통박치기를 찾아내 적이 자기 최약체
@@ -391,7 +632,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
     if (cfg.monsterId !== excludeId) {
       const base = monsters.find((m) => m.id === cfg.monsterId);
       if (base) {
-        return { ...scaleToLevel(base, floor), moves: cfg.moves };
+        return applyCorridor({ ...scaleToLevel(base, floor), moves: cfg.moves }, floor);
       }
     }
   }
@@ -406,10 +647,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       // 이 층의 전기불꽃만 마비를 크게 건다. 첫 관문의 답을 **해독제**로 잡으려는 것이다 —
       // 10층 시점에 만들 수 있는 건 소모품뿐이라(아티팩트 재료는 깊은 숲부터) 답도 거기 있어야 한다.
       moves: [{ ...spark, statusEffect: "paralysis", statusChance: 35 }, thunderbolt, quickAttack, icePunch],
-      maxHp: Math.floor(scaled.maxHp * 1.5),
-      attack: Math.floor(scaled.attack * 1.25),
-      defense: Math.floor(scaled.defense * 1.15),
-      rewardExp: Math.floor(scaled.rewardExp * 2.4),
+      ...applyBoss(scaled, 10),
     };
   }
   if (floor === 20) {
@@ -419,10 +657,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       ...scaled,
       name: "격노한 모치",
       moves: [voltCrash, thunderbolt, bodySlam, flamethrower],
-      maxHp: Math.floor(scaled.maxHp * 1.38),
-      attack: Math.floor(scaled.attack * 1.15),
-      defense: Math.floor(scaled.defense * 1.5),
-      rewardExp: Math.floor(scaled.rewardExp * 2.4),
+      ...applyBoss(scaled, 20),
     };
   }
   if (floor === 30) {
@@ -433,10 +668,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       name: "고대의 프리로",
       // 설풍에 빙결을 크게 실었다. 빙결은 한 턴을 확실히 먹으므로 해독제나 방어가 답이 된다
       moves: [{ ...blizzard, statusEffect: "freeze", statusChance: 30 }, crystalBurst, tidalCrash, solarBeam],
-      maxHp: Math.floor(scaled.maxHp * 1.95),
-      attack: Math.floor(scaled.attack * 1.78),
-      defense: Math.floor(scaled.defense * 1.95),
-      rewardExp: Math.floor(scaled.rewardExp * 2.4),
+      ...applyBoss(scaled, 30),
     };
   }
   if (floor === 40) {
@@ -446,10 +678,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       ...scaled,
       name: "전설의 모왕",
       moves: [thunderStrike, voltCrash, overheat, blizzard],
-      maxHp: Math.floor(scaled.maxHp * 1.7),
-      attack: Math.floor(scaled.attack * 1.37),
-      defense: Math.floor(scaled.defense * 1.94),
-      rewardExp: Math.floor(scaled.rewardExp * 2.8),
+      ...applyBoss(scaled, 40),
     };
   }
   if (floor === 50) {
@@ -459,10 +688,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       ...scaled,
       name: "오름",
       moves: pickOrmrMoves(),
-      maxHp: Math.floor(scaled.maxHp * 2.15),
-      attack: Math.floor(scaled.attack * 1.38),
-      defense: Math.floor(scaled.defense * 1.75),
-      rewardExp: Math.floor(scaled.rewardExp * 3.5),
+      ...applyBoss(scaled, 50),
     };
   }
 
@@ -487,19 +713,8 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
     };
   }
 
-  // 26층부터의 일반 층. 여기는 설계가 없어 랜덤 풀만 돌던 구간이라, 무장비 파티도
-  // 6턴에 완승했다. **패배율이 아니라 소모율**을 올린다 — 층이 길어져 물약과 HP 가 닳는다.
-  const zone = corridorMultiplier(floor);
-  if (zone > 1) {
-    return {
-      ...scaled,
-      maxHp: Math.floor(scaled.maxHp * zone),
-      // 방어는 조금 더, 공격은 조금만. 공격을 같이 올리면 소모가 아니라 사고가 된다
-      defense: Math.floor(scaled.defense * (1 + (zone - 1) * 1.15)),
-      attack: Math.floor(scaled.attack * (1 + (zone - 1) * 0.4)),
-    };
-  }
-  return scaled;
+  // 고정 구성이 excludeId 에 걸려 랜덤으로 내려온 층. 구간 배수는 똑같이 붙는다
+  return applyCorridor(scaled, floor);
 }
 
 // ─── 층별 고정 스킬 조회 ──────────────────────────────────────────────────────────
