@@ -588,6 +588,38 @@ function applyCorridor(m: Monster, floor: number): Monster {
   };
 }
 
+/**
+ * 이름 있는 보스의 능력치 배수. **여기 한 벌뿐이다.**
+ *
+ * 예전엔 다섯 덩이가 `buildFloorEnemy` 안에 흩어져 있어서, 승률을 맞추려면 함수 본문을
+ * 다섯 군데 뒤져야 했고 무엇이 무엇에 대응하는지 한눈에 안 보였다. 관문 배수
+ * (`GATE_MULT_BY_FLOOR`)와 같은 모양으로 맞춰 둔다.
+ *
+ * 배수가 층마다 다른 이유는 관문과 같다 — 기반 종족의 성향과 그 시점 파티의 화력
+ * 곡선이 둘 다 균일하지 않다. 만질 때는 종족 기본 스탯과 `scripts/sim/gateCheck.ts` 를
+ * 함께 볼 것.
+ *
+ * `exp` 는 보상 경험치 배수다. 벽 뒤에 보상이 없으면 벽이 아니라 통행세가 된다.
+ */
+const BOSS_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number; exp: number }> = {
+  10: { hp: 1.50, attack: 1.25, defense: 1.15, exp: 2.4 },
+  20: { hp: 1.38, attack: 1.15, defense: 1.50, exp: 2.4 },
+  30: { hp: 1.95, attack: 1.78, defense: 1.95, exp: 2.4 },
+  40: { hp: 1.70, attack: 1.37, defense: 1.94, exp: 2.8 },
+  50: { hp: 2.15, attack: 1.38, defense: 1.75, exp: 3.5 },
+};
+
+/** 그 층의 보스 배수를 스케일된 능력치에 얹는다 */
+function applyBoss(scaled: Monster, floor: number): Pick<Monster, "maxHp" | "attack" | "defense" | "rewardExp"> {
+  const m = BOSS_MULT_BY_FLOOR[floor];
+  return {
+    maxHp: Math.floor(scaled.maxHp * m.hp),
+    attack: Math.floor(scaled.attack * m.attack),
+    defense: Math.floor(scaled.defense * m.defense),
+    rewardExp: Math.floor(scaled.rewardExp * m.exp),
+  };
+}
+
 function buildFloorEnemy(floor: number, excludeId?: string): Monster {
   // ── 고정 구성 층 (n0층 보스와 50층을 뺀 전 층) ──
   // 예전에 조건이 `floor <= 9` 라서 11~25층 구성 15개가 통째로 죽어 있었다. 그 층들은
@@ -615,10 +647,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       // 이 층의 전기불꽃만 마비를 크게 건다. 첫 관문의 답을 **해독제**로 잡으려는 것이다 —
       // 10층 시점에 만들 수 있는 건 소모품뿐이라(아티팩트 재료는 깊은 숲부터) 답도 거기 있어야 한다.
       moves: [{ ...spark, statusEffect: "paralysis", statusChance: 35 }, thunderbolt, quickAttack, icePunch],
-      maxHp: Math.floor(scaled.maxHp * 1.5),
-      attack: Math.floor(scaled.attack * 1.25),
-      defense: Math.floor(scaled.defense * 1.15),
-      rewardExp: Math.floor(scaled.rewardExp * 2.4),
+      ...applyBoss(scaled, 10),
     };
   }
   if (floor === 20) {
@@ -628,10 +657,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       ...scaled,
       name: "격노한 모치",
       moves: [voltCrash, thunderbolt, bodySlam, flamethrower],
-      maxHp: Math.floor(scaled.maxHp * 1.38),
-      attack: Math.floor(scaled.attack * 1.15),
-      defense: Math.floor(scaled.defense * 1.5),
-      rewardExp: Math.floor(scaled.rewardExp * 2.4),
+      ...applyBoss(scaled, 20),
     };
   }
   if (floor === 30) {
@@ -642,10 +668,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       name: "고대의 프리로",
       // 설풍에 빙결을 크게 실었다. 빙결은 한 턴을 확실히 먹으므로 해독제나 방어가 답이 된다
       moves: [{ ...blizzard, statusEffect: "freeze", statusChance: 30 }, crystalBurst, tidalCrash, solarBeam],
-      maxHp: Math.floor(scaled.maxHp * 1.95),
-      attack: Math.floor(scaled.attack * 1.78),
-      defense: Math.floor(scaled.defense * 1.95),
-      rewardExp: Math.floor(scaled.rewardExp * 2.4),
+      ...applyBoss(scaled, 30),
     };
   }
   if (floor === 40) {
@@ -655,10 +678,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       ...scaled,
       name: "전설의 모왕",
       moves: [thunderStrike, voltCrash, overheat, blizzard],
-      maxHp: Math.floor(scaled.maxHp * 1.7),
-      attack: Math.floor(scaled.attack * 1.37),
-      defense: Math.floor(scaled.defense * 1.94),
-      rewardExp: Math.floor(scaled.rewardExp * 2.8),
+      ...applyBoss(scaled, 40),
     };
   }
   if (floor === 50) {
@@ -668,10 +688,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
       ...scaled,
       name: "오름",
       moves: pickOrmrMoves(),
-      maxHp: Math.floor(scaled.maxHp * 2.15),
-      attack: Math.floor(scaled.attack * 1.38),
-      defense: Math.floor(scaled.defense * 1.75),
-      rewardExp: Math.floor(scaled.rewardExp * 3.5),
+      ...applyBoss(scaled, 50),
     };
   }
 
