@@ -16,7 +16,7 @@ import {
   zap, boltStrike, thunder,
   leafBlade, sporeCloud, seedBomb, rootSpear,
   frostMist, crystalLance,
-  acidSpray, poisonFog, poisonJab, venomFang,
+  poisonSting, acidSpray, poisonFog, poisonJab, venomFang,
 } from "../monster/moves";
 
 // ─── 오름(Ormr) 전용 기술 풀 ──────────────────────────────────────────────────────
@@ -103,10 +103,19 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     moves: [tackle, spark, thunderbolt],
     skillOrder: ["spark", "tackle", "thunderbolt", "spark"],
   },
+  // ── 11~25층에 노비(노말)와 독 두 종을 들였다 ──────────────────────────────
+  // 이 구간에 서던 종이 아홉뿐이라 물·풀·전기·불·얼음만 돌았다. 노비는 어느 티어
+  // 풀에도 없어 탑 전체에서 한 번도 안 나왔고, 베노까·톡사룡도 이 구간이 전부 고정
+  // 구성이라 닿지 못했다. 그래서 이 구간의 노말·독 방이 통째로 잠들어 있었고,
+  // 새로 넣은 상성(독 → 노말 2배)도 쓸 자리가 없는 규칙이었다.
+  //
+  // 1~10층은 건드리지 않는다. 첫 보스까지의 곡선은 이미 재 놓은 값이고, 거기에
+  // 탱커와 지속 피해를 넣으면 시작 30분의 체감이 곧장 느려진다. z01 의 노말·독 방
+  // 두 개는 쓰지 않는 채로 남겨 둔다 — 파일은 그대로 있으니 나중에 열면 된다.
   12: {
-    monsterId: "crystafox",
-    moves: [tackle, iceBeam],
-    skillOrder: ["ice-beam", "tackle", "ice-beam", "ice-beam"],
+    monsterId: "nobi",
+    moves: [tackle, twister, headbutt],
+    skillOrder: ["headbutt", "twister", "headbutt", "tackle"],
   },
   13: {
     monsterId: "leafy",
@@ -126,26 +135,31 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     moves: [tackle, iceBeam, blizzard],
     skillOrder: ["ice-beam", "blizzard", "ice-beam", "tackle"],
   },
-  // 볼트크래시는 모치 전용이라 모시는 못 배운다. 낙뢰격이 모시의 정식 최상급기다.
+  // 11·16·19 가 전부 전기였다. 넷 중 둘을 덜어내면 이 구간에서 전기는 11층과
+  // 20층 보스 둘로 줄고, 20층 보스의 전기가 다시 특별해진다.
   16: {
-    monsterId: "mossy",
-    moves: [tackle, spark, thunderbolt, boltStrike],
-    skillOrder: ["thunderbolt", "spark", "bolt-strike", "tackle"],
+    monsterId: "nobi",
+    moves: [tackle, headbutt, twister, poisonSting],
+    skillOrder: ["headbutt", "poison-sting", "twister", "headbutt"],
   },
+  // 확정 독(독가시)을 든 첫 층. 10층 보스의 답이 해독제였는데 그 뒤로 쓸 자리가
+  // 없었다 — 여기서 한 번 더 필요해진다.
   17: {
-    monsterId: "crystafox",
-    moves: [tackle, iceBeam, crystalBurst],
-    skillOrder: ["crystal-burst", "ice-beam", "crystal-burst", "tackle"],
+    monsterId: "venomcrow",
+    moves: [acidSpray, poisonSting, toxic, quickAttack],
+    skillOrder: ["acid-spray", "toxic", "acid-spray", "poison-sting"],
   },
   18: {
     monsterId: "aquavern",
     moves: [tackle, aquaWhirl, surf],
     skillOrder: ["surf", "aqua-whirl", "surf", "tackle"],
   },
+  // 11~20 구간에 불이 한 층도 없었다. 20층 보스가 전기라, 그 직전을 불로 두면
+  // 마지막 정비가 "무엇을 데려갈까"가 된다.
   19: {
-    monsterId: "mossevo",
-    moves: [tackle, spark, thunderbolt],
-    skillOrder: ["thunderbolt", "spark", "thunderbolt", "tackle"],
+    monsterId: "burno",
+    moves: [ember, firePunch, cinderToss, headbutt],
+    skillOrder: ["fire-punch", "ember", "cinder-toss", "fire-punch"],
   },
   // 20층은 보스: getFloorEnemy에서 처리
   21: {
@@ -158,15 +172,17 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     moves: [tackle, waterGun, surf],
     skillOrder: ["surf", "water-gun", "surf", "tackle"],
   },
+  // 23·25 가 둘 다 모치였다. 25층 관문이 「관문의 모치」라 바로 앞 층에 같은 종을
+  // 세우면 관문이 그냥 조금 더 센 23층이 된다.
   23: {
-    monsterId: "mossevo",
-    moves: [tackle, thunderbolt, voltCrash],
-    skillOrder: ["volt-crash", "thunderbolt", "volt-crash", "tackle"],
+    monsterId: "nobi",
+    moves: [headbutt, bodySlam, twister, poisonSting],
+    skillOrder: ["body-slam", "headbutt", "twister", "body-slam"],
   },
   24: {
-    monsterId: "frostorb",
-    moves: [tackle, blizzard, iceBeam],
-    skillOrder: ["blizzard", "blizzard", "ice-beam", "tackle"],
+    monsterId: "toxadon",
+    moves: [poisonJab, headbutt, toxic, poisonSting],
+    skillOrder: ["poison-jab", "headbutt", "toxic", "poison-jab"],
   },
   25: {
     monsterId: "mossevo",
