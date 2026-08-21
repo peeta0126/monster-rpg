@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   imprintTier, withImprint, chainKeyOf, tierOf, imprintStatus,
-  essenceCostFor, IMPRINT_TIERS, MAX_IMPRINT_TIER,
+  essenceCostFor, imprintMultiplier, IMPRINT_TIERS, MAX_IMPRINT_TIER,
 } from "../src/monster/imprint.ts";
 import { monsters } from "../src/monster/monsters.ts";
 import { applyLevelGrowth } from "../src/monster/growth.ts";
@@ -57,10 +57,13 @@ test("withImprint 는 원본을 건드리지 않는다", () => {
 
   assert.deepEqual({ ...m }, before, "원본 능력치가 그대로다");
   assert.notEqual(out, m);
-  assert.equal(out.maxHp, Math.round(before.maxHp * 1.25));
-  assert.equal(out.attack, Math.round(before.attack * 1.25));
-  assert.equal(out.defense, Math.round(before.defense * 1.25));
-  assert.equal(out.speed, Math.round(before.speed * 1.25));
+  // 배수는 imprint.ts 에서 읽는다. 여기 숫자를 적어 두면 표가 두 벌이 되고,
+  // 밸런스를 만질 때마다 게임이 아니라 이 사본이 틀렸다고 알려 준다.
+  const max = imprintMultiplier(MAX_IMPRINT_TIER);
+  assert.equal(out.maxHp, Math.round(before.maxHp * max));
+  assert.equal(out.attack, Math.round(before.attack * max));
+  assert.equal(out.defense, Math.round(before.defense * max));
+  assert.equal(out.speed, Math.round(before.speed * max));
 });
 
 test("두 번 걸어도 배수가 겹치지 않는다", () => {
@@ -73,7 +76,7 @@ test("두 번 걸어도 배수가 겹치지 않는다", () => {
 
   // 등급이 바뀌어도 원본 기준으로 다시 계산된다
   const lowered = withImprint(once, { mossy: 1 });
-  assert.equal(lowered.attack, Math.round(m.attack * 1.05));
+  assert.equal(lowered.attack, Math.round(m.attack * imprintMultiplier(1)));
 });
 
 test("각인이 없으면 능력치가 그대로다", () => {
