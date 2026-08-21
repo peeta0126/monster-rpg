@@ -123,12 +123,13 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["tackle", "vine-whip", "ice-leaf", "vine-whip"],
   },
   14: {
-    // 아쿠사(22레벨 진화체)가 서 있던 자리다. 플레이어 쪽은 아직 진화 전인데 상대만
+    // 원래 아쿠사(22레벨 진화체)가 서 있던 자리다. 플레이어 쪽은 아직 진화 전인데 상대만
     // 최종 진화체라 14층만 난이도가 튀었다 — 예전 시뮬에서도 이 층 패배율이 45% 로
-    // 20층 보스와 비슷했다. 같은 물 계열의 미진화체로 되돌린다.
-    monsterId: "bubblet",
-    moves: [tackle, waterGun, surf],
-    skillOrder: ["surf", "water-gun", "tackle", "surf"],
+    // 20층 보스와 비슷했다. 그래서 미진화체로 내렸고, 지금은 여기가 이 구간의 불이다
+    // (11~20 에 불이 한 층도 없어 z11 의 불 방이 잠겨 있었다).
+    monsterId: "burno",
+    moves: [tackle, ember, firePunch],
+    skillOrder: ["fire-punch", "ember", "fire-punch", "tackle"],
   },
   15: {
     monsterId: "frostorb",
@@ -154,12 +155,13 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     moves: [tackle, aquaWhirl, surf],
     skillOrder: ["surf", "aqua-whirl", "surf", "tackle"],
   },
-  // 11~20 구간에 불이 한 층도 없었다. 20층 보스가 전기라, 그 직전을 불로 두면
-  // 마지막 정비가 "무엇을 데려갈까"가 된다.
+  // ⚠️ 여기는 진화체 자리다. 한 번 버노로 내렸더니 맨몸 등반이 20층 보스를 넘어
+  // 30층까지 갔다(e2e/balanceRun). 이 구간의 난이도는 **진화체가 몇 층에 서 있는가**로
+  // 정해진다 — 18(아쿠사)·19(모치)·23(아쿠사)이 그 셋이고, 하나만 내려도 벽이 무너진다.
   19: {
-    monsterId: "burno",
-    moves: [ember, firePunch, cinderToss, headbutt],
-    skillOrder: ["fire-punch", "ember", "cinder-toss", "fire-punch"],
+    monsterId: "mossevo",
+    moves: [tackle, spark, thunderbolt],
+    skillOrder: ["thunderbolt", "spark", "thunderbolt", "tackle"],
   },
   // 20층은 보스: getFloorEnemy에서 처리
   21: {
@@ -168,16 +170,17 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["flamethrower", "ember", "flamethrower", "tackle"],
   },
   22: {
-    monsterId: "bubblet",
-    moves: [tackle, waterGun, surf],
-    skillOrder: ["surf", "water-gun", "surf", "tackle"],
-  },
-  // 23·25 가 둘 다 모치였다. 25층 관문이 「관문의 모치」라 바로 앞 층에 같은 종을
-  // 세우면 관문이 그냥 조금 더 센 23층이 된다.
-  23: {
     monsterId: "nobi",
-    moves: [headbutt, bodySlam, twister, poisonSting],
-    skillOrder: ["body-slam", "headbutt", "twister", "body-slam"],
+    moves: [tackle, headbutt, bodySlam, twister],
+    skillOrder: ["headbutt", "body-slam", "twister", "headbutt"],
+  },
+  // 23·25 가 둘 다 모치였다. 25층 관문이 「관문의 모치」라 바로 앞 층에 같은 종을 세우면
+  // 관문이 그냥 조금 더 센 23층이 된다. 종만 바꾸고 **진화체라는 것은 유지한다** —
+  // 아쿠사는 총합이 모치와 거의 같아(336 대 343) 이 자리의 무게가 안 바뀐다.
+  23: {
+    monsterId: "aquavern",
+    moves: [tackle, aquaWhirl, surf, icePunch],
+    skillOrder: ["surf", "aqua-whirl", "ice-punch", "surf"],
   },
   24: {
     monsterId: "toxadon",
