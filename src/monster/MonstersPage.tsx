@@ -11,7 +11,8 @@ import { ImprintModal } from "./ImprintModal";
 import type { ArtifactInstance } from "../shared/crafting";
 import {
   ARTIFACT_SLOT_MAP, ARTIFACT_SLOT_LABEL, ALL_ARTIFACT_SLOTS,
-  QUALITY_COLOR, QUALITY_LABEL, ARTIFACT_STAT_LABEL, sumEquippedStatBonuses,
+  QUALITY_COLOR, QUALITY_LABEL, sumEquippedStatBonuses,
+  getArtifactDisplayStats,
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { GameBackground } from "../shared/ui/GameBackground";
@@ -193,12 +194,13 @@ function EquipModal({
                           <p className="text-pixel-sm font-bold mt-0.5" style={{ color: QUALITY_COLOR[item.quality] }}>
                             {QUALITY_LABEL[item.quality]}
                           </p>
-                          {item.statBonuses && item.statBonuses.length > 0 && (
+                          {getArtifactDisplayStats(item).length > 0 && (
                             <div className="flex flex-wrap gap-0.5 mt-1">
-                              {item.statBonuses.map((sb, i) => (
-                                <span key={i} className="text-pixel-sm px-1 py-0.5 rounded"
-                                  style={{ background: "rgba(132, 75, 63, .154)", color: PALETTE.ember500 }}>
-                                  {ARTIFACT_STAT_LABEL[sb.stat]} +{sb.value}
+                              {getArtifactDisplayStats(item).map((line) => (
+                                <span key={line.key} className="text-pixel-sm px-1 py-0.5 rounded"
+                                  style={{ background: "rgba(132, 75, 63, .154)",
+                                    color: line.bonus ? PALETTE.mist300 : PALETTE.ember500 }}>
+                                  {line.label} +{line.value}{line.percent ? "%" : ""}
                                 </span>
                               ))}
                             </div>
@@ -255,12 +257,13 @@ function EquipModal({
                     <p className="text-pixel-sm mt-0.5" style={{ color: "rgba(132, 75, 63, .891)" }}>
                       {ARTIFACT_SLOT_LABEL[ARTIFACT_SLOT_MAP[a.itemId]] ?? "알 수 없음"}
                     </p>
-                    {a.statBonuses && a.statBonuses.length > 0 && (
+                    {getArtifactDisplayStats(a).length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-0.5">
-                        {a.statBonuses.map((sb, i) => (
-                          <span key={i} className="text-pixel-sm px-1 py-0.5 rounded"
-                            style={{ background: "rgba(132, 75, 63, .154)", color: PALETTE.ember500 }}>
-                            {ARTIFACT_STAT_LABEL[sb.stat]} +{sb.value}
+                        {getArtifactDisplayStats(a).map((line) => (
+                          <span key={line.key} className="text-pixel-sm px-1 py-0.5 rounded"
+                            style={{ background: "rgba(132, 75, 63, .154)",
+                              color: line.bonus ? PALETTE.mist300 : PALETTE.ember500 }}>
+                            {line.label} +{line.value}{line.percent ? "%" : ""}
                           </span>
                         ))}
                       </div>

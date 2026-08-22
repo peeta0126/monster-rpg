@@ -5,9 +5,9 @@ import { MATERIALS } from "../shared/items";
 import {
   QUALITY_COLOR,
   QUALITY_LABEL,
-  ARTIFACT_STAT_LABEL,
+  getArtifactDisplayStats,
 } from "../shared/craftingUtils";
-import type { ArtifactStatType, ArtifactInstance, CraftedPotionStack } from "../shared/crafting";
+import type { ArtifactInstance, CraftedPotionStack } from "../shared/crafting";
 
 import { PALETTE } from "../shared/palette";
 import { PixelIcon } from "../shared/ui/PixelIcon";
@@ -294,20 +294,19 @@ function ArtifactsSection({
                 {/* 버리기 */}
                 <DiscardBtn onConfirm={() => discardArtifact(item.instanceId)} />
               </div>
-
               {/* 능력치 */}
-              {item.statBonuses.length > 0 && (
+              {getArtifactDisplayStats(item).length > 0 && (
                 <div className="px-4 pb-4">
                   <div className="rounded-lg p-3 space-y-1"
                     style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(243, 229, 185, .064)" }}>
-                    {item.statBonuses.map((b) => (
-                      <p key={b.stat} className="text-pixel-sm font-bold flex justify-between"
+                    {getArtifactDisplayStats(item).map((line) => (
+                      <p key={line.key} className="text-pixel-sm font-bold flex justify-between"
                         style={{ color: PALETTE.sand300 }}>
-                        <span style={{ color: "rgba(132, 75, 63, 1)" }}>
-                          {ARTIFACT_STAT_LABEL[b.stat as ArtifactStatType] ?? b.stat}
+                        <span style={{ color: line.bonus ? PALETTE.mist500 : "rgba(132, 75, 63, 1)" }}>
+                          {line.label}
                         </span>
-                        <span style={{ color: PALETTE.cream100 }}>
-                          +{b.value}{b.stat === "critRate" ? "%" : ""}
+                        <span style={{ color: line.bonus ? PALETTE.mist300 : PALETTE.cream100 }}>
+                          +{line.value}{line.percent ? "%" : ""}
                         </span>
                       </p>
                     ))}

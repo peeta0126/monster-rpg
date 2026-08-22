@@ -10,7 +10,7 @@ import { usePlayerStore } from "../shared/playerStore";
 import type { CraftingRecipe, CraftingStationType, CraftedItem } from "../shared/crafting";
 import type { RpsResult } from "../shared/craftingUtils";
 import type { ItemQuality } from "../shared/crafting";
-import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, ARTIFACT_STAT_LABEL, rollArtifactQualityFromArrowResult, maxCraftable } from "../shared/craftingUtils";
+import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, getArtifactDisplayStats, rollArtifactQualityFromArrowResult, maxCraftable } from "../shared/craftingUtils";
 import { RockPaperScissorsMiniGame } from "./RockPaperScissorsMiniGame";
 import { ArrowKeyCraftingMiniGame, TOTAL_KEYS, GREAT_MAX_WRONG, GOOD_MAX_WRONG } from "./ArrowKeyCraftingMiniGame";
 import type { ArrowMiniGameResult } from "./ArrowKeyCraftingMiniGame";
@@ -615,6 +615,7 @@ function CraftResultPanel({
   const glow       = QUALITY_GLOW[result.quality];
   const label      = QUALITY_LABEL[result.quality];
   const isArtifact = result.stationType === "artifact";
+  const craftedStats = getArtifactDisplayStats({ statBonuses: result.statBonuses ?? [] });
 
   return (
     <div className="flex flex-col items-center gap-5 py-6 text-center">
@@ -640,16 +641,16 @@ function CraftResultPanel({
           {label}
         </p>
 
-        {/* 아티팩트 능력치 */}
-        {isArtifact && result.statBonuses && result.statBonuses.length > 0 && (
+        {/* 아티팩트 능력치 — 갓 만든 것이라 Lv.1 +0 이지만, 값을 뽑는 길은 다른 화면과 같다.
+            여기만 따로 계산하면 배율이 붙는 날 이 화면만 옛 숫자를 말한다. */}
+        {isArtifact && craftedStats.length > 0 && (
           <div className="mt-4 text-left space-y-1.5 rounded-lg p-3"
             style={{ background: "rgba(13, 18, 35, .35)", border: `1px solid ${C.border}` }}>
             <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2"
               style={{ color: C.textFaint }}>능력치</p>
-            {result.statBonuses.map((b) => (
-              <p key={b.stat} className="text-pixel-sm font-bold" style={{ color: C.gold }}>
-                {ARTIFACT_STAT_LABEL[b.stat as keyof typeof ARTIFACT_STAT_LABEL] ?? b.stat}
-                {" "}+{b.value}{b.stat === "critRate" ? "%" : ""}
+            {craftedStats.map((line) => (
+              <p key={line.key} className="text-pixel-sm font-bold" style={{ color: C.gold }}>
+                {line.label}{" "}+{line.value}{line.percent ? "%" : ""}
               </p>
             ))}
           </div>

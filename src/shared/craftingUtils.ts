@@ -138,6 +138,69 @@ export function sumEquippedBonusStats(
   return totals;
 }
 
+/**
+ * 장비 하나가 실제로 주는 것 — **화면에 찍는 값의 단일 출처**.
+ *
+ * 예전에는 화면마다 `statBonuses` 를 그대로 찍었다. 그건 제작 시점의 원본이라
+ * 레벨·강화가 안 들어간 값이고, 전투는 `sumEquipped*` 로 배율을 먹인 값을 쓴다.
+ * Lv.50 +5 정예 목걸이가 화면에는 공격 +14, 전투에는 +52 로 들어가 있었다.
+ *
+ * 부가 능력치(레벨 10마다 해제)도 능력치의 일부라 같이 내보낸다. 최대 HP 계열만
+ * 기본 HP 줄에 합쳐서 한 번만 센다 — 전투도 그렇게 더한다(sumEquippedStatBonuses).
+ */
+export interface ArtifactDisplayStat {
+  key:     string;
+  label:   string;
+  value:   number;
+  /** % 로 읽는 값인가 */
+  percent: boolean;
+  /** 레벨 10마다 해제되는 부가 능력치인가 */
+  bonus:   boolean;
+}
+
+export interface ArtifactStatSource {
+  statBonuses:  ArtifactStatBonus[];
+  level?:       number;
+  enhancement?: number;
+  bonusStats?:  ArtifactBonusStat[];
+}
+
+export function getArtifactDisplayStats(a: ArtifactStatSource): ArtifactDisplayStat[] {
+  const hpFlat = (a.bonusStats ?? [])
+    .filter((b) => b.type === "maxHpFlat")
+    .reduce((sum, b) => sum + b.value, 0);
+
+  const lines: ArtifactDisplayStat[] = [];
+  let hasHpLine = false;
+
+  for (const b of getEffectiveStats(a.statBonuses, a.level ?? 1, a.enhancement ?? 0)) {
+    if (b.stat === "hp") hasHpLine = true;
+    lines.push({
+      key:     `base:${b.stat}`,
+      label:   ARTIFACT_STAT_LABEL[b.stat],
+      value:   b.stat === "hp" ? b.value + hpFlat : b.value,
+      percent: b.stat === "critRate",
+      bonus:   false,
+    });
+  }
+  // 힘의 목걸이처럼 기본 HP 가 없는 장비도 최대 HP 부가 능력치를 뽑을 수 있다.
+  if (!hasHpLine && hpFlat > 0) {
+    lines.push({ key: "base:hp", label: ARTIFACT_STAT_LABEL.hp, value: hpFlat, percent: false, bonus: false });
+  }
+
+  for (const b of a.bonusStats ?? []) {
+    if (b.type === "maxHpFlat") continue;
+    lines.push({
+      key:     `bonus:${b.type}`,
+      label:   ARTIFACT_BONUS_STAT_LABEL[b.type],
+      value:   b.value,
+      percent: true,
+      bonus:   true,
+    });
+  }
+
+  return lines;
+}
 // ─── 부가 능력치 풀 ────────────────────────────────────────────────────────────────
 
 export interface ArtifactBonusStatDef {
