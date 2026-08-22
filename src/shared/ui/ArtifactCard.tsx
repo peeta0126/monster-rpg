@@ -180,7 +180,8 @@ export function ArtifactCard({
           >
             {stats.map((line) => (
               <p key={line.key} className="flex justify-between gap-2 text-pixel-sm font-bold">
-                <span style={{ color: line.bonus ? PALETTE.mist500 : PALETTE.earth500 }}>
+                {/* 12px 라벨이라 어두운 토큰(earth500·mist500)은 못 쓴다 — 판 위에서 3:1 아래다 */}
+                <span style={{ color: line.bonus ? PALETTE.mist300 : PALETTE.earth400 }}>
                   {line.label}
                 </span>
                 <span style={{ color: line.bonus ? PALETTE.mist300 : PALETTE.cream100 }}>

@@ -23,8 +23,10 @@ const AUTH = JSON.stringify({
 
 const ARTIFACTS = [
   { itemId: "power_necklace", name: "힘의 목걸이",   quality: "rare" },
-  { itemId: "guard_bracelet", name: "수호의 팔찌",   quality: "epic" },
-  { itemId: "spirit_amulet",  name: "정령의 부적",   quality: "common" },
+  // 등급은 세 가지뿐이다(normal·rare·elite). 예전에 epic·common 이 적혀 있었는데
+  // 그런 등급이 없어서 캡처에 등급 줄이 통째로 비어 있었다.
+  { itemId: "guard_bracelet", name: "수호의 팔찌",   quality: "elite" },
+  { itemId: "spirit_amulet",  name: "정령의 부적",   quality: "normal" },
 ] as const;
 
 /** 21종이 한 화면에 다 서는 세이브. 재료는 넉넉히 — 제작 창의 "보유"도 같이 보고 싶다. */
