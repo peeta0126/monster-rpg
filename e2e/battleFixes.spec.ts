@@ -111,9 +111,17 @@ test("상태이상은 몇 턴 뒤 스스로 풀리고, 이미 걸린 상대에�
   await castMove("cinder-toss");
   expect(await logLines(page)).toContain("화상 상태이상이 걸렸다!");
 
-  // 두 번 걸면 아무 일도 없다는 걸 화면이 말해야 한다
-  await castMove("cinder-toss");
-  expect(await logLines(page)).toContain("효과가 없었다");
+  // 두 번 걸면 아무 일도 없다는 걸 화면이 말해야 한다.
+  //
+  // ⚠ 한 번 눌러 보고 단정하면 안 된다. 이 층 보스는 설풍으로 이쪽을 얼리고, 얼면 그 턴이
+  //   통째로 날아가 기술이 아예 안 나간다 — 네 번에 한 번꼴로 "안 나간 기술"을 가지고
+  //   게임이 틀렸다고 말하고 있었다. 기술이 실제로 나갈 때까지 눌러 본다.
+  let saidNoEffect = false;
+  for (let i = 0; i < 4 && !saidNoEffect && (await canAct(page)); i++) {
+    await castMove("cinder-toss");
+    saidNoEffect = (await logLines(page)).includes("효과가 없었다");
+  }
+  expect(saidNoEffect, "이미 화상인 상대에게 또 걸었는데 화면이 아무 말도 안 한다").toBe(true);
 
   // 지속 턴(화상 4턴)이 지나면 풀린다
   for (let i = 0; i < 4 && (await canAct(page)); i++) await castMove("ember");
