@@ -281,7 +281,14 @@ function LevelUpPanel({
                 cursor: "not-allowed" }
         }
       >
-        {isMax ? "최대 레벨" : canDo ? (willUnlockNext ? "✨  레벨업 (부가 능력치 해제!)" : "⬆  레벨업") : "강화석 부족"}
+        {/* 반짝이 이모지 자리였다. 픽셀 폰트에 없어서 그 글자만 다른 서체로 떨어진다.
+            이름도 다른 탭에 맞춘다 — 강화하기·분해하기·합성하기 옆에서 "레벨업"만 명사였다. */}
+        {isMax ? "최대 레벨" : canDo ? (
+          <span className="inline-flex items-center justify-center gap-1.5">
+            <PixelIcon name="levelup" size={16} />
+            {willUnlockNext ? "레벨업하기 (부가 능력치 해제!)" : "레벨업하기"}
+          </span>
+        ) : "강화석 부족"}
       </button>
     </div>
   );
@@ -735,7 +742,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
     discardMaterial("enhancement_stone", cost);
     updateCraftedArtifact(primary.instanceId, { level: newLv });
     if (unlocksBonus) {
-      showToast(`✨ ${primary.name} Lv.${newLv} — 부가 능력치 해제!`);
+      showToast(`${primary.name} Lv.${newLv} — 부가 능력치 해제!`);
     } else {
       showToast(`${primary.name} Lv.${newLv} 달성!`);
     }
