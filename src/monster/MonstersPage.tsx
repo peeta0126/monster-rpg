@@ -11,7 +11,7 @@ import { ImprintModal } from "./ImprintModal";
 import type { ArtifactInstance } from "../shared/crafting";
 import {
   ARTIFACT_SLOT_MAP, ARTIFACT_SLOT_LABEL, ALL_ARTIFACT_SLOTS,
-  sumEquippedStatBonuses,
+  sumEquippedStatBonuses, getEquipmentMaxLevel,
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { GameBackground } from "../shared/ui/GameBackground";
@@ -24,6 +24,9 @@ import type { IconName } from "../shared/ui/icons";
 /** 파티 카드/상태창에 반영할 장비 능력치 (HP는 배틀 실수치와 어긋나지 않도록 제외) */
 export interface EquipStatBonus { attack: number; defense: number; speed: number }
 const ZERO_EQUIP_BONUS: EquipStatBonus = { attack: 0, defense: 0, speed: 0 };
+
+/** 파티 카드에 붙는 장착 표시 — 슬롯 이름만으로는 다 키운 장비가 안 보인다 */
+interface EquippedSlotChip { slot: string; enhancement: number; maxed: boolean }
 
 // ─── 속성 상수 ────────────────────────────────────────────────────────────────────
 const TYPE_KO: Record<string, string> = {
@@ -170,7 +173,7 @@ function EquipModal({
             <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2" style={{ color: "rgba(132, 75, 63, 1)" }}>
               장착 중인 장비 (슬롯 클릭 → 가방 필터)
             </p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2" data-testid="equipped-slots">
               {ALL_ARTIFACT_SLOTS.map((slot) => {
                 const item = equipped.find((a) => ARTIFACT_SLOT_MAP[a.itemId] === slot);
                 const isActive = selectedSlot === slot;
@@ -483,7 +486,7 @@ function MonsterCard({
   monster: OwnedMonster; size?: "sm" | "md" | "lg";
   layout?: "stack" | "row";
   selected?: boolean; dimmed?: boolean; onClick: () => void; showStats?: boolean;
-  equippedSlots?: string[]; equipBonus?: EquipStatBonus;
+  equippedSlots?: EquippedSlotChip[]; equipBonus?: EquipStatBonus;
 }) {
   const hpPct     = monster.maxHp === 0 ? 0 : Math.round((monster.currentHp / monster.maxHp) * 100);
   const isFainted = hpPct === 0;
@@ -567,10 +570,16 @@ function MonsterCard({
 
         {equippedSlots.length > 0 && (
           <div className={`w-full flex items-center gap-0.5 flex-wrap ${row ? "" : "justify-center mt-0.5"}`}>
-            {equippedSlots.map((slot) => (
-              <span key={slot} className="text-pixel-sm px-1 rounded font-bold"
-                style={{ background: "rgba(132, 75, 63, .468)", color: PALETTE.sand300, border: "1px solid rgba(132, 75, 63, .702)" }}>
-                {ARTIFACT_SLOT_LABEL[slot]}
+            {/* 강화 수치를 여기에도 적는다. 파티를 훑을 때 "어느 놈 장비가 덜 컸는지"가
+                안 보이면 강화석을 부을 이유가 안 생긴다. */}
+            {equippedSlots.map((chip) => (
+              <span key={chip.slot} className="text-pixel-sm px-1 rounded font-bold"
+                style={{
+                  background: "rgba(132, 75, 63, .468)",
+                  color: chip.maxed ? PALETTE.ember500 : PALETTE.sand300,
+                  border: `1px solid ${chip.maxed ? "rgba(233, 148, 65, .706)" : "rgba(132, 75, 63, .702)"}`,
+                }}>
+                {ARTIFACT_SLOT_LABEL[chip.slot]}{chip.enhancement > 0 ? ` +${chip.enhancement}` : ""}
               </span>
             ))}
           </div>
@@ -711,9 +720,15 @@ export default function MonstersPage() {
     if (equipModalUid === uid) setEquipModalUid(null);
   };
 
-  // 헬퍼: 장착 슬롯 이름 목록
-  const getEquippedSlots = (uid: string): string[] =>
-    (equippedArtifacts[uid] ?? []).map((a) => ARTIFACT_SLOT_MAP[a.itemId]).filter(Boolean);
+  // 헬퍼: 장착 슬롯 — 이름과 함께 얼마나 키웠는지도 같이 넘긴다
+  const getEquippedSlots = (uid: string): EquippedSlotChip[] =>
+    (equippedArtifacts[uid] ?? [])
+      .filter((a) => ARTIFACT_SLOT_MAP[a.itemId])
+      .map((a) => ({
+        slot:        ARTIFACT_SLOT_MAP[a.itemId],
+        enhancement: a.enhancement ?? 0,
+        maxed:       (a.level ?? 1) >= getEquipmentMaxLevel(a.quality),
+      }));
 
   // 헬퍼: 장착 장비의 공격/방어/속도 합산 보너스 (HP는 배틀 실수치와 어긋나지 않도록 제외)
   const getEquipBonus = (uid: string): EquipStatBonus => {
