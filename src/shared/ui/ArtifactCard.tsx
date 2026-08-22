@@ -7,6 +7,7 @@ import {
   qualityTint,
   getArtifactDisplayStats,
   getEquipmentMaxLevel,
+  MAX_EQUIPMENT_ENHANCEMENT,
 } from "../craftingUtils";
 import { PALETTE, rgba } from "../palette";
 import { PixelIcon } from "./PixelIcon";
@@ -70,8 +71,9 @@ export function ArtifactCard({
   const lv    = artifact.level ?? 1;
   const enh   = artifact.enhancement ?? 0;
   const maxLv = getEquipmentMaxLevel(artifact.quality);
-  // "다 키웠다"는 레벨로 정한다. 강화는 배지가 따로 말한다.
-  const maxed = lv >= maxLv;
+  // "다 키웠다"는 레벨과 강화가 **둘 다** 끝났을 때다. 레벨만으로 치면 강화가 하나도 안 된
+  // 장비에 MAX 가 붙어서, 정작 더 부을 데가 남았다는 걸 표가 가려 버린다.
+  const maxed = lv >= maxLv && enh >= MAX_EQUIPMENT_ENHANCEMENT;
   const stats = size === "full" ? getArtifactDisplayStats(artifact) : [];
 
   // 버튼 안에 버튼을 넣을 수 없다. 조작이 붙는 자리와 누를 데가 없는 자리는 div 로 둔다.
@@ -82,7 +84,7 @@ export function ArtifactCard({
     <Tag
       {...(Tag === "button" ? { type: "button" as const } : {})}
       onClick={onClick}
-      className={`w-full overflow-hidden rounded-xl text-left transition ${className}`}
+      className={`flex w-full flex-col overflow-hidden rounded-xl text-left transition ${className}`}
       style={{
         background: selected ? rgba("earth500", 0.28) : rgba("shadow900", 0.88),
         border: `1px solid ${selected ? PALETTE.ember500 : qualityTint(artifact.quality, 0.4)}`,
@@ -128,6 +130,20 @@ export function ArtifactCard({
             {artifact.name}
           </p>
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            {/* 슬롯 이름 같은 자리 표시는 맨 앞에 둔다 — 등급·레벨 뒤로 밀면 어디에 끼는
+                물건인지가 제일 늦게 읽힌다 */}
+            {note && (
+              <span
+                className="rounded px-1 py-0.5 text-pixel-sm font-bold leading-none"
+                style={{
+                  background: rgba("earth500", 0.28),
+                  border: `1px solid ${rgba("earth500", 0.55)}`,
+                  color: PALETTE.sand200,
+                }}
+              >
+                {note}
+              </span>
+            )}
             <span className="text-pixel-sm font-bold" style={{ color }}>
               {QUALITY_LABEL[artifact.quality]}
             </span>
@@ -161,21 +177,25 @@ export function ArtifactCard({
                 합성
               </span>
             )}
-            {note && (
-              <span className="text-pixel-sm" style={{ color: PALETTE.earth400 }}>{note}</span>
-            )}
+
           </div>
         </div>
 
         {action}
       </div>
 
-      {/* 능력치 — 부가 능력치(레벨 10마다 해제)는 청록으로 갈라 놓는다 */}
+      {/* 능력치 — 부가 능력치(레벨 10마다 해제)는 청록으로 갈라 놓는다.
+          다 키운 장비는 줄이 일곱 개까지 늘어난다. 한 줄에 하나씩 쌓으면 카드가 그만큼
+          길어져서, 칸이 넓은 자리에서는 두 단으로 접힌다(좁은 자리는 저절로 한 단이다). */}
       {stats.length > 0 && (
-        <div className="px-3 pb-3">
+        <div className="flex flex-1 px-3 pb-3">
           <div
-            className="space-y-1 rounded-lg p-2.5"
-            style={{ background: rgba("shadow900", 0.35), border: `1px solid ${rgba("cream100", 0.06)}` }}
+            className="grid h-full w-full content-start gap-x-4 gap-y-1 rounded-lg p-2.5"
+            style={{
+              background: rgba("shadow900", 0.35),
+              border: `1px solid ${rgba("cream100", 0.06)}`,
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            }}
           >
             {stats.map((line) => (
               <p key={line.key} className="flex justify-between gap-2 text-pixel-sm font-bold">

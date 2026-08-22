@@ -11,7 +11,7 @@ import { ImprintModal } from "./ImprintModal";
 import type { ArtifactInstance } from "../shared/crafting";
 import {
   ARTIFACT_SLOT_MAP, ARTIFACT_SLOT_LABEL, ALL_ARTIFACT_SLOTS,
-  sumEquippedStatBonuses, getEquipmentMaxLevel,
+  sumEquippedStatBonuses, getEquipmentMaxLevel, MAX_EQUIPMENT_ENHANCEMENT,
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { GameBackground } from "../shared/ui/GameBackground";
@@ -177,42 +177,53 @@ function EquipModal({
               {ALL_ARTIFACT_SLOTS.map((slot) => {
                 const item = equipped.find((a) => ARTIFACT_SLOT_MAP[a.itemId] === slot);
                 const isActive = selectedSlot === slot;
-                return (
-                  <div
+                // 슬롯 이름은 카드 안에 넣는다. 예전엔 카드를 한 겹 더 감싸고 왼쪽에 이름을
+                // 세웠는데, 테두리가 두 겹으로 겹치고 이름만 허공에 떠 보였다.
+                return item ? (
+                  <ArtifactCard
                     key={slot}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2 cursor-pointer transition"
-                    style={{
-                      background: isActive ? "rgba(132, 75, 63, .281)" : "rgba(13, 18, 35, .35)",
-                      border: `1px solid ${isActive ? "rgba(132, 75, 63, 1)" : "rgba(132, 75, 63, .105)"}`,
-                    }}
+                    artifact={item}
+                    size="full"
+                    note={ARTIFACT_SLOT_LABEL[slot]}
+                    selected={isActive}
                     onClick={() => setSelectedSlot(isActive ? null : slot)}
+                    action={
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onUnequip(item.instanceId); }}
+                        className="text-pixel-sm font-bold px-2 py-0.5 rounded shrink-0 transition hover:brightness-125"
+                        style={{
+                          background: "rgba(168, 61, 31, .236)",
+                          border: "1px solid rgba(168, 61, 31, .547)",
+                          color: PALETTE.ember500,
+                        }}
+                      >
+                        해제
+                      </button>
+                    }
+                  />
+                ) : (
+                  <button
+                    key={slot}
+                    onClick={() => setSelectedSlot(isActive ? null : slot)}
+                    className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition"
+                    style={{
+                      background: "rgba(13, 18, 35, .35)",
+                      border: `1px dashed ${isActive ? PALETTE.earth500 : "rgba(132, 75, 63, .45)"}`,
+                    }}
                   >
-                    <span className="w-16 text-pixel-sm font-bold shrink-0" style={{ color: PALETTE.sand300 }}>
-                      {ARTIFACT_SLOT_LABEL[slot]}
-                    </span>
-                    {item ? (
-                      <ArtifactCard
-                        artifact={item}
-                        size="full"
-                        className="flex-1"
-                        action={
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onUnequip(item.instanceId); }}
-                            className="text-pixel-sm font-bold px-2 py-0.5 rounded shrink-0 transition hover:brightness-125"
-                            style={{
-                              background: "rgba(168, 61, 31, .236)",
-                              border: "1px solid rgba(168, 61, 31, .547)",
-                              color: PALETTE.ember500,
-                            }}
-                          >
-                            해제
-                          </button>
-                        }
-                      />
-                    ) : (
-                      <p className="text-pixel-sm" style={{ color: "rgba(205, 178, 126, .08)" }}>— 비어있음 —</p>
-                    )}
-                  </div>
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+                      style={{ border: "1px dashed rgba(132, 75, 63, .45)" }}>
+                      <PixelIcon name="artifact" size={32} style={{ opacity: 0.2 }} />
+                    </div>
+                    <div>
+                      <p className="text-pixel-sm font-black" style={{ color: PALETTE.sand300 }}>
+                        {ARTIFACT_SLOT_LABEL[slot]}
+                      </p>
+                      <p className="text-pixel-sm" style={{ color: PALETTE.earth400 }}>
+                        비어 있음 — 눌러서 가방을 거른다
+                      </p>
+                    </div>
+                  </button>
                 );
               })}
             </div>
@@ -727,7 +738,8 @@ export default function MonstersPage() {
       .map((a) => ({
         slot:        ARTIFACT_SLOT_MAP[a.itemId],
         enhancement: a.enhancement ?? 0,
-        maxed:       (a.level ?? 1) >= getEquipmentMaxLevel(a.quality),
+        maxed:       (a.level ?? 1) >= getEquipmentMaxLevel(a.quality)
+                     && (a.enhancement ?? 0) >= MAX_EQUIPMENT_ENHANCEMENT,
       }));
 
   // 헬퍼: 장착 장비의 공격/방어/속도 합산 보너스 (HP는 배틀 실수치와 어긋나지 않도록 제외)
