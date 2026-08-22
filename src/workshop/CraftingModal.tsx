@@ -10,12 +10,13 @@ import { usePlayerStore } from "../shared/playerStore";
 import type { CraftingRecipe, CraftingStationType, CraftedItem } from "../shared/crafting";
 import type { RpsResult } from "../shared/craftingUtils";
 import type { ItemQuality } from "../shared/crafting";
-import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, getArtifactDisplayStats, rollArtifactQualityFromArrowResult, maxCraftable } from "../shared/craftingUtils";
+import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, rollArtifactQualityFromArrowResult, maxCraftable } from "../shared/craftingUtils";
 import { RockPaperScissorsMiniGame } from "./RockPaperScissorsMiniGame";
 import { ArrowKeyCraftingMiniGame, TOTAL_KEYS, GREAT_MAX_WRONG, GOOD_MAX_WRONG } from "./ArrowKeyCraftingMiniGame";
 import type { ArrowMiniGameResult } from "./ArrowKeyCraftingMiniGame";
 import { PALETTE } from "../shared/palette";
 import { PixelIcon } from "../shared/ui/PixelIcon";
+import { ArtifactCard } from "../shared/ui/ArtifactCard";
 import { isIconName, type IconName } from "../shared/ui/icons";
 
 // ─── 중세 공방 팔레트 ──────────────────────────────────────────────────────────
@@ -615,7 +616,6 @@ function CraftResultPanel({
   const glow       = QUALITY_GLOW[result.quality];
   const label      = QUALITY_LABEL[result.quality];
   const isArtifact = result.stationType === "artifact";
-  const craftedStats = getArtifactDisplayStats({ statBonuses: result.statBonuses ?? [] });
 
   return (
     <div className="flex flex-col items-center gap-5 py-6 text-center">
@@ -626,36 +626,38 @@ function CraftResultPanel({
         ✦ Crafted! ✦
       </p>
 
-      <div
-        className="w-full rounded-xl p-6"
-        style={{
-          background: `${color}0e`,
-          border: `1px solid ${color}55`,
-          boxShadow: `0 0 40px ${glow}`,
-        }}
-      >
-        <p className="text-pixel-md font-black" style={{ color: C.textPrimary }}>
-          {result.name}
-        </p>
-        <p className="mt-3 text-title-sm font-black" style={{ color }}>
-          {label}
-        </p>
-
-        {/* 아티팩트 능력치 — 갓 만든 것이라 Lv.1 +0 이지만, 값을 뽑는 길은 다른 화면과 같다.
-            여기만 따로 계산하면 배율이 붙는 날 이 화면만 옛 숫자를 말한다. */}
-        {isArtifact && craftedStats.length > 0 && (
-          <div className="mt-4 text-left space-y-1.5 rounded-lg p-3"
-            style={{ background: "rgba(13, 18, 35, .35)", border: `1px solid ${C.border}` }}>
-            <p className="text-pixel-sm font-bold uppercase tracking-widest mb-2"
-              style={{ color: C.textFaint }}>능력치</p>
-            {craftedStats.map((line) => (
-              <p key={line.key} className="text-pixel-sm font-bold" style={{ color: C.gold }}>
-                {line.label}{" "}+{line.value}{line.percent ? "%" : ""}
-              </p>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* 아티팩트는 가방·모루·장착 화면과 같은 칸으로 보여준다. 갓 만든 것이라 Lv.1 +0 이지만
+          숫자를 뽑는 길이 같아야, 배율을 고치는 날 이 화면만 옛말을 하지 않는다. */}
+      {isArtifact ? (
+        <ArtifactCard
+          size="full"
+          glow
+          artifact={{
+            itemId:      result.recipeId,
+            name:        result.name,
+            quality:     result.quality,
+            statBonuses: result.statBonuses ?? [],
+            level:       1,
+            enhancement: 0,
+          }}
+        />
+      ) : (
+        <div
+          className="w-full rounded-xl p-6"
+          style={{
+            background: `${color}0e`,
+            border: `1px solid ${color}55`,
+            boxShadow: `0 0 40px ${glow}`,
+          }}
+        >
+          <p className="text-pixel-md font-black" style={{ color: C.textPrimary }}>
+            {result.name}
+          </p>
+          <p className="mt-3 text-title-sm font-black" style={{ color }}>
+            {label}
+          </p>
+        </div>
+      )}
 
       <p className="text-pixel-sm" style={{ color: C.textFaint }}>
         {isArtifact

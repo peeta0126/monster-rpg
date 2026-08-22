@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "../shared/playerStore";
-import type { ArtifactInstance } from "../shared/crafting";
+import type { ArtifactInstance, ArtifactStatBonus, ItemQuality } from "../shared/crafting";
 import { PALETTE } from "../shared/palette";
 import { withJosa } from "../shared/josa";
 import {
@@ -19,6 +19,7 @@ import {
   ARTIFACT_BONUS_POOL,
 } from "../shared/craftingUtils";
 import { PixelIcon } from "../shared/ui/PixelIcon";
+import { ArtifactCard } from "../shared/ui/ArtifactCard";
 import type { IconName } from "../shared/ui/icons";
 
 // ─── 팔레트 (제작 공방 공통) ──────────────────────────────────────────────────
@@ -58,14 +59,6 @@ const TABS: { id: AnvilTab; label: string; icon: IconName }[] = [
   { id: "synthesize",  label: "합성",    icon: "synthesize" },
 ];
 
-// ─── 아이템 아이콘 ────────────────────────────────────────────────────────────
-
-const ARTIFACT_ICON: Record<string, IconName> = {
-  power_necklace: "power_necklace",
-  guard_bracelet: "guard_bracelet",
-  spirit_amulet:  "spirit_amulet",
-};
-
 // ─── 헬퍼 ─────────────────────────────────────────────────────────────────────
 
 function makeId(): string {
@@ -80,62 +73,17 @@ function artifactEnh(a: ArtifactInstance): number {
   return a.enhancement ?? 0;
 }
 
-// 강화석 소비: discardMaterial을 활용 (store에 이미 있음)
-
-// ─── 작은 아티팩트 카드 ────────────────────────────────────────────────────────
-
-function ArtifactCard({
-  artifact,
-  selected,
-  onClick,
-  dim = false,
-}: {
-  artifact: ArtifactInstance;
-  selected?: boolean;
-  onClick?: () => void;
-  dim?: boolean;
-}) {
-  const color = QUALITY_COLOR[artifact.quality];
-  const lv    = artifactLevel(artifact);
-  const enh   = artifactEnh(artifact);
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!onClick}
-      className="w-full rounded-lg p-3 text-left transition"
-      style={{
-        background:  selected ? C.cardSel : C.card,
-        border:      `1px solid ${selected ? C.borderGold : C.border}`,
-        boxShadow:   selected ? `0 0 14px rgba(132, 75, 63, .702)` : "none",
-        opacity:     dim ? 0.4 : 1,
-        cursor:      onClick ? "pointer" : "default",
-      }}
-    >
-      <div className="flex items-center gap-2.5">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: "rgba(132, 75, 63, .282)", border: `1px solid ${color}44` }}
-        >
-          <PixelIcon name={ARTIFACT_ICON[artifact.itemId] ?? "artifact"} size={32} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-pixel-sm font-black" style={{ color: C.textPrimary }}>
-            {artifact.name}
-          </p>
-          <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <span className="text-pixel-sm font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
-            <span className="text-pixel-sm" style={{ color: C.textFaint }}>Lv.{lv}</span>
-            {enh > 0 && (
-              <span className="text-pixel-sm font-black" style={{ color: C.gold }}>+{enh}</span>
-            )}
-          </div>
-        </div>
-      </div>
-    </button>
-  );
+/**
+ * 합성 후의 기본 능력치 — 예전 등급 배율을 벗기고 새 등급 배율을 씌운다.
+ * 미리보기와 실제 합성이 같은 함수를 봐야 "결과가 이렇다"는 말이 참이 된다.
+ */
+function synthesizedStats(a: ArtifactInstance, next: ItemQuality): ArtifactStatBonus[] {
+  const from = QUALITY_MULTIPLIER[a.quality];
+  const to   = QUALITY_MULTIPLIER[next];
+  return a.statBonuses.map((b) => ({ ...b, value: Math.round((b.value / from) * to) }));
 }
+
+// 강화석 소비: discardMaterial을 활용 (store에 이미 있음)
 
 // ─── 레벨업 패널 ──────────────────────────────────────────────────────────────
 
@@ -174,13 +122,10 @@ function LevelUpPanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="mb-2 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 레벨업 ✦
         </p>
-        <p className="mt-1 text-title-sm font-black" style={{ color: C.textPrimary }}>
-          {artifact.name}
-        </p>
-        <span className="text-pixel-sm font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
+        <ArtifactCard artifact={artifact} />
       </div>
 
       {/* 레벨 바 */}
@@ -357,7 +302,6 @@ function EnhancePanel({
   onSelectMaterial: (id: string) => void;
   onEnhance:        () => void;
 }) {
-  const color   = QUALITY_COLOR[target.quality];
   const enh     = artifactEnh(target);
   const isMax   = enh >= MAX_EQUIPMENT_ENHANCEMENT;
 
@@ -371,13 +315,10 @@ function EnhancePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="mb-2 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 강화 ✦
         </p>
-        <p className="mt-1 text-title-sm font-black" style={{ color: C.textPrimary }}>
-          {target.name}
-        </p>
-        <span className="text-pixel-sm font-bold" style={{ color }}>{QUALITY_LABEL[target.quality]}</span>
+        <ArtifactCard artifact={target} />
       </div>
 
       {/* 강화 수치 표시 */}
@@ -483,7 +424,6 @@ function DisassemblePanel({
   onDisassemble: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
-  const color  = QUALITY_COLOR[artifact.quality];
   const lv     = artifactLevel(artifact);
   const enh    = artifactEnh(artifact);
   const stones = getDisassembleStones(artifact.quality, lv, enh);
@@ -491,14 +431,10 @@ function DisassemblePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="mb-2 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 분해 ✦
         </p>
-        <p className="mt-1 text-title-sm font-black" style={{ color: C.textPrimary }}>
-          {artifact.name}
-        </p>
-        <span className="text-pixel-sm font-bold" style={{ color }}>{QUALITY_LABEL[artifact.quality]}</span>
-        <span className="ml-2 text-pixel-sm" style={{ color: C.textFaint }}>Lv.{lv} +{enh}</span>
+        <ArtifactCard artifact={artifact} size="full" />
       </div>
 
       {/* 획득 강화석 */}
@@ -662,17 +598,23 @@ function SynthesizePanel({
         )}
       </div>
 
-      {/* 합성 결과 미리보기 */}
+      {/* 합성 결과 미리보기 — 합성은 등급만 올리고 레벨·강화를 1/+0 으로 되돌린다.
+          능력치까지 보여야 "지금 것보다 나은가"를 눈으로 잴 수 있다. */}
       {nextQual && (
-        <div
-          className="rounded-lg p-3 text-center"
-          style={{ background: `${nextColor}0e`, border: `1px solid ${nextColor}44` }}
-        >
-          <p className="text-pixel-sm font-bold mb-1" style={{ color: C.textFaint }}>합성 결과</p>
-          <p className="text-pixel-sm font-black" style={{ color: C.textPrimary }}>{primary.name}</p>
-          <p className="text-pixel-sm font-black mt-0.5" style={{ color: nextColor }}>
-            {QUALITY_LABEL[nextQual]} · Lv.1 +0
-          </p>
+        <div>
+          <p className="mb-2 text-pixel-sm font-bold" style={{ color: C.textFaint }}>합성 결과</p>
+          <ArtifactCard
+            size="full"
+            artifact={{
+              itemId:      primary.itemId,
+              name:        primary.name,
+              quality:     nextQual,
+              statBonuses: synthesizedStats(primary, nextQual),
+              level:       1,
+              enhancement: 0,
+              source:      "synthesis",
+            }}
+          />
         </div>
       )}
 
@@ -843,21 +785,13 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
     if (!nextQual) return;
     busyRef.current = true;
 
-    // 스탯 재계산: 기존 등급 배율 → 새 등급 배율
-    const fromMult = QUALITY_MULTIPLIER[primary.quality];
-    const toMult   = QUALITY_MULTIPLIER[nextQual];
-    const newStats = primary.statBonuses.map((b) => ({
-      ...b,
-      value: Math.round((b.value / fromMult) * toMult),
-    }));
-
     const newInstance: ArtifactInstance = {
       instanceId:  makeId(),
       itemId:      primary.itemId,
       name:        primary.name,
       quality:     nextQual,
       description: primary.description,
-      statBonuses: newStats,
+      statBonuses: synthesizedStats(primary, nextQual),
       createdAt:   Date.now(),
       level:       1,
       enhancement: 0,

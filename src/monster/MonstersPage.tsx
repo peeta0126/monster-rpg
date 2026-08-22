@@ -11,14 +11,14 @@ import { ImprintModal } from "./ImprintModal";
 import type { ArtifactInstance } from "../shared/crafting";
 import {
   ARTIFACT_SLOT_MAP, ARTIFACT_SLOT_LABEL, ALL_ARTIFACT_SLOTS,
-  QUALITY_COLOR, QUALITY_LABEL, sumEquippedStatBonuses,
-  getArtifactDisplayStats,
+  sumEquippedStatBonuses,
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
 import { GameBackground } from "../shared/ui/GameBackground";
 import { josa, withJosa } from "../shared/josa";
 import { StatBar } from "../shared/ui";
 import { PixelIcon } from "../shared/ui/PixelIcon";
+import { ArtifactCard } from "../shared/ui/ArtifactCard";
 import type { IconName } from "../shared/ui/icons";
 
 /** 파티 카드/상태창에 반영할 장비 능력치 (HP는 배틀 실수치와 어긋나지 않도록 제외) */
@@ -188,36 +188,24 @@ function EquipModal({
                       {ARTIFACT_SLOT_LABEL[slot]}
                     </span>
                     {item ? (
-                      <>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-pixel-sm font-black truncate" style={{ color: PALETTE.cream100 }}>{item.name}</p>
-                          <p className="text-pixel-sm font-bold mt-0.5" style={{ color: QUALITY_COLOR[item.quality] }}>
-                            {QUALITY_LABEL[item.quality]}
-                          </p>
-                          {getArtifactDisplayStats(item).length > 0 && (
-                            <div className="flex flex-wrap gap-0.5 mt-1">
-                              {getArtifactDisplayStats(item).map((line) => (
-                                <span key={line.key} className="text-pixel-sm px-1 py-0.5 rounded"
-                                  style={{ background: "rgba(132, 75, 63, .154)",
-                                    color: line.bonus ? PALETTE.mist300 : PALETTE.ember500 }}>
-                                  {line.label} +{line.value}{line.percent ? "%" : ""}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onUnequip(item.instanceId); }}
-                          className="text-pixel-sm font-bold px-2 py-0.5 rounded shrink-0 transition hover:brightness-125"
-                          style={{
-                            background: "rgba(168, 61, 31, .236)",
-                            border: "1px solid rgba(168, 61, 31, .547)",
-                            color: PALETTE.ember500,
-                          }}
-                        >
-                          해제
-                        </button>
-                      </>
+                      <ArtifactCard
+                        artifact={item}
+                        size="full"
+                        className="flex-1"
+                        action={
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onUnequip(item.instanceId); }}
+                            className="text-pixel-sm font-bold px-2 py-0.5 rounded shrink-0 transition hover:brightness-125"
+                            style={{
+                              background: "rgba(168, 61, 31, .236)",
+                              border: "1px solid rgba(168, 61, 31, .547)",
+                              color: PALETTE.ember500,
+                            }}
+                          >
+                            해제
+                          </button>
+                        }
+                      />
                     ) : (
                       <p className="text-pixel-sm" style={{ color: "rgba(205, 178, 126, .08)" }}>— 비어있음 —</p>
                     )}
@@ -239,40 +227,22 @@ function EquipModal({
                   : "가방에 아티팩트가 없습니다."}
               </p>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {visibleArtifacts.map((a) => (
-                  <button
+                  <ArtifactCard
                     key={a.instanceId}
+                    artifact={a}
+                    size="full"
                     onClick={() => onEquip(a)}
-                    className="rounded-xl px-3 py-2 text-left transition hover:brightness-110 w-full"
-                    style={{
-                      background: "rgba(13, 18, 35, .88)",
-                      border: `1px solid ${QUALITY_COLOR[a.quality]}44`,
-                    }}
-                  >
-                    <p className="text-pixel-sm font-black leading-tight" style={{ color: PALETTE.cream100 }}>{a.name}</p>
-                    <p className="text-pixel-sm font-bold mt-0.5" style={{ color: QUALITY_COLOR[a.quality] }}>
-                      {QUALITY_LABEL[a.quality]}
-                    </p>
-                    <p className="text-pixel-sm mt-0.5" style={{ color: "rgba(132, 75, 63, .891)" }}>
-                      {ARTIFACT_SLOT_LABEL[ARTIFACT_SLOT_MAP[a.itemId]] ?? "알 수 없음"}
-                    </p>
-                    {getArtifactDisplayStats(a).length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-0.5">
-                        {getArtifactDisplayStats(a).map((line) => (
-                          <span key={line.key} className="text-pixel-sm px-1 py-0.5 rounded"
-                            style={{ background: "rgba(132, 75, 63, .154)",
-                              color: line.bonus ? PALETTE.mist300 : PALETTE.ember500 }}>
-                            {line.label} +{line.value}{line.percent ? "%" : ""}
-                          </span>
-                        ))}
+                    className="hover:brightness-110"
+                    note={ARTIFACT_SLOT_LABEL[ARTIFACT_SLOT_MAP[a.itemId]] ?? "알 수 없음"}
+                    footer={
+                      <div className="mx-3 mb-3 rounded py-0.5 text-center text-pixel-sm font-black"
+                        style={{ background: "rgba(132, 75, 63, .351)", color: PALETTE.sand300 }}>
+                        장착하기
                       </div>
-                    )}
-                    <div className="mt-1.5 text-center text-pixel-sm font-black rounded py-0.5"
-                      style={{ background: "rgba(132, 75, 63, .351)", color: PALETTE.sand300 }}>
-                      장착하기
-                    </div>
-                  </button>
+                    }
+                  />
                 ))}
               </div>
             )}

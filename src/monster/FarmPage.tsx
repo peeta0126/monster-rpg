@@ -5,23 +5,16 @@ import { MATERIALS } from "../shared/items";
 import {
   QUALITY_COLOR,
   QUALITY_LABEL,
-  getArtifactDisplayStats,
 } from "../shared/craftingUtils";
 import type { ArtifactInstance, CraftedPotionStack } from "../shared/crafting";
 
 import { PALETTE } from "../shared/palette";
 import { PixelIcon } from "../shared/ui/PixelIcon";
-import { isIconName, type IconName } from "../shared/ui/icons";
+import { ArtifactCard } from "../shared/ui/ArtifactCard";
+import { isIconName } from "../shared/ui/icons";
 import { SlotGrid, EmptySlot } from "../shared/ui/SlotGrid";
 import { GameBackground } from "../shared/ui/GameBackground";
 import { EmptyState } from "../shared/ui";
-
-/** 아티팩트 아이콘 — itemId 가 곧 아이콘 이름이다 (shared/ui/PixelIcon) */
-const ARTIFACT_ICON: Record<string, IconName> = {
-  power_necklace: "power_necklace",
-  guard_bracelet: "guard_bracelet",
-  spirit_amulet:  "spirit_amulet",
-};
 
 // ─── CSS 애니메이션 ──────────────────────────────────────────────────────────────
 const BAG_STYLES = `
@@ -250,72 +243,16 @@ function ArtifactsSection({
       </div>
 
       <SlotGrid minItemWidth={280} minSlots={3} emptySlot={() => <EmptySlot className="min-h-24" />}>
-        {craftedArtifacts.map((item, i) => {
-          const color = QUALITY_COLOR[item.quality];
-          return (
-            <div key={item.instanceId}
-              className="rounded-2xl overflow-hidden"
-              style={{
-                background: "linear-gradient(145deg, rgba(13, 18, 35, .9), rgba(13, 18, 35, .7))",
-                border: `1px solid ${color}55`,
-                boxShadow: `0 0 16px ${color}22`,
-                animation: `bagIn .35s ease ${i * .07}s both`,
-              }}>
-              <div className="p-4 flex items-start gap-3">
-                <div className="w-12 h-12 flex-shrink-0 rounded-xl flex items-center justify-center"
-                  style={{ background: "rgba(13, 18, 35, .35)", border: `1px solid ${color}44` }}>
-                  <PixelIcon name={ARTIFACT_ICON[item.itemId] ?? "artifact"} size={32} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-pixel-sm font-black text-cream-100">{item.name}</p>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                    <span className="text-pixel-sm font-bold" style={{ color }}>
-                      {QUALITY_LABEL[item.quality]}
-                    </span>
-                    {item.level !== undefined && (
-                      <span className="text-pixel-sm font-bold text-sand-300">
-                        Lv.{item.level}
-                      </span>
-                    )}
-                    {item.enhancement !== undefined && item.enhancement > 0 && (
-                      <span className="text-pixel-sm font-black" style={{ color: PALETTE.ember500 }}>
-                        +{item.enhancement}
-                      </span>
-                    )}
-                    {item.source === "synthesis" && (
-                      <span className="rounded-full px-1.5 py-0.5 text-pixel-sm font-black"
-                        style={{ background: "rgba(174, 226, 213, .088)", color: PALETTE.mist300,
-                          border: "1px solid rgba(174, 226, 213, .131)" }}>
-                        합성
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {/* 버리기 */}
-                <DiscardBtn onConfirm={() => discardArtifact(item.instanceId)} />
-              </div>
-              {/* 능력치 */}
-              {getArtifactDisplayStats(item).length > 0 && (
-                <div className="px-4 pb-4">
-                  <div className="rounded-lg p-3 space-y-1"
-                    style={{ background: "rgba(13, 18, 35, .35)", border: "1px solid rgba(243, 229, 185, .064)" }}>
-                    {getArtifactDisplayStats(item).map((line) => (
-                      <p key={line.key} className="text-pixel-sm font-bold flex justify-between"
-                        style={{ color: PALETTE.sand300 }}>
-                        <span style={{ color: line.bonus ? PALETTE.mist500 : "rgba(132, 75, 63, 1)" }}>
-                          {line.label}
-                        </span>
-                        <span style={{ color: line.bonus ? PALETTE.mist300 : PALETTE.cream100 }}>
-                          +{line.value}{line.percent ? "%" : ""}
-                        </span>
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {craftedArtifacts.map((item, i) => (
+          <ArtifactCard
+            key={item.instanceId}
+            artifact={item}
+            size="full"
+            className="rounded-2xl"
+            style={{ animation: `bagIn .35s ease ${i * .07}s both` }}
+            action={<DiscardBtn onConfirm={() => discardArtifact(item.instanceId)} />}
+          />
+        ))}
       </SlotGrid>
 
       {craftedArtifacts.length === 0 && (

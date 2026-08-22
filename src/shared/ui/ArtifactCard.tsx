@@ -54,6 +54,8 @@ interface ArtifactCardProps {
   /** 카드 아래에 붙는 것 (장착하기 띠 등) */
   footer?:   ReactNode;
   className?: string;
+  /** 등장 애니메이션처럼 부르는 쪽에서만 아는 것 */
+  style?: React.CSSProperties;
 }
 
 function iconOf(itemId: string): IconName {
@@ -62,7 +64,7 @@ function iconOf(itemId: string): IconName {
 
 export function ArtifactCard({
   artifact, size = "compact", selected = false, dim = false, glow = false,
-  note, onClick, action, footer, className = "",
+  note, onClick, action, footer, className = "", style,
 }: ArtifactCardProps) {
   const color = QUALITY_COLOR[artifact.quality];
   const lv    = artifact.level ?? 1;
@@ -92,6 +94,7 @@ export function ArtifactCard({
           : "none",
         opacity: dim ? 0.4 : 1,
         cursor: onClick ? "pointer" : "default",
+        ...style,
       }}
     >
       <div className="flex items-center gap-3 p-3">
