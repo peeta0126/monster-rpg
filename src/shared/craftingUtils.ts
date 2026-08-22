@@ -6,6 +6,7 @@ import type {
   ArtifactInstance,
   ItemQuality,
 } from "./crafting";
+import { PALETTE, rgba, type PaletteName } from "./palette";
 
 export type RpsResult = "win" | "draw" | "lose";
 
@@ -37,11 +38,25 @@ export const QUALITY_LABEL: Record<ItemQuality, string> = {
 
 // 등급 3색은 마스터 팔레트에서 서로 가장 멀리 떨어진 세 갈래를 고른다
 // (중립 sand / 마법 mist / 화염 ember) — 색약 상태에서도 명도와 색상이 모두 다르다.
-export const QUALITY_COLOR: Record<ItemQuality, string> = {
-  normal: "var(--color-sand-300)",   // #CDB27E
-  rare:   "var(--color-mist-300)",   // #AEE2D5
-  elite:  "var(--color-ember-500)",  // #E99441
+export const QUALITY_TOKEN: Record<ItemQuality, PaletteName> = {
+  normal: "sand300",
+  rare:   "mist300",
+  elite:  "ember500",
 };
+
+// 값은 `var(--color-*)` 였다. 화면 네 곳이 `${QUALITY_COLOR[q]}44` 로 흐린 테두리를
+// 만들고 있었는데 `var(...)44` 는 CSS 가 통째로 버리는 값이라, 테두리가 아예 안 그려졌다.
+// 팔레트 값을 그대로 내주면 8자리 hex 가 되어 의도대로 나온다.
+export const QUALITY_COLOR: Record<ItemQuality, string> = {
+  normal: PALETTE[QUALITY_TOKEN.normal],
+  rare:   PALETTE[QUALITY_TOKEN.rare],
+  elite:  PALETTE[QUALITY_TOKEN.elite],
+};
+
+/** 등급색을 알파와 함께. 판·테두리 채움에 쓴다. */
+export function qualityTint(quality: ItemQuality, alpha: number): string {
+  return rgba(QUALITY_TOKEN[quality], alpha);
+}
 
 export const QUALITY_GLOW: Record<ItemQuality, string> = {
   normal: "rgba(205,178,126,0.3)",
