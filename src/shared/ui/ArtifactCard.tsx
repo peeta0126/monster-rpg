@@ -74,14 +74,13 @@ export function ArtifactCard({
   const maxed = lv >= maxLv;
   const stats = size === "full" ? getArtifactDisplayStats(artifact) : [];
 
-  // 버튼 안에 버튼을 넣을 수 없다. 조작이 붙는 자리는 카드 자체를 div 로 둔다.
-  const Tag = action ? "div" : "button";
+  // 버튼 안에 버튼을 넣을 수 없다. 조작이 붙는 자리와 누를 데가 없는 자리는 div 로 둔다.
+  // (누를 데가 없는데 button 으로 두면 disabled 버튼이 되어 브라우저가 글자를 흐리게 그린다.)
+  const Tag = onClick && !action ? "button" : "div";
 
   return (
     <Tag
-      {...(Tag === "button"
-        ? { type: "button" as const, disabled: !onClick }
-        : {})}
+      {...(Tag === "button" ? { type: "button" as const } : {})}
       onClick={onClick}
       className={`w-full overflow-hidden rounded-xl text-left transition ${className}`}
       style={{
