@@ -242,7 +242,10 @@ function ArtifactsSection({
         <p className="text-pixel-sm font-black text-sand-200">보유 아티팩트 <span className="text-ember-500 font-mono">{craftedArtifacts.length}개</span></p>
       </div>
 
-      <SlotGrid minItemWidth={280} minSlots={3} emptySlot={() => <EmptySlot className="min-h-24" />}>
+      {/* 칸을 280 → 340 으로 넓혔다. 다 키운 장비는 능력치 줄이 일곱까지 늘어나는데, 좁은
+          칸에서는 한 단으로 쌓여 카드 높이가 두 배 넘게 벌어진다(줄이 둘뿐인 카드 옆에서
+          그만큼이 빈다). 넓히면 능력치가 두 단으로 접혀 높이 차가 줄어든다. */}
+      <SlotGrid minItemWidth={340} minSlots={3} emptySlot={() => <EmptySlot className="min-h-24" />}>
         {craftedArtifacts.map((item, i) => (
           <ArtifactCard
             key={item.instanceId}
