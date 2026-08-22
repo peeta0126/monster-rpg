@@ -168,17 +168,20 @@ function LevelUpPanel({
         <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>
           능력치 <span style={{ color: C.textFaint, fontWeight: 400 }}>(Lv.{lv} +{enh} 기준)</span>
         </p>
+        {/* 다른 화면은 전부 "+52" 로 적는다. 여기만 "52" 였는데, 장비가 주는 값이 아니라
+            장비의 능력치 그 자체인 것처럼 읽혔다. 단위(%)도 같이 붙인다. */}
         {currentStats.map((s, i) => {
           const diff = nextStats[i].value - s.value;
+          const unit = s.stat === "critRate" ? "%" : "";
           return (
             <div key={s.stat} className="flex items-center justify-between text-pixel-sm">
               <span style={{ color: C.textMuted }}>{ARTIFACT_STAT_LABEL[s.stat]}</span>
               <div className="flex items-center gap-1.5 font-mono font-bold">
-                <span style={{ color: C.textPrimary }}>{s.value}</span>
+                <span style={{ color: C.textPrimary }}>+{s.value}{unit}</span>
                 {!isMax && diff > 0 && (
                   <>
                     <span style={{ color: C.textFaint }}>→</span>
-                    <span style={{ color: C.green }}>{nextStats[i].value}</span>
+                    <span style={{ color: C.green }}>+{nextStats[i].value}{unit}</span>
                     <span className="text-pixel-sm font-normal" style={{ color: C.green }}>(+{diff})</span>
                   </>
                 )}

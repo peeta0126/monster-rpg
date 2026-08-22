@@ -141,7 +141,10 @@ test("capture: equip-anvil", async ({ page }) => {
     await page.getByRole("button", { name: tab, exact: true }).click();
     // 왼쪽 목록에서 하나 골라야 오른쪽 패널이 뜬다. 합성만 정예를 고르면 안 된다 —
     // 정예는 더 올라갈 등급이 없어서 결과 미리보기가 아예 안 나온다.
-    await page.getByText(tab === "합성" ? "정령의 부적" : "힘의 목걸이").first().click();
+    // 레벨업은 아직 키울 게 남은 쪽(둘째)을 고른다 — 만렙을 고르면 다음 레벨 미리보기가
+    // 안 나와서, 이 탭에서 제일 중요한 화면을 못 본다.
+    const pick = page.getByText(tab === "합성" ? "정령의 부적" : "힘의 목걸이");
+    await (tab === "레벨업" ? pick.nth(1) : pick.first()).click();
     await settle(page);
     await shot(page, `equip-anvil-${ANVIL_TABS.indexOf(tab)}-${tab}`);
   }
