@@ -67,10 +67,15 @@ const statValue = async (page: Page, label: string) =>
 const statBonus = async (page: Page, label: string) =>
   Number((await page.getByTestId(`stat-${label}-bonus`).first().innerText()).replace("+", ""));
 
-/** 장비 모달을 열고 가방의 index 번째 아티팩트를 장착한다 */
+/**
+ * 장비 모달을 열고 가방의 index 번째 아티팩트를 장착한다.
+ *
+ * 장착 버튼은 카드마다 있던 것이 상태창의 '관리' 한 벌로 모였다 — 그래서
+ * openStatus() 로 대상을 먼저 세운 뒤에만 눌린다.
+ */
 async function equipNth(page: Page, index: number) {
-  await page.getByRole("button", { name: "장착", exact: true }).first().click();
-  await expect(page.getByText(/장착 중인 장비/)).toBeVisible();
+  await page.getByTestId("action-equip").click();
+  await expect(page.getByTestId("equip-modal")).toBeVisible();
   await page.getByText("장착하기").nth(index).click();
   await page.keyboard.press("Escape");
 }
