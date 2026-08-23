@@ -711,11 +711,15 @@ function MonsterCard({
         // 카드는 **합계 하나만** 적는다. 예전엔 한 칸에 합계와 "+n" 을 같이 찍어 46px
         // 칸에서 옆 칸으로 흘렀다("공 169 +119 +속 124 +6"). 장비가 올려 준 값이라는
         // 사실은 색(moss)으로 알리고, 얼마인지는 상태창의 종합 능력치가 적는다.
+        //
+        // 이름은 상태창과 같은 "공격·방어·속도" 다. 한 글자로 줄여 놓았던 건 저 넘침
+        // 때문이었는데, 줄이 카드 전체 폭(240px)을 쓰게 되면서 한 칸이 77px 이라
+        // "공격 169"(46px)가 남는다. 같은 값을 화면마다 다르게 부를 이유가 없다.
         <div className="grid w-full grid-cols-3 gap-1">
           {([
-            ["공", monster.attack, equipBonus.attack],
-            ["방", monster.defense, equipBonus.defense],
-            ["속", monster.speed, equipBonus.speed],
+            ["공격", monster.attack, equipBonus.attack],
+            ["방어", monster.defense, equipBonus.defense],
+            ["속도", monster.speed, equipBonus.speed],
           ] as [string, number, number][]).map(([l, base, bonus]) => (
             <div key={l} className="flex items-center justify-center gap-1 rounded py-0.5"
               style={{ background: rgba("shadow900", 0.3) }}>
