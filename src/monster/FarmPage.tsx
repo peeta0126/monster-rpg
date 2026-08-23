@@ -102,11 +102,11 @@ function MaterialsSection({
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
-            style={{ color: "rgba(132, 75, 63, 1)" }}>MATERIALS</p>
+            style={{ color: PALETTE.sand300 }}>MATERIALS</p>
           <p className="text-pixel-sm font-black text-sand-200">보유 재료</p>
         </div>
         <p className="text-title-sm font-black font-mono"
-          style={{ color: total > 0 ? PALETTE.ember500 : "rgba(205, 178, 126, .08)" }}>
+          style={{ color: total > 0 ? PALETTE.ember500 : PALETTE.earth400 }}>
           {total}
         </p>
       </div>
@@ -166,7 +166,7 @@ function PotionsSection({
     <div>
       <div className="mb-3">
         <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
-          style={{ color: "rgba(132, 75, 63, 1)" }}>POTIONS</p>
+          style={{ color: PALETTE.sand300 }}>POTIONS</p>
         <p className="text-pixel-sm font-black text-sand-200">
           보유 물약{" "}
           <span className="font-mono text-ember-500">
@@ -245,7 +245,7 @@ function ArtifactsSection({
     <div>
       <div className="mb-3">
         <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
-          style={{ color: "rgba(132, 75, 63, 1)" }}>ARTIFACTS</p>
+          style={{ color: PALETTE.sand300 }}>ARTIFACTS</p>
         <p className="text-pixel-sm font-black text-sand-200">보유 아티팩트 <span className="text-ember-500 font-mono">{craftedArtifacts.length}개</span></p>
       </div>
 
@@ -303,7 +303,7 @@ function ArtifactsSection({
                     {item.statBonuses.map((b) => (
                       <p key={b.stat} className="text-pixel-sm font-bold flex justify-between"
                         style={{ color: PALETTE.sand300 }}>
-                        <span style={{ color: "rgba(132, 75, 63, 1)" }}>
+                        <span style={{ color: PALETTE.sand300 }}>
                           {ARTIFACT_STAT_LABEL[b.stat as ArtifactStatType] ?? b.stat}
                         </span>
                         <span style={{ color: PALETTE.cream100 }}>
@@ -409,7 +409,7 @@ export default function FarmPage() {
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className="relative flex items-center gap-2 px-5 py-3 text-pixel-sm font-bold transition-all"
                 style={{
-                  color: isActive ? PALETTE.ember500 : "rgba(205, 178, 126, .12)",
+                  color: isActive ? PALETTE.ember500 : PALETTE.sand300,
                   borderBottom: isActive ? `2px solid ${PALETTE.ember500}` : "2px solid transparent",
                   background: isActive ? "rgba(233, 148, 65, .068)" : "transparent",
                 }}>
@@ -417,8 +417,8 @@ export default function FarmPage() {
                 {b > 0 && (
                   <span className="rounded-full px-1.5 text-pixel-sm font-black"
                     style={{
-                      background: isActive ? "rgba(233, 148, 65, .283)" : "rgba(132, 75, 63, .105)",
-                      color: isActive ? PALETTE.ember500 : "rgba(205, 178, 126, .12)",
+                      background: isActive ? "rgba(233, 148, 65, .283)" : "rgba(132, 75, 63, .45)",
+                      color: isActive ? PALETTE.ember500 : PALETTE.sand300,
                       minWidth: 18, textAlign: "center",
                     }}>
                     {b}

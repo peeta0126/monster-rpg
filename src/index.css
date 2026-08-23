@@ -71,6 +71,13 @@ body {
   /* 픽셀 폰트는 힌팅·서브픽셀 보정이 들어가면 획이 흐려진다 */
   -webkit-font-smoothing: none;
   font-smooth: never;
+
+  /* 한국어는 기본값(break-word)이면 글자 단위로 끊긴다 — "보관함이 비어 있 습니다",
+     "클릭해 선/택" 처럼 낱말 한가운데서 줄이 갈렸다. 좁은 칸이 생길 때마다 폭을
+     넓혀 피해 왔는데, 원인은 칸이 아니라 줄바꿈 규칙이다.
+     keep-all 이 낱말을 지키고, 낱말 하나가 칸보다 길 때만 break-word 가 받는다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* 아트 계층 분리 — ART_DIRECTION 3-4.
