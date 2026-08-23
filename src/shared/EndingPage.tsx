@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "./playerStore";
+import { useBgm, BGM } from "./audio";
 
 export default function EndingPage() {
+  useBgm(BGM.title);
+
   const navigate = useNavigate();
   const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
 

@@ -7,6 +7,7 @@ import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
 import { PALETTE, withAlpha } from "../shared/palette";
 import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
+import { useBgm, BGM } from "../shared/audio";
 import {
   getPlayerFrame, atlasFrameCell, PLAYER_ATLAS_PNG,
   PLAYER_ATLAS_COLS, PLAYER_ATLAS_ROWS, PLAYER_WALK_FRAMES, PLAYER_FOOT_ANCHOR,
@@ -59,6 +60,8 @@ function directionToDir8(dir: Direction): Dir8 {
 // ─── WorkshopPage ─────────────────────────────────────────────────────────────
 
 export default function WorkshopPage() {
+  useBgm(BGM.workshop);
+
   const navigate = useNavigate();
   const craftedItems = usePlayerStore((s) => s.craftedItems);
 

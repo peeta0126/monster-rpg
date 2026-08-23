@@ -10,6 +10,7 @@ import type { OwnedMonster } from "../shared/playerStore";
 import { getNextObjective } from "../shared/nextObjective";
 import { ObjectiveBanner } from "../shared/ui/ObjectiveBanner";
 import { AudioSettings } from "../shared/ui/AudioSettings";
+import { useBgm, BGM } from "../shared/audio";
 import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
 import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
@@ -940,6 +941,8 @@ function CampMenu({
 // ── BaseCampPage ───────────────────────────────────────────────────────────────────
 
 export default function BaseCampPage() {
+  useBgm(BGM.basecamp);
+
   const gameRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
