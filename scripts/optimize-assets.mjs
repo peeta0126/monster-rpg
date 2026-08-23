@@ -90,8 +90,12 @@ const RECIPES = [
  * assets/icons 도 같은 이유로 들어 있다. 아이템 아이콘은 scripts/build-icons.mjs 가
  * art-src/icons/ 에서 64x64 무손실로 굽는다. 여기서 quality 82 로 다시 구우면 픽셀
  * 테두리가 번진다 — 24px 로 보는 그림에서 그건 바로 보인다.
+ *
+ * assets/audio 는 이 스크립트가 지금은 손댈 수단조차 없지만(sharp 는 그림만 다룬다)
+ * 같은 자리에 적어 둔다. BGM 여섯 곡은 이어 붙여도 티가 안 나게 다듬어 들어온
+ * 최종본이라, 언젠가 오디오 레시피가 생기는 날 조용히 다시 인코딩되면 안 된다.
  */
-const PRESERVED_DIRS = ["assets/forest", "assets/icons"];
+const PRESERVED_DIRS = ["assets/forest", "assets/icons", "assets/audio"];
 
 /** 몬스터 일러스트 — art-src/monsters/*.png 를 512px 상한으로 줄여 내보낸다 */
 const MONSTER_SRC_DIR = "monsters";
