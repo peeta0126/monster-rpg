@@ -19,6 +19,7 @@ import { josa, withJosa } from "../shared/josa";
 import { StatBar, PixelButton } from "../shared/ui";
 import { PixelIcon } from "../shared/ui/PixelIcon";
 import { isIconName, type IconName } from "../shared/ui/icons";
+import { useBgm, BGM } from "../shared/audio";
 
 /** 파티 카드/상태창에 반영할 장비 능력치 (HP는 배틀 실수치와 어긋나지 않도록 제외) */
 export interface EquipStatBonus { attack: number; defense: number; speed: number }
@@ -780,6 +781,8 @@ function FilterChip({ active, accent, onClick, children }: {
 type SortKey = "level" | "hp" | "type";
 
 export default function MonstersPage() {
+  // 내 몬스터도 마을 안이다 — 마을 곡을 그대로 잇는다
+  useBgm(BGM.basecamp);
   const navigate = useNavigate();
   const {
     party: rawParty, storage: rawStorage, bestFloor, dexCaught, imprint,

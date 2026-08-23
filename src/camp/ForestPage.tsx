@@ -10,6 +10,7 @@ import { FOREST_STYLES } from "./forest/styles";
 import { alertBand } from "./forest/alert";
 import { ForestRunView } from "./forest/ForestRunView";
 import { SettleScreen } from "./forest/SettleScreen";
+import { useBgm, BGM } from "../shared/audio";
 import { startRun, type ForestRun, type RunBagEntry, type SettleReason } from "./forest/runStore";
 import { canCatchIn, partyCapLevel } from "./forest/catchLevel";
 import {
@@ -47,6 +48,8 @@ function areaOf(loaded: LoadedForest): ForestArea | null {
 }
 
 export default function ForestPage() {
+  useBgm(BGM.forest);
+
   const navigate = useNavigate();
   const bestFloor = usePlayerStore((s) => s.bestFloor);
   const addMaterial = usePlayerStore((s) => s.addMaterial);

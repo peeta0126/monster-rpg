@@ -45,9 +45,14 @@ async function enterFloor(page: Page, floor: number) {
 /** 로그 기록 패널을 열어 지금까지의 줄을 전부 읽는다 */
 async function logLines(page: Page): Promise<string> {
   const toggle = page.locator("button").filter({ hasText: "기록" }).first();
+  const history = page.getByTestId("battle-log-history");
+  // 눌렀다고 바로 열려 있지는 않다. 열린 것을 확인하고 읽는다 — 예전에는 곧바로
+  // innerText 를 읽어서, 화면이 잠깐 버벅이면 로그 대신 적 정보를 읽고 실패했다.
   await toggle.click();
+  await expect(history).toBeVisible();
   const text = await page.locator("[data-testid=battle-panel]").innerText();
   await toggle.click();
+  await expect(history).toBeHidden();
   return text;
 }
 

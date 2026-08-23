@@ -11,6 +11,7 @@ import type { ArtifactStatType, ArtifactInstance, CraftedPotionStack } from "../
 
 import { PALETTE } from "../shared/palette";
 import { PixelIcon } from "../shared/ui/PixelIcon";
+import { useBgm, BGM } from "../shared/audio";
 import { isIconName, type IconName } from "../shared/ui/icons";
 import { SlotGrid, EmptySlot } from "../shared/ui/SlotGrid";
 import { GameBackground } from "../shared/ui/GameBackground";
@@ -329,6 +330,9 @@ function ArtifactsSection({
 
 // ─── FarmPage ─────────────────────────────────────────────────────────────────────
 export default function FarmPage() {
+  // 가방은 마을 안이다 — 마을 곡을 그대로 잇는다(같은 키라 되감기지 않는다)
+  useBgm(BGM.basecamp);
+
   const navigate = useNavigate();
   const location = useLocation();
   const from     = (location.state as { from?: string } | null)?.from;

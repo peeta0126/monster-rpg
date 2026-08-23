@@ -6,10 +6,13 @@ import {
 } from "../shared/assetPaths";
 import { generateParticles } from "./particles";
 import LoginForm from "./LoginForm";
+import { useBgm, BGM } from "../shared/audio";
 
 const MAX_PARALLAX_PX = 14;
 
 export default function LoginPage() {
+  useBgm(BGM.title);
+
   const bgImgRef = useRef<HTMLImageElement>(null);
   const particles = useMemo(() => generateParticles(), []);
 

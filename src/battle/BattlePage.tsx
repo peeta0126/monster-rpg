@@ -17,6 +17,7 @@ import { withImprint } from "../monster/imprint";
 import { isAnomalyMove } from "../monster/learnset";
 import { applyLevelGrowth } from "../monster/growth";
 import { sumEquippedStatBonuses, sumEquippedBonusStats } from "../shared/craftingUtils";
+import { useBgm, BGM } from "../shared/audio";
 
 /**
  * OwnedMonster → 배틀 진입용 OwnedMonster.
@@ -110,6 +111,10 @@ export default function BattlePage() {
   const routeState = location.state as BattleRouteState | undefined;
 
   const floor       = routeState?.floor ?? 1;
+
+  // 보스 층 판정은 층 표(floorTable)의 것 하나뿐이다 — 여기서 10 을 다시 적지 않는다.
+  // 층이 바뀌어 이 화면이 통째로 다시 마운트돼도 같은 키면 곡이 안 끊긴다.
+  useBgm(isBossFloor(floor) ? BGM.boss : BGM.battle);
 
   const gameRef = useRef<HTMLDivElement | null>(null);
   const { autoAdvance, logSpeed, toggleAuto, cycleSpeed } = useBattleSettings();
@@ -1192,7 +1197,8 @@ export default function BattlePage() {
         </div>
 
         {showLog && (
-          <div className="border-b border-earth-500/40 bg-shadow-900/80 px-3 py-2">
+          <div data-testid="battle-log-history"
+            className="border-b border-earth-500/40 bg-shadow-900/80 px-3 py-2">
             <div className="flex max-h-24 flex-col-reverse gap-0.5 overflow-y-auto">
               {logHistory.length === 0
                 ? <p className="text-pixel-sm text-earth-400">아직 기록이 없습니다.</p>
