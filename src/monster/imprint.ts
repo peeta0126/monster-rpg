@@ -2,13 +2,13 @@ import type { Monster } from "../shared/game";
 import { monsters } from "./monsters";
 
 /**
- * 각인 — 같은 몬스터를 모아 그 **계열 전체**를 강하게 만드는 축.
+ * 각인. 같은 몬스터를 모아 그 계열 전체를 강하게 만드는 축이다.
  *
  * 둥지에서 후보 2~3마리가 전부 같은 풀·같은 등급에서 나오던 시절엔 레벨만 다르고,
  * 레벨은 높은 게 무조건 좋으니 고를 게 없었다. "중복이 자원이 된다"는 규칙이 붙으면
- * 그 자리에 저울이 하나 선다 — 각인 재료냐, 새 식구냐.
+ * 그 자리에 저울이 하나 선다. 각인 재료냐, 새 식구냐.
  *
- * 단위가 **종이 아니라 계열**인 이유: 종 단위로 세면 진화시키는 순간 각인이 0으로
+ * 단위가 종이 아니라 계열인 이유는, 종 단위로 세면 진화시키는 순간 각인이 0으로
  * 돌아간다. 그러면 "진화시키면 손해"라는, 수집 게임에서 제일 나쁜 상황이 나온다.
  */
 
@@ -22,7 +22,7 @@ export const IMPRINT_ESSENCE_ID = "monster_essence";
 
 export interface ImprintTierDef {
   tier: number;
-  /** 이 등급이 되기까지 **누적**으로 먹인 중복 수 */
+  /** 이 등급이 되기까지 누적으로 먹인 중복 수 */
   fed: number;
   /** 이 등급으로 올라서는 그 한 마리를 먹일 때 함께 드는 몬스터 정수 */
   essence: number;
@@ -53,7 +53,7 @@ export function chainMembers(key: string): Monster[] {
   return byChain.sort((a, b) => (a.evolutionStage ?? 1) - (b.evolutionStage ?? 1));
 }
 
-/** 화면에 적는 계열 이름 — 계열의 기초 단계 이름을 쓴다 */
+/** 화면에 적는 계열 이름. 계열의 기초 단계 이름을 쓴다 */
 export function chainLabel(key: string): string {
   const first = chainMembers(key)[0];
   return first ? `${first.name} 계열` : key;
@@ -62,7 +62,7 @@ export function chainLabel(key: string): string {
 /**
  * 먹인 수 → 등급.
  *
- * **등급은 저장하지 않는다.** 저장하는 건 먹인 수뿐이다 — 그건 일어난 사실이고
+ * 등급은 저장하지 않는다. 저장하는 건 먹인 수뿐인데, 그건 일어난 사실이고
  * 등급은 계산이라, 위 비용표를 고칠 때마다 세이브를 손볼 필요가 없다.
  */
 export function imprintTier(fed: number): number {
@@ -82,7 +82,7 @@ export function nextImprintTier(fed: number): ImprintTierDef | null {
  * 지금 한 마리를 더 먹이면 함께 드는 정수.
  *
  * 등급이 오르는 그 한 마리에만 붙는다(누적 5→6 은 3개, 6→7·7→8 은 0개).
- * 정수가 없으면 먹이기 자체를 막는다 — 여기서 그냥 먹여 버리면 "먹인 수는 6인데
+ * 정수가 없으면 먹이기 자체를 막는다. 여기서 그냥 먹여 버리면 "먹인 수는 6인데
  * 등급은 3"인 상태가 생겨 등급 = f(먹인 수) 라는 규칙이 깨진다.
  */
 export function essenceCostFor(fed: number): number {
@@ -101,7 +101,7 @@ export function tierOf(m: Pick<Monster, "id" | "evolutionChainId">, imprint: Rec
 /**
  * 각인 전의 능력치.
  *
- * 열거 불가능(non-enumerable)하게 붙인다 — 전개 연산자는 열거 가능한 것만 복사하므로
+ * 열거 불가능(non-enumerable)하게 붙인다. 전개 연산자는 열거 가능한 것만 복사해서
  * `{...m}` 한 번이면 자국이 사라진다. 즉 자국은 withImprint 가 방금 만든 그 객체에만
  * 남고, 저장·성장·진화를 거친 사본에는 절대 따라붙지 않는다. Symbol 이라 JSON 에도
  * 실리지 않는다.
@@ -123,11 +123,11 @@ function baseOf<T extends Monster>(m: T): BaseStats {
 }
 
 /**
- * 각인이 반영된 몬스터를 **새로** 만들어 돌려준다.
+ * 각인이 반영된 몬스터를 새로 만들어 돌려준다.
  *
  * ⚠ 저장된 능력치에는 절대 손대지 않는다. OwnedMonster 는 능력치를 절대값으로 들고
  * 있어서, 거기에 +5% 를 누적하면 저장·로드·진화를 거칠 때마다 배수가 겹친다. 각인은
- * **읽는 쪽에서만** 얹는 파생값이다 — 장비 보너스와 같은 취급이다.
+ * 읽는 쪽에서만 얹는 파생값이고, 장비 보너스랑 같은 취급이다.
  *
  * 두 번 걸어도 배수가 겹치지 않는다(위 자국을 보고 원본에서 다시 계산한다).
  */
@@ -185,7 +185,7 @@ export function imprintStatus(key: string, imprint: Record<string, number>): Imp
   };
 }
 
-/** ★★☆☆☆ — 등급을 글자 하나로 */
+/** ★★☆☆☆. 등급을 글자 하나로 */
 export function imprintStars(tier: number): string {
   return "★".repeat(tier) + "☆".repeat(MAX_IMPRINT_TIER - tier);
 }

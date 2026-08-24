@@ -48,7 +48,7 @@ export function useSaveSync() {
         }
         console.warn("[saveSync] 서버와 동기화하지 못했습니다. 오프라인(로컬 저장)으로 계속 진행합니다.", err);
       } finally {
-        // 실패했더라도 업로드를 영원히 막아두지는 않는다 — 서버가 돌아오면 다음 변경부터 다시 동기화된다.
+        // 실패했어도 업로드를 영영 막아 두진 않는다. 서버가 돌아오면 다음 변경부터 다시 동기화된다.
         pullSettledRef.current = true;
       }
     })();

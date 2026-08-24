@@ -79,8 +79,8 @@ const MON_STYLES = `
 // ─── 공용 조판 ──────────────────────────────────────────────────────────────────
 /**
  * 패널 안 구역 이름. 여덟 곳이 같은 조판을 손으로 반복하고 있었는데, 색이
- * earth-500(#844B3F) 이라 shadow-900 위에서 2.7:1 밖에 안 나왔다 — 팔레트 표에서
- * earth-500 은 **테두리 색**이지 글자 색이 아니다(palette.ts 머리말). 한 곳으로
+ * earth-500(#844B3F) 이라 shadow-900 위에서 2.7:1 밖에 안 나왔다. 팔레트 표에서
+ * earth-500 은 테두리 색이지 글자 색이 아니다(palette.ts 머리말). 한 곳으로
  * 모으고 sand-300(7:1) 으로 올린다.
  */
 function SectionLabel({ children }: { children: ReactNode }) {
@@ -101,7 +101,7 @@ function artifactIcon(itemId: string): IconName {
  * 카드 위의 장비 표시.
  *
  * 슬롯 이름 칩(목걸이·팔찌·부적) 세 개는 116px 카드에서 줄을 갈아 카드마다 높이가
- * 달라졌고, 그만큼 아래 것들이 어긋났다. 카드에서는 **아이콘 한 줄**로만 눕히고
+ * 달라졌고, 그만큼 아래 것들이 어긋났다. 카드에서는 아이콘 한 줄로만 눕히고
  * 이름·등급은 상태창의 '장비' 칸이 맡는다.
  */
 function EquipStrip({ items, align = "center" }: {
@@ -121,7 +121,7 @@ function EquipStrip({ items, align = "center" }: {
  * 스크롤이 이어진다는 표시.
  *
  * 이 게임은 스크롤바를 전역에서 숨긴다(index.css). 그래서 잘린 자리가 "여기서 끝"으로
- * 읽힌다 — 상태창은 관리 버튼부터 기술까지 한 칸에 담겨 늘 잘린 채로 서 있다.
+ * 읽힌다. 상태창은 관리 버튼부터 기술까지 한 칸에 담겨 늘 잘린 채로 서 있다.
  * 아래쪽을 패널 색으로 흐리면 "더 있다"가 스크롤바 없이도 읽힌다.
  */
 function ScrollFade() {
@@ -217,7 +217,7 @@ function EquipModal({
               {ALL_ARTIFACT_SLOTS.map((slot) => {
                 const item = equipped.find((a) => ARTIFACT_SLOT_MAP[a.itemId] === slot);
                 const isActive = selectedSlot === slot;
-                // 슬롯 이름은 카드 안에 넣는다. 예전엔 카드를 한 겹 더 감싸고 왼쪽에 이름을
+                // 슬롯 이름은 카드 안에 넣는다. 원래는 카드를 한 겹 더 감싸고 왼쪽에 이름을
                 // 세웠는데, 테두리가 두 겹으로 겹치고 이름만 허공에 떠 보였다.
                 return item ? (
                   <ArtifactCard
@@ -304,11 +304,11 @@ function EquipModal({
 
 // ─── MonsterStatusPanel ──────────────────────────────────────────────────────────
 /**
- * 고른 몬스터의 정보와 **그 몬스터로 할 수 있는 일 전부**를 담는 상시 패널(모달 아님).
+ * 고른 몬스터의 정보와 그 몬스터로 할 수 있는 일 전부를 담는 상시 패널(모달 아님).
  *
- * 예전에는 장착·각인·놓아주기가 카드마다 따라붙어 있었다. 보관함 카드는 124px 인데
- * 버튼 셋은 150px 이라 카드 밖으로 흘러 옆 카드의 버튼과 겹쳤고, 어느 카드의 버튼인지
- * 알 수 없었다. 조작은 **한 마리에게만** 하는 것이므로 고른 한 마리 옆에 한 벌만 둔다 —
+ * 원래는 장착·각인·놓아주기가 카드마다 따라붙어 있었다. 보관함 카드는 124px 인데
+ * 버튼 셋은 150px 이라 카드 밖으로 흘러 옆 카드 버튼과 겹쳤고, 어느 카드의 버튼인지
+ * 알 수 없었다. 조작은 한 마리한테만 하는 거니까 고른 한 마리 옆에 한 벌만 둔다.
  * 덤으로 늘 비어 있던 이 칸이 제 일을 하게 된다.
  */
 function MonsterStatusPanel({
@@ -320,7 +320,7 @@ function MonsterStatusPanel({
   equipBonus?: EquipStatBonus;
   equipped?: ArtifactInstance[];
   imprint?: Record<string, number>;
-  /** 파티 멤버는 먼저 보관함으로 내려야 먹일 수 있다 — 각인 버튼을 잠그고 이유를 적는다 */
+  /** 파티 멤버는 먼저 보관함으로 내려야 먹일 수 있다. 각인 버튼을 잠그고 이유를 적는다 */
   inParty?: boolean;
   canAddToParty?: boolean;
   canRemoveFromParty?: boolean;
@@ -390,7 +390,7 @@ function MonsterStatusPanel({
               <span className={`rounded-full border px-1.5 text-pixel-sm font-bold ${acc.label}`}>
                 {TYPE_KO[monster.type ?? "none"] ?? ""}
               </span>
-              {/* 파티인지 보관함인지가 곧 무엇을 할 수 있는지다 — 아래 버튼의 근거를 여기서 밝힌다 */}
+              {/* 파티인지 보관함인지가 곧 뭘 할 수 있는지다. 아래 버튼의 근거를 여기서 밝힌다 */}
               <span className="rounded-full border px-1.5 text-pixel-sm font-bold"
                 style={{
                   borderColor: rgba("earth500", 0.8),
@@ -403,7 +403,7 @@ function MonsterStatusPanel({
           </div>
         </div>
 
-        {/* 관리 — 이 화면에서 몬스터에게 할 수 있는 일 전부가 여기 한 벌 있다 */}
+        {/* 관리. 이 화면에서 몬스터에게 할 수 있는 일 전부가 여기 한 벌 있다 */}
         <div>
           <SectionLabel>관리</SectionLabel>
           <div className="grid grid-cols-2 gap-2">
@@ -459,7 +459,7 @@ function MonsterStatusPanel({
           </div>
         </div>
 
-        {/* 장비 — 카드에는 아이콘만 서므로 이름·등급은 여기서만 읽힌다 */}
+        {/* 장비. 카드에는 아이콘만 서니까 이름·등급은 여기서만 읽힌다 */}
         <div>
           <SectionLabel>장비</SectionLabel>
           <div className="flex flex-col gap-1">
@@ -491,7 +491,7 @@ function MonsterStatusPanel({
           </div>
         </div>
 
-        {/* 각인 — 계열 단위라 이 몬스터 한 마리가 아니라 계열 전원에 붙는다 */}
+        {/* 각인. 계열 단위라 이 몬스터 한 마리가 아니라 계열 전원에 붙는다 */}
         <div>
           <SectionLabel>각인</SectionLabel>
           <div className="rounded-xl px-3 py-2.5" data-testid="imprint-status" style={boxStyle}>
@@ -515,7 +515,7 @@ function MonsterStatusPanel({
           </div>
         </div>
 
-        {/* 성장 — 다음 레벨까지, 다음에 배울 기술, 진화 예정 */}
+        {/* 성장. 다음 레벨까지, 다음에 배울 기술, 진화 예정 */}
         <div>
           <SectionLabel>성장</SectionLabel>
           <div className="rounded-xl px-3 py-2.5" style={boxStyle}>
@@ -584,10 +584,10 @@ function MonsterStatusPanel({
 
 // ─── MonsterCard ────────────────────────────────────────────────────────────────
 /**
- * 몬스터 카드. **정보만 담는다** — 조작은 상태창의 '관리' 한 벌뿐이다.
+ * 몬스터 카드. 정보만 담는다. 조작은 상태창의 '관리' 한 벌뿐이다.
  *
  * `layout="row"` 은 파티 칸 전용이다. 세로로 쌓으면 한 장이 200px 을 넘어 세 마리가
- * 1280x900 화면에 안 들어갔다. 가로로 누이되 HP·공방속 줄은 **카드 전체 폭**을 쓴다 —
+ * 1280x900 화면에 안 들어갔다. 가로로 누이되 HP·공방속 줄은 카드 전체 폭을 쓴다.
  * 그림 옆 글자 칸(146px)에 세 칸을 넣으면 한 칸이 46px 이라 "공 169" 부터 이미 넘친다.
  */
 function MonsterCard({
@@ -601,7 +601,7 @@ function MonsterCard({
   targetable?: boolean;
   onClick: () => void; showStats?: boolean;
   equipped?: ArtifactInstance[]; equipBonus?: EquipStatBonus; testId?: string;
-  /** 보관함 격자만 h-full 을 준다 — 파티 칸에서 늘리면 카드 밑에 빈 자리가 길게 남는다 */
+  /** 보관함 격자만 h-full 을 준다. 파티 칸에서 늘리면 카드 밑에 빈 자리가 길게 남는다 */
   className?: string;
 }) {
   const isFainted = monster.currentHp === 0;
@@ -619,7 +619,7 @@ function MonsterCard({
         background: selected
           ? `linear-gradient(145deg, ${acc.bg}, ${rgba("shadow900", 0.9)})`
           : rgba("shadow900", 0.85),
-        // 교체가 걸린 쪽은 **점선 강조**로 알린다. 예전에는 반대쪽을 45% 로 어둡게 눌렀는데,
+        // 교체가 걸린 쪽은 점선 강조로 알린다. 원래는 반대쪽을 45% 로 어둡게 눌렀는데,
         // 정작 눌러야 하는 게 그 어두워진 쪽이라 안내가 거꾸로였고 글자도 안 읽혔다.
         border: selected ? `1px solid ${acc.border}`
           : targetable ? `1px dashed ${PALETTE.ember500}`
@@ -659,7 +659,7 @@ function MonsterCard({
               style={{ paddingTop: 0, paddingBottom: 0 }}>
               {TYPE_KO[monster.type ?? "none"] ?? ""}
             </span>
-            {/* 기절은 카드 전체를 덮는 오버레이였다 — 그 밑의 HP 숫자가 안 읽혔다.
+            {/* 기절은 카드 전체를 덮는 오버레이였다. 그 밑의 HP 숫자가 안 읽혔다.
                 칩으로 내려 세우고, 흑백이 된 그림과 빈 HP 바가 같은 말을 거든다. */}
             {isFainted && (
               <span className="rounded-full border px-1 text-pixel-sm font-bold"
@@ -685,7 +685,7 @@ function MonsterCard({
       </div>
 
       {showStats && (
-        // 카드는 **합계 하나만** 적는다. 예전엔 한 칸에 합계와 "+n" 을 같이 찍어 46px
+        // 카드는 합계 하나만 적는다. 원래 한 칸에 합계와 "+n" 을 같이 찍어서 46px
         // 칸에서 옆 칸으로 흘렀다("공 169 +119 +속 124 +6"). 장비가 올려 준 값이라는
         // 사실은 색(moss)으로 알리고, 얼마인지는 상태창의 종합 능력치가 적는다.
         //
@@ -734,7 +734,7 @@ function EmptyPartySlot({ index, selected, targetable, onClick }: {
 }
 
 /**
- * 속성 필터·정렬 칩. 안 고른 쪽 글자가 cream 알파 .12~.14 라 사실상 안 보였다 —
+ * 속성 필터·정렬 칩. 안 고른 쪽 글자가 cream 알파 .12~.14 라 사실상 안 보였다.
  * 속성 필터가 몇 개 서 있는지조차 못 읽는 상태였다. 안 고른 쪽도 sand-300 으로 세운다.
  */
 function FilterChip({ active, accent, onClick, children }: {
@@ -757,7 +757,7 @@ function FilterChip({ active, accent, onClick, children }: {
 type SortKey = "level" | "hp" | "type";
 
 export default function MonstersPage() {
-  // 내 몬스터도 마을 안이다 — 마을 곡을 그대로 잇는다
+  // 내 몬스터도 마을 안이다. 마을 곡을 그대로 잇는다
   useBgm(BGM.basecamp);
   const navigate = useNavigate();
   const {
@@ -766,7 +766,7 @@ export default function MonstersPage() {
     equippedArtifacts, craftedArtifacts, equipArtifact, unequipArtifact, releaseMonster,
   } = usePlayerStore();
 
-  // 각인은 저장된 능력치에 손대지 않는다 — 화면에 보이는 값만 파생시킨다.
+  // 각인은 저장된 능력치에 손 안 댄다. 화면에 보이는 값만 파생시킨다.
   // 순서는 그대로라 파티 인덱스·uid 로 도는 조작은 전부 원본과 맞물린다.
   const party   = useMemo(() => rawParty.map((m) => withImprint(m, imprint)), [rawParty, imprint]);
   const storage = useMemo(() => rawStorage.map((m) => withImprint(m, imprint)), [rawStorage, imprint]);
@@ -781,7 +781,7 @@ export default function MonstersPage() {
   const [sortBy,     setSortBy]     = useState<SortKey>("level");
   const [restoreAnim, setRestoreAnim] = useState(false);
 
-  // 각인 모달 — 계열 단위라 uid 가 아니라 계열키를 들고 연다
+  // 각인 모달. 계열 단위라 uid 가 아니라 계열키를 들고 연다
   const [imprintKey, setImprintKey] = useState<string | null>(null);
 
   // 장비 모달
@@ -790,7 +790,7 @@ export default function MonstersPage() {
     ? ([...party, ...storage].find((m) => m.uid === equipModalUid) ?? null)
     : null;
 
-  // 상태창에 세울 몬스터. 아무것도 안 골랐으면 **파티 첫 마리**가 선다 — 이 칸이 비면
+  // 상태창에 세울 몬스터. 아무것도 안 골랐으면 파티 첫 마리가 선다. 이 칸이 비면
   // 화면 가운데 320px 이 통째로 놀고, 이제 조작이 전부 여기 있어서 "무엇부터 눌러야
   // 하는지"까지 같이 사라진다.
   const [detailUid, setDetailUid] = useState<string | null>(null);
@@ -963,7 +963,7 @@ export default function MonstersPage() {
               ))}
             </div>
 
-            {/* 기절이 있으면 강조되고, 없어도 **읽히는** 버튼이어야 한다 —
+            {/* 기절이 있으면 강조되고, 없어도 읽히는 버튼이어야 한다.
                 예전엔 평상시 글자색이 stone-600 이라 1.6:1 이었다. */}
             <PixelButton
               variant={faintedCount > 0 ? "nature" : "ghost"}
@@ -1100,7 +1100,7 @@ export default function MonstersPage() {
                 gridTemplateColumns: "repeat(auto-fill, minmax(var(--container-tile), 1fr))",
               }}>
                 {filteredStorage.map((m, i) => (
-                  // 등장 애니메이션은 겉의 칸이 맡는다 — 카드 자신의 animation 자리는
+                  // 등장 애니메이션은 겉의 칸이 맡는다. 카드 자신의 animation 자리는
                   // 선택 링이 쓰고 있어서 둘을 같은 요소에 걸 수 없다.
                   <div key={m.uid} style={{ animation: `monIn .3s ease ${(i * 0.04).toFixed(2)}s both` }}>
                     <MonsterCard monster={m} size="sm" className="h-full"

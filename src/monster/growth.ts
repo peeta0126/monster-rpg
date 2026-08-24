@@ -3,7 +3,7 @@ import { monsters } from "./monsters";
 import { getLearnableAtLevel } from "./learnset";
 
 /**
- * 레벨업에 딸려오는 성장 처리 — 기술 습득과 진화.
+ * 레벨업에 딸려오는 성장 처리. 기술 습득과 진화를 태운다.
  *
  * `learnset.ts`의 레벨업 기술표와 `monsters.ts`의 `evolvesTo`/`evolvesAtLevel`은
  * 원래 도감 표시에만 쓰이고 실제 성장에는 연결돼 있지 않았다. 그 결과 성장축이 "레벨"
@@ -26,7 +26,7 @@ export interface GrowthResult<T extends Monster> {
   evolvedFrom: string | null;
 }
 
-/** 기술의 실전 가치 — 칸이 찼을 때 무엇을 밀어낼지 고르는 기준 */
+/** 기술의 실전 가치. 칸이 찼을 때 뭘 밀어낼지 고르는 기준이다 */
 function moveValue(m: Move): number {
   // 상태이상기(위력 0)는 위력만 보면 항상 밀려나므로 최소한의 가치를 인정해준다
   if (m.power === 0) return 35;
@@ -43,7 +43,7 @@ export type ForgetResolver = (
   incoming: Move,
 ) => number | null | Promise<number | null>;
 
-/** 기본 정책 — 가장 값이 낮은 기술을 밀어낸다. 새 기술이 더 나쁘면 배우지 않는다. */
+/** 기본 정책. 제일 값이 낮은 기술을 밀어낸다. 새 기술이 더 나쁘면 안 배운다 */
 export const autoForget: ForgetResolver = (current, incoming) => {
   let worstIdx = 0;
   for (let i = 1; i < current.length; i++) {
@@ -79,13 +79,13 @@ async function learnMoves(current: Move[], incoming: Move[], resolve: ForgetReso
  * 여러 레벨이 한 번에 오른 경우(경험치 대량 획득)도 각 레벨을 순서대로 훑는다.
  *
  * 진화 시 능력치는 진화 후 종족의 기본값 위에 레벨 증분을 다시 쌓아 계산한다
- * (`playerStore.normalizeOwnedMonster`와 같은 규칙 — 레벨당 HP+10/공격+3/방어+2/속도+2).
+ * (`playerStore.normalizeOwnedMonster` 와 같은 규칙이고, 레벨당 HP+10/공격+3/방어+2/속도+2).
  * 현재 HP는 진화로 늘어난 만큼 함께 늘려 손해가 없게 한다.
  */
 export async function applyLevelGrowth<T extends Monster & { currentHp: number }>(
   monster: T,
   prevLevel: number,
-  /** 기술 칸이 찼을 때 무엇을 잊을지 — 기본값은 자동 판단, 전투 화면은 플레이어에게 묻는다 */
+  /** 기술 칸이 찼을 때 뭘 잊을지. 기본값은 자동 판단이고, 전투 화면은 플레이어에게 묻는다 */
   resolveForget: ForgetResolver = autoForget,
 ): Promise<GrowthResult<T>> {
   let result: T = { ...monster };

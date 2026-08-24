@@ -124,7 +124,7 @@ function MaterialsSection({
                 <p className="text-pixel-sm font-bold text-sand-200 text-center">{mat.name}</p>
                 <p className="text-pixel-md font-black font-mono mt-1" style={{ color: PALETTE.moss500 }}>×{cnt}</p>
 
-                {/* 버리기 — 되돌릴 수 없으므로 한 개짜리도 두 번 눌러야 나간다.
+                {/* 버리기. 되돌릴 수 없으니 한 개짜리도 두 번 눌러야 나간다.
                     몬스터 놓아주기는 확인이 있는데 재료만 즉시 사라져 있었다. */}
                 <div className="flex gap-1 mt-0.5">
                   <DiscardBtn label="−1" small onConfirm={() => discardMaterial(mat.id, 1)} />
@@ -269,7 +269,7 @@ function ArtifactsSection({
 
 // ─── FarmPage ─────────────────────────────────────────────────────────────────────
 export default function FarmPage() {
-  // 가방은 마을 안이다 — 마을 곡을 그대로 잇는다(같은 키라 되감기지 않는다)
+  // 가방은 마을 안이다. 마을 곡을 그대로 잇는다(같은 키라 안 되감긴다)
   useBgm(BGM.basecamp);
 
   const navigate = useNavigate();

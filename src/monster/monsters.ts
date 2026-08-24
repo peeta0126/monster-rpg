@@ -30,7 +30,7 @@ export const monsters: Monster[] = [
     id: "burno",
     name: "버노",
     type: "fire",
-    // 유리대포 컨셉 유지(공격/방어 그대로) — 화력을 낮추지 않고 HP만 SPD에서 옮겨와
+    // 유리대포 컨셉 유지(공격/방어 그대로). 화력을 낮추지 않고 HP만 SPD에서 옮겨와
     // "한 방은 버티는" 여유를 준다. 총합은 186으로 불변.
     maxHp: 110,
     attack: 38,
@@ -146,7 +146,7 @@ export const monsters: Monster[] = [
     id: "mossyfinal",
     name: "모왕",
     type: "electric",
-    // 이미 최종 진화체로 충분히 강함 — 순수 화력형 정체성 유지, 능력치 추가 상향 없음.
+    // 이미 최종 진화체로 충분히 강함. 순수 화력형 정체성 유지, 능력치 추가 상향 없음.
     maxHp: 240,
     attack: 95,
     defense: 62,

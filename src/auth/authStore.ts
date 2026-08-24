@@ -9,7 +9,7 @@ interface AuthState {
   hasHydrated: boolean;
   setAuthed: (token: string, username: string) => void;
   continueAsGuest: () => void;
-  /** 개발자 코드 인증 성공 시 호출 — 서버 토큰 없이 게스트 세션처럼 게임에 입장시킨다 */
+  /** 개발자 코드 인증에 성공하면 부른다. 서버 토큰 없이 게스트 세션처럼 게임에 들여보낸다 */
   enterDevMode: () => void;
   logout: () => void;
   setHydrated: () => void;

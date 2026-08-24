@@ -11,7 +11,7 @@ import {
 /**
  * 각인 창.
  *
- * 계열 단위 화면이라 카드 안에 못 들어간다 — 등급·다음 비용·먹일 후보를 한자리에서
+ * 계열 단위 화면이라 카드 안에 못 들어간다. 등급·다음 비용·먹일 후보를 한자리에서
  * 봐야 "이 중복을 먹일까 남길까"가 결정된다. 장비 관리 모달과 같은 층위에 둔다.
  */
 
@@ -41,7 +41,7 @@ export function ImprintModal({ chainKey, onClose }: { chainKey: string; onClose:
   const ownedCount = [...party, ...storage].filter(inChain).length;
   const inParty    = party.filter(inChain);
   const candidates = storage.filter(inChain);
-  /** 마지막 한 마리는 먹일 수 없다 — 각인이 붙을 몸이 하나는 남아야 한다 */
+  /** 마지막 한 마리는 못 먹인다. 각인이 붙을 몸이 하나는 남아야 한다 */
   const canFeedAny = ownedCount > 1 && !status.maxed;
   const essenceShort = !status.maxed && status.needFed === 1 && essence < status.needEssence;
 

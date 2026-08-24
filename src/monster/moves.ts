@@ -2,7 +2,7 @@ import type { Move } from "../shared/game";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- *  기술 전체 테이블 — 타입별 스킬트리
+ *  기술 전체 테이블. 타입별 스킬트리
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * 각 원소 타입은 동일한 트리 골격을 가진다. 학습 테이블은 이 트리를 따라 오른다.
@@ -19,7 +19,7 @@ import type { Move } from "../shared/game";
  *   normal은 상성이 없는 대신 피니셔 위력이 최고
  */
 
-// ═══ NORMAL — 상성 없음. 약점도 이점도 없다. ═══════════════════════════════
+// ═══ NORMAL: 상성 없음. 약점도 이점도 없다. ════════════════════════════════
 export const tackle: Move = {
   id: "tackle", name: "몸통박치기", type: "normal", power: 40, accuracy: 100, category: "physical",
 };
@@ -46,7 +46,7 @@ export const hyperBeam: Move = {
   id: "hyper-beam", name: "초강력빔", type: "normal", power: 95, accuracy: 85, category: "special",
 };
 
-// ═══ FIRE — 풀·얼음에 강, 물에 약. 화상. ══════════════════════════════════
+// ═══ FIRE: 풀·얼음에 강, 물에 약. 화상. ═══════════════════════════════════
 export const ember: Move = {
   id: "ember", name: "불씨", type: "fire", power: 45, accuracy: 100, category: "special",
   statusEffect: "burn", statusChance: 10,
@@ -80,7 +80,7 @@ export const overheat: Move = {
   statusEffect: "burn", statusChance: 30,
 };
 
-// ═══ WATER — 불에 강, 풀·전기에 약. 안정형 딜러. ═══════════════════════════
+// ═══ WATER: 불에 강, 풀·전기에 약. 안정형 딜러. ════════════════════════════
 export const waterGun: Move = {
   id: "water-gun", name: "물총", type: "water", power: 45, accuracy: 100, category: "special",
 };
@@ -108,7 +108,7 @@ export const hydroPump: Move = {
   id: "hydro-pump", name: "하이드로펌프", type: "water", power: 95, accuracy: 80, category: "special",
 };
 
-// ═══ ELECTRIC — 물에 강, 풀에 막힘. 마비. ═════════════════════════════════
+// ═══ ELECTRIC: 물에 강, 풀에 막힘. 마비. ══════════════════════════════════
 export const spark: Move = {
   id: "spark", name: "전기불꽃", type: "electric", power: 45, accuracy: 100, category: "physical",
   statusEffect: "paralysis", statusChance: 10,
@@ -146,7 +146,7 @@ export const thunderStrike: Move = {
   statusEffect: "paralysis", statusChance: 30,
 };
 
-// ═══ GRASS — 물에 강, 불·얼음에 약. 독 보조. ══════════════════════════════
+// ═══ GRASS: 물에 강, 불·얼음에 약. 독 보조. ═══════════════════════════════
 export const vineWhip: Move = {
   id: "vine-whip", name: "넝쿨채찍", type: "grass", power: 45, accuracy: 100, category: "physical",
 };
@@ -174,7 +174,7 @@ export const solarBeam: Move = {
   id: "solar-beam", name: "광합성포", type: "grass", power: 90, accuracy: 90, category: "special",
 };
 
-// ═══ ICE — 풀에 강, 불에 약. 빙결. ════════════════════════════════════════
+// ═══ ICE: 풀에 강, 불에 약. 빙결. ═════════════════════════════════════════
 export const frostBreath: Move = {
   id: "frost-breath", name: "서리숨결", type: "ice", power: 45, accuracy: 100, category: "special",
   statusEffect: "freeze", statusChance: 10,
@@ -212,7 +212,7 @@ export const sheerCold: Move = {
   statusEffect: "freeze", statusChance: 30,
 };
 
-// ═══ POISON — 풀에 강. 지속 피해·포획 보조 전문. ══════════════════════════
+// ═══ POISON: 풀에 강. 지속 피해·포획 보조 전문. ═══════════════════════════
 export const poisonSting: Move = {
   id: "poison-sting", name: "독침", type: "poison", power: 40, accuracy: 100, category: "physical",
   statusEffect: "poison", statusChance: 15,

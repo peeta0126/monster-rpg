@@ -26,7 +26,7 @@
  * 진화 계통 전용 기술 (⭐이번 재설계의 핵심):
  *   아쿠비 전용(아쿠사는 못 배움) : frostBreath, acidSpray
  *   아쿠사 전용(진화 후에만)      : bodySlam, crystalLance, tidalCrash
- *   모시 전용(모치·모왕은 못 배움): stunNeedle — 확정 마비, 포획 보조가 필요하면
+ *   모시 전용(모치·모왕은 못 배움): stunNeedle. 확정 마비, 포획 보조가 필요하면
  *                                   진화 전에 반드시 챙겨야 하는 라인 최고의 선택지
  *   모치 전용(모왕은 못 배움)     : voltCrash
  *   모왕 전용(최종체만)           : hyperBeam, thunderStrike, gigaImpact
@@ -36,7 +36,7 @@
  *                  명중 100%로 사고 없이 턴을 소모할 수 있는 만능 기본기
  *   quickAttack  : 수치상 tackle과 동일하나(위력40·명중100·물리), "질풍"이라는
  *                  이름값대로 속도형 종에게 우선 배정해 정체성을 부여하는 기술
- *   surf         : hydroPump보다 약하지만 명중 100% — 고위력·저명중 피니셔 대신
+ *   surf         : hydroPump보다 약하지만 명중 100%. 고위력·저명중 피니셔 대신
  *                  안정적으로 승부를 볼 때 쓰는 신뢰도 축 딜러
  *   discharge    : thunderbolt보다 먼저 배우는 초반 실전기. 진화 전/저레벨 구간의
  *                  주력기로 쓰다가 나중에 thunderbolt로 자연스럽게 대체되는 역할
@@ -70,7 +70,7 @@ export interface LearnEntry {
 
 export const LEARNSET: Record<string, LearnEntry[]> = {
 
-  // ═══ 플레미 (불꽃 말) — 불 + 노말(육탄). 속도형 ═══════════════════════════
+  // ═══ 플레미 (불꽃 말): 불 + 노말(육탄). 속도형 ════════════════════════════
   flameling: [
     { level:  1, move: tackle },
     { level:  1, move: ember },
@@ -85,7 +85,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 46, move: overheat },
   ],
 
-  // ═══ 버노 (불꽃 황소) — 불 + 전기(정전기 뿔). 완력형 ═══════════════════════
+  // ═══ 버노 (불꽃 황소): 불 + 전기(정전기 뿔). 완력형 ════════════════════════
   burno: [
     { level:  1, move: tackle },
     { level:  1, move: ember },
@@ -100,11 +100,11 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: overheat },
   ],
 
-  // ═══ 아쿠비 (물 도롱뇽) — 물 + 얼음(냉수). 특수형 ════════════════════════
-  // 진화 라인 재설계: frostBreath·acidSpray는 "아쿠비 전용" — 아쿠사는 못 배운다.
+  // ═══ 아쿠비 (물 도롱뇽): 물 + 얼음(냉수). 특수형 ═════════════════════════
+  // 진화 라인 재설계: frostBreath·acidSpray는 "아쿠비 전용". 아쿠사는 못 배운다.
   // 어린 도롱뇽 특유의 냉수 분사·점액 독이라는 설정이라, 진화하면 잃는다.
   // 이 둘을 챙기려면 진화(Lv22 권장)를 미루고 Lv20까지는 아쿠비로 다녀야 함.
-  // hydroPump(특수 최상급)도 아쿠비만의 종착점으로 남김 — 진화체는 대신 물리
+  // hydroPump(특수 최상급)도 아쿠비만의 종착점으로 남김. 진화체는 대신 물리
   // 최상급 tidalCrash를 갖게 되므로, "안 진화하고 특수 피니셔 vs 진화해서 물리
   // 피니셔" 구도가 라인 전체의 선택지가 된다.
   aquabe: [
@@ -112,15 +112,15 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level:  1, move: waterGun },
     { level:  5, move: bubbleCannon },
     { level: 10, move: waterPulse },
-    { level: 15, move: frostBreath },      // ★아쿠비 전용 — 교차: 얼음(냉수)
-    { level: 20, move: acidSpray },        // ★아쿠비 전용 — 교차: 독(피부 점액)
+    { level: 15, move: frostBreath },      // ★아쿠비 전용. 교차: 얼음(냉수)
+    { level: 20, move: acidSpray },        // ★아쿠비 전용. 교차: 독(피부 점액)
     { level: 26, move: aquaWhirl },
     { level: 33, move: icePunch },         // 교차: 얼음
     { level: 40, move: hydroPump },        // 아쿠비만의 특수 최종기
   ],
 
-  // ═══ 아쿠사 (물 도마뱀) — 물 + 얼음/노말. 물리 겸용 진화체 ════════════════
-  // bodySlam·crystalLance·tidalCrash는 "아쿠사 전용" — 덩치가 커져야 다룰 수 있는
+  // ═══ 아쿠사 (물 도마뱀): 물 + 얼음/노말. 물리 겸용 진화체 ═════════════════
+  // bodySlam·crystalLance·tidalCrash는 "아쿠사 전용". 덩치가 커져야 다룰 수 있는
   // 물리 기술이라 아쿠비 단계에선 배울 수 없다. tidalCrash(Lv50)는 진화체만의
   // 물리 최종 피니셔로, 아쿠비 쪽 hydroPump(특수 피니셔)와 대비되는 종착점.
   aquavern: [
@@ -131,12 +131,12 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 16, move: aquaWhirl },
     { level: 21, move: icePunch },         // 교차: 얼음
     { level: 27, move: surf },
-    { level: 33, move: bodySlam },         // ★아쿠사 전용 — 교차: 노말
-    { level: 40, move: crystalLance },     // ★아쿠사 전용 — 교차: 얼음
-    { level: 47, move: tidalCrash },       // ★아쿠사 전용 — 진화체 물리 최종기
+    { level: 33, move: bodySlam },         // ★아쿠사 전용. 교차: 노말
+    { level: 40, move: crystalLance },     // ★아쿠사 전용. 교차: 얼음
+    { level: 47, move: tidalCrash },       // ★아쿠사 전용. 진화체 물리 최종기
   ],
 
-  // ═══ 버블릿 (물 벌레) — 물 + 독(독침). 상태이상 전문 ══════════════════════
+  // ═══ 버블릿 (물 벌레): 물 + 독(독침). 상태이상 전문 ═══════════════════════
   bubblet: [
     { level:  1, move: tackle },
     { level:  1, move: waterGun },
@@ -151,7 +151,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: hydroPump },
   ],
 
-  // ═══ 리피 (풀 곰) — 풀 + 얼음/독(서리잎·포자). 상태이상형 ═════════════════
+  // ═══ 리피 (풀 곰): 풀 + 얼음/독(서리잎·포자). 상태이상형 ══════════════════
   leafy: [
     { level:  1, move: tackle },
     { level:  1, move: vineWhip },
@@ -166,18 +166,18 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: hyperBeam },        // 교차: 노말
   ],
 
-  // ═══ 모시 (전기 늑대·기초) — 전기 + 노말(육탄). 진화 라인의 탱커 ═══════════
-  // stunNeedle(Lv17, 확정 마비)은 "모시 전용" — 모치/모왕은 배울 수 없다.
+  // ═══ 모시 (전기 늑대·기초): 전기 + 노말(육탄). 진화 라인의 탱커 ════════════
+  // stunNeedle(Lv17, 확정 마비)은 "모시 전용". 모치/모왕은 배울 수 없다.
   // 포획 보조용 확정 마비기가 필요하면 모시 단계에서 반드시 Lv17을 찍고
   // 진화시켜야 하는, 이 라인에서 가장 중요한 선택지.
-  // discharge는 thunderbolt보다 먼저 배우는 초반 실전기 — 저레벨 구간의
+  // discharge는 thunderbolt보다 먼저 배우는 초반 실전기. 저레벨 구간의
   // 주력기로 쓰다가 나중에 thunderbolt로 자연스럽게 대체되는 역할.
   mossy: [
     { level:  1, move: tackle },
     { level:  1, move: spark },
-    { level:  5, move: quickAttack },      // 교차: 노말 — 속도형 견제기
+    { level:  5, move: quickAttack },      // 교차: 노말. 속도형 견제기
     { level: 10, move: discharge },        // thunderbolt 전 단계 주력기
-    { level: 17, move: stunNeedle },       // ★모시 전용 — 확정 마비
+    { level: 17, move: stunNeedle },       // ★모시 전용. 확정 마비
     { level: 23, move: headbutt },         // 교차: 노말
     { level: 29, move: thunderbolt },
     { level: 36, move: bodySlam },         // 교차: 노말
@@ -185,9 +185,9 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: thunder },
   ],
 
-  // ═══ 모치 (전기 늑대·1차 진화) — 전기 + 노말. 화력형으로 전환 ═════════════
-  // voltCrash(Lv32)는 "모치 전용" — 모왕은 배울 수 없다(모왕은 thunderStrike로
-  // 대체). zap은 spark의 특수형 변형 — 물리/특수 구분이 실전 대미지에 반영되진
+  // ═══ 모치 (전기 늑대·1차 진화): 전기 + 노말. 화력형으로 전환 ══════════════
+  // voltCrash(Lv32)는 "모치 전용". 모왕은 배울 수 없다(모왕은 thunderStrike로
+  // 대체). zap은 spark의 특수형 변형. 물리/특수 구분이 실전 대미지에 반영되진
   // 않지만, "전격을 세련되게 다루기 시작한" 모치의 상징 기술로 배치.
   mossevo: [
     { level:  1, move: tackle },
@@ -202,8 +202,8 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 46, move: thunder },
   ],
 
-  // ═══ 모왕 (전기 늑대·최종) — 전기 + 노말 피니셔. 순수 화력형 ═════════════
-  // hyperBeam(Lv44)·thunderStrike(Lv52)·gigaImpact(Lv58)는 전부 "모왕 전용" —
+  // ═══ 모왕 (전기 늑대·최종): 전기 + 노말 피니셔. 순수 화력형 ══════════════
+  // hyperBeam(Lv44)·thunderStrike(Lv52)·gigaImpact(Lv58)는 전부 "모왕 전용"이다.
   // 최종 진화체만이 다룰 수 있는 궁극기 3종. tackle 없이 spark부터 시작하는
   // 것도 의도(더 이상 몸통박치기 따위로 힘을 낭비하지 않는 완성형이라는 설정).
   mossyfinal: [
@@ -215,12 +215,12 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 21, move: bodySlam },         // 교차: 노말
     { level: 28, move: thunder },
     { level: 35, move: heavyBlow },        // 교차: 노말
-    { level: 44, move: hyperBeam },        // ★모왕 전용 — 교차: 노말
+    { level: 44, move: hyperBeam },        // ★모왕 전용. 교차: 노말
     { level: 52, move: thunderStrike },    // ★모왕 전용
-    { level: 58, move: gigaImpact },       // ★모왕 전용 — 교차: 노말
+    { level: 58, move: gigaImpact },       // ★모왕 전용. 교차: 노말
   ],
 
-  // ═══ 크리샤 (얼음 수정 여우) — 얼음 + 물(수정 물방울). 특수 딜러 ══════════
+  // ═══ 크리샤 (얼음 수정 여우): 얼음 + 물(수정 물방울). 특수 딜러 ═══════════
   crystafox: [
     { level:  1, move: tackle },
     { level:  1, move: frostBreath },
@@ -235,7 +235,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: sheerCold },
   ],
 
-  // ═══ 프리로 (얼음 원반) — 얼음 + 물/노말. 방벽형 ═════════════════════════
+  // ═══ 프리로 (얼음 원반): 얼음 + 물/노말. 방벽형 ══════════════════════════
   frostorb: [
     { level:  1, move: tackle },
     { level:  1, move: frostBreath },
@@ -250,7 +250,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 49, move: sheerCold },
   ],
 
-  // ═══ 톡사룡 (독 도마뱀) — 독 + 노말(육탄 포식자). 물리 어태커 ═════════════
+  // ═══ 톡사룡 (독 도마뱀): 독 + 노말(육탄 포식자). 물리 어태커 ══════════════
   toxadon: [
     { level:  1, move: tackle },
     { level:  1, move: poisonSting },
@@ -264,7 +264,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: venomStorm },
   ],
 
-  // ═══ 베노까 (독 까마귀) — 독 + 노말(비행 질풍). 특수 어태커 ═══════════════
+  // ═══ 베노까 (독 까마귀): 독 + 노말(비행 질풍). 특수 어태커 ════════════════
   venomcrow: [
     { level:  1, move: tackle },
     { level:  1, move: acidSpray },
@@ -278,7 +278,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 45, move: venomStorm },
   ],
 
-  // ═══ 노비 (노말) — 만능형. 여러 타입을 얕게. 대boss 서브 요원 ═════════════
+  // ═══ 노비 (노말): 만능형. 여러 타입을 얕게. 대boss 서브 요원 ══════════════
   nobi: [
     { level:  1, move: tackle },
     { level:  1, move: quickAttack },
@@ -306,7 +306,7 @@ export function getAllLearnableUpToLevel(monsterId: string, maxLevel: number): L
   return (LEARNSET[monsterId] ?? []).filter((e) => e.level <= maxLevel);
 }
 
-/** 도감 표시용 — 레벨 순 정렬된 전체 학습 목록 */
+/** 도감 표시용. 레벨 순 정렬된 전체 학습 목록 */
 export function getFullLearnset(monsterId: string): LearnEntry[] {
   return [...(LEARNSET[monsterId] ?? [])].sort((a, b) => a.level - b.level);
 }

@@ -10,7 +10,7 @@ import {
 /**
  * 보관함이 가득 찬 채로 포획에 성공했을 때.
  *
- * 예전엔 그냥 사라졌다(숲은 안내조차 없었다). 각인이 생긴 뒤로는 잃는 것 말고
+ * 원래는 그냥 사라졌다(숲은 안내조차 없었다). 각인이 생긴 뒤로는 잃는 것 말고
  * 남는 길이 하나 생겼으므로, 사라지기 전에 한 번 묻는다.
  */
 export function CaptureOverflowPrompt({ monster, onAbsorb, onRelease }: {
