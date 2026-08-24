@@ -287,7 +287,7 @@ export default class BattleScene extends Phaser.Scene {
     this.smoothTexture("enemy-mon");
     for (let i = 0; i < 6; i++) this.smoothTexture(`party-mon-${i}`);
 
-    // 적 — 뒤(오른쪽·위·작게)
+    // 적. 뒤(오른쪽·위·작게)
     if (this.textures.exists("enemy-mon")) {
       this.enemySprite = this.add.image(this.enemy.x, this.enemy.cy, "enemy-mon")
         .setDisplaySize(this.enemy.size, this.enemy.size).setDepth(6);
@@ -295,7 +295,7 @@ export default class BattleScene extends Phaser.Scene {
       this.enemySprite = this.makeFallback(this.enemy.x, this.enemy.cy, HEX.ember700, this.enemy.size);
     }
 
-    // 아군 — 앞(왼쪽·아래·크게). 파티 0번 슬롯 이미지 사용 (party-mon-0)
+    // 아군. 앞(왼쪽·아래·크게). 파티 0번 슬롯 이미지 사용 (party-mon-0)
     if (this.textures.exists("party-mon-0")) {
       this.playerSprite = this.add.image(PLAYER_X, PLAYER_CY, "party-mon-0")
         .setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(6);

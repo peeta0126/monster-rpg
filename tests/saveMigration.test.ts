@@ -7,8 +7,8 @@ import type { PersistedStoryFlag } from "../src/shared/storyFlags.ts";
 /**
  * 본 대사 기록(seenDialogues)이 옛 세이브에 채워지는지 본다.
  *
- * 검사 대상이 migrate 가 아니라 normalizeState 인 것은 의도다. **서버 세이브에는 버전이
- * 없어서 migrate 를 아예 타지 않는다**(useSaveSync 가 normalizeState 만 거친다).
+ * 검사 대상이 migrate 가 아니라 normalizeState 인 건 일부러 그런 거다. 서버 세이브에는 버전이
+ * 없어서 migrate 를 아예 안 탄다(useSaveSync 가 normalizeState 만 거친다).
  * 두 경로가 다 지나는 곳이 여기라, 여기가 맞으면 둘 다 맞다.
  */
 

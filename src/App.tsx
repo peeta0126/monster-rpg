@@ -9,7 +9,7 @@ import { SmallScreenNotice } from "./shared/ui/SmallScreenNotice";
 import { SceneTransition } from "./shared/ui/SceneTransition";
 
 // 라우트를 전부 지연 로딩한다. 정적 import 로 두면 캔버스를 안 쓰는 화면(숲·가방·
-// 몬스터·공방)에서도 phaser 청크 325KB 를 같이 받는다 — design/PERF.md 참고.
+// 몬스터·공방)에서도 phaser 청크 325KB 를 같이 받는다. design/PERF.md 참고.
 const BaseCampPage = lazy(() => import("./camp/BaseCampPage"));
 const BattlePage   = lazy(() => import("./battle/BattlePage"));
 const FarmPage     = lazy(() => import("./monster/FarmPage"));

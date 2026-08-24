@@ -260,8 +260,8 @@ export interface Interactable {
  * 지금 위치에서 상호작용할 대상. 제작대가 우선이고, 없을 때만 출입구를 본다.
  * 제작대끼리 겹치는 경우는 없지만(테스트로 지킨다) 그래도 가장 가까운 것을 고른다.
  *
- * 호출부는 이 함수만 쓰고 제작대/출입구를 따로 분기하지 않는다 — 우선순위 규칙이
  * 호출부는 이 함수만 쓰고 제작대/출입구를 따로 분기하지 않는다. 우선순위 규칙이
+ * 여러 군데로 흩어지면 한쪽만 고쳐서 어긋난다.
  */
 export function findInteractable(pos: Point): Interactable | null {
   let best: Interactable | null = null;
