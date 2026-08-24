@@ -36,24 +36,24 @@ export const QUALITY_LABEL: Record<ItemQuality, string> = {
   elite:  "최고급 제작품",
 };
 
-// 등급 3색은 마스터 팔레트에서 서로 가장 멀리 떨어진 세 갈래를 고른다
-// (중립 sand / 마법 mist / 화염 ember) — 색약 상태에서도 명도와 색상이 모두 다르다.
+// 등급 3색은 마스터 팔레트에서 서로 제일 멀리 떨어진 세 갈래로 골랐다
+// (중립 sand / 마법 mist / 화염 ember). 색약이어도 명도와 색상이 둘 다 다르다.
 export const QUALITY_TOKEN: Record<ItemQuality, PaletteName> = {
   normal: "sand300",
   rare:   "mist300",
   elite:  "ember500",
 };
 
-// 값은 `var(--color-*)` 였다. 화면 네 곳이 `${QUALITY_COLOR[q]}44` 로 흐린 테두리를
-// 만들고 있었는데 `var(...)44` 는 CSS 가 통째로 버리는 값이라, 테두리가 아예 안 그려졌다.
-// 팔레트 값을 그대로 내주면 8자리 hex 가 되어 의도대로 나온다.
+// 원래 `var(--color-*)` 였다. 화면 네 곳이 `${QUALITY_COLOR[q]}44` 로 흐린 테두리를
+// 만드는데 `var(...)44` 는 CSS 가 통째로 버리는 값이라 테두리가 아예 안 그려졌다.
+// 팔레트 값을 그대로 내주면 8자리 hex 가 돼서 의도대로 나온다.
 export const QUALITY_COLOR: Record<ItemQuality, string> = {
   normal: PALETTE[QUALITY_TOKEN.normal],
   rare:   PALETTE[QUALITY_TOKEN.rare],
   elite:  PALETTE[QUALITY_TOKEN.elite],
 };
 
-/** 등급색을 알파와 함께. 판·테두리 채움에 쓴다. */
+/** 등급색 + 알파. 판이나 테두리 채움에 쓴다 */
 export function qualityTint(quality: ItemQuality, alpha: number): string {
   return rgba(QUALITY_TOKEN[quality], alpha);
 }
@@ -133,9 +133,9 @@ export function sumEquippedStatBonuses(
 }
 
 /**
- * 장착된 아티팩트 전체의 부가 능력치(레벨 10마다 랜덤 해제) 합계.
- * maxHpFlat은 sumEquippedStatBonuses의 hp에 이미 합산되므로 여기서는 제외한다.
- * 레벨/강화 배율은 적용하지 않는다 — 부가 능력치는 해제된 값 그대로 고정.
+ * 장착한 아티팩트 전체의 부가 능력치(레벨 10마다 랜덤 해제) 합계.
+ * maxHpFlat 은 sumEquippedStatBonuses 의 hp 에 이미 들어가 있어서 여기서는 뺀다.
+ * 레벨·강화 배율은 안 먹인다. 부가 능력치는 해제된 값 그대로 고정이다.
  */
 export function sumEquippedBonusStats(
   equipped: ArtifactInstance[],
@@ -154,14 +154,14 @@ export function sumEquippedBonusStats(
 }
 
 /**
- * 장비 하나가 실제로 주는 것 — **화면에 찍는 값의 단일 출처**.
+ * 장비 하나가 실제로 주는 값. 화면에 찍는 숫자는 전부 여기서 나온다.
  *
- * 예전에는 화면마다 `statBonuses` 를 그대로 찍었다. 그건 제작 시점의 원본이라
- * 레벨·강화가 안 들어간 값이고, 전투는 `sumEquipped*` 로 배율을 먹인 값을 쓴다.
- * Lv.50 +5 정예 목걸이가 화면에는 공격 +14, 전투에는 +52 로 들어가 있었다.
+ * 원래는 화면마다 `statBonuses` 를 그대로 찍었는데, 그건 제작 시점 원본이라
+ * 레벨·강화가 안 들어간 값이다. 전투는 `sumEquipped*` 로 배율 먹인 값을 쓰고.
+ * Lv.50 +5 정예 목걸이가 화면엔 공격 +14, 전투엔 +52 로 들어가 있었다.
  *
- * 부가 능력치(레벨 10마다 해제)도 능력치의 일부라 같이 내보낸다. 최대 HP 계열만
- * 기본 HP 줄에 합쳐서 한 번만 센다 — 전투도 그렇게 더한다(sumEquippedStatBonuses).
+ * 부가 능력치(레벨 10마다 해제)도 능력치니까 같이 내보낸다. 최대 HP 계열만
+ * 기본 HP 줄에 합쳐 한 번만 센다. 전투도 그렇게 더한다(sumEquippedStatBonuses).
  */
 export interface ArtifactDisplayStat {
   key:     string;
@@ -240,8 +240,8 @@ export const ARTIFACT_BONUS_POOL: Record<string, ArtifactBonusStatDef[]> = {
     { type: "maxHpFlat",    value: 50, label: "최대 HP +50" },
     { type: "waterDamage",  value: 5,  label: "수류 데미지 +5%" },
     { type: "earthDamage",  value: 5,  label: "대지 데미지 +5%" },
-    // 경험치 +5% 자리였다. 레벨차 컷오프(battleUtils.expLevelGapMultiplier)가 들어가면서
-    // 경험치는 "층을 올라가면 붙는 것"이 됐고, 곱해 봐야 컷오프를 못 넘는다 — 죽은 굴림이었다.
+    // 원래 경험치 +5% 자리. 레벨차 컷오프(battleUtils.expLevelGapMultiplier)가 들어가면서
+    // 경험치는 "층을 올라가면 붙는 것"이 됐고, 곱해 봐야 컷오프를 못 넘어서 죽은 굴림이 됐다.
     { type: "maxHpFlat",    value: 40, label: "최대 HP +40" },
     { type: "critDamage",   value: 6,  label: "치명타 데미지 +6%" },
   ],
@@ -265,9 +265,8 @@ export const ARTIFACT_BONUS_STAT_LABEL: Record<ArtifactBonusStatType, string> = 
 };
 
 /**
- * 레벨 업 후 부가 능력치를 해제해야 하는지 여부와
- * 해제할 보너스 스탯을 반환한다.
- * 이전 레벨~새 레벨 사이에 걸친 10의 배수 임계값마다 1회 해제.
+ * 레벨 업 뒤에 부가 능력치를 해제할지, 해제한다면 뭘 줄지.
+ * 옛 레벨~새 레벨 사이에 낀 10의 배수마다 한 번씩 해제한다.
  */
 export function rollBonusStats(
   itemId:    string,
@@ -316,9 +315,9 @@ export const EQUIPMENT_MAX_LEVEL: Record<ItemQuality, number> = {
 export const MAX_EQUIPMENT_ENHANCEMENT = 5;
 
 /**
- * 강화 성공 확률. +0→+1은 확정이고, 올라갈수록 낮아진다.
- * 실패해도 강화 수치가 내려가지는 않고 재료만 소모된다 — 되돌릴 수 없는 손실은 만들지 않는다.
- * (index = 현재 강화 수치)
+ * 강화 성공 확률. +0→+1 은 확정이고 올라갈수록 낮아진다.
+ * 실패해도 수치가 내려가진 않고 재료만 날아간다. 되돌릴 수 없는 손실은 안 만든다.
+ * (index = 지금 강화 수치)
  */
 export const ENHANCEMENT_SUCCESS_RATE = [1.0, 0.9, 0.75, 0.6, 0.45] as const;
 
@@ -338,9 +337,9 @@ export function getEquipmentLevelUpCost(quality: ItemQuality, currentLevel: numb
   const mult = ({ normal: 1, rare: 1, elite: 2 } as const)[quality];
   // 계수를 6 → 12, 등급 배율을 {1,2,3} → {1,1,2} 로 낮췄다.
   //
-  // 장비가 **필수**가 된 지금(관문은 장비 없이는 못 넘는다) 예전 비용은 그대로 벽이었다.
-  // 파티 3마리 × 슬롯 3개를 레어 30레벨까지 올리는 데 강화석 1,530개, 고대 숲으로 환산하면
-  // 백 번이 넘는다. 지금은 459개다 — 숲 대여섯 번이면 닿는다.
+  // 관문을 장비 없이 못 넘게 되면서 장비가 필수가 됐는데, 옛 비용은 그대로 벽이었다.
+  // 파티 3마리 × 슬롯 3개를 레어 30레벨까지 올리는 데 강화석 1,530개, 고대 숲으로 치면
+  // 백 번이 넘는다. 지금은 459개, 숲 대여섯 번이면 닿는다.
   return Math.ceil(currentLevel / 12) * mult;
 }
 
@@ -374,8 +373,8 @@ export function canSynthesizeArtifacts(
   if (a.instanceId === b.instanceId) return false;
   if (a.quality !== b.quality)       return false;
   if (a.quality === "elite")         return false;
-  // 양쪽 모두 만렙+최대강화를 요구하면 투자를 두 번 해야 해서 상위 등급에 도달할 수 없었다.
-  // 성장시킨 쪽(a)만 조건을 채우면 되고, 재료로 소모될 b는 같은 등급이기만 하면 된다.
+  // 양쪽 다 만렙+최대강화를 요구하면 투자를 두 번 해야 해서 상위 등급에 못 닿았다.
+  // 성장시킨 쪽(a)만 조건을 채우면 되고, 재료로 녹을 b 는 같은 등급이기만 하면 된다.
   const maxLv = EQUIPMENT_MAX_LEVEL[a.quality];
   return (
     (a.level ?? 1) >= maxLv &&

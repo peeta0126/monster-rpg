@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { gameEvents, GAME_EVENT, type AppErrorPayload } from "./phaser/events";
 
 /**
- * Phaser 씬(requestAnimationFrame 루프)이나 전역 window 핸들러에서 잡힌 예외는
- * React 렌더 트리 바깥에서 발생하므로 ErrorBoundary가 직접 잡지 못한다.
- * setState 업데이터 함수 안에서 다시 던져 React 렌더 단계로 옮기면, 가장 가까운
- * ErrorBoundary가 동일한 폴백 UI로 처리할 수 있다. 이 컴포넌트는 ErrorBoundary
- * 안쪽에 항상 마운트해둔다.
+ * Phaser 씬(rAF 루프)이나 window 핸들러에서 터진 예외는 React 렌더 트리 밖이라
+ * ErrorBoundary 가 못 잡는다. setState 업데이터 안에서 다시 던지면 렌더 단계로
+ * 넘어가서, 가장 가까운 ErrorBoundary 가 같은 폴백을 띄워 준다.
+ * 그래서 이 컴포넌트는 ErrorBoundary 안쪽에 늘 붙여 둔다.
  */
 export default function AppErrorBridge() {
   const [, setError] = useState<AppErrorPayload | null>(null);

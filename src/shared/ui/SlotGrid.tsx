@@ -1,8 +1,8 @@
 import { Children, type ReactNode } from "react";
 
 interface SlotGridProps {
-  /** 칸 하나의 최소 너비(px). 열 수는 여기에 맞춰 자동으로 정해진다 —
-   *  열 수를 고정하면 태블릿 폭에서 칸이 뭉개진다. */
+  /** 칸 하나의 최소 너비(px). 열 수는 여기에 맞춰 알아서 정해진다.
+   *  열 수를 고정하면 태블릿 폭에서 칸이 뭉개진다 */
   minItemWidth: number;
   /** 내용이 적어도 최소 이만큼의 칸은 보여준다 */
   minSlots?: number;
@@ -36,8 +36,8 @@ export function SlotGrid({ minItemWidth, minSlots = 0, emptySlot, className = ""
 }
 
 /**
- * 기본 빈 칸. 채워진 슬롯과 높이가 같아야 그리드가 흔들린다.
- * 높이는 호출부가 정한다 — 카드 모양이 화면마다 달라서 여기서 고정하면 맞지 않는다.
+ * 기본 빈 칸. 채워진 슬롯과 높이가 같아야 그리드가 안 흔들린다.
+ * 높이는 호출부가 정한다. 카드 모양이 화면마다 달라서 여기서 고정하면 안 맞는다.
  */
 export function EmptySlot({ children, className = "min-h-28" }: { children?: ReactNode; className?: string }) {
   return (

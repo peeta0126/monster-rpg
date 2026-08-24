@@ -11,10 +11,10 @@ interface State {
 const pixelFont = { fontFamily: "var(--font-pixel)" };
 
 /**
- * 최상위 폴백 UI. Phaser 씬 예외도 AppErrorBridge를 통해 여기로 들어온다.
- * 발표 중 렌더링 예외로 화면이 통째로 하얘지는 상황을 막기 위한 최후 방어선이므로,
- * "새로고침"/"베이스캠프로" 둘 다 SPA 상태를 신뢰하지 않고 location을 직접 바꿔
- * Phaser 게임 인스턴스 등 깨졌을 수 있는 런타임 상태를 완전히 새로 시작한다.
+ * 최상위 폴백 UI. Phaser 씬 예외도 AppErrorBridge 를 거쳐 여기로 온다.
+ * 렌더링 예외로 화면이 통째로 하얘지는 걸 막는 마지막 방어선이라,
+ * "새로고침"·"베이스캠프로" 둘 다 SPA 상태를 안 믿고 location 을 직접 바꾼다.
+ * Phaser 게임 인스턴스처럼 깨져 있을지 모르는 것까지 새로 시작시키려는 것이다.
  */
 export default class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };

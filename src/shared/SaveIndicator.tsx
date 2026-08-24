@@ -6,8 +6,8 @@ import { useSaveStatusStore } from "./saveStatusStore";
 /**
  * 화면 구석의 자동 저장 표시.
  *
- * 게스트는 로컬 저장만 하므로 스토어가 바뀌는 순간을 저장 시점으로 본다(zustand persist가
- * 같은 시점에 로컬 스토리지에 쓴다). 로그인 사용자는 서버 업로드 결과를 `saveStatusStore`에서 받는다.
+ * 게스트는 로컬 저장뿐이라 스토어가 바뀌는 순간을 저장 시점으로 친다. zustand persist 가
+ * 같은 시점에 로컬 스토리지에 쓰니까. 로그인한 사람은 서버 업로드 결과를 `saveStatusStore` 에서 받아 온다.
  */
 const VISIBLE_MS = 2200;
 
@@ -16,12 +16,12 @@ export default function SaveIndicator() {
   const token = useAuthStore((s) => s.token);
   const { status, mode, message, seq } = useSaveStatusStore();
   const setStatus = useSaveStatusStore((s) => s.setStatus);
-  /** 이미 지나간 알림의 seq. 표시 여부는 이 값과 현재 seq를 비교해 "계산"한다
-   *  (렌더 중 setState를 유발하지 않기 위해 boolean 상태로 들고 있지 않는다) */
+  /** 이미 지나간 알림의 seq. 표시 여부는 이 값과 지금 seq 를 비교해서 계산한다
+   *  (boolean 상태로 안 들고 있는 건 렌더 중에 setState 가 돌지 않게 하려고) */
   const [dismissedSeq, setDismissedSeq] = useState(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // 게스트(또는 서버 미사용) — 상태가 바뀌면 곧 로컬에 저장된다
+  // 게스트(또는 서버를 안 쓰는 경우). 상태가 바뀌면 곧 로컬에 저장된다
   useEffect(() => {
     if (!isGuest && token) return;
     const unsub = usePlayerStore.subscribe(() => {
@@ -30,7 +30,7 @@ export default function SaveIndicator() {
     return unsub;
   }, [isGuest, token, setStatus]);
 
-  // 저장이 끝난 알림은 잠깐 보여주고 스스로 사라진다 ("저장 중…"은 결과가 올 때까지 유지)
+  // 저장이 끝난 알림은 잠깐 보여주고 알아서 사라진다 ("저장 중…"은 결과가 올 때까지 그대로)
   useEffect(() => {
     clearTimeout(hideTimer.current);
     if (status === "idle" || status === "saving") return;
@@ -49,8 +49,8 @@ export default function SaveIndicator() {
     : (message ?? "저장 실패 — 로컬에는 보관됨");
 
   // 색은 마스터 팔레트 토큰만 (ART_DIRECTION 1-2).
-  // 텍스트는 어두운 배지 배경 위에서 4.5:1을 넘겨야 해서, 위험도 ember-700 대신
-  // ember-500(5.3:1)을 쓴다 — 테두리 쪽에서 ember-700으로 위험을 구분한다.
+  // 글자는 어두운 배지 위에서 4.5:1 을 넘겨야 해서 위험도 ember-700 말고
+  // ember-500(5.3:1)을 쓴다. 위험 표시는 테두리 쪽 ember-700 이 맡는다.
   const color =
     status === "error"    ? { border: "rgba(168,61,31,.6)",  text: "var(--color-ember-500)" }
     : status === "saving" ? { border: "rgba(66,61,70,.5)",   text: "var(--color-sand-300)" }

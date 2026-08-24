@@ -1,13 +1,13 @@
 /**
- * 마스터 팔레트 — docs/ART_DIRECTION.md 1-2 표의 TypeScript 사본.
+ * 마스터 팔레트. docs/ART_DIRECTION.md 1-2 표의 TypeScript 사본이다.
  *
- * 왜 있나: Phaser 는 CSS 변수를 읽지 못한다. 씬 코드(`BattleScene`, `BaseCampScene`)는
- * `0xRRGGBB` 숫자나 `"#RRGGBB"` 문자열을 직접 요구하므로, index.css 의 @theme 토큰을
- * 그대로 쓸 수가 없다. 그렇다고 씬마다 hex 를 손으로 적으면 화면마다 톤이 갈린다.
- * → 값은 여기 한 곳에만 두고, 씬은 이름으로만 참조한다.
+ * 왜 있냐면, Phaser 가 CSS 변수를 못 읽는다. 씬 코드(`BattleScene`, `BaseCampScene`)는
+ * `0xRRGGBB` 숫자나 `"#RRGGBB"` 문자열을 달라고 하니까 index.css 의 @theme 토큰을
+ * 그대로 못 쓴다. 그렇다고 씬마다 hex 를 손으로 적으면 화면마다 톤이 갈린다.
+ * 그래서 값은 여기만 두고 씬은 이름으로만 갖다 쓴다.
  *
- * ⚠️ index.css 의 @theme 블록과 값이 항상 같아야 한다. 색을 바꿀 때는
- *    ART_DIRECTION 1-2 표 → index.css → 이 파일 순서로 셋 다 고칠 것.
+ * ⚠️ index.css 의 @theme 블록이랑 값이 늘 같아야 한다. 색을 바꿀 때는
+ *    ART_DIRECTION 1-2 표 → index.css → 이 파일 순서로 셋 다 고쳐라.
  */
 import { ELEMENT_KO } from "./game";
 
@@ -41,18 +41,18 @@ export const HEX = Object.fromEntries(
 /**
  * 속성 7종 → 팔레트 토큰.
  *
- * 원래 각 속성이 Tailwind 기본 램프(red/blue/green/yellow/cyan/zinc/purple)를 하나씩
- * 쓰고 있었다. 마스터 팔레트는 색상환을 다 덮지 않아서 "빨강→ember, 파랑→mist" 식으로
- * 기계적으로 접으면 불/전기가 같은 색, 물/얼음이 같은 색이 되어 속성 구분이 사라진다.
+ * 원래 속성마다 Tailwind 기본 램프(red/blue/green/yellow/cyan/zinc/purple)를 하나씩
+ * 쓰고 있었다. 마스터 팔레트는 색상환을 다 안 덮어서 "빨강→ember, 파랑→mist" 식으로
+ * 기계적으로 접으면 불/전기가 같은 색, 물/얼음이 같은 색이 돼서 구분이 사라진다.
  *
- * 그래서 색상만이 아니라 명도까지 써서 7개를 전부 다르게 배치했다. 이 표가 숲·전투·
- * 몬스터 화면의 단일 출처다 — 화면마다 따로 정하지 말 것.
+ * 그래서 색상만이 아니라 명도까지 써서 일곱을 전부 다르게 놨다. 숲·전투·몬스터
+ * 화면이 전부 이 표를 보니까 화면마다 따로 정하지 마라.
  */
 export const ELEMENT_COLOR = {
   fire:     "ember600",  // 짙은 화염
-  electric: "ember500",  // 밝은 화염 — fire 보다 한 단계 밝게 해서 구분
+  electric: "ember500",  // 밝은 화염. fire 보다 한 단계 밝게 해서 구분
   water:    "mist500",   // 짙은 청록
-  ice:      "mist300",   // 밝은 청록 — water 보다 밝게
+  ice:      "mist300",   // 밝은 청록. water 보다 밝게
   grass:    "moss500",
   poison:   "earth500",  // 팔레트에 보라가 없다. 탁한 흙빛으로 대체 (ART_DIRECTION 1-2 표에 보라 추가 시 교체)
   normal:   "sand300",
@@ -61,21 +61,21 @@ export const ELEMENT_COLOR = {
 /**
  * 속성 7종의 한글 이름.
  *
- * 표 자체는 game.ts 에 있다. 여기에도 똑같은 표가 한 벌 더 있었는데, 두 벌이면 한쪽만
- * 고쳐도 티가 안 난다 — 이름을 바꾸는 날 화면 절반만 따라온다. 부르는 쪽이 팔레트에서
- * 같이 가져다 쓸 수 있게 이름만 다시 내보낸다.
+ * 표 자체는 game.ts 에 있다. 여기에도 똑같은 게 한 벌 더 있었는데, 두 벌이면 한쪽만
+ * 고쳐도 티가 안 난다. 이름 바꾸는 날 화면 절반만 따라온다는 뜻이다. 부르는 쪽이
+ * 팔레트에서 같이 가져다 쓰라고 이름만 다시 내보낸다.
  */
 export { ELEMENT_KO };
 
 /**
- * 속성 칩(작은 태그) 의 Tailwind 클래스. 배경·테두리가 속성을 구분하고,
- * 글자색은 어두운 패널 위에서 4.5:1 을 넘기는 토큰만 쓴다 — ember-600/mist-500/
+ * 속성 칩(작은 태그)의 Tailwind 클래스. 배경·테두리가 속성을 구분하고,
+ * 글자색은 어두운 패널 위에서 4.5:1 을 넘기는 토큰만 쓴다. ember-600/mist-500/
  * moss-500/earth-500 은 본문 글자로 쓰기엔 너무 어두워서(2.7~3.4:1) sand-200 으로 뺐다.
- * 색을 못 보는 사람에게도 테두리 밝기 차이로 구분이 남는다.
+ * 색을 못 보는 사람한테도 테두리 밝기 차이로 구분은 남는다.
  */
 /**
- * 속성 칩의 글자색 토큰. 바로 위 ELEMENT_CHIP_CLASS 의 text-* 와 같은 값이어야 한다 —
- * Phaser 는 Tailwind 클래스를 못 읽어서(palette.ts 머리말 참고) 씬이 이 표를 쓴다.
+ * 속성 칩의 글자색 토큰. 바로 위 ELEMENT_CHIP_CLASS 의 text-* 와 같은 값이어야 한다.
+ * Phaser 가 Tailwind 클래스를 못 읽어서(맨 위 머리말 참고) 씬은 이 표를 쓴다.
  */
 export const ELEMENT_CHIP_INK: Record<keyof typeof ELEMENT_COLOR, PaletteName> = {
   fire: "sand200", electric: "ember500", water: "sand200", ice: "mist300",
@@ -93,18 +93,18 @@ export const ELEMENT_CHIP_CLASS: Record<keyof typeof ELEMENT_COLOR, string> = {
 };
 
 /**
- * 위험 구간의 경계(%). 색만이 아니라 맥박 연출도 이 값 하나를 본다 — 바는 빨간데
- * 몬스터는 멀쩡하거나, 그 반대인 상태를 만들지 않으려면 경계가 한 벌이어야 한다.
- * 20 이었는데 25 로 올렸다: 20% 면 대개 한 대 더 맞으면 죽는 시점이라, 경고를 보고
- * 손쓸 여지가 없었다.
+ * 위험 구간 경계(%). 색만이 아니라 맥박 연출도 이 값 하나를 본다. 바는 빨간데
+ * 몬스터는 멀쩡하거나 그 반대인 꼴을 안 보려면 경계가 한 벌이어야 한다.
+ * 20 이었는데 25 로 올렸다. 20% 면 대개 한 대 더 맞으면 죽는 시점이라 경고를
+ * 봐도 손쓸 여지가 없었다.
  */
 export const HP_DANGER_PCT = 25;
 
 /**
  * 속성 칩 한 개의 재료(이름·바탕색·글자색).
  *
- * `null` 은 무속성(오름)이다. 약점도 저항도 없다는 뜻이라 속성 이름을 지어내면 안 되고,
- * 자리를 비워도 안 된다 — 비우면 "아직 안 불러왔나"로 읽힌다. 그래서 "?" 로 적는다.
+ * `null` 은 무속성(오름)이다. 약점도 저항도 없다는 뜻이라 속성 이름을 지어내면 안 된다.
+ * 그렇다고 비워 두면 "아직 안 불러왔나"로 읽히니까 "?" 로 적는다.
  */
 export function elementChip(type: keyof typeof ELEMENT_COLOR | null): {
   label: string; color: PaletteName; ink: PaletteName;
@@ -115,8 +115,8 @@ export function elementChip(type: keyof typeof ELEMENT_COLOR | null): {
 
 /**
  * HP 잔량(%) → 색 토큰. ART_DIRECTION 3-2 규칙: 100~50% moss / 50~25% ember-500 /
- * 25% 이하 ember-700. 전투 캔버스·전투 UI·몬스터 화면이 전부 이 함수를 쓴다 —
- * 세 곳이 각자 경계값을 들고 있으면 같은 HP 인데 화면마다 색이 달라진다.
+ * 25% 이하 ember-700. 전투 캔버스·전투 UI·몬스터 화면이 전부 이 함수를 쓴다.
+ * 세 곳이 각자 경계값을 들고 있으면 같은 HP 인데 화면마다 색이 달라지니까.
  */
 export function hpToken(pct: number): PaletteName {
   if (pct > 50) return "moss500";
@@ -124,18 +124,18 @@ export function hpToken(pct: number): PaletteName {
   return "ember700";
 }
 
-/** 위험 구간인가. 0 이하(기절)는 경고할 대상이 아니다. */
+/** 위험 구간인가. 0 이하(기절)는 경고할 대상이 아님 */
 export function isHpDanger(pct: number): boolean {
   return pct > 0 && pct <= HP_DANGER_PCT;
 }
 
-/** `rgba(r, g, b, a)` 문자열. 그림자·오버레이는 검정 대신 shadow-800/900 을 쓴다. */
+/** `rgba(r, g, b, a)` 문자열. 그림자·오버레이는 검정 대신 shadow-800/900 을 쓴다 */
 export function rgba(name: PaletteName, alpha: number): string {
   const n = HEX[name];
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
-/** Phaser 텍스트의 `backgroundColor` 처럼 8자리 hex 를 받는 곳에 쓴다. */
+/** Phaser 텍스트의 `backgroundColor` 처럼 8자리 hex 를 받는 곳에 쓴다 */
 export function withAlpha(name: PaletteName, alpha: number): string {
   const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255);
   return PALETTE[name] + a.toString(16).padStart(2, "0");

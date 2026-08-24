@@ -25,9 +25,9 @@ import { rewardDisplay } from "../camp/questRewards";
 
 // ─── 스토리 플래그 · 퀘스트 상태 ─────────────────────────────────────────────────
 //
-// 정의는 shared/storyFlags.ts 로 내렸다 — 세이브 마이그레이션이 대사 표를 읽어야 해서
-// 이 파일과 campDialogues 가 서로를 부르게 됐고, 둘 다 필요한 건 그 정의들뿐이었다.
-// 기존 import 경로가 살아 있도록 여기서 그대로 다시 내보낸다.
+// 정의는 shared/storyFlags.ts 로 내렸다. 세이브 마이그레이션이 대사 표를 읽어야 해서
+// 이 파일이랑 campDialogues 가 서로를 부르게 됐는데, 둘 다 필요한 건 그 정의들뿐이었다.
+// 기존 import 경로가 살아 있게 여기서 그대로 다시 내보낸다.
 
 export type { StoryFlag, PersistedStoryFlag, QuestStatus } from "./storyFlags";
 export { isStoryFlagSet, getQuestStatus } from "./storyFlags";
@@ -56,7 +56,7 @@ const DEV_PARTY_LEVEL = 50;
 /** 개발자 프리셋 파티(선두 3마리). 50층 시험이 목적이라 최종 진화체 위주로 고른다. */
 const DEV_PARTY_IDS = ["mossyfinal", "aquavern", "frostorb"];
 
-/** 개발자 프리셋이 파티에 장착시키는 아티팩트 — 정식 레시피(ARTIFACT_RECIPES)의 만렙 엘리트 버전 */
+/** 개발자 프리셋이 파티에 채워 주는 아티팩트. 정식 레시피(ARTIFACT_RECIPES)의 만렙 엘리트판 */
 const DEV_PRESET_ARTIFACTS = ARTIFACT_RECIPES.map((r) => ({
   itemId: r.resultItemId,
   name:   r.resultItemName,
@@ -64,7 +64,7 @@ const DEV_PRESET_ARTIFACTS = ARTIFACT_RECIPES.map((r) => ({
   baseStats: r.baseStats ?? [],
 }));
 
-/** 개발자 프리셋 물약 — 50층은 물약 운용을 전제로 한 난이도라 넉넉히 지급한다 */
+/** 개발자 프리셋 물약. 50층이 물약 운용을 전제로 한 난이도라 넉넉히 준다 */
 const DEV_PRESET_POTIONS: Record<string, number> = {
   potion: 20, super_potion: 20, max_potion: 20, antidote: 10,
   attack_buff: 10, strong_attack_buff: 10,
@@ -106,9 +106,9 @@ const WORKSHOP_TEST_MATERIALS: Record<string, number> = {
 
 // ─── 저장 대상 데이터 (persist가 실제로 디스크에 쓰는 필드) ──────────────────────────────
 //
-// PlayerState 중 액션(함수)을 뺀 "순수 데이터" 부분. 함수는 JSON.stringify에서
-// 어차피 사라지지만, 마이그레이션 코드에서 "무엇이 저장 대상인지"를 명확히 하기 위해
-// 별도 타입으로 뽑아둔다. 새 데이터 필드를 추가할 땐 여기와 PlayerState 양쪽에 반영.
+// PlayerState 에서 액션(함수)을 뺀 순수 데이터 부분. 함수야 JSON.stringify 에서
+// 어차피 사라지지만, 마이그레이션 쪽에서 뭐가 저장 대상인지 분명히 하려고 타입을
+// 따로 뽑아 뒀다. 새 데이터 필드를 넣을 땐 여기랑 PlayerState 양쪽에 넣어라.
 export interface PersistedPlayerState {
   party: OwnedMonster[];
   storage: OwnedMonster[];
@@ -120,19 +120,19 @@ export interface PersistedPlayerState {
   storyFlags: Record<PersistedStoryFlag, boolean>;
   questStatus: Record<string, QuestStatus>;
   /**
-   * 끝까지 읽은 이야기 대사의 이름표. 플래그와는 다른 값이다 — 플래그는 "그 일이
-   * 일어났는가"고 이건 "그 글을 읽었는가"다. 이게 있어야 다 본 사람에게 잡담을 낼 수 있다.
+   * 끝까지 읽은 이야기 대사의 이름표. 플래그와는 다른 값이다. 플래그는 "그 일이
+   * 일어났나"고 이건 "그 글을 읽었나"다. 이게 있어야 다 본 사람한테 잡담을 낼 수 있다.
    *
-   * 빈 배열과 "필드 자체가 없음"의 뜻이 다르다. 없음은 이 기록이 생기기 전의 세이브라
-   * 지금까지 지나온 대사를 채워 넣어야 하고, 빈 배열은 새로 시작해 아직 아무것도 안 본
-   * 상태라 손대면 안 된다.
+   * 빈 배열이랑 "필드 자체가 없음"은 뜻이 다르다. 없음은 이 기록이 생기기 전 세이브라
+   * 지금까지 지나온 대사를 채워 넣어야 하고, 빈 배열은 새로 시작해서 아직 아무것도
+   * 안 본 상태라 손대면 안 된다.
    */
   seenDialogues: string[];
   craftedItems: CraftedItem[];
   craftedArtifacts: ArtifactInstance[];
   craftedPotions: CraftedPotionStack[];
   equippedArtifacts: Record<string, ArtifactInstance[]>;
-  /** 각인 — 계열키 → 지금까지 먹인 중복 수. 등급이 아니라 **먹인 수**를 적는다 */
+  /** 각인. 계열키 → 지금까지 먹인 중복 수. 등급 말고 먹인 수를 적는다 */
   imprint: Record<string, number>;
 }
 
@@ -179,10 +179,10 @@ function normalizeStringArray(raw: unknown, fallback: string[]): string[] {
 }
 
 /**
- * 레벨에 따른 능력치를 "새 밸런스 기준"으로 다시 계산한다.
- * battleUtils.ts의 gainExp()가 레벨업마다 적용하는 증분(HP+10/공격+3/방어+2/속도+2)과
- * 동일한 공식 — 저장된 수치를 신뢰하지 않고, 최신 monsters.ts의 base 스탯 위에
- * 이 증분을 (level-1)번 다시 쌓는다. 레벨 자체는 유지하되 수치는 항상 최신 밸런스를 따른다.
+ * 레벨에 맞는 능력치를 새 밸런스 기준으로 다시 계산한다.
+ * battleUtils.ts 의 gainExp() 가 레벨업마다 얹는 증분(HP+10/공격+3/방어+2/속도+2)과
+ * 같은 공식이다. 저장된 수치는 안 믿고, 최신 monsters.ts 의 base 위에 이 증분을
+ * (level-1)번 다시 쌓는다. 레벨은 그대로 두되 수치는 늘 최신 밸런스를 따른다.
  */
 export function recomputeStatsForLevel(base: Monster, level: number) {
   const n = Math.max(0, level - 1);
@@ -195,12 +195,12 @@ export function recomputeStatsForLevel(base: Monster, level: number) {
 }
 
 /**
- * 포획 몬스터 1마리 보정.
- * - 현재 monsters.ts에 있는 종이면: 최신 종 정의를 기본값으로 깔아 없는 필드를 채우고,
- *   maxHp/attack/defense/speed는 저장된 값을 무시하고 recomputeStatsForLevel로 항상
- *   재계산한다 — 즉 레벨(육성 진행도)은 보존하되, 능력치는 새 밸런스를 그대로 적용받는다.
- * - 삭제/개명 등으로 monsters.ts에 없는 id면: 조용히 버리지 않고 콘솔에 경고를
- *   남긴 뒤 저장된 값을 최대한 그대로 보존한다(재계산할 기준 종 정의 자체가 없으므로).
+ * 포획 몬스터 한 마리 보정.
+ * - 지금 monsters.ts 에 있는 종이면: 최신 종 정의를 기본값으로 깔아 없는 필드를 채우고,
+ *   maxHp/attack/defense/speed 는 저장값을 무시하고 recomputeStatsForLevel 로 다시
+ *   계산한다. 레벨(키운 만큼)은 남기고 능력치만 새 밸런스를 따르게 하는 것이다.
+ * - 삭제나 개명으로 monsters.ts 에 없는 id 면: 조용히 버리지 않고 콘솔에 경고를 남긴 뒤
+ *   저장된 값을 최대한 그대로 둔다(다시 계산할 기준 종 정의가 아예 없으니까).
  */
 function normalizeOwnedMonster(raw: unknown): OwnedMonster | null {
   if (!raw || typeof raw !== "object") return null;
@@ -295,8 +295,8 @@ export function normalizeState(input: object): PersistedPlayerState {
     questStatus: (raw.questStatus && typeof raw.questStatus === "object"
       ? raw.questStatus : {}) as PersistedPlayerState["questStatus"],
     // 필드가 아예 없을 때만 지금까지 지나온 대사를 채운다. 빈 배열은 "새로 시작해서 아직
-    // 아무것도 안 봤다"는 뜻이라 손대면 안 된다 — 이 함수는 저장할 때마다도 돌기 때문에,
-    // 무조건 채우면 새 플레이어가 첫 저장에서 전 대사를 본 것으로 찍힌다.
+    // 아무것도 안 봤다"는 뜻이라 손대면 안 된다. 이 함수는 저장할 때마다도 도니까,
+    // 무조건 채우면 새 플레이어가 첫 저장에서 전 대사를 본 걸로 찍힌다.
     seenDialogues: Array.isArray(raw.seenDialogues)
       ? raw.seenDialogues.filter((x): x is string => typeof x === "string")
       : backfillSeenDialogues(storyFlags, bestFloor),
@@ -305,8 +305,8 @@ export function normalizeState(input: object): PersistedPlayerState {
     craftedPotions:    (Array.isArray(raw.craftedPotions) ? raw.craftedPotions : []) as PersistedPlayerState["craftedPotions"],
     equippedArtifacts: (raw.equippedArtifacts && typeof raw.equippedArtifacts === "object"
       ? raw.equippedArtifacts : {}) as PersistedPlayerState["equippedArtifacts"],
-    // 각인이 없던 옛 세이브는 여기서 빈 표를 받는다 — 등급은 먹인 수에서 계산되므로
-    // 그 이상 손댈 게 없다(비용표를 고쳐도 마이그레이션이 필요 없는 이유이기도 하다)
+    // 각인이 없던 옛 세이브는 여기서 빈 표를 받는다. 등급은 먹인 수에서 계산되니까
+    // 그 이상 손댈 게 없다(비용표를 고쳐도 마이그레이션이 필요 없는 이유다)
     imprint: normalizeImprint(raw.imprint),
   };
 }
@@ -323,16 +323,16 @@ function normalizeImprint(raw: unknown): Record<string, number> {
 }
 
 /**
- * zustand persist의 migrate 훅. 저장된 version이 PERSIST_VERSION과 다를 때만 호출된다
- * (version 개념이 없던 옛 세이브는 zustand가 자동으로 version=0을 넘겨줌).
+ * zustand persist 의 migrate 훅. 저장된 version 이 PERSIST_VERSION 과 다를 때만 불린다
+ * (version 개념이 없던 옛 세이브는 zustand 가 version=0 으로 넘겨준다).
  *
- * ⭐ 앞으로 저장 구조를 또 바꿀 때:
- *   1) 위 PERSIST_VERSION을 +1 한다.
- *   2) 아래에 `if (version < 새버전) { ... 그 버전에서만 필요한 변환 ... }` 분기를 추가한다.
- *      기존 분기는 지우지 말 것 — 여러 버전을 건너뛴 옛 세이브도 순서대로 다 거쳐야 한다.
- *   3) 마지막엔 항상 normalizeState()를 거치므로, 대부분의 "필드 추가"는 별도 분기 없이
- *      normalizeState의 기본값 채우기만으로 해결된다. 값의 "형태 변환"(예: 배열→객체)이
- *      필요할 때만 버전 분기를 추가하면 된다.
+ * 저장 구조를 또 바꿀 때:
+ *   1) 위 PERSIST_VERSION 을 +1 한다.
+ *   2) 아래에 `if (version < 새버전) { ... 그 버전에서만 필요한 변환 ... }` 을 붙인다.
+ *      기존 분기는 지우지 마라. 여러 버전을 건너뛴 옛 세이브도 순서대로 다 거쳐야 한다.
+ *   3) 마지막엔 늘 normalizeState() 를 지나니까, 웬만한 "필드 추가"는 분기 없이
+ *      normalizeState 의 기본값 채우기만으로 끝난다. 값의 형태가 바뀔 때(배열→객체 같은)만
+ *      버전 분기를 더하면 된다.
  */
 function migrate(persistedState: unknown, version: number): PersistedPlayerState {
   try {
@@ -344,10 +344,10 @@ function migrate(persistedState: unknown, version: number): PersistedPlayerState
     }
 
     if (version < 2) {
-      // v1 → v2: 본 대사 기록(seenDialogues)이 생겼다. 아래 normalizeState가 "필드 없음"을
-      // 보고 지금까지 지나온 대사를 채운다 — 안 채우면 엔딩까지 본 사람이 첫 만남 대사부터
-      // 다시 듣는다. 여기서 따로 손댈 게 없는 이유는 그 판단이 필드 존재 여부만으로
-      // 결정되기 때문이고, 그래야 버전이 없는 서버 세이브도 같은 처리를 받는다.
+      // v1 → v2: 본 대사 기록(seenDialogues)이 생겼다. 아래 normalizeState 가 "필드 없음"을
+      // 보고 지금까지 지나온 대사를 채운다. 안 채우면 엔딩까지 본 사람이 첫 만남 대사부터
+      // 다시 듣는다. 여기서 따로 손댈 게 없는 건 그 판단이 필드가 있냐 없냐로만 정해져서고,
+      // 그래야 버전이 없는 서버 세이브도 같은 처리를 받는다.
     }
 
     return normalizeState(raw);
@@ -405,7 +405,7 @@ interface PlayerState {
     objective: QuestObjective;
     rewards: QuestReward[];
     setsFlag?: PersistedStoryFlag;
-    /** 몬스터 보상일 때 미리 만들어 넘긴다 — 진화·기술 습득 경로가 비동기라 여기서 못 만든다 */
+    /** 몬스터 보상이면 미리 만들어 넘긴다. 진화·기술 습득 경로가 비동기라 여기서 못 만든다 */
     monster?: OwnedMonster;
   }) => RewardDisplay[] | null;
   addCapturedMonster: (monster: Monster) => "storage" | "full";
@@ -430,8 +430,8 @@ interface PlayerState {
   grantWorkshopTestMaterials: () => void;
   addCraftedArtifact: (instance: ArtifactInstance) => void;
   removeCraftedArtifact: (instanceId: string) => void;
-  /** 장비 성장(레벨업/강화) — instanceId 기준으로 가방 + 장착 위치 모두 업데이트
-   *  level 값을 포함하면 레벨 10 배수 달성 시 부가 능력치를 자동으로 해제한다 */
+  /** 장비 성장(레벨업/강화). instanceId 기준으로 가방이랑 장착 위치를 같이 갱신한다
+   *  level 값을 같이 주면 레벨 10 배수를 찍을 때 부가 능력치가 자동으로 해제된다 */
   updateCraftedArtifact: (
     instanceId: string,
     patch: Partial<Pick<ArtifactInstance, "level" | "enhancement" | "bonusStats">>,
@@ -492,12 +492,12 @@ export const usePlayerStore = create<PlayerState>()(
         set((s) => ({ questStatus: { ...s.questStatus, [questId]: "in_progress" } })),
 
       /**
-       * 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 한 번의 set()으로 처리한다.
+       * 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 set() 한 번에 끝낸다.
        *
-       * 보상이 네 갈래로 늘면서 손대는 칸도 늘었다. 물약은 **전투 재고와 가방 표시 스택
-       * 양쪽**을 같이 올려야 한다 — 한쪽만 올리면 개수가 어긋난다(예전에 소모 쪽에서 이미
-       * 한 번 물렸다). 몬스터는 미리 만들어 넘겨받는다. 기술 습득과 진화를 태우는 경로가
-       * 비동기라 여기서 만들 수가 없다.
+       * 보상이 네 갈래로 늘면서 손대는 칸도 늘었다. 물약은 전투 재고랑 가방 표시 스택을
+       * 같이 올려야 한다. 한쪽만 올리면 개수가 어긋난다(소모 쪽에서 이미 한 번 물렸다).
+       * 몬스터는 미리 만들어서 넘겨받는다. 기술 습득이랑 진화를 태우는 경로가 비동기라
+       * 여기서는 못 만든다.
        */
       completeQuest: ({ questId, objective, rewards, setsFlag, monster }) => {
         const s = get();
@@ -554,8 +554,8 @@ export const usePlayerStore = create<PlayerState>()(
             }];
             granted.push(rewardDisplay(reward));
           } else if (reward.kind === "monster" && monster) {
-            // 자리는 부르는 쪽이 미리 봤다. 그래도 여기서 한 번 더 확인한다 —
-            // 넘치면 조용히 사라지는 게 제일 나쁘다
+            // 자리는 부르는 쪽이 미리 봤지만 여기서 한 번 더 본다.
+            // 넘쳐서 조용히 사라지는 게 제일 나쁘다
             if (newParty.length < 3) newParty = [...newParty, monster];
             else if (newStorage.length < 30) newStorage = [...newStorage, monster];
             else return null;
@@ -575,9 +575,9 @@ export const usePlayerStore = create<PlayerState>()(
           craftedArtifacts: newCraftedArtifacts,
           party: newParty, storage: newStorage, dexSeen, dexCaught,
           questStatus: { ...s.questStatus, [questId]: "completed" },
-          // 플래그를 세우는 퀘스트는 그 플래그가 이야기 대사의 조건일 때뿐이다.
-          // 나머지는 완료 기록만으로 충분하다 — 퀘스트마다 플래그를 만들면 세이브에
-          // 새 값이 여섯 개 늘고, 늘어난 만큼 마이그레이션할 것도 늘어난다.
+          // 플래그를 세우는 퀘스트는 그 플래그가 이야기 대사 조건일 때뿐이다.
+          // 나머지는 완료 기록이면 충분하다. 퀘스트마다 플래그를 만들면 세이브에
+          // 새 값이 여섯 개 늘고, 그만큼 마이그레이션할 것도 늘어난다.
           storyFlags:  setsFlag ? { ...s.storyFlags, [setsFlag]: true } : s.storyFlags,
         });
         return granted;
@@ -594,7 +594,7 @@ export const usePlayerStore = create<PlayerState>()(
             dexCaught: s.dexCaught.includes(monster.id) ? s.dexCaught : [...s.dexCaught, monster.id],
             // 이 플래그를 세우는 곳이 어디에도 없었다. 그래서 "숲에서 포획해 보세요"
             // 안내가 영영 안 넘어가고, 첫 포획 뒤 대사도 아무도 못 봤다.
-            // 이장에게 받은 첫 몬스터(grantMonster)는 여기 해당하지 않는다 — 잡은 게 아니다.
+            // 이장에게 받은 첫 몬스터(grantMonster)는 여기 해당 안 된다. 잡은 게 아니니까.
             storyFlags: s.storyFlags.first_capture
               ? s.storyFlags
               : { ...s.storyFlags, first_capture: true },
@@ -701,10 +701,10 @@ export const usePlayerStore = create<PlayerState>()(
         const s = get();
         if ((s.potions[potionId] ?? 0) <= 0) return false;
 
-        // 물약 재고는 두 곳에 있다 — 전투가 쓰는 potions(수량)와 가방 화면이 보여주는
-        // craftedPotions(등급별 스택). 제작과 버리기는 둘 다 갱신하는데 여기서만 potions를
-        // 줄여서, 전투에서 쓸수록 가방 표시 수량이 실제보다 많아졌다. 같이 줄인다.
-        // 등급이 낮은 스택부터 소모한다(좋은 걸 남긴다).
+        // 물약 재고는 두 군데 있다. 전투가 쓰는 potions(수량)랑 가방 화면이 보여주는
+        // craftedPotions(등급별 스택). 제작이랑 버리기는 둘 다 갱신하는데 여기서만
+        // potions 를 줄여서, 전투에서 쓸수록 가방 표시 수량이 실제보다 많아졌다.
+        // 같이 줄인다. 등급 낮은 스택부터 쓴다(좋은 걸 남긴다).
         const order: Record<string, number> = { normal: 0, rare: 1, elite: 2 };
         const target = s.craftedPotions
           .filter((p) => p.itemId === potionId && p.quantity > 0)
@@ -876,7 +876,7 @@ export const usePlayerStore = create<PlayerState>()(
         if (!target) return "not-found";
 
         const key = chainKeyOf(target);
-        // 계열이 통째로 사라지는 건 막는다 — 각인이 붙을 몸이 하나는 남아야 한다
+        // 계열이 통째로 사라지는 건 막는다. 각인이 붙을 몸이 하나는 남아야 한다
         const owned = [...s.party, ...s.storage].filter((m) => chainKeyOf(m) === key).length;
         if (owned <= 1) return "last-one";
 

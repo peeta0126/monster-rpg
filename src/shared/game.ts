@@ -24,7 +24,7 @@ export interface Monster {
   id: string;
   /** 한글 이름 */
   name: string;
-  /** null은 "무속성/전속성"(오름 전용)을 의미하며, 방어 시 모든 상성 배율이 1배로 고정된다 */
+  /** null 은 "무속성/전속성"(오름 전용). 방어할 때 모든 상성 배율이 1배로 고정된다 */
   type: ElementType | null;
   maxHp: number;
   attack: number;
@@ -49,5 +49,5 @@ export interface Monster {
 
 // ─── 전투 시스템 타입 ────────────────────────────────────────────────────────────
 
-/** 상태이상 종류. null은 정상 상태를 의미한다. */
+/** 상태이상 종류. null 이면 정상 */
 export type StatusEffect = "paralysis" | "poison" | "freeze" | "burn" | null;

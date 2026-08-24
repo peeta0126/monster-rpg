@@ -14,14 +14,14 @@ import { PixelIcon } from "./PixelIcon";
 import { isIconName, type IconName } from "./icons";
 
 /**
- * 장비 한 칸 — **화면마다 따로 그리지 않는다.**
+ * 장비 한 칸. 화면마다 따로 그리지 않는다.
  *
  * 가방·모루 네 탭·몬스터 장착 슬롯·제작 결과가 전부 자기 손으로 카드를 그리고 있었다.
- * 그래서 같은 장비가 화면마다 다르게 보였다. 어디는 아이콘이 있고 어디는 글자만 있었고,
- * 능력치는 세 곳이 제작 시점의 원본을 찍어 실제보다 3.7배 낮은 숫자를 말했다.
+ * 그래서 같은 장비가 화면마다 다르게 보였다. 어디는 아이콘이 있고 어디는 글자만 있고,
+ * 능력치는 세 곳이 제작 시점 원본을 찍어서 실제보다 3.7배 낮은 숫자를 말했다.
  *
- * 크기는 두 단계다. 좁은 자리(`compact`)는 아이콘·이름·등급·강화까지만 그리고 능력치를
- * 접는다 — 모루 왼쪽 목록이나 재료 고르는 자리처럼 여러 개가 세로로 서는 곳이다.
+ * 크기는 두 단계다. 좁은 자리(`compact`)는 아이콘·이름·등급·강화까지만 그리고 능력치는
+ * 접는다. 모루 왼쪽 목록이나 재료 고르는 자리처럼 여러 개가 세로로 서는 곳이다.
  */
 
 /** 카드가 알아야 하는 것만. ArtifactInstance 도 CraftedItem 도 이 모양에 맞는다. */
@@ -71,8 +71,8 @@ export function ArtifactCard({
   const lv    = artifact.level ?? 1;
   const enh   = artifact.enhancement ?? 0;
   const maxLv = getEquipmentMaxLevel(artifact.quality);
-  // "다 키웠다"는 레벨과 강화가 **둘 다** 끝났을 때다. 레벨만으로 치면 강화가 하나도 안 된
-  // 장비에 MAX 가 붙어서, 정작 더 부을 데가 남았다는 걸 표가 가려 버린다.
+  // "다 키웠다"는 레벨이랑 강화가 둘 다 끝났을 때다. 레벨만 보면 강화가 하나도 안 된
+  // 장비에 MAX 가 붙어서, 아직 더 부을 데가 남았다는 걸 표가 가려 버린다.
   const maxed = lv >= maxLv && enh >= MAX_EQUIPMENT_ENHANCEMENT;
   const stats = size === "full" ? getArtifactDisplayStats(artifact) : [];
 

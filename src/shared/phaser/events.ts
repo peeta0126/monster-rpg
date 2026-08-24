@@ -5,10 +5,10 @@ import type { QuestReward } from "../../camp/questRewards";
 /**
  * React ↔ Phaser 공용 이벤트 버스.
  *
- * Phaser.Events.EventEmitter 를 쓰지 않는다. 이 파일은 main.tsx 가 임포트하는데,
+ * Phaser.Events.EventEmitter 는 안 쓴다. 이 파일을 main.tsx 가 임포트하는데,
  * Phaser 를 물고 오면 캔버스를 안 쓰는 화면(숲·가방·몬스터·공방)에서도 phaser 청크
- * 325KB 를 함께 받게 된다. 버스가 Phaser 에 기대야 할 이유도 없다 —
- * 필요한 건 on/off/once/emit 뿐이다.
+ * 325KB 를 같이 받게 된다. 버스가 Phaser 에 기댈 이유도 없다. 필요한 건
+ * on/off/once/emit 뿐이라서.
  */
 type Listener = (...args: never[]) => void;
 

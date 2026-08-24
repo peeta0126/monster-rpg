@@ -13,8 +13,8 @@ const FILL_MS = 300;
 
 /**
  * 채워진 부분의 색.
- * hp 만 잔량에 따라 3단계로 바뀐다 (ART_DIRECTION 3-2) — 그래서 경험치는 **변하지 않는
- * 단색**이어야 한다. 둘 다 변하면 어느 쪽이 줄고 어느 쪽이 느는지 색으로 구분이 안 된다.
+ * hp 만 잔량에 따라 3단계로 바뀐다(ART_DIRECTION 3-2). 그래서 경험치는 변하지 않는
+ * 단색이어야 한다. 둘 다 변하면 뭐가 줄고 뭐가 느는지 색으로 구분이 안 된다.
  * mist300 은 HP 3단계(moss500·ember500·ember700) 어디와도 안 겹치는 유일한 밝은 색이다.
  */
 function fillColor(variant: StatBarVariant, pct: number): string {
@@ -44,7 +44,7 @@ export function StatBar({
 }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   // 위험 구간에서 느리게 맥박쳐 "위험"을 색이 아닌 움직임으로도 알린다.
-  // 경계는 palette 한 곳에서 온다 — 전투 캔버스의 몬스터 경고와 같은 순간에 켜져야 한다.
+  // 경계는 palette 한 곳에서 온다. 전투 캔버스의 몬스터 경고와 같은 순간에 켜져야 한다.
   const critical = variant === "hp" && isHpDanger(pct);
 
   return (

@@ -31,7 +31,7 @@ export function dirFromVector(dx: number, dy: number): Dir8 {
 
 /**
  * 좌우 반전으로 대체 가능한 방향.
- * SW/W/NW 는 SE/E/NE 를 뒤집어 쓴다 — 에셋 작업량이 40% 줄어든다.
+ * SW/W/NW 는 SE/E/NE 를 뒤집어 쓴다. 에셋 작업량이 40% 줄어든다.
  */
 const MIRROR: Partial<Record<Dir8, Dir8>> = { SW: "SE", W: "E", NW: "NE" };
 
@@ -92,9 +92,9 @@ export function walkFrameIndex(frame: number): number {
 /**
  * 프레임 이름 → 아틀라스 격자 칸.
  *
- * <img> 로 그리는 공방은 Phaser 처럼 이름으로 프레임을 찾을 수 없어서 좌표가 필요하다.
- * 이름에서 되짚는 이유는, 이미 반전까지 적용된 `getPlayerFrame().source` 를 그대로
- * 넘겨 받기 위해서다 — 방향을 두 번 해석하면 한쪽만 어긋난다.
+ * <img> 로 그리는 공방은 Phaser 처럼 이름으로 프레임을 못 찾아서 좌표가 필요하다.
+ * 이름에서 되짚는 건 이미 반전까지 적용된 `getPlayerFrame().source` 를 그대로
+ * 넘겨받으려고 그런 거다. 방향을 두 번 해석하면 한쪽만 어긋난다.
  */
 export function atlasFrameCell(source: string): { col: number; row: number } {
   const m = /^(idle|walk)_([A-Z]+)(?:_(\d+))?$/.exec(source);

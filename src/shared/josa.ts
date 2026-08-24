@@ -6,7 +6,7 @@
  * 숫자는 경험치·레벨뿐이라, 받침 판정 하나면 전부 덮인다.
  */
 
-/** 마지막 글자의 받침 — 'ㄹ' 은 (으)로 가 따로 갈리므로 구분한다 */
+/** 마지막 글자의 받침. 'ㄹ' 은 (으)로 가 따로 갈려서 구분한다 */
 type Final = "none" | "rieul" | "other";
 
 /** 한 자리 숫자를 소리 나는 대로 읽었을 때의 받침 (영·일·이·삼·사·오·육·칠·팔·구) */
@@ -39,14 +39,14 @@ const PAIRS = {
 
 export type JosaPair = keyof typeof PAIRS | "로";
 
-/** 조사만 돌려준다. 대개는 `withJosa` 쪽이 읽기 편하다. */
+/** 조사만 돌려줌. 보통은 `withJosa` 쪽이 읽기 편하다 */
 export function josa(word: string | number, pair: JosaPair): string {
   const f = finalOf(String(word));
   if (pair === "로") return f === "other" ? "으로" : "로";
   return PAIRS[pair][f === "none" ? 0 : 1];
 }
 
-/** 말과 조사를 붙여 돌려준다 — `${withJosa(name, "은는")} 쓰러졌다` */
+/** 말에 조사를 붙여서 돌려줌. `${withJosa(name, "은는")} 쓰러졌다` 처럼 쓴다 */
 export function withJosa(word: string | number, pair: JosaPair): string {
   return `${word}${josa(word, pair)}`;
 }

@@ -49,20 +49,20 @@ import statusParalysisSvg  from "../../assets/ui/status-paralysis.svg";
 import statusFreezeSvg     from "../../assets/ui/status-freeze.svg";
 
 /**
- * 아이콘 한 벌 — **폴백**이다.
+ * 아이콘 한 벌. 이건 폴백이다.
  *
  * 재료·물약·아티팩트 21종은 이제 그림 파일(public/assets/icons/*.webp)로 나간다.
- * 여기 적힌 SVG 는 그 파일이 없을 때 대신 그려진다. 지우지 말 것 — 굽지 않은 채로
- * 클론한 곳에서도 화면이 비지 않아야 한다.
+ * 여기 적힌 SVG 는 그 파일이 없을 때 대신 그려진다. 지우지 마라. 굽지 않고 클론한
+ * 곳에서도 화면이 비면 안 된다.
  *
- * 상태이상·메뉴·공방 탭은 그림 파일이 없어 계속 이 SVG 로 나간다.
+ * 상태이상·메뉴·공방 탭은 그림 파일이 없어서 계속 이 SVG 로 나간다.
  *
- * 예전에는 화면마다 이모지를 박아 뒀다. 이모지는 글꼴이 그리는 그림이라 픽셀아트와
+ * 원래는 화면마다 이모지를 박아 뒀다. 이모지는 글꼴이 그리는 그림이라 픽셀아트랑
  * 톤이 안 맞고, 같은 자리에 픽셀 SVG 와 이모지가 섞여 나왔다(가방의 약초는 픽셀아트,
- * 가죽은 갈색 사각형 이모지였다). 게다가 플랫폼마다 다르게 그려진다.
+ * 가죽은 갈색 사각형 이모지였다). 플랫폼마다 다르게 그려지기도 하고.
  *
- * 그래서 아이콘은 **여기 적힌 것만** 쓴다. 새 아이콘이 필요하면 `src/assets/ui` 나
- * `src/assets/materials` 에 32×32 픽셀 SVG 를 그려 넣고 이 표에 이름을 더한다.
+ * 그래서 아이콘은 여기 적힌 것만 쓴다. 새 아이콘이 필요하면 `src/assets/ui` 나
+ * `src/assets/materials` 에 32×32 픽셀 SVG 를 그려 넣고 이 표에 이름을 더해라.
  */
 export const ICONS = {
   // 재료
@@ -101,9 +101,9 @@ export type IconName = keyof typeof ICONS;
 /**
  * 아이템 id 처럼 표 밖에서 온 문자열을 아이콘 이름으로 좁힌다.
  *
- * 예전엔 URL 을 바로 내주는 `iconUrl` 도 있었는데 걷어냈다. 그건 위 표(=SVG 폴백)를
- * 가리키므로, 그걸로 `<img>` 를 만들면 그림 파일이 있어도 옛 SVG 가 나간다.
- * 조용히 틀린 그림이 나오는 쪽이라 눈으로 잡히지 않는다. 아이콘은 PixelIcon 으로만 그린다.
+ * URL 을 바로 내주는 `iconUrl` 도 있었는데 걷어냈다. 그건 위 표(=SVG 폴백)를 가리키니까
+ * 그걸로 `<img>` 를 만들면 그림 파일이 있어도 옛 SVG 가 나간다. 조용히 틀린 그림이
+ * 나오는 쪽이라 눈으로는 안 잡힌다. 아이콘은 PixelIcon 으로만 그린다.
  */
 export function isIconName(name: string): name is IconName {
   return name in ICONS;

@@ -5,7 +5,7 @@ import type { IconName } from "./ui/icons";
 export interface Material {
   id: string;
   name: string;
-  /** shared/ui/PixelIcon 의 아이콘 이름. id 와 같게 둔다 — 표를 두 벌로 만들지 않는다 */
+  /** shared/ui/PixelIcon 의 아이콘 이름. 표를 두 벌로 안 만들려고 id 와 같게 둔다 */
   icon: IconName;
   description: string;
 }

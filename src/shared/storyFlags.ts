@@ -1,10 +1,10 @@
 /**
- * 스토리 플래그와 퀘스트 상태 — 아무것도 import 하지 않는 바닥 모듈.
+ * 스토리 플래그와 퀘스트 상태. 아무것도 import 하지 않는 바닥 모듈이다.
  *
  * 원래 playerStore 안에 있었는데, 세이브 마이그레이션이 "지금까지 조건을 만족한 대사"를
- * 계산하려고 대사 표를 읽어야 하면서 playerStore ↔ campDialogues 가 서로를 부르게 됐다.
- * 둘 다 필요로 하는 것은 이 정의들뿐이라 여기로 내렸다. playerStore 가 그대로 다시
- * 내보내므로 기존 import 경로는 살아 있다.
+ * 계산하려고 대사 표를 읽으면서 playerStore ↔ campDialogues 가 서로를 부르게 됐다.
+ * 둘 다 필요한 건 이 정의들뿐이라 여기로 내렸다. playerStore 가 그대로 다시 내보내니까
+ * 기존 import 경로는 살아 있다.
  */
 
 /** always: 항상 충족되는 sentinel. floor_*: bestFloor에서 파생(저장 안 함). 나머지는 저장 대상. */
@@ -28,7 +28,7 @@ export type PersistedStoryFlag =
   | "first_capture"
   | "quest_baros_done"
   | "quest_orion_done"
-  /** 오름을 쓰러뜨리고 엔딩까지 본 상태. bestFloor >= 50(floor_50)과 달리 "엔딩을 봤는가"를 가린다. */
+  /** 오름을 쓰러뜨리고 엔딩까지 본 상태. bestFloor >= 50(floor_50)과 달리 엔딩을 봤는지를 가린다 */
   | "tower_cleared";
 
 export const DEFAULT_STORY_FLAGS: Record<PersistedStoryFlag, boolean> = {

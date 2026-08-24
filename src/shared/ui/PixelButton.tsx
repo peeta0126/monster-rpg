@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes } from "react";
 type Variant = "primary" | "ghost" | "danger" | "info" | "nature";
 
 /**
- * 톤은 팔레트의 뜻을 그대로 따른다 — ember=주 강조/위험, mist=정보, moss=자연.
+ * 톤은 팔레트의 뜻을 그대로 따른다. ember=주 강조/위험, mist=정보, moss=자연.
  * 글자색은 전부 밝은 쪽(cream/sand/mist-300)이다. mist-500·moss-500·earth-500 을
  * 글자에 쓰면 shadow-900 위에서 2.7~3.4:1 밖에 안 나온다 (palette.ts 머리말).
  */

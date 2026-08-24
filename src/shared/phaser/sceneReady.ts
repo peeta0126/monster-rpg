@@ -8,7 +8,7 @@ import Phaser from "phaser";
  * window.__PHASER_READY__ 를 true 로 세우고, shutdown/destroy 시 false 로 되돌린다
  * (씬 재시작 시 이전 실행의 true 가 남아 있으면 안 되므로).
  *
- * 프로덕션 동작에는 영향이 없다 — 읽는 쪽은 테스트뿐이다.
+ * 프로덕션 동작에는 영향 없다. 읽는 쪽은 테스트뿐이다.
  */
 declare global {
   interface Window {
