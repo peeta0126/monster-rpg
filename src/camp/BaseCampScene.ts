@@ -28,7 +28,7 @@ import {
 
 // ─── 맵 좌표 ──────────────────────────────────────────────────────────────────
 // 탑·숲·집의 판정 좌표와 복귀 좌표는 campCollision.ts 의 CAMP_INTERACTIONS 한 벌뿐이다.
-// 여기 숫자를 다시 적지 말 것 — 충돌 형상과 같이 움직여야 하는 값이라 거기 있다.
+// 여기 숫자를 다시 적지 마라. 충돌 형상이랑 같이 움직여야 하는 값이라 거기 있다.
 
 const CAM_ZOOM = 0.5;
 const NPC_DISPLAY_HEIGHT = 192;   // 플레이어(160) × 1.2배
@@ -93,7 +93,7 @@ export default class BaseCampScene extends Phaser.Scene {
 
   preload() {
     // JSON Array 형식(Aseprite 내보내기)이라 load.atlas 로 읽는다. load.aseprite 는
-    // meta.frameTags 를 요구하는데 이 파일에는 태그가 없다 — 애니메이션은 아래
+    // meta.frameTags 를 요구하는데 이 파일엔 태그가 없다. 애니메이션은 아래
     // registerPlayerAnimations 가 프레임 이름 규칙에서 직접 만든다.
     this.load.atlas(PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON);
     this.load.image("basecamp-bg", BASECAMP_BACKGROUND_IMAGE);
@@ -130,15 +130,15 @@ export default class BaseCampScene extends Phaser.Scene {
     // ─────────────────────────────────────────────────────────────────────────────
     // 플레이어
     // ─────────────────────────────────────────────────────────────────────────────
-    // 벽 안에서 시작하면 그대로 갇힌다 — 정적 바디는 이미 겹쳐 있는 것을 밀어내지 않는다.
-    // 형상을 고치는 중에 실제로 걸렸다. 들어올 자리는 테스트가 지키지만, 여기서도 한 번 본다.
+    // 벽 안에서 시작하면 그대로 갇힌다. 정적 바디는 이미 겹쳐 있는 걸 안 밀어낸다.
+    // 형상 고치는 중에 실제로 걸렸다. 들어올 자리는 테스트가 지키지만 여기서도 한 번 본다.
     const initPos = safeSpawn(getCampPosition());
     this.player = this.physics.add.sprite(initPos.x, initPos.y, PLAYER_ATLAS_KEY, atlasFrameName("S", 0));
     this.player.setCollideWorldBounds(true);
     this.player.setScale(PLAYER_SCALE);
     this.player.setDepth(footYFromSpriteY(initPos.y));
 
-    // 바디는 발밑에 둔다. 예전에는 스프라이트 한가운데(offset 27,27)에 있어서,
+    // 바디는 발밑에 둔다. 원래 스프라이트 한가운데(offset 27,27)에 있어서,
     // 벽 앞에 서면 발이 화단·좌판 안으로 80px 씩 파고들어 있었다.
     // texture 좌표 → 월드 = ×PLAYER_SCALE. 아틀라스 한 칸의 아래쪽에 맞춘다.
     const body = this.player.body as Phaser.Physics.Arcade.Body;
@@ -159,8 +159,8 @@ export default class BaseCampScene extends Phaser.Scene {
     };
 
     // ── E 키 ────────────────────────────────────────────────────────────────────
-    // 판정은 findTarget 하나로만 한다. 예전에는 여기와 근접 안내가 각자 조건을 갖고
-    // 있어서 "E: 숲 입장" 이 떠 있는데 E 가 안 먹는 구간이 30px 씩 있었다.
+    // 판정은 findTarget 하나로만 한다. 원래는 여기랑 근접 안내가 각자 조건을 갖고
+    // 있어서, "E: 숲 입장"이 떠 있는데 E 가 안 먹는 구간이 30px 씩 있었다.
     keyboard.on("keydown-E", safeHandler(this, () => {
       const target = this.findTarget();
       if (!target) return;
@@ -192,13 +192,13 @@ export default class BaseCampScene extends Phaser.Scene {
   /**
    * 정적 충돌 바디 + 개발자 모드 표시선.
    *
-   * NPC 도 막는다 — 예전에는 통과할 수 있어서 오리온과 바로스 몸을 뚫고 지나갔다.
+   * NPC 도 막는다. 원래는 통과할 수 있어서 오리온과 바로스 몸을 뚫고 지나갔다.
    */
   private buildCollision() {
     const statics = this.physics.add.staticGroup();
 
     for (const b of CAMP_COLLISION_BOXES) {
-      // alpha 0 — 화면에 안 그려지는 판정용이라 색은 의미가 없다
+      // alpha 0. 화면에 안 그려지는 판정용이라 색은 의미가 없다
       const r = this.add.rectangle(b.x + b.w / 2, b.y + b.h / 2, b.w, b.h, 0x000000, 0); // palette-ok: alpha 0, 판정 전용
       statics.add(r);
     }
@@ -245,7 +245,7 @@ export default class BaseCampScene extends Phaser.Scene {
    * 걷기 애니메이션 등록.
    *
    * 아틀라스에 든 방향은 다섯이다(S·SE·E·NE·N). 나머지 셋은 좌우 반전이라
-   * 애니메이션을 따로 만들지 않는다 — resolveDir 이 어느 쪽을 뒤집을지 정한다.
+   * 애니메이션을 따로 안 만든다. resolveDir 이 어느 쪽을 뒤집을지 정한다.
    */
   private registerPlayerAnimations() {
     if (!this.textures.exists(PLAYER_ATLAS_KEY)) return;
@@ -282,11 +282,11 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   /**
-   * 지금 E 로 할 수 있는 것. 범위 안에서 **가장 가까운** 하나를 고른다.
+   * 지금 E 로 할 수 있는 것. 범위 안에서 제일 가까운 하나를 고른다.
    *
-   * 우선순위 규칙이 한 군데에만 있어야 근접 안내와 E 가 어긋나지 않는다. 거리 비교가
-   * 곧 규칙이라 판정 원이 겹쳐도 예측이 된다 — 오리온 옆에 서면 오리온, 숲 쪽으로
-   * 두 걸음 가면 숲이다.
+   * 우선순위 규칙이 한 군데에만 있어야 근접 안내랑 E 가 안 어긋난다. 거리 비교가 곧
+   * 규칙이라 판정 원이 겹쳐도 예측이 된다. 오리온 옆에 서면 오리온, 숲 쪽으로 두
+   * 걸음 가면 숲이다.
    */
   private findTarget():
     | { kind: "npc"; npc: BaseCampNpcInstance; dist: number }
@@ -341,7 +341,7 @@ export default class BaseCampScene extends Phaser.Scene {
         noPotion: Object.values(potions).every((n) => n <= 0),
         loaded:   Object.values(materials).reduce((a, n) => a + n, 0) >= LOADED_MATERIAL_COUNT,
       },
-      // 바로 앞에 한 잡담만 기억한다. 세이브에 넣지 않는다 — 새로고침하면 같은 말이 한 번
+      // 바로 앞에 한 잡담만 기억한다. 세이브엔 안 넣는다. 새로고침하면 같은 말이 한 번
       // 더 나올 수 있지만, 그 정도를 저장 구조에 얹을 값어치는 없다.
       lastSmallTalk: this.lastSmallTalk[npc.id],
     });
@@ -428,7 +428,7 @@ export default class BaseCampScene extends Phaser.Scene {
     }
 
     // ── 근접 힌트 ────────────────────────────────────────────────────────────────
-    // 안내는 하나뿐이고, 판정은 E 키와 같은 findTarget 을 쓴다. 예전에는 대상마다
+    // 안내는 하나뿐이고 판정은 E 키와 같은 findTarget 을 쓴다. 원래는 대상마다
     // 텍스트를 따로 만들고 지웠는데, 만든 자리에 그대로 못박혀 있어서 걸어가면
     // 안내만 월드에 남아 떠다녔다. 매 프레임 플레이어 위로 옮긴다.
     this.updateHint(this.findTarget());

@@ -8,9 +8,9 @@ import type { RpsChoice } from "../../workshop/rps";
 /**
  * 포획 규칙 한 벌.
  *
- * 가위바위보는 판정이 아니라 **어느 확률로 굴릴지 고르는 보정**이다. 최종 굴림은
+ * 가위바위보는 판정이 아니라 어느 확률로 굴릴지 고르는 보정이다. 최종 굴림은
  * 한 번뿐이고, 화면에 적히는 숫자가 곧 그 값이다. 시뮬(gameModel)도 이 표를 불러
- * 쓴다 — 예전엔 사본을 들고 있어서 포획률을 고쳐도 측정이 옛 값을 계속 쟀다.
+ * 쓴다. 원래는 사본을 들고 있어서 포획률을 고쳐도 측정이 옛 값을 계속 쟀다.
  */
 
 export type RpsResult = "win" | "lose" | "draw";
@@ -55,7 +55,7 @@ export function catchChance(result: RpsResult, alert: number): number {
  * 이 속성 상대로 이 수를 냈을 때의 기대 포획률.
  *
  * 상대 손이 균등하면 세 수의 값이 전부 같다(그게 예전 문제였다). 버릇이 붙으면
- * 여기서 갈린다 — 밸런스 판단도 시뮬 측정도 이 함수 하나만 본다.
+ * 여기서 갈린다. 밸런스 판단도 시뮬 측정도 이 함수 하나만 본다.
  */
 export function expectedCatchChance(player: RpsChoice, type: ElementType, alert: number): number {
   const w = handWeights(type);
@@ -64,10 +64,10 @@ export function expectedCatchChance(player: RpsChoice, type: ElementType, alert:
 }
 
 /**
- * 시도마다 붙는 소란. 첫 시도는 공짜다 — 조우에 들어선 값은 걸음이 이미 치렀다.
+ * 시도마다 붙는 소란. 첫 시도는 공짜다. 조우에 들어선 값은 걸음이 이미 치렀다.
  *
- * 예전엔 3번을 다 쓰고 놓친 뒤에야 escapeAlert 가 한 번 붙었다. 그러니 항상 3번을 다
- * 썼다 — 안 쓸 이유가 없으면 그건 선택이 아니라 절차다. 값이 붙어야 "여기서 그만둔다"가
+ * 원래는 3번을 다 쓰고 놓친 뒤에야 escapeAlert 가 한 번 붙었다. 그러니 항상 3번을 다
+ * 썼다. 안 쓸 이유가 없으면 그건 선택이 아니라 절차다. 값이 붙어야 "여기서 그만둔다"가
  * 저울에 올라간다. 완전히 놓쳤을 때의 escapeAlert 는 그대로 따로 붙는다.
  */
 export const ATTEMPT_ALERT: number[] = [0, 5, 10];

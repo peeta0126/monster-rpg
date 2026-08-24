@@ -28,11 +28,11 @@ import { chainInDex, tellReveal } from "./catchTells";
  * 탐험 화면.
  *
  * 배경 원화가 무대고, 그 위에 상단 바 · 사건 패널 · 하단 바만 얹힌다. 노드 맵을
- * 걷어낸 이유가 여기 있다 — 지도는 여러 걸음 앞을 계획하게 하려고 그리는 UI 인데
- * 우리는 한 걸음씩만 고른다. 볼 것은 지금 눈앞의 사건 하나뿐이다.
+ * 걷어낸 이유가 여기 있다. 지도는 여러 걸음 앞을 계획하라고 그리는 UI 인데 우리는
+ * 한 걸음씩만 고른다. 볼 것은 지금 눈앞의 사건 하나뿐이다.
  */
 
-/** 걸음 안에서의 진행 단계. run.step 에서 파생된다 — 따로 들고 있지 않는다 */
+/** 걸음 안에서의 진행 단계. run.step 에서 뽑는다. 따로 들고 있지 않는다 */
 type StepPhase = "event" | "nest" | "catch" | "resolved";
 
 /** 이번 걸음의 굴림. 시드에서 다시 나오므로 저장하지 않는다 */
@@ -52,11 +52,11 @@ function pickMonsterFor(
   // 강한 사건일수록 풀 후반부에서, 레벨 하한도 위로
   const strong = kind === "champion" || kind === "warden" || kind === "anomaly";
   const pool = strong ? area.monsterPool.slice(-2) : area.monsterPool;
-  // id 를 먼저 뽑아 둔다 — find 안에서 rng() 를 부르면 술어가 원소마다 실행되면서
-  // 매번 다른 id 와 비교하게 되어 대개 아무것도 못 찾는다
+  // id 를 먼저 뽑아 둔다. find 안에서 rng() 를 부르면 술어가 원소마다 실행되면서
+  // 매번 다른 id 와 비교하게 돼서 대개 아무것도 못 찾는다
   const id = pool[Math.floor(rng() * pool.length)];
   const base = monsters.find((m) => m.id === id)!;
-  // 천장이 낮으면 하한도 같이 내려온다 — 안 그러면 강한 사건에서 범위가 뒤집힌다
+  // 천장이 낮으면 하한도 같이 내려온다. 안 그러면 강한 사건에서 범위가 뒤집힌다
   const [areaMin, lvMax] = range;
   const lvMin = strong ? Math.min(lvMax, Math.floor((area.levelRange[0] + area.levelRange[1]) / 2)) : areaMin;
   const level = lvMin + Math.floor(rng() * (lvMax - lvMin + 1));
@@ -67,7 +67,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
   area: ForestArea;
   run: ForestRun;
   /**
-   * 런 갱신. 함수형도 받는다 — 포획 결과는 900ms 뒤에 도착해서, 그때 닫아 둔 런으로
+   * 런 갱신. 함수형도 받는다. 포획 결과가 900ms 뒤에 도착하는데, 그때 닫아 둔 런으로
    * 덮어쓰면 그 사이에 태운 시도가 되살아난다(그게 곧 리롤이다).
    */
   setRun: Dispatch<SetStateAction<ForestRun | null>>;
@@ -99,7 +99,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
    * 이번 걸음의 굴림.
    *
    * 시드가 (seed, depth) 로 고정돼 있어 몇 번을 다시 계산해도 같은 결과가 나온다.
-   * 그래서 수확 목록도 상대 몬스터도 저장하지 않는다 — 새로고침하면 여기서 그대로
+   * 그래서 수확 목록도 상대 몬스터도 저장 안 한다. 새로고침하면 여기서 그대로
    * 다시 나온다. 저장하는 건 "어디까지 했는가"(run.step) 뿐이다.
    */
   const draft = useMemo<StepDraft | null>(() => {
@@ -131,7 +131,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
   }, [setRun]);
 
   /**
-   * 사건에 들어선다. 둥지라면 지금의 보유 계열을 함께 적어 둔다 —
+   * 사건에 들어선다. 둥지라면 지금 보유 계열을 같이 적어 둔다.
    * 후보 굴림이 그걸 보기 때문에, 굳혀 두지 않으면 런 도중 보유가 바뀔 때 후보도 바뀐다.
    */
   const enterStep = useCallback(() => {
@@ -144,7 +144,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
    * 내놓을 몬스터가 없으면 포획 화면으로 보내지 않는다.
    *
    * 지금은 그런 사건이 애초에 뽑히지 않지만(`steps.candidates` 의 `canCatch`), 여기서 한 번 더
-   * 막는다 — 포획 화면이 빈손으로 뜨면 버튼이 하나도 없어 걸음에 갇힌다. 이 게임에서 제일
+   * 막는다. 포획 화면이 빈손으로 뜨면 버튼이 하나도 없어서 걸음에 갇힌다. 이 게임에서 제일
    * 나쁜 고장은 막다른 화면이다.
    */
   const catchable = kind === "nest" ? draft !== null && draft.choices.length > 0 : draft?.monster != null;
@@ -162,7 +162,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
     if (!draft) return;
     const next = resolveStep(run, {
       gained: draft.gained,
-      // 보관함이 넘쳐 흡수·방생으로 끝난 포획은 데려온 게 아니다 — 정산에서 세지 않는다
+      // 보관함이 넘쳐 흡수·방생으로 끝난 포획은 데려온 게 아니다. 정산에서 안 센다
       caught: step.done?.caught && step.overflow === null,
       escaped: step.done?.escaped,
       // 시도 비용은 걸음이 끝날 때 한 번에 붙는다. 물러섰어도 건 만큼은 치른다
@@ -183,10 +183,10 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
     if (result.caught) {
       // 몬스터는 즉시 확정이다. 정산 대상이 아니라서 퇴각해도 잃지 않는다
       addToDexCaught(monster.id);
-      // 자리가 없으면 예전엔 아무 말 없이 사라졌다. 이제는 사라지기 전에 한 번 묻는다
+      // 자리가 없으면 원래 아무 말 없이 사라졌다. 이제는 사라지기 전에 한 번 묻는다
       if (addCapturedMonster(monster) === "full") overflow = "pending";
     }
-    // 스스로 물러선 것은 놓친 게 아니다 — escapeAlert 도 짐 흘림도 붙지 않는다
+    // 스스로 물러선 건 놓친 게 아니다. escapeAlert 도 짐 흘림도 안 붙는다
     const escaped = !result.caught && !result.retreated;
     patchStep({ pending: null, done: { caught: result.caught, escaped }, overflow });
   }, [patchStep, addToDexCaught, addCapturedMonster]);
@@ -204,13 +204,13 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
   const [resolving, setResolving] = useState(false);
   const goHome = () => { if (!resolving) onSettle("voluntary", run.bag, run.caught, run.alertPeak); };
 
-  // 정찰은 "다음 걸음"이 아니라 지금 눈앞의 사건에 대해 말한다 — 아직 안 들어갔으니 예고다
+  // 정찰은 "다음 걸음"이 아니라 지금 눈앞의 사건을 말한다. 아직 안 들어갔으니 예고다
   const scout = scoutStep(kind, run.depth, band.scout);
   const delta = stepAlertDelta(kind, run.depth);
 
   return (
     <div className="relative z-10 flex h-full w-full flex-col">
-      {/* ── 상단 바 — 판 없이 원화 위에 바로 놓이므로 글자마다 그림자를 깐다 ── */}
+      {/* ── 상단 바. 판 없이 원화 위에 바로 놓이므로 글자마다 그림자를 깐다 ── */}
       <div className="flex items-start justify-between px-6 pt-4"
         style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
         <div>
@@ -230,7 +230,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
         </div>
       </div>
 
-      {/* ── 중앙 — 갈림길이면 두 갈래, 아니면 사건 하나 ── */}
+      {/* ── 중앙. 갈림길이면 두 갈래, 아니면 사건 하나 ── */}
       <div className="flex flex-1 items-center justify-center px-6">
         {phase === "event" && run.fork && (
           <ForkChoice
@@ -270,7 +270,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
             seed={(run.seed ^ (run.depth + 1)) >>> 0}
             attempts={step.attempts}
             pending={step.pending}
-            /* 정찰 등급은 이 조우를 실제로 판정하는 소란도로 본다 — 주인을 깨우면
+            /* 정찰 등급은 이 조우를 실제로 판정하는 소란도로 본다. 주인을 깨우면
                그 +30 이 붙은 뒤라, 깨우는 순간 읽히던 것도 안 읽히게 된다 */
             reveal={tellReveal({
               dexCaught: chainInDex(draft.monster, dexCaught),
@@ -335,7 +335,7 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
             </span>
           </button>
 
-          {/* 뱅킹 결정에 정보가 있어야 한다 — 지금 확정될 것을 늘 적어 둔다 */}
+          {/* 뱅킹 결정에 정보가 있어야 한다. 지금 확정될 것을 늘 적어 둔다 */}
           <p className="text-pixel-sm text-sand-300" data-testid="forest-banked">
             지금 돌아가면 <span className="font-bold text-cream-100">{banked}</span> 확정으로 가져간다
           </p>

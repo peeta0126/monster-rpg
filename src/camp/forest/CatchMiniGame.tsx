@@ -16,11 +16,11 @@ import { withJosa } from "../../shared/josa";
 /**
  * 포획 미니게임.
  *
- * 숲에는 턴제 전투가 없다 — 붙이는 순간 파티 HP 를 전투 사이로 이월해야 하고,
- * 그러면 소모전이 되어 무한의 탑과 똑같아진다. 그래서 포획 수단은 가위바위보다.
+ * 숲에는 턴제 전투가 없다. 붙이는 순간 파티 HP 를 전투 사이로 이월해야 하고,
+ * 그러면 소모전이 돼서 무한의 탑이랑 똑같아진다. 그래서 포획 수단은 가위바위보다.
  *
- * 실패의 이름은 "패배"가 아니라 **"놓쳤다"** 다. 숲에서 지는 건 못 이긴 게 아니라
- * 못 가져온 것이다. 시도를 다 쓰면 몬스터가 달아나고 런은 계속된다.
+ * 실패의 이름은 "패배"가 아니라 "놓쳤다"다. 숲에서 지는 건 못 이긴 게 아니라
+ * 못 가져온 거다. 시도를 다 쓰면 몬스터가 달아나고 런은 계속된다.
  */
 
 const RESULT_TEXT: Record<RpsResult, { text: string; color: string }> = {
@@ -32,9 +32,9 @@ const RESULT_TEXT: Record<RpsResult, { text: string; color: string }> = {
 /**
  * 세 버튼은 같은 판이다.
  *
- * 예전엔 가위 빨강 · 바위 회색 · 보 주황으로 갈라 뒀는데, 아이콘 셋이 같은 살색으로
- * 통일되면서 그 색이 아무것도 가리키지 않게 됐다. 무엇을 고르든 위험은 같으니
- * 색으로 구분할 것이 애초에 없다 — 구분은 호버와 결과 화면의 강조가 한다.
+ * 원래 가위 빨강 · 바위 회색 · 보 주황으로 갈라 뒀는데, 아이콘 셋이 같은 살색으로
+ * 통일되면서 그 색이 아무것도 안 가리키게 됐다. 뭘 고르든 위험은 같으니 색으로
+ * 구분할 게 애초에 없다. 구분은 호버랑 결과 화면의 강조가 한다.
  */
 const CARD_BORDER = rgba("shadow700", 1);
 
@@ -50,14 +50,14 @@ export function CatchMiniGame({
   /**
    * 이 조우의 시드. 상대의 수와 최종 굴림이 여기서 나온다.
    *
-   * Math.random 을 쓰면 실패한 뒤 새로고침해서 다시 굴릴 수 있다 — 같은 시도 번호는
+   * Math.random 을 쓰면 실패한 뒤 새로고침해서 다시 굴릴 수 있다. 같은 시도 번호는
    * 언제나 같은 결과가 나와야 리롤이 막힌다.
    */
   seed: number;
   /**
    * 지금까지 건 시도 횟수. 런이 들고 있고 저장된다.
    *
-   * 여기 안에 두면 새로고침이 시도를 되살린다 — 같은 시도 번호는 같은 수를 내므로,
+   * 여기 안에 두면 새로고침이 시도를 되살린다. 같은 시도 번호는 같은 수를 내니까,
    * 방금 본 상대의 수를 알고 다시 낼 수 있게 된다. 시드로 리롤을 막아 놓고 횟수를
    * 화면에 두면 그 자물쇠가 열린다.
    */
@@ -66,7 +66,7 @@ export function CatchMiniGame({
   pending: { hand: RpsChoice; caught: boolean } | null;
   /**
    * 이 상대의 버릇을 얼마나 열어 줄지. 도감과 정찰 등급이 정한다(catchTells.tellReveal).
-   * 처음 보는 몬스터를 못 읽는 게 정상이다 — 여기서 임의로 열지 말 것.
+   * 처음 보는 몬스터를 못 읽는 게 정상이다. 여기서 마음대로 열지 마라.
    */
   reveal: TellReveal;
   /** 각인 진행도. 3번째 시도를 지를 이유가 되므로 카드에 같이 적는다 */
@@ -78,7 +78,7 @@ export function CatchMiniGame({
   /**
    * 이 걸음의 포획을 끝낸다.
    *
-   * `retreated` 는 **스스로 물러선 것**이라 놓친 것과 다르다 — escapeAlert 도 짐 흘림도
+   * `retreated` 는 스스로 물러선 거라 놓친 것과 다르다. escapeAlert 도 짐 흘림도
    * 없다. 이미 건 시도의 소란만 치른다. 시도를 다 쓰고 놓친 것과 값이 같으면
    * "물러선다"는 선택지가 아니라 버튼일 뿐이다.
    */
@@ -87,7 +87,7 @@ export function CatchMiniGame({
    * 상대의 수를 공개하는 동안 알린다.
    *
    * 이 사이에는 화면에 아무 버튼도 없는데, 정작 하단 바의 "돌아간다"는 살아 있어서
-   * 굴림이 끝나기 전에 원정을 접을 수 있었다 — 시도 비용을 안 치르고 나가는 길이다.
+   * 굴림이 끝나기 전에 원정을 접을 수 있었다. 시도 비용을 안 치르고 나가는 길이었다.
    */
   onResolving: (busy: boolean) => void;
 }) {
@@ -123,7 +123,7 @@ export function CatchMiniGame({
     const comp = rollHand(type, rng);
     const res = getRpsResult(choice, comp);
     setPicked(choice); setComputer(comp); setResult(res); setStage("reveal");
-    // 시도는 결과가 아니라 **공개**에 태운다. 상대의 수를 본 뒤 새로고침해도 그 수는
+    // 시도는 결과가 아니라 공개에 태운다. 상대의 수를 본 뒤 새로고침해도 그 수는
     // 이미 쓴 번호에 묶여 있어야 한다
     onReveal();
 
@@ -252,7 +252,7 @@ export function CatchMiniGame({
 /**
  * 상대에 대해 지금 읽히는 것.
  *
- * "none" 일 때도 자리를 비우지 않고 **못 읽는다고 적는다.** 정보가 없는 것과 정보가
+ * "none" 일 때도 자리를 비우지 않고 못 읽는다고 적는다. 정보가 없는 것과 정보가
  * 막힌 것은 다르고, 막혔다는 걸 알아야 소란을 낮출(또는 도감을 채울) 이유가 생긴다.
  */
 function TellLine({ reveal, type }: { reveal: TellReveal; type: ElementType }) {
@@ -283,7 +283,7 @@ function TellLine({ reveal, type }: { reveal: TellReveal; type: ElementType }) {
   );
 }
 
-/** 각인 진행도. 둥지 카드와 같은 배지를 쓴다 — 3번째 시도를 지를 이유가 여기 있다 */
+/** 각인 진행도. 둥지 카드와 같은 배지를 쓴다. 3번째 시도를 지를 이유가 여기 있다 */
 function Badge({ badge }: { badge: NestBadge }) {
   const tone = BADGE_TONE[badge.tone];
   return (
@@ -300,7 +300,7 @@ function Badge({ badge }: { badge: NestBadge }) {
 }
 
 /**
- * 물러서기 — 몬스터는 놓치되 소란은 안 오른다(escapeAlert 도 안 붙는다).
+ * 물러서기. 몬스터는 놓치되 소란은 안 오른다(escapeAlert 도 안 붙는다).
  *
  * 이게 이 화면의 진짜 선택지다. 3번째 시도의 값이 +10 이라, 소란 예산이 얼마 안 남은
  * 자리에서는 물러서는 쪽이 실제로 낫다.

@@ -130,7 +130,7 @@ export function ArtifactCard({
             {artifact.name}
           </p>
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-            {/* 슬롯 이름 같은 자리 표시는 맨 앞에 둔다 — 등급·레벨 뒤로 밀면 어디에 끼는
+            {/* 슬롯 이름 같은 자리 표시는 맨 앞에 둔다. 등급·레벨 뒤로 밀면 어디에 끼는
                 물건인지가 제일 늦게 읽힌다 */}
             {note && (
               <span
@@ -147,7 +147,7 @@ export function ArtifactCard({
             <span className="text-pixel-sm font-bold" style={{ color }}>
               {QUALITY_LABEL[artifact.quality]}
             </span>
-            {/* Lv.1 은 안 적는다 — 갓 만든 것이 기본값이라 줄만 길어진다 */}
+            {/* Lv.1 은 안 적는다. 갓 만든 게 기본값이라 줄만 길어진다 */}
             {lv > 1 && (
               <span className="text-pixel-sm font-bold" style={{ color: PALETTE.sand300 }}>
                 Lv.{lv}
@@ -184,7 +184,7 @@ export function ArtifactCard({
         {action}
       </div>
 
-      {/* 능력치 — 부가 능력치(레벨 10마다 해제)는 청록으로 갈라 놓는다.
+      {/* 능력치. 부가 능력치(레벨 10마다 해제)는 청록으로 갈라 놓는다.
           다 키운 장비는 줄이 일곱 개까지 늘어난다. 한 줄에 하나씩 쌓으면 카드가 그만큼
           길어져서, 칸이 넓은 자리에서는 두 단으로 접힌다(좁은 자리는 저절로 한 단이다). */}
       {stats.length > 0 && (
@@ -199,7 +199,7 @@ export function ArtifactCard({
           >
             {stats.map((line) => (
               <p key={line.key} className="flex justify-between gap-2 text-pixel-sm font-bold">
-                {/* 12px 라벨이라 어두운 토큰(earth500·mist500)은 못 쓴다 — 판 위에서 3:1 아래다 */}
+                {/* 12px 라벨이라 어두운 토큰(earth500·mist500)은 못 쓴다. 판 위에서 3:1 아래다 */}
                 <span style={{ color: line.bonus ? PALETTE.mist300 : PALETTE.earth400 }}>
                   {line.label}
                 </span>

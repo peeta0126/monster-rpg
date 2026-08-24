@@ -20,14 +20,14 @@ import {
 /**
  * 숲 화면.
  *
- * 여기가 하는 일은 셋뿐이다 — 구역을 고르고, 원정을 열고, 정산을 띄운다.
+ * 여기가 하는 일은 셋뿐이다. 구역을 고르고, 원정을 열고, 정산을 띄운다.
  * 탐험 중의 규칙은 forest/runStore.ts 에, 화면은 forest/ForestRunView.tsx 에 있다.
  *
- * 예전에는 이 파일 하나가 1,500줄이었다. 노드 맵 SVG·좌표 계산·사건별 화면이 전부
+ * 원래 이 파일 하나가 1,500줄이었다. 노드 맵 SVG·좌표 계산·사건별 화면이 전부
  * 여기 있었기 때문인데, 지도를 걷어내면서 같이 흩어 놓았다.
  *
- * 걷다 만 원정은 저장돼 있다. 들어오면 **묻지 않고 그 자리로 되돌린다** — 이어할지
- * 고르게 하면 그 선택 자체가 리롤이 된다(마음에 안 드는 사건을 버릴 수 있다).
+ * 걷다 만 원정은 저장돼 있다. 들어오면 묻지 않고 그 자리로 되돌린다. 이어할지
+ * 고르게 하면 그 선택 자체가 리롤이 된다(마음에 안 드는 사건을 버릴 수 있으니까).
  */
 
 /** 원정이 끝난 뒤 정산 화면에 넘길 것 */
@@ -38,7 +38,7 @@ interface Settlement {
   alertPeak: number;
 }
 
-/** 저장된 구역. 못 알아보면 얕은 숲으로 둔다 — 정산 화면에 이름 한 줄이 필요할 뿐이다 */
+/** 저장된 구역. 못 알아보면 얕은 숲으로 둔다. 정산 화면에 이름 한 줄이 필요할 뿐이다 */
 function areaOf(loaded: LoadedForest): ForestArea | null {
   const id = loaded.kind === "run" ? loaded.run.areaId
     : loaded.kind === "settle" ? loaded.settlement.areaId
@@ -73,7 +73,7 @@ export default function ForestPage() {
   /**
    * 저장은 상태가 바뀔 때마다 한다.
    *
-   * 걸음 끝마다가 아니라 **걸음 안의 한 칸마다**여야 한다 — 시도 횟수가 안 남으면
+   * 걸음 끝마다가 아니라 걸음 안의 한 칸마다여야 한다. 시도 횟수가 안 남으면
    * 새로고침이 곧 리롤이다(runStore 의 StepProgress 참조).
    */
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function ForestPage() {
     setSettlement({ reason, bag, caught, alertPeak });
   }, [setRun, setSettlement]);
 
-  /** 정산 확인 — 여기서 처음으로 재료가 창고에 들어간다. 런 중에는 가방에만 있었다 */
+  /** 정산 확인. 여기서 처음으로 재료가 창고에 들어간다. 런 중에는 가방에만 있었다 */
   const confirmSettlement = (kept: RunBagEntry[]) => {
     for (const k of kept) addMaterial(k.id, k.count);
     setSettlement(null);
@@ -120,7 +120,7 @@ export default function ForestPage() {
       {area && <Particles area={area} density={density}/>}
 
       {/* ── 구역 선택 ──
-          justify-center 를 빼면 카드 묶음이 위로 붙는다 — 비주얼 스냅샷이 통째로 어긋난다 */}
+          justify-center 를 빼면 카드 묶음이 위로 붙는다. 비주얼 스냅샷이 통째로 어긋난다 */}
       {!inRun && (
         <div className="relative z-10 flex w-full flex-1 flex-col items-center justify-center overflow-y-auto px-gutter pb-6 pt-16">
           <div className="absolute left-gutter top-gutter">
@@ -141,7 +141,7 @@ export default function ForestPage() {
                   : "탐험할 구역을 선택하세요"}
               </p>
             </div>
-            {/* gap 을 두지 않는다 — 물러난 카드가 scale(.75) 로 줄면서 자리에 여백을 스스로 남긴다 */}
+            {/* gap 을 안 둔다. 물러난 카드가 scale(.75) 로 줄면서 자리에 여백을 스스로 남긴다 */}
             {FOREST_AREAS.map((a) => (
               <ForestTierCard
                 key={a.id}

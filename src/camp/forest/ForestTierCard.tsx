@@ -23,7 +23,7 @@ const CARD_STYLES = `
 @media (prefers-reduced-motion: reduce) { .tier-card { transition: none; } }
 `;
 
-/** 고대 숲은 속성을 숨긴다. 칸 수는 그대로 셋 — 비면 카드가 헐거워 보인다. */
+/** 고대 숲은 속성을 숨긴다. 칸 수는 그대로 셋. 비면 카드가 헐거워 보인다 */
 const HIDDEN_TYPES = ["?", "?", "?"];
 
 function monsterTypes(area: ForestArea): string[] {
@@ -32,11 +32,11 @@ function monsterTypes(area: ForestArea): string[] {
 }
 
 /**
- * 구역 카드 한 장. 상태는 셋이다 — 선택됨 / 물러남 / 잠김.
+ * 구역 카드 한 장. 상태는 셋이다. 선택됨 / 물러남 / 잠김.
  *
  * 선택된 것과 아닌 것을 최대한 벌린다(Balatro·Darkest Dungeon 의 선택 화면). 크기 75%,
  * 채도 40%, 부가 정보 제거까지 한꺼번에 걸어야 "지금 이걸 고르고 있다"가 한눈에 읽힌다.
- * 흑백으로 바꿔도 크기·테두리 굵기·버튼 유무로 구분이 남는다 — 색만으로 가르지 않는다.
+ * 흑백으로 바꿔도 크기·테두리 굵기·버튼 유무로 구분이 남는다. 색만으로 가르지 않는다.
  *
  * 잠긴 구역에 회색 버튼을 두지 않는 이유: 눌리지 않는 버튼은 화면이 고장난 것처럼 읽힌다.
  * 버튼이 있던 자리에 해금 조건을 그대로 넣으면 같은 공간이 답을 준다.
@@ -48,7 +48,7 @@ export function ForestTierCard({
   selected: boolean;
   locked: boolean;
   bestFloor: number;
-  /** 파티 최고 레벨 — 숲이 내주는 레벨의 천장이다 */
+  /** 파티 최고 레벨. 숲이 내주는 레벨의 천장이다 */
   capLevel: number;
   /** 왜 잠겼는가. 층수가 모자란 것과 파티가 빈 것은 답이 다르다 */
   lockReason?: "floor" | "no-party";
@@ -83,7 +83,7 @@ export function ForestTierCard({
         borderRadius: 0,
         boxShadow: selected && !locked ? `5px 5px 0 ${area.glowColor}` : "none",
         // 배경 원화 위에 얹히므로 카드 판을 충분히 덮어야 본문이 4.5:1 을 넘는다.
-        // 색은 거의 shadow-900 하나로 간다 — 판에 색을 넣으면 뒤의 원화와 싸운다.
+        // 색은 거의 shadow-900 하나로 간다. 판에 색을 넣으면 뒤 원화랑 싸운다.
         background: selected
           ? `linear-gradient(160deg, ${rgba("shadow900", 0.92)} 0%, ${rgba("shadow900", 0.86)} 100%)`
           : rgba("shadow900", 0.85),
@@ -96,7 +96,7 @@ export function ForestTierCard({
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           {/* 영문 서브타이틀은 선택된 카드에서만. 항상 띄우면 한글 이름과 자리를 다툰다. */}
           {/* 부제·라벨은 강조색을 쓰지 않는다. moss-500 은 12px 글자로 쓰면 얕은 숲
-              카드(가장 밝은 원화 위)에서 4.2:1 까지 떨어진다 — 큰 글자와 테두리·버튼
+              카드(가장 밝은 원화 위)에서 4.2:1 까지 떨어진다. 큰 글자와 테두리·버튼
               채움에만 남기고, 작은 글자는 sand 계열로 뺀다. */}
           {selected && (
             <span className="text-pixel-sm font-bold tracking-widest text-sand-300">
@@ -142,7 +142,7 @@ export function ForestTierCard({
         </div>
       )}
 
-      {/* 액션 자리 — 잠겼으면 죽은 버튼 대신 해금 조건이 이 칸을 차지한다. */}
+      {/* 액션 자리. 잠겼으면 죽은 버튼 대신 해금 조건이 이 칸을 차지한다. */}
       {locked ? (
         <div className="relative z-10 border-t px-5 py-3 text-center"
           style={{ borderColor: rgba("stone600", 0.9), background: rgba("shadow900", 0.92) }}>

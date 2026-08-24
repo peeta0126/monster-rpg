@@ -1099,7 +1099,7 @@ export default function BattlePage() {
       {/* ══════════ 하단 배틀 패널 ══════════ */}
       <div data-testid="battle-panel" data-floor={floor} className="relative shrink-0 border-t-2 border-earth-500 bg-shadow-900">
 
-        {/* 상성표 — 패널 바로 위에 뜬다. 레이아웃을 밀지 않으니 캔버스가 줄었다 늘었다 하지 않고,
+        {/* 상성표. 패널 바로 위에 뜬다. 레이아웃을 밀지 않으니 캔버스가 줄었다 늘었다 하지 않고,
             열어 둔 채로 기술을 골라도 된다. */}
         {showTypeChart && (
           <div className="absolute bottom-full right-3 z-40 mb-2">
@@ -1109,7 +1109,7 @@ export default function BattlePage() {
 
         {/* ── ① 턴 바 ──────────────────────────────────────────────────────────
             예전 이 자리는 플레이어 HP 바였는데, 그건 캔버스 패널이 이미 크게 보여준다.
-            같은 걸 두 번 그리는 대신 캔버스가 못 하는 것 — 이번 라운드의 순서 — 을 놓는다. */}
+            같은 걸 두 번 그리는 대신 캔버스가 못 하는 것, 이번 라운드의 순서를 놓는다. */}
         <div className="flex items-center justify-between gap-3 border-b border-earth-500/40 px-3 py-2 text-pixel-sm">
           <div className="flex min-w-0 items-center gap-3">
             {battleOutcome === null && !mustSwitch && (
@@ -1139,7 +1139,7 @@ export default function BattlePage() {
             {isProcessing && !mustSwitch && (
               <span data-testid="log-wait" className="animate-pulse text-pixel-sm text-ember-500">▶ Q / 클릭</span>
             )}
-            {/* 자동 진행 — 로그 한 줄마다 Q 를 누르는 게 엔딩까지 8천 번이다 */}
+            {/* 자동 진행. 로그 한 줄마다 Q 를 누르는 게 엔딩까지 8천 번이다 */}
             <button onClick={toggleAuto}
               data-testid="log-auto"
               title="로그 자동 진행"
@@ -1188,7 +1188,7 @@ export default function BattlePage() {
           levelUp={expView?.card !== null && expView !== null}
         />
 
-        {/* 로그 한 줄 — 캔버스 로그 상자와 같은 내용이다. 접근성·테스트용으로 DOM 에도 남기되
+        {/* 로그 한 줄. 캔버스 로그 상자와 같은 내용이다. 접근성·테스트용으로 DOM 에도 남기되
             자리를 적게 쓴다(예전엔 56px 짜리 띠가 대부분 비어 있었다). */}
         <div className="flex h-7 items-center border-b border-earth-500/40 bg-shadow-700/50 px-3">
           <p data-testid="battle-log-line" className="truncate text-pixel-sm text-sand-200">
@@ -1211,7 +1211,7 @@ export default function BattlePage() {
           </div>
         )}
 
-        {/* 전투 중 메인 패널 — 파티 · 커맨드 · 상대 카드 세 구역 */}
+        {/* 전투 중 메인 패널. 파티 · 커맨드 · 상대 카드 세 구역 */}
         {battleOutcome === null && (
           <div className="flex" style={{ minHeight: "152px" }}>
 
@@ -1226,7 +1226,7 @@ export default function BattlePage() {
             />
 
             {/* 커맨드는 2x2 고정이다(ART_DIRECTION 3-2). 남는 폭을 전부 여기로 흘리면
-                넓은 화면에서 버튼 하나가 700px 이 되고 글자는 왼쪽 끝에만 남는다 —
+                넓은 화면에서 버튼 하나가 700px 이 되고 글자는 왼쪽 끝에만 남는다.
                 상한을 두고 가운데 세워, 넘치는 폭은 양옆 레일이 가져가게 한다. */}
             <div className="mx-auto flex w-full min-w-0 max-w-board flex-1 flex-col gap-1.5 p-2">
               {mustSwitch ? (
@@ -1271,10 +1271,10 @@ export default function BattlePage() {
         )}
       </div>
 
-      {/* 레벨업 카드 — 오른 스탯은 상태 줄 한 칸에 안 들어간다 */}
+      {/* 레벨업 카드. 오른 스탯은 상태 줄 한 칸에 안 들어간다 */}
       {expView && <ExpGainOverlay view={expView} onAdvance={advanceExp} />}
 
-      {/* 기술 교체 선택 — 4칸이 찼을 때만 뜬다 */}
+      {/* 기술 교체 선택. 4칸이 찼을 때만 뜬다 */}
       {forgetPrompt && (
         <div className="absolute inset-0 z-[60] flex items-center justify-center bg-shadow-900/75">
           <div className="w-full max-w-md mx-4 border-2 border-ember-700 bg-shadow-900/95 p-5">
@@ -1350,7 +1350,7 @@ export default function BattlePage() {
               </div>
             )}
 
-            {/* 파티 상태 — 다음 층으로 갈지 내려갈지는 이 숫자를 보고 정한다.
+            {/* 파티 상태. 다음 층으로 갈지 내려갈지는 이 숫자를 보고 정한다.
                 예전엔 여기 "전회복" 버튼이 있어서 볼 이유가 없었다. */}
             <div className="mb-4 flex flex-col gap-1">
               {partyView.map((m) => (
@@ -1398,7 +1398,7 @@ export default function BattlePage() {
             <p className="text-title-md font-bold text-ember-500 mb-4">LOSE...</p>
             <p className="text-pixel-sm text-sand-300 mb-6 leading-relaxed">{floor}층 재도전?</p>
             <div className="flex flex-col gap-2">
-              {/* 전멸한 채로 재도전은 허구다 — 캠프에서 회복하고 오는 게 유일한 길이다 */}
+              {/* 전멸한 채로 재도전은 허구다. 캠프에서 회복하고 오는 게 유일한 길이다 */}
               <button onClick={() => navigate("/")}
                 data-testid="result-primary"
                 className="w-full border-2 border-ember-700 bg-ember-700/25 py-3 text-pixel-sm font-bold text-ember-500 hover:bg-ember-700/40 transition active:scale-95">

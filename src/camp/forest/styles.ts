@@ -1,9 +1,9 @@
 /**
  * 숲 화면 전용 키프레임.
  *
- * 노드 맵을 걷어내면서 절반이 죽었다 — nodeReveal·nodePulse·lineGrow 는 맵 전용이었고,
+ * 노드 맵을 걷어내면서 절반이 죽었다. nodeReveal·nodePulse·lineGrow 는 맵 전용이었고,
  * shimmerPass·treeSway·fogDrift·mist 는 정의만 있고 쓰는 데가 없었다. 남긴 것만 둔다.
- * 여기 있는 이름은 전부 실제로 쓰인다. 안 쓰게 되면 같이 지울 것.
+ * 여기 있는 이름은 전부 실제로 쓰인다. 안 쓰게 되면 같이 지워라.
  */
 export const FOREST_STYLES = `
 @keyframes leafFall {

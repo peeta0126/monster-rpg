@@ -114,8 +114,8 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
   onBack: () => void;
   onGoTo: (id: string) => void;
 }) {
-  // 훅은 조건부 return보다 먼저 호출해야 한다 — 존재하지 않는 id로 들어와 일찍 return하면
-  // 렌더마다 훅 개수가 달라져 React가 "Rendered fewer hooks than expected"로 죽는다.
+  // 훅은 조건부 return 보다 먼저 불러야 한다. 없는 id 로 들어와서 일찍 return 하면
+  // 렌더마다 훅 개수가 달라져 React 가 "Rendered fewer hooks than expected"로 죽는다.
   const dexSeen = usePlayerStore((s) => s.dexSeen);
 
   const m = monsters.find(x => x.id === monsterId);
@@ -352,12 +352,12 @@ function DexModal({ onClose }: { onClose: () => void }) {
               ))}
             </div>
 
-            {/* 몬스터 그리드 — 아래를 흐리게 덮어 "더 있다"를 표시한다.
+            {/* 몬스터 그리드. 아래를 흐리게 덮어 "더 있다"를 표시한다.
                 안 그러면 마지막 줄이 잘린 채 끝나 스크롤이 있는지 알 수 없다.
 
                 흐림막을 얹으려고 감싼 칸이라 안쪽도 flex 로 이어 준다. h-full 로 두면
-                높이가 부모가 아니라 **내용**을 따라가서, 스크롤할 게 자기 안에는 없는
-                채로 부모가 잘라내기만 한다 — 도감이 첫 화면에서 멈춰 있었다. */}
+                높이가 부모가 아니라 내용을 따라가서, 스크롤할 게 자기 안에는 없는
+                채로 부모가 잘라내기만 한다. 도감이 첫 화면에서 멈춰 있었다. */}
             <div className="relative flex min-h-0 flex-1 flex-col">
               <div className="flex-1 overflow-y-auto p-5">
               <div className="grid gap-3"
@@ -440,8 +440,8 @@ function DexModal({ onClose }: { onClose: () => void }) {
 /**
  * 퀘스트 보상을 받은 직후 한 장.
  *
- * 예전에는 대사만 흐르고 조용히 가방에 들어갔다. 뭘 받았는지 모른 채 대화가 끝나니
- * 보상이 아무리 좋아도 밋밋했다. 제목에 퀘스트 이름을 그대로 쓴다 — 뭘 하고 받은
+ * 원래는 대사만 흐르고 조용히 가방에 들어갔다. 뭘 받았는지 모른 채 대화가 끝나니
+ * 보상이 아무리 좋아도 밋밋했다. 제목엔 퀘스트 이름을 그대로 쓴다. 뭘 하고 받은
  * 건지가 붙어 있어야 기억에 남는다.
  */
 function RewardScreen({ title, items, onClose }: {
@@ -501,10 +501,10 @@ function RewardScreen({ title, items, onClose }: {
 /**
  * 퀘스트로 받는 몬스터 한 마리를 만든다.
  *
- * 레벨을 정해 주는 게 핵심이다. 이야기로 받는 몬스터는 지금까지 늘 1레벨이었는데, 시작
- * 몬스터라 문제가 없었을 뿐이다. 10층에서 1레벨을 주면 안 주느니만 못하다.
+ * 레벨을 정해 주는 게 핵심이다. 이야기로 받는 몬스터는 늘 1레벨이었는데, 그동안은
+ * 시작 몬스터라 문제가 없었을 뿐이다. 10층에서 1레벨을 주면 안 주느니만 못하다.
  *
- * 그 레벨까지의 기술 습득과 진화를 반드시 태운다 — 숲의 포획이 쓰는 경로와 같은 것이다.
+ * 그 레벨까지의 기술 습득이랑 진화를 반드시 태운다. 숲의 포획이 쓰는 경로와 같다.
  * 빼먹으면 레벨만 높고 기술이 둘뿐인 개체가 나간다.
  */
 async function buildQuestMonster(
@@ -556,13 +556,13 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
 
   const inProgress = ALL_QUESTS.filter((q) => status(q) === "in_progress");
   const completed  = ALL_QUESTS.filter((q) => status(q) === "completed");
-  // 아직 수락하지 않았지만 지금 가면 받을 수 있는 것. 제목은 가린다 —
+  // 아직 수락 안 했지만 지금 가면 받을 수 있는 것. 제목은 가린다.
   // 무슨 부탁인지는 만나서 듣는 게 맞다
   const waiting = (["orion", "baros"] as const)
     .map((npcId) => activeQuestFor(npcId, storyFlags, bestFloor, questStatus))
     .filter((q): q is QuestDef => !!q && status(q) === "not_accepted");
 
-  // 맨 위 한 장 — 지금 뭘 해야 하는지. 진행 중인 것 중 첫째가 기본이고,
+  // 맨 위 한 장. 지금 뭘 해야 하는지 적는다. 진행 중인 것 중 첫째가 기본이고,
   // 없으면 받으러 갈 사람을 가리킨다
   const headline = (() => {
     const doing = inProgress[0];
@@ -618,7 +618,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="overflow-y-auto flex-1 p-5 space-y-3">
-          {/* 지금 할 일 — 목록에 섞어 두면 여덟 개 사이에서 찾아야 한다 */}
+          {/* 지금 할 일. 목록에 섞어 두면 여덟 개 사이에서 찾아야 한다 */}
           {headline && (
             <div className="rounded-xl border-2 border-ember-700/70 bg-ember-700/10 p-4"
               data-testid="quest-headline">
@@ -663,12 +663,12 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* 진행 중 — 맨 위 판에 올린 하나는 뺀다. 같은 내용을 두 번 읽게 할 이유가 없다 */}
+          {/* 진행 중. 맨 위 판에 올린 하나는 뺀다. 같은 내용을 두 번 읽게 할 이유가 없다 */}
           {inProgress.slice(headline?.fromQuestId ? 1 : 0).map((q) => (
             <QuestCard key={q.id} quest={q} status="in_progress" snapshot={snapshot} />
           ))}
 
-          {/* 받을 수 있는 것 — 제목을 가린다 */}
+          {/* 받을 수 있는 것. 제목을 가린다 */}
           {waiting.map((q) => (
             <div key={q.id}
               className="rounded-xl border border-dashed border-stone-600 bg-shadow-800/50 p-4">
@@ -681,7 +681,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
             </div>
           ))}
 
-          {/* 완료 — 접어 둔다. 여덟 개가 다 펼쳐져 있으면 진행 중인 하나를 못 찾는다 */}
+          {/* 완료. 접어 둔다. 여덟 개가 다 펼쳐져 있으면 진행 중인 하나를 못 찾는다 */}
           {completed.length > 0 && (
             <div className="pt-1">
               <button
@@ -759,7 +759,7 @@ function QuestCard({ quest, status, snapshot }: {
 
       <div className="mt-3 flex items-center gap-1.5 flex-wrap">
         <span className="text-pixel-sm text-earth-400">보상</span>
-        {/* 아직 안 받은 것은 몬스터를 가린다 — 뭘 받을지 미리 알면 완료 대사가 죽는다 */}
+        {/* 아직 안 받은 것은 몬스터를 가린다. 뭘 받을지 미리 알면 완료 대사가 죽는다 */}
         {quest.rewards.map((r) => rewardDisplay(r, !done)).map((d, i) => (
           <span key={`${d.name}-${i}`}
             className="flex items-center gap-1 rounded bg-shadow-700/70 px-1.5 py-0.5 text-pixel-sm text-sand-300">
@@ -817,14 +817,14 @@ function TowerModal({
           {bestFloor > 0 ? `최고 도달 층: ${bestFloor}층` : "아직 탑에 오른 기록이 없습니다."}
         </p>
 
-        {/* 파티가 비어 있으면 층을 고를 수 없다 — 첫 몬스터는 이장에게서 받는다 */}
+        {/* 파티가 비어 있으면 층을 고를 수 없다. 첫 몬스터는 이장에게서 받는다 */}
         {partyEmpty && (
           <p className="mb-4 rounded-xl border border-ember-500/50 bg-ember-700/12 px-3 py-2 text-pixel-sm text-ember-500">
             함께 오를 몬스터가 없다. 마을 안쪽의 이장 오리온에게 말을 걸어 보자.
           </p>
         )}
 
-        {/* 회복을 여기서 바로 — 예전에는 /monsters까지 갔다가 탑 앞까지 다시 걸어와야 했다 */}
+        {/* 회복은 여기서 바로 한다. 원래는 /monsters까지 갔다가 탑 앞까지 다시 걸어와야 했다 */}
         <button
           onClick={onHeal}
           disabled={healed || partyEmpty}
@@ -903,8 +903,8 @@ function CampMenu({
   const isGuest = useAuthStore((s) => s.isGuest);
   const [showAudio, setShowAudio] = useState(false);
 
-  // 메뉴를 닫으면 소리 패널도 접는다 — 다시 열었을 때 펼쳐진 채로 나오면 목록이 밀린다.
-  // effect 로 하면 한 번 더 렌더되고 그 사이 프레임에 펼쳐진 메뉴가 보인다.
+  // 메뉴를 닫으면 소리 패널도 접는다. 다시 열었을 때 펼쳐진 채로 나오면 목록이 밀린다.
+  // effect 로 하면 한 번 더 렌더되고, 그 사이 프레임에 펼쳐진 메뉴가 보인다.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
@@ -973,8 +973,8 @@ export default function BaseCampPage() {
   const craftedPotions = usePlayerStore((s) => s.craftedPotions);
 
   // 이 화면은 캔버스뿐이라 "다음에 뭘 하지"가 어디에도 안 적혀 있었다.
-  // 진행 중인 부탁이 있으면 그게 앞선다 — 예전에는 1층 이후로 "N층에 도전해 보세요"만
-  // 반복해서, 벽에 부딪힌 사람에게 제작·강화를 한 번도 안 짚어 줬다.
+  // 진행 중인 부탁이 있으면 그게 앞선다. 원래는 1층 이후로 "N층에 도전해 보세요"만
+  // 반복해서, 벽에 부딪힌 사람한테 제작·강화를 한 번도 안 짚어 줬다.
   const questSnapshot = useQuestSnapshot();
   const questStatus = usePlayerStore((s) => s.questStatus);
   const activeQuestLine = (() => {
@@ -1031,11 +1031,11 @@ export default function BaseCampPage() {
   // 매 렌더 새로 만들면 effect 의존성에 넣을 수 없고(리스너를 매번 재등록하게 된다),
   // 빼면 오래된 클로저를 잡아 대화가 엉뚱한 줄에서 멈출 수 있다.
   /**
-   * 대사가 끝났을 때 실제로 벌어지는 일. **대화창을 어떻게 닫든 한 번은 지나가야 한다.**
+   * 대사가 끝났을 때 실제로 벌어지는 일. 대화창을 어떻게 닫든 한 번은 지나가야 한다.
    *
-   * 예전에는 마지막 줄까지 넘겨야만 여기 왔다. ESC 로 닫으면 플래그도 보상도 안 들어가서,
-   * 완료 대사를 보고 ESC 를 누른 사람은 재료만 그대로 든 채 아무것도 못 받았다. 재료 몇
-   * 개일 땐 티가 안 났지만 몬스터를 주기 시작하면 사고다.
+   * 원래는 마지막 줄까지 넘겨야 여기 왔다. ESC 로 닫으면 플래그도 보상도 안 들어가서,
+   * 완료 대사를 보고 ESC 를 누른 사람은 재료만 그대로 든 채 아무것도 못 받았다. 재료
+   * 몇 개일 땐 티가 안 났는데, 몬스터를 주기 시작하면 사고다.
    */
   const applyDialogueOutcome = useCallback(async (payload: NpcDialoguePayload) => {
     if (payload.dialogueId) markDialogueSeen(payload.dialogueId);
@@ -1045,8 +1045,8 @@ export default function BaseCampPage() {
     if (payload.completeQuest) {
       const { questId, objective, rewards, setsFlag } = payload.completeQuest;
       const wanted = monsterReward(rewards);
-      // 몬스터는 여기서 만들어 넘긴다. 기술 습득과 진화를 태우는 경로가 비동기라
-      // 스토어 안에서는 만들 수가 없다 — 숲의 포획도 같은 경로를 쓴다
+      // 몬스터는 여기서 만들어 넘긴다. 기술 습득이랑 진화를 태우는 경로가 비동기라
+      // 스토어 안에서는 못 만든다. 숲의 포획도 같은 경로를 쓴다
       const monster = wanted ? await buildQuestMonster(wanted) : undefined;
       const granted = completeQuest({ questId, objective, rewards, setsFlag, monster });
       if (granted?.length) {
@@ -1115,14 +1115,14 @@ export default function BaseCampPage() {
 
       <ObjectiveBanner objective={objective} />
 
-      {/* 조작 안내 — 이 화면은 캔버스뿐이라 안내가 없으면 이동법조차 알 수 없다.
+      {/* 조작 안내. 이 화면은 캔버스뿐이라 안내가 없으면 이동법조차 알 수 없다.
           공방 하단 안내와 같은 문구를 쓴다. */}
       <div className="pointer-events-none fixed bottom-gutter left-gutter z-40 rounded-xl border
         border-stone-600 bg-shadow-900/80 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
         WASD / 방향키 이동 · E 상호작용 · TAB 메뉴
       </div>
 
-      {/* 우상단 메뉴 — 버튼 아래로 펼쳐진다 */}
+      {/* 우상단 메뉴. 버튼 아래로 펼쳐진다 */}
       <CampMenu
         open={menuOpen}
         onOpen={() => setMenuOpen(true)}
