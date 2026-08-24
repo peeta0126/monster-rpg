@@ -294,11 +294,11 @@ function DexModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-shadow-900/80 p-gutter backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col w-full max-w-3xl max-h-[92vh] rounded-2xl border border-stone-600 bg-shadow-900 shadow-2xl overflow-hidden"
+        className="relative flex flex-col w-full max-w-board max-h-[92vh] rounded-2xl border border-stone-600 bg-shadow-900 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {detailId ? (
@@ -360,7 +360,8 @@ function DexModal({ onClose }: { onClose: () => void }) {
                 채로 부모가 잘라내기만 한다 — 도감이 첫 화면에서 멈춰 있었다. */}
             <div className="relative flex min-h-0 flex-1 flex-col">
               <div className="flex-1 overflow-y-auto p-5">
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              <div className="grid gap-3"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))" }}>
                 {filteredMonsters.map((m) => {
                   const seen   = dexSeen.includes(m.id);
                   const caught = dexCaught.includes(m.id);
@@ -595,7 +596,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col w-full max-w-lg max-h-[85vh] rounded-2xl border border-stone-600 bg-shadow-900 shadow-2xl overflow-hidden"
+        className="relative flex flex-col w-full max-w-stage max-h-[85vh] rounded-2xl border border-stone-600 bg-shadow-900 shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -1116,8 +1117,8 @@ export default function BaseCampPage() {
 
       {/* 조작 안내 — 이 화면은 캔버스뿐이라 안내가 없으면 이동법조차 알 수 없다.
           공방 하단 안내와 같은 문구를 쓴다. */}
-      <div className="pointer-events-none fixed bottom-4 left-4 z-40 rounded-xl border border-stone-600
-        bg-shadow-900/80 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
+      <div className="pointer-events-none fixed bottom-gutter left-gutter z-40 rounded-xl border
+        border-stone-600 bg-shadow-900/80 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
         WASD / 방향키 이동 · E 상호작용 · TAB 메뉴
       </div>
 

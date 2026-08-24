@@ -16,7 +16,7 @@ import { BADGE_TONE, type NestBadge } from "./nest";
 function PanelShell({ tint, children }: { tint: string; children: React.ReactNode }) {
   return (
     <div
-      className="w-full max-w-xl rounded-2xl px-6 py-5 backdrop-blur"
+      className="w-full max-w-stage rounded-2xl px-6 py-5 backdrop-blur"
       style={{
         background: rgba("shadow900", 0.82),
         border: `1px solid ${tint}55`,

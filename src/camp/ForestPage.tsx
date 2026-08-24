@@ -122,15 +122,15 @@ export default function ForestPage() {
       {/* ── 구역 선택 ──
           justify-center 를 빼면 카드 묶음이 위로 붙는다 — 비주얼 스냅샷이 통째로 어긋난다 */}
       {!inRun && (
-        <div className="relative z-10 flex w-full flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-6 pt-16">
-          <div className="absolute left-4 top-4">
+        <div className="relative z-10 flex w-full flex-1 flex-col items-center justify-center overflow-y-auto px-gutter pb-6 pt-16">
+          <div className="absolute left-gutter top-gutter">
             <button onClick={() => navigate("/")}
               className="rounded-xl border border-stone-600/60 bg-shadow-900/85 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur transition hover:bg-shadow-900 hover:text-sand-200">
               ← 베이스캠프
             </button>
           </div>
 
-          <div className="flex w-full max-w-lg flex-col items-center">
+          <div className="flex w-full max-w-stage flex-col items-center">
             {/* 배경 원화의 밝은 안개 위에 놓이는 자리라 글자마다 그림자를 깐다 */}
             <div className="mb-2 text-center" style={{ textShadow: `0 2px 6px ${rgba("shadow900", 0.9)}` }}>
               <p className="mb-1 text-pixel-sm uppercase tracking-[.25em] text-sand-300">EXPEDITION</p>
@@ -166,7 +166,7 @@ export default function ForestPage() {
 
       {/* ── 정산 ── */}
       {area && settlement && (
-        <div className="relative z-10 flex flex-1 items-center justify-center px-4">
+        <div className="relative z-10 flex flex-1 items-center justify-center px-gutter">
           <SettleScreen
             area={area}
             reason={settlement.reason}

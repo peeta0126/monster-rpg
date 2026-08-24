@@ -189,7 +189,7 @@ function EquipModal({
     >
       <div
         data-testid="equip-modal"
-        className="relative flex max-h-[90vh] w-[520px] max-w-full flex-col rounded-2xl"
+        className="relative flex max-h-[90vh] w-full max-w-stage flex-col rounded-2xl"
         style={{
           background: rgba("shadow900", 0.98),
           border: `2px solid ${PALETTE.earth500}`,
@@ -330,8 +330,8 @@ function MonsterStatusPanel({
   onOpenImprint?: (chainKey: string) => void;
   onRelease?: () => void;
 }) {
-  const shell = "m-3 flex min-h-40 flex-col overflow-hidden rounded-lg border-2 border-earth-500" +
-    " bg-shadow-900/85 lg:mr-0 lg:w-80 lg:flex-shrink-0";
+  const shell = "m-gutter flex min-h-40 flex-col overflow-hidden rounded-lg border-2 border-earth-500" +
+    " bg-shadow-900/85 lg:mr-0 lg:w-aside lg:flex-shrink-0";
   const header = (
     <div className="px-4 py-3" style={{ borderBottom: `1px solid ${rgba("earth500", 0.32)}` }}>
       <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">STATUS</p>
@@ -987,8 +987,8 @@ export default function MonstersPage() {
           "보관함이 비어 있 습니다" 처럼 단어 중간에서 줄이 끊겼다. */}
       <div className="relative flex flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
         {/* 파티 패널 */}
-        <div className="m-3 flex flex-col overflow-hidden rounded-lg border-2 border-earth-500
-          bg-shadow-900/85 lg:mr-0 lg:w-64 lg:flex-shrink-0">
+        <div className="m-gutter flex flex-col overflow-hidden rounded-lg border-2 border-earth-500
+          bg-shadow-900/85 lg:mr-0 lg:w-rail lg:flex-shrink-0">
           <div className="flex items-center justify-between px-4 py-3"
             style={{ borderBottom: `1px solid ${rgba("earth500", 0.32)}` }}>
             <div>
@@ -999,7 +999,7 @@ export default function MonstersPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 px-3 py-3 lg:flex-1 lg:overflow-y-auto">
+          <div className="flex flex-col gap-2 px-gutter py-gutter lg:flex-1 lg:overflow-y-auto">
             {[0, 1, 2].map((idx) => {
               const m = party[idx];
               return m ? (
@@ -1045,7 +1045,7 @@ export default function MonstersPage() {
         />
 
         {/* 보관함 */}
-        <div className="relative m-3 flex min-h-64 flex-1 flex-col overflow-hidden rounded-lg
+        <div className="relative m-gutter flex min-h-64 flex-1 flex-col overflow-hidden rounded-lg
           border-2 border-earth-500 bg-shadow-900/85">
           <div className="flex flex-wrap items-center gap-2 px-4 py-3"
             style={{ borderBottom: `1px solid ${rgba("earth500", 0.32)}`, background: rgba("shadow900", 0.35) }}>
@@ -1074,7 +1074,7 @@ export default function MonstersPage() {
             </div>
           </div>
 
-          <div className="p-3 lg:flex-1 lg:overflow-y-auto">
+          <div className="p-gutter lg:flex-1 lg:overflow-y-auto">
             {storage.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
                 <PixelIcon name="storage" size={64} className="opacity-40" />
@@ -1094,7 +1094,10 @@ export default function MonstersPage() {
                 // 버튼을 걷어내기 전에는 셋(장착·각인·놓아주기)이 한 줄에 서야 해서 124px 이
                 // 하한이었는데, 실제로는 150px 이 필요해 카드 밖으로 넘쳤다. 이제 카드에는
                 // 글자와 게이지만 있으므로 "Lv.30 [전기]" 한 줄이 하한이다.
-                gridTemplateColumns: "repeat(auto-fill, minmax(116px, 1fr))",
+                //
+                // 하한은 화면을 따라간다. 넓은 화면에서 116px 로 묶어 두면 칸만 아홉 열로
+                // 늘고 카드는 그대로라, 넓어진 자리가 카드 사이 여백으로만 갔다.
+                gridTemplateColumns: "repeat(auto-fill, minmax(var(--container-tile), 1fr))",
               }}>
                 {filteredStorage.map((m, i) => (
                   // 등장 애니메이션은 겉의 칸이 맡는다 — 카드 자신의 animation 자리는

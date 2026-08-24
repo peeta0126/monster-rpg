@@ -317,7 +317,7 @@ export default function FarmPage() {
       }}>
         <div style={{ height: 2, background: "linear-gradient(90deg,transparent,rgba(233, 148, 65, .357),transparent)" }} />
 
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-3">
+        <div className="mx-auto flex w-full max-w-board items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate(backPath)}
               className="rounded-xl px-3 py-1.5 text-pixel-sm font-semibold transition"
@@ -344,7 +344,7 @@ export default function FarmPage() {
         </div>
 
         {/* ── 탭 바 ── */}
-        <div className="mx-auto flex w-full max-w-5xl px-2">
+        <div className="mx-auto flex w-full max-w-board px-2">
           {TAB_DATA.map((tab) => {
             const isActive = activeTab === tab.id;
             const b = badge[tab.id];
@@ -378,7 +378,7 @@ export default function FarmPage() {
       </header>
 
       {/* ── 탭 콘텐츠 ── */}
-      <div className="relative mx-auto w-full max-w-5xl flex-1 overflow-y-auto p-5">
+      <div className="relative mx-auto w-full max-w-board flex-1 overflow-y-auto p-panel">
         {(activeTab === "all" || activeTab === "materials") && (
           <div style={{ animation: "bagIn .3s ease both" }}>
             <MaterialsSection materials={materials} discardMaterial={discardMaterial} />

@@ -55,6 +55,67 @@
   --text-title-sm--line-height: 24px;
   --text-title-md: 32px;
   --text-title-md--line-height: 40px;
+
+  /* ── 화면 폭에 맞춰 함께 움직이는 자 ────────────────────────────────────────
+     글자는 못 늘린다. 픽셀 폰트라 12/24/36(Galmuri11)·16/32(Galmuri14) 정수배에
+     묶여 있어서(ART_DIRECTION 2-1), 비정수배를 쓰면 획이 뭉개진다. 그래서
+     "화면에 맞춘다"는 일은 **여백·칸 폭·열 수**가 대신 진다.
+
+     토큰 한 벌로 두는 이유는, 화면마다 lg:/xl: 분기를 흩뿌리면 같은 폭에서
+     화면끼리 어긋나서다 — 가방은 넓어졌는데 내 몬스터는 그대로인 식이 된다.
+     쓸 때는 p-panel · gap-gutter · w-rail 처럼 이름으로만 부른다.
+
+     아래 기본값이 **1440 기준**(디자인 기준 해상도)이고, 좁으면 틀을 조여 내용에
+     자리를 주고 넓으면 칸을 넓혀 빈자리를 줄인다. 값은 전부 4px 그리드 위에 있다. */
+  --spacing-gutter:  12px;   /* 화면 가장자리 · 패널 사이 */
+  --spacing-panel:   16px;   /* 패널 안쪽 */
+  --spacing-stack:   20px;   /* 패널 안 구역 사이 */
+
+  --container-rail:  256px;  /* 좁은 세로 패널 — 메뉴 · 파티 */
+  --container-aside: 320px;  /* 넓은 세로 패널 — 상태창 */
+  --container-stage: 576px;  /* 가운데 한 기둥으로 서는 내용 — 숲 구역 · 정산 · 한 줄 모달 */
+  --container-board: 1024px; /* 가로로 펼쳐지는 판 — 가방 · 큰 모달 */
+  --container-tile:   116px; /* 격자 한 칸의 최소 폭 — 보관함 카드 */
+}
+
+/* 작은 노트북(1280x720 언저리). 여기서는 넓히는 게 아니라 **조인다** — 틀이 두꺼우면
+   내용이 밀려서 숲 카드 마지막 장이 화면 밖으로 잘렸다. */
+@media (max-width: 1439px) {
+  :root {
+    --spacing-panel:   12px;
+    --spacing-stack:   16px;
+    --container-rail:  224px;
+    --container-aside: 288px;
+    --container-stage: 512px;
+    --container-board: 896px;
+    --container-tile:  116px;
+  }
+}
+@media (max-width: 1023px) {
+  :root {
+    --spacing-gutter:   8px;
+    --spacing-stack:   12px;
+    --container-rail:  224px;
+    --container-aside: 264px;
+    --container-stage: 480px;
+    --container-board: 768px;
+    --container-tile:  108px;
+  }
+}
+
+/* 넓은 화면. 글자를 못 키우니 칸을 키운다 — 안 그러면 1920 에서 UI 가 가운데 조금만
+   차지하고 나머지가 빈다. */
+@media (min-width: 1800px) {
+  :root {
+    --spacing-gutter:  16px;
+    --spacing-panel:   20px;
+    --spacing-stack:   24px;
+    --container-rail:  304px;
+    --container-aside: 384px;
+    --container-stage: 704px;
+    --container-board: 1280px;
+    --container-tile:  148px;
+  }
 }
 
 /* ── 전역 스크롤바 숨김 (스크롤은 가능, 바 없음) ─────────────────── */

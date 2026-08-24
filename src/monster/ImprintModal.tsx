@@ -59,7 +59,7 @@ export function ImprintModal({ chainKey, onClose }: { chainKey: string; onClose:
       data-testid="imprint-modal"
     >
       <div
-        className="relative max-h-[90vh] w-[500px] overflow-y-auto rounded-2xl"
+        className="relative max-h-[90vh] w-full max-w-stage overflow-y-auto rounded-2xl"
         style={{
           background: rgba("shadow900", 0.98),
           border: `1px solid ${rgba("earth500", 0.94)}`,

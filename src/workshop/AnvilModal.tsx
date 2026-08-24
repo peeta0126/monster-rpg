@@ -825,7 +825,7 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-board flex-col overflow-hidden rounded-xl shadow-2xl"
         style={{
           background:  C.bg,
           border:      `1px solid ${C.borderGold}`,
@@ -913,7 +913,10 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
                 <span className="text-pixel-sm">제작 공방에서 먼저 제작해 보세요.</span>
               </p>
             ) : (
-              <div className="space-y-2">
+              // 한 줄에 하나씩 세우면 판이 넓어질수록 카드 오른쪽이 통째로 빈다.
+              // 칸 폭이 열 수를 정하게 두면 넓은 화면에서 목록이 짧아진다.
+              <div className="grid gap-2"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
                 {craftedArtifacts.map((a) => (
                   <ArtifactCard
                     key={a.instanceId}

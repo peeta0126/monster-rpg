@@ -319,7 +319,7 @@ function RetreatButton({ onClick }: { onClick: () => void }) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-full max-w-xl rounded-2xl px-6 py-5 backdrop-blur"
+    <div className="w-full max-w-stage rounded-2xl px-6 py-5 backdrop-blur"
       style={{
         background: rgba("shadow900", 0.86),
         border: `1px solid ${rgba("stone600", 0.9)}`,

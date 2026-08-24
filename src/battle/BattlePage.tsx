@@ -1225,7 +1225,10 @@ export default function BattlePage() {
               onSelect={handlePartySwap}
             />
 
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2">
+            {/* 커맨드는 2x2 고정이다(ART_DIRECTION 3-2). 남는 폭을 전부 여기로 흘리면
+                넓은 화면에서 버튼 하나가 700px 이 되고 글자는 왼쪽 끝에만 남는다 —
+                상한을 두고 가운데 세워, 넘치는 폭은 양옆 레일이 가져가게 한다. */}
+            <div className="mx-auto flex w-full min-w-0 max-w-board flex-1 flex-col gap-1.5 p-2">
               {mustSwitch ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
                   <p className="text-pixel-sm font-bold text-ember-500">{withJosa(player.name, "이가")} 기절했다!</p>
@@ -1252,7 +1255,8 @@ export default function BattlePage() {
             </div>
 
             {/* ─── 상대 카드 ─────────────────────────────── */}
-            <div className="w-48 shrink-0 border-l border-shadow-700 p-2">
+            {/* 넓은 화면에서 이 칸만 192px 로 남으면 가운데 커맨드만 늘어나 옆이 빈다 */}
+            <div className="w-rail shrink-0 border-l border-shadow-700 p-2">
               <EnemyCard
                 enemy={enemyState}
                 moves={player.moves}

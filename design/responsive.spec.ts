@@ -1,4 +1,4 @@
-import { test, type Page } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -70,7 +70,12 @@ for (const vp of VIEWPORTS) {
 
         const o = await overflowReport(page);
         const hOverflow = o.scrollW - o.clientW;
-        if (hOverflow > 1) {
+        // 390 은 SmallScreenNotice 가 막는 폭이라 안내만 뜬다 — 거기까지 재지 않는다.
+        // 지원하는 폭(768 이상)에서 가로 스크롤이 생겼다면 무언가 칸 밖으로 나간 것이다.
+        if (vp.w >= 768) {
+          expect(hOverflow, `${vp.w}x${vp.h} ${screen.name}: 가로 스크롤 ${hOverflow}px`)
+            .toBeLessThanOrEqual(1);
+        } else if (hOverflow > 1) {
           console.log(`  ⚠ ${vp.w}x${vp.h} ${screen.name}: 가로 스크롤 ${hOverflow}px`);
         }
         await page.screenshot({ path: path.join(dir, `${screen.name}.png`) });

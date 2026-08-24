@@ -19,7 +19,7 @@ export function ForkChoice({ kinds, names, depth, scout, onChoose }: {
   onChoose: (kind: ForestStepKind) => void;
 }) {
   return (
-    <div className="flex w-full max-w-xl flex-col items-center gap-4"
+    <div className="flex w-full max-w-stage flex-col items-center gap-4"
       style={{ animation: "fadeInScale .35s ease both" }}
       data-testid="forest-fork">
       <p className="text-title-sm font-black text-cream-100"

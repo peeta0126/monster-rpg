@@ -47,7 +47,7 @@ export function PartyStrip({
   return (
     <div
       data-testid="party-strip"
-      className={`flex w-44 shrink-0 flex-col gap-1.5 border-r p-2 transition-colors ${
+      className={`flex w-rail shrink-0 flex-col gap-1.5 border-r p-2 transition-colors ${
         focused ? "border-mist-500/70 bg-mist-500/5" : "border-shadow-700"}`}
     >
       <p className="text-pixel-sm font-semibold uppercase tracking-wider text-earth-400">

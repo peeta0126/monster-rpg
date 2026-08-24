@@ -39,7 +39,7 @@ export function SettleScreen({ area, reason, bag, caught, alertPeak, onConfirm }
   const keptCount = (id: string) => kept.find((k) => k.id === id)?.count ?? 0;
 
   return (
-    <div className="w-full max-w-lg" style={{ animation: "fadeInScale .4s ease both" }}>
+    <div className="w-full max-w-stage" style={{ animation: "fadeInScale .4s ease both" }}>
       <div className="overflow-hidden rounded-2xl backdrop-blur"
         style={{
           background: rgba("shadow900", 0.9),

@@ -64,8 +64,8 @@ export function GameMenu({
   return (
     <div
       ref={rootRef}
-      className="fixed right-4 top-4 z-50 w-64 overflow-hidden rounded-xl border border-earth-500
-        bg-shadow-900/92 shadow-2xl backdrop-blur"
+      className="fixed right-gutter top-gutter z-50 w-rail overflow-hidden rounded-xl border
+        border-earth-500 bg-shadow-900/92 shadow-2xl backdrop-blur"
     >
       <button
         type="button"

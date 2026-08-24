@@ -203,7 +203,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-board flex-col overflow-hidden rounded-xl shadow-2xl"
         style={{
           background: C.bg,
           border: `1px solid ${C.borderGold}`,

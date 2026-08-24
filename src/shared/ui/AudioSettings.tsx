@@ -26,8 +26,10 @@ function VolumeRow({
 }
 
 /**
- * 소리 설정. 우상단 메뉴 안에서 펼쳐지므로 메뉴 폭(w-64) 안에 들어가야 한다 —
- * 음소거 버튼을 슬라이더 옆에 두면 슬라이더가 손가락만 해진다. 세로로 쌓는다.
+ * 소리 설정. 우상단 메뉴 안에서 펼쳐지므로 메뉴 폭 안에 들어가야 한다. 그 폭은
+ * 화면을 따라 움직이므로(GameMenu 의 w-rail — 좁은 화면에서는 224px 까지 줄어든다)
+ * 고정 폭을 쓰지 않고 전부 w-full 로 세로로 쌓는다 — 음소거 버튼을 슬라이더 옆에
+ * 두면 좁은 화면에서 슬라이더가 손가락만 해진다.
  */
 export function AudioSettings() {
   const { bgmVolume, sfxVolume, muted, setBgmVolume, setSfxVolume, setMuted } = useAudioStore();

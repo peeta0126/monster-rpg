@@ -601,3 +601,28 @@ test.describe("좁은 화면", () => {
       .toBeLessThanOrEqual(overflow.clientW);
   });
 });
+
+/**
+ * 넓은 화면. 글자를 못 키우니(픽셀 폰트) 넓어진 만큼을 칸이 받아야 한다 —
+ * 안 받으면 UI 가 가운데 조금만 차지하고 나머지가 통째로 빈다.
+ * 좁은 쪽 캡처와 **짝으로** 본다. 한 장만 보면 어느 쪽으로 틀어졌는지 알 수 없다.
+ */
+test.describe("넓은 화면", () => {
+  test.use({ viewport: { width: 1920, height: 1080 } });
+
+  test("capture: monsters-full-1920", async ({ page }) => {
+    await seedFullSave(page);
+    await page.goto("/monsters");
+    await expect(page.locator('[data-testid="storage-card-s0"]')).toBeVisible({ timeout: 20_000 });
+    await page.mouse.move(40, 1040);
+    await waitForVisualSettle(page);
+    await page.screenshot({ path: path.join(OUT_DIR, "monsters-full-1920.png"), fullPage: false });
+  });
+
+  test("capture: bag-1920", async ({ page }) => {
+    await seedFullSave(page);
+    await page.goto("/farm");
+    await waitForVisualSettle(page);
+    await page.screenshot({ path: path.join(OUT_DIR, "bag-1920.png"), fullPage: false });
+  });
+});

@@ -437,7 +437,13 @@ export default function WorkshopPage() {
                 color: DEBUG_LINE_CSS,
               }}
             >
-              <span className="px-0.5" style={{ textShadow: `0 1px 2px ${PALETTE.shadow900}` }}>{box.id}</span>
+              {/* 세로 줄은 폭이 1% 라 이름이 글자마다 줄바꿈된다. 줄 밖으로 흘려 쓴다 */}
+              <span
+                className="whitespace-nowrap px-0.5"
+                style={{ textShadow: `0 1px 2px ${PALETTE.shadow900}` }}
+              >
+                {box.id}
+              </span>
             </div>
           ))}
 
@@ -539,7 +545,7 @@ export default function WorkshopPage() {
           ══════════════════════════════════════════════════════════════════════ */}
 
       {/* 뒤로가기 */}
-      <div className="absolute left-4 top-4 z-40">
+      <div className="absolute left-gutter top-gutter z-40">
         <button
           type="button"
           onClick={goToBaseCamp}
@@ -575,11 +581,14 @@ export default function WorkshopPage() {
         items={menuItems}
       />
 
-      {/* 최근 제작 아이템 패널 — 메뉴 바(top-4 + 높이 48) 바로 아래에 폭을 맞춰 붙인다 */}
+      {/* 최근 제작 아이템 패널 — 메뉴 바 바로 아래에 폭을 맞춰 붙인다.
+          폭·가장자리 여백은 메뉴와 같은 토큰을 쓴다(GameMenu 도 right-gutter · w-rail).
+          위 오프셋만 계산인데, 메뉴 버튼 높이 48 + 사이 16 이 붙기 때문이다. */}
       {showCraftedPanel && (
         <div
-          className="absolute right-4 top-20 z-40 w-64 rounded-xl p-4 backdrop-blur shadow-2xl"
+          className="absolute right-gutter z-40 w-rail rounded-xl p-4 backdrop-blur shadow-2xl"
           style={{
+            top: "calc(var(--spacing-gutter) + 64px)",
             background: "rgba(13, 18, 35, .95)",
             border: "1px solid rgba(132, 75, 63, 1)",
           }}

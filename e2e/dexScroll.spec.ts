@@ -52,16 +52,21 @@ async function openDex(page: Page) {
 const scroller = (page: Page) =>
   page.locator("div.overflow-y-auto").filter({ has: page.locator("div.grid") }).first();
 
+/**
+ * 넘치는 크기에서 본다. 넓고 높은 화면에서는 14종이 여섯 열로 서서 스크롤이 아예 안 생긴다 —
+ * 그건 정상이고, 여기서 보려는 건 넘칠 때 굴러가느냐다. 세로를 낮춰 넘치는 상태를 만든다.
+ */
 test("도감 목록은 넘치는 만큼 굴러간다", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1280, height: 620 });
   await openDex(page);
 
   const box = scroller(page);
-  // 넘칠 게 있어야 시험이 성립한다 — 종이 늘어 화면에 다 들어오면 여기서 알린다
+  // 넘칠 게 있어야 시험이 성립한다 — 칸이 넓어지거나 종이 줄어 다 들어오면 여기서 알린다
   const { clientH, scrollH } = await box.evaluate((el) => ({
     clientH: el.clientHeight, scrollH: el.scrollHeight,
   }));
-  expect(scrollH, `도감이 한 화면에 다 들어온다 (${scrollH} ≤ ${clientH})`).toBeGreaterThan(clientH);
+  expect(scrollH, `이 크기에서도 도감이 한 화면에 다 들어온다 (${scrollH} ≤ ${clientH}) — 시험 크기를 다시 잡을 것`)
+    .toBeGreaterThan(clientH);
 
   await box.hover();
   await page.mouse.wheel(0, 600);
