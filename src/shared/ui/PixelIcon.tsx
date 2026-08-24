@@ -4,7 +4,7 @@ import { ICONS, type IconName } from "./icons";
 import { RASTER_ICON_IDS } from "./rasterIcons";
 
 /**
- * 원본이 32px 논리 격자라 표시 크기도 정수배·정수분의 1 만 쓴다(CLAUDE.md 픽셀 규칙).
+ * 원본이 32px 논리 격자라 표시 크기도 정수배·정수분의 1 만 쓴다.
  * 24 나 48 은 그 격자의 1.5 배·0.75 배라 crispEdges 로 그린 칸 폭이 들쭉날쭉해진다.
  * 16 은 12px 글자 옆, 32 는 카드·메뉴, 64 는 빈 화면의 큰 표식.
  */
