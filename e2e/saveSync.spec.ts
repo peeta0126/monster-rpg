@@ -87,7 +87,7 @@ test.describe("서버 세이브 동기화", () => {
 
     // ── push: 게임 안에서 상태를 바꾸면 서버로 올라가는가 ─────────────────────
     //
-    // localStorage 를 직접 고치고 새로고침하는 방법은 안 된다 — 로그인 상태로 뜨면
+    // localStorage 를 직접 고치고 새로고침하는 방법은 안 된다. 로그인 상태로 뜨면
     // 서버 세이브를 먼저 pull 해서 로컬 변경을 덮어쓴다(useSaveSync 의 의도된 동작).
     // 실제 조작으로 스토어를 바꿔야 구독이 걸리고 debounce 가 돈다.
     const before = (await getSave(token)).updatedAt;

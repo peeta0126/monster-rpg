@@ -38,7 +38,7 @@ test("포획 목표 — 도감에 그 속성 종이 있으면 된다", () => {
   assert.equal(evaluateObjective(o, snap({ dexCaught: ["flameling", "leafy"] })).done, false);
   assert.equal(evaluateObjective(o, snap({ dexCaught: ["venomcrow"] })).done, true);
   assert.equal(evaluateObjective(o, snap({ dexCaught: ["toxadon"] })).done, true, "같은 속성 다른 종도 된다");
-  // 지금 데리고 있지 않아도 된다 — 도감은 지워지지 않으니 뺏을 것도 없다
+  // 지금 데리고 있지 않아도 된다. 도감은 지워지지 않으니 뺏을 것도 없다
   assert.ok(evaluateObjective(o, snap({ dexCaught: ["toxadon"] })).label.includes("독"));
 });
 
@@ -62,7 +62,7 @@ test("장비 레벨 목표 — 가방에 있든 끼고 있든 올린 건 올린 
   assert.equal(evaluateObjective(o, snap({ craftedArtifacts: [{ level: 19 }] })).done, false);
   assert.equal(evaluateObjective(o, snap({ craftedArtifacts: [{ level: 20 }] })).done, true);
   assert.equal(evaluateObjective(o, snap({ equippedArtifacts: { a: [{ level: 25 }] } })).done, true);
-  // 여러 개 중 제일 높은 것으로 본다 — "하나라도" 올리라는 목표다
+  // 여러 개 중 제일 높은 것으로 본다. "하나라도" 올리라는 목표다
   assert.equal(
     evaluateObjective(o, snap({ craftedArtifacts: [{ level: 3 }, { level: 22 }] })).done, true);
   // 레벨이 안 적힌 옛 장비는 1로 본다

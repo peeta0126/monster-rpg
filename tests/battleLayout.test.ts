@@ -39,7 +39,7 @@ const MUST_NOT_TOUCH: [string, string][] = [
   ["적 스프라이트", "로그 상자"],
 ];
 
-// 1~49층(적 140px)과 50층(오름 256px)은 배치가 다르다. 둘 다 본다 —
+// 1~49층(적 140px)과 50층(오름 256px)은 배치가 다르다. 둘 다 본다.
 // 오름만 커지면서 패널을 덮은 적이 있어서, 한쪽만 재면 그걸 못 잡는다.
 for (const floor of [1, MAX_TOWER_FLOOR]) {
   const boxes = boxesAt(floor);
@@ -102,7 +102,7 @@ test("그림자 폭이 크기에서 계산된다", () => {
   assert.equal(getEnemyLayout(1).size * 0.52, 72.8);
 });
 
-// 아군이 앞(왼쪽·아래·큼), 적이 뒤(오른쪽·위·작음) — 원근이 뒤집히면 도전하는 그림이 아니게 된다
+// 아군이 앞(왼쪽·아래·큼), 적이 뒤(오른쪽·위·작음). 원근이 뒤집히면 도전하는 그림이 아니게 된다
 test("아군이 앞, 적이 뒤에 선다", () => {
   assert.ok(PLAYER_X < ENEMY_X, "아군이 왼쪽이어야 한다");
   assert.ok(PLAYER_FEET > ENEMY_FEET, "아군이 더 아래(앞)여야 한다");
@@ -128,7 +128,7 @@ test("층 구간이 10층마다 바뀐다", () => {
 test("범위 밖 층도 배경이 나온다", () => {
   assert.equal(getTowerZone(0), "z01");
   assert.equal(getTowerZone(-5), "z01");
-  // 위쪽은 탑 정상 방으로 접힌다 — 51층 이상은 존재하지 않는 층이다
+  // 위쪽은 탑 정상 방으로 접힌다. 51층 이상은 존재하지 않는 층이다
   assert.equal(getTowerZone(999), "z50");
 });
 

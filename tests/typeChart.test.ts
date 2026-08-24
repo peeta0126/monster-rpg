@@ -7,7 +7,7 @@ import { ALL_MOVES } from "../src/monster/moves";
 import type { ElementType } from "../src/shared/game";
 
 /**
- * 상성표에 구멍이 없는가. 지금 값이 아니라 **성질**을 본다 — 어느 속성을 더하든
+ * 상성표에 구멍이 없는가. 지금 값이 아니라 성질을 본다. 어느 속성을 더하든
  * "약점 없는 속성"과 "한 속성만 강한 표"로 돌아가지 않게 못 박는다.
  */
 
@@ -33,7 +33,7 @@ test("속성이 물고 물리는 순환이 있다", () => {
   assert.ok(cycle, "3개 이상으로 도는 상성 고리가 없다");
 });
 
-/** normal 의 정체성 — 때리는 쪽 상성이 없는 대신 최상급 기술 위력이 제일 높다 */
+/** normal 의 정체성. 때리는 쪽 상성이 없는 대신 최상급 기술 위력이 제일 높다 */
 test("normal 은 상성으로 때리지 않고 위력으로 때린다", () => {
   assert.deepEqual(typeChart.normal, {}, "normal 이 상성으로 때리기 시작했다");
 

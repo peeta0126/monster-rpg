@@ -1,8 +1,8 @@
 /**
- * 숲 밸런스 측정 — `npx tsx scripts/sim/forestBalance.ts`
+ * 숲 밸런스 측정. `npx tsx scripts/sim/forestBalance.ts`
  *
  * 소란도가 다이얼로 작동하는지 보는 도구다. 소란을 피하는 쪽(avoid)과 올리는 쪽
- * (greedy)의 **집에 가져오는 양**이 비슷해야 선택이 선택이 된다. 한쪽이 압도적이면
+ * (greedy)의 집에 가져오는 양이 비슷해야 선택이 선택이 된다. 한쪽이 압도적이면
  * 다이얼이 아니라 정답이 하나 있는 장식이다.
  *
  * 결과는 docs/FOREST_BALANCE.md 에 기록해 STEP 마다 비교한다.
@@ -20,7 +20,7 @@ const FORCED_RECOVERY = 0.5;
 
 const STRATEGIES: ForestStrategy[] = ["avoid", "random", "greedy"];
 
-/** 자진 귀환 기준 — 소란이 이 값에 닿으면 돌아간다 */
+/** 자진 귀환 기준. 소란이 이 값에 닿으면 돌아간다 */
 const BANK_AT = Number(process.env.BANK_AT ?? 85);
 
 interface Row {

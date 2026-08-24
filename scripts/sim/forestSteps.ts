@@ -1,11 +1,11 @@
 /**
- * 사건별 기대가치 측정 — `npx tsx scripts/sim/forestSteps.ts`
+ * 사건별 기대가치 측정. `npx tsx scripts/sim/forestSteps.ts`
  *
  * 걸음 수를 소란이 정하는 구조에서는 "비싼 사건이 배수를 더 받는다"만으로는 부족하다.
- * 소란 25 를 쓰는 사건은 소란 5 짜리보다 **기대 수확 자체가 5배 가까이** 커야 본전이다.
+ * 소란 25 를 쓰는 사건은 소란 5 짜리보다 기대 수확 자체가 5배 가까이 커야 본전이다.
  * 안 그러면 비싼 길은 언제나 손해고, 다이얼은 한 방향으로만 굳는다.
  *
- * 개수가 아니라 가치로 잰다(dropTables.MATERIAL_VALUE) — 약초 1개와 강화석 1개를
+ * 개수가 아니라 가치로 잰다(dropTables.MATERIAL_VALUE). 약초 1개와 강화석 1개를
  * 같은 무게로 세면 희귀 전용 사건이 흔적보다 못한 것으로 계산된다.
  */
 import { FOREST_AREAS } from "../../src/camp/forest/areas";
@@ -18,7 +18,7 @@ import { CATCH_ATTEMPTS, attemptAlert, catchChance } from "../../src/camp/forest
 /**
  * 몬스터 1마리를 재료 몇 가치로 칠 것인가.
  *
- * 시뮬 정규화용 숫자다 — "몬스터가 강화석 1.5개짜리"라는 뜻이 아니다. 포획 연출과
+ * 시뮬 정규화용 숫자다. "몬스터가 강화석 1.5개짜리"라는 뜻이 아니다. 포획 연출과
  * 도감 등록의 체감은 이 숫자와 무관하게 크게 만든다.
  *
  * ⚠️ 이 값은 판이 진행되면 실제로 떨어진다(도감이 차면 조우가 나쁜 선택이 된다).
@@ -27,9 +27,9 @@ import { CATCH_ATTEMPTS, attemptAlert, catchChance } from "../../src/camp/forest
 const MONSTER_VALUE = Number(process.env.MONSTER_VALUE ?? 6);
 
 /**
- * 시도당 포획률 — 버릇을 모르는 플레이어 기준.
+ * 시도당 포획률. 버릇을 모르는 플레이어 기준.
  *
- * 상대 손에 편향이 붙어도 **아무 수나 낼 때의 기대값은 세 손의 평균 그대로**다.
+ * 상대 손에 편향이 붙어도 아무 수나 낼 때의 기대값은 세 손의 평균 그대로다.
  * 그래서 기준선은 예전과 같은 값이고, 버릇을 아는 쪽이 그 위로 벌어진다.
  */
 function perAttempt(alert: number): number {
@@ -44,7 +44,7 @@ function catchSuccessRate(alert: number): number {
 /**
  * 조우 하나가 시도 비용으로 태우는 소란의 기대값.
  *
- * 사건 자체의 소란(STEP_ALERT)만 세면 포획이 붙은 사건이 실제보다 싸 보인다 —
+ * 사건 자체의 소란(STEP_ALERT)만 세면 포획이 붙은 사건이 실제보다 싸 보인다.
  * 지금은 재도전에 값이 붙으므로 그 몫도 이 사건의 값이다.
  */
 function expectedAttemptAlert(alert: number): number {
@@ -55,12 +55,12 @@ function expectedAttemptAlert(alert: number): number {
 }
 
 const N = 40000;
-/** 이 소란도에서 잰다 — 구간 배수가 1.0 인 지점이라 사건 자체의 값이 보인다 */
+/** 이 소란도에서 잰다. 구간 배수가 1.0 인 지점이라 사건 자체의 값이 보인다 */
 const AT_ALERT = 0;
 
 const KINDS: ForestStepKind[] = ["trace", "encounter", "nest", "anomaly", "champion", "warden"];
 
-/** 목표 비례계수 — 비싼 사건이 약간 유리해야 다이얼이 양방향으로 돈다 */
+/** 목표 비례계수. 비싼 사건이 약간 유리해야 다이얼이 양방향으로 돈다 */
 const TARGET_K: Partial<Record<ForestStepKind, number>> = {
   trace: 1.00, encounter: 1.05, nest: 1.10, anomaly: 1.15, champion: 1.20, warden: 1.25,
 };

@@ -1,15 +1,15 @@
 /**
- * 관문 층이 **레벨로 넘는 벽인지 장비로 넘는 벽인지**를 잰다.
+ * 관문 층이 레벨로 넘는 벽인지 장비로 넘는 벽인지를 잰다.
  *
- * 이 게임의 설계 목표는 한 문장이다 — "장비를 갖추는 것이 레벨을 올리는 것보다 크게
- * 이득이어야 한다". 그 부등식이 성립하는지 보려면 같은 층을 **레벨 축**과 **장비 축**
+ * 이 게임의 설계 목표는 한 문장이다. "장비를 갖추는 것이 레벨을 올리는 것보다 크게
+ * 이득이어야 한다". 그 부등식이 성립하는지 보려면 같은 층을 레벨 축과 장비 축
  * 양쪽으로 훑어야 한다. 그래서 표가 2차원이다.
  *
  * 실행: npx tsx scripts/sim/bossCurve.ts [판수]
  *
  * 읽는 법: 한 줄(같은 장비)에서 오른쪽으로 가는 것이 레벨을 올리는 것,
  *          한 칸 아래로 가는 것이 장비를 한 단계 올리는 것이다.
- *          **아래로 가는 폭이 오른쪽으로 8칸 가는 폭보다 커야 한다.**
+ *          아래로 가는 폭이 오른쪽으로 8칸 가는 폭보다 커야 한다.
  */
 import { installSeededRandom, fightFloor, type SimState } from "./gameModel";
 import { DEFAULT_STORY_FLAGS } from "../../src/shared/storyFlags";
@@ -29,7 +29,7 @@ interface Scenario {
   loadouts: { label: string; gear: string; imprint: number }[];
 }
 
-/** 층마다 정규 등급이 다르다 — 재료가 열리는 시점이 다르기 때문이다 */
+/** 층마다 정규 등급이 다르다. 재료가 열리는 시점이 다르기 때문이다 */
 const SCENARIOS: Scenario[] = [
   {
     floor: 10, species: ["flameling", "aquabe", "venomcrow"],

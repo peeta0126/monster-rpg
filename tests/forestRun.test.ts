@@ -12,8 +12,8 @@ import { chooseFork } from "../src/camp/forest/runStore.ts";
 import { ALERT_MAX } from "../src/camp/forest/alert.ts";
 
 /**
- * 원정은 지도가 아니라 걸음이다. 여기서 지키는 건 걸음의 규칙 — 판정 순서, 짐을
- * 흘리는 방식, 정산 셈, 그리고 **저장을 못 읽을 때 플레이어가 손해를 보지 않는가**다.
+ * 원정은 지도가 아니라 걸음이다. 여기서 지키는 건 걸음의 규칙. 판정 순서, 짐을
+ * 흘리는 방식, 정산 셈, 그리고 저장을 못 읽을 때 플레이어가 손해를 보지 않는가다.
  */
 
 const run0 = () => startRun("shallow", 0, { capLevel: 99, canCatch: true }, 12345);
@@ -122,7 +122,7 @@ test("주인은 조건을 채워야 나온다", () => {
   assert.equal(wardenCanAppear(80, 0), true, "소란이 높으면 나와야 한다");
   assert.equal(wardenCanAppear(0, 15), true, "깊이 끈기로도 닿아야 한다");
 
-  // 조건 전에는 절대 안 나온다 — 안 그러면 초반에 원정이 끝나 버린다
+  // 조건 전에는 절대 안 나온다. 안 그러면 초반에 원정이 끝나 버린다
   for (let seed = 0; seed < 500; seed++) {
     const { rng } = makeRng(seed);
     assert.notEqual(rollStep(10, 2, rng), "warden", `시드 ${seed}: 조건도 안 찼는데 주인이 나왔다`);

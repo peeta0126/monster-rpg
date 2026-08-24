@@ -100,7 +100,7 @@ export async function asGuest(page: Page, path: string) {
   await page.addInitScript(
     ([ak, av, pk, pv]) => {
       window.localStorage.setItem(ak as string, av as string);
-      // ⚠ addInitScript 는 **네비게이션마다** 돈다. 무조건 덮으면 공방에서 만든 장비가
+      // ⚠ addInitScript 는 네비게이션마다 돈다. 무조건 덮으면 공방에서 만든 장비가
       // /monsters 로 넘어가는 순간 사라진다. 없을 때만 심는다.
       if (!window.localStorage.getItem(pk as string)) {
         window.localStorage.setItem(pk as string, pv as string);

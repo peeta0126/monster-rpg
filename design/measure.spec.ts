@@ -35,7 +35,7 @@ for (const [w, h] of VPS) {
       console.log(`${w}x${h} monsters 열 폭 ${cols.join(" / ")}`);
 
       // 전투 기술 버튼 폭.
-      // 768px 미만은 SmallScreenNotice 가 화면을 덮는다 — 잴 게 없는 게 아니라 못 논다
+      // 768px 미만은 SmallScreenNotice 가 화면을 덮는다. 잴 게 없는 게 아니라 못 논다
       if (w < 768) {
         console.log(`${w}x${h} 기술 버튼 — 화면이 작아 막힌 해상도다 (SmallScreenNotice)`);
         return;
@@ -43,7 +43,7 @@ for (const [w, h] of VPS) {
       await page.goto("/battle");
       await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
       await page.waitForTimeout(700);
-      // 기술은 2단에 있다 — 1단에서 "기술"을 먼저 열어야 셀이 나온다
+      // 기술은 2단에 있다. 1단에서 "기술"을 먼저 열어야 셀이 나온다
       await page.getByTestId("cmd-moves").click();
       await page.waitForTimeout(300);
       const btn = await page.locator("button").filter({ hasText: "위력" }).first().boundingBox();

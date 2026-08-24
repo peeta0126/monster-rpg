@@ -53,7 +53,7 @@ test("엔딩 후에는 두 NPC 모두 대사가 바뀐다", () => {
     met_orion: true, met_baros: true, first_capture: true,
     quest_baros_done: true, quest_orion_done: true, tower_cleared: true,
   });
-  // 클리어 대사만 안 읽은 상태 — 옛 세이브 마이그레이션이 만들어 내는 바로 그 상태다
+  // 클리어 대사만 안 읽은 상태. 옛 세이브 마이그레이션이 만들어 내는 바로 그 상태다
   const orion = talk(ORION_DIALOGUES, f, 50, allSeen(ORION_DIALOGUES, f, 50, ["orion_cleared"]));
   const baros = talk(BAROS_DIALOGUES, f, 50, allSeen(BAROS_DIALOGUES, f, 50, ["baros_cleared"]));
 

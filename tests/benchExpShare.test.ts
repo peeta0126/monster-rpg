@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { benchExpShare, expLevelGapMultiplier, EXP_GAP_CUTOFF, expToNext } from "../src/battle/battleUtils";
 
-/** 벤치 분배 — 뒤처진 몬스터만 당겨 준다 */
+/** 벤치 분배. 뒤처진 몬스터만 당겨 준다 */
 
 test("선봉과 같은 레벨이면 절반 조금 아래를 받는다", () => {
   assert.equal(benchExpShare(30, 30), 0.45);
@@ -18,14 +18,14 @@ test("아주 많이 벌어지면 동등까지 받고, 그 위로는 더 오르�
   assert.ok(benchExpShare(10, 30) <= 1);
 });
 
-// 앞서 있는 몬스터까지 보너스를 받으면 격차가 되레 벌어진다 — 이 보정의 전제가 무너진다
+// 앞서 있는 몬스터까지 보너스를 받으면 격차가 되레 벌어진다. 이 보정의 전제가 무너진다
 test("선봉보다 앞서 있으면 보너스가 없다", () => {
   assert.equal(benchExpShare(40, 30), 0.45);
   assert.equal(benchExpShare(31, 30), 0.45);
 });
 
 /**
- * 레벨차 컷오프 — 이 게임에서 레벨을 재화로 되돌리는 장치다.
+ * 레벨차 컷오프. 이 게임에서 레벨을 재화로 되돌리는 장치다.
  * 예전엔 무장비 파티가 낮은 층을 갈아 50층까지 갔다.
  */
 
@@ -57,6 +57,6 @@ test("요구 경험치는 레벨만 보고 정해진다", () => {
   assert.ok(expToNext(40) > expToNext(20));
   // 직접 키운 개체든 잡은 개체든 같은 레벨이면 같은 값이어야 한다
   assert.equal(expToNext(40), expToNext(40));
-  // 지수가 완만해야 한다 — Lv40 요구치가 Lv1 의 20배를 넘으면 후반이 멈춘다
+  // 지수가 완만해야 한다. Lv40 요구치가 Lv1 의 20배를 넘으면 후반이 멈춘다
   assert.ok(expToNext(40) < expToNext(1) * 20, `Lv40 요구치가 너무 크다: ${expToNext(40)}`);
 });

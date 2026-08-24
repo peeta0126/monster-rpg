@@ -12,7 +12,7 @@ import {
 /**
  * 장비 칸이 실제로 어떻게 보이는지 남긴다.
  *
- * 여기서 보려는 것은 숫자가 아니라 그림이다 — 갓 만든 것과 다 키운 것이 한눈에 다른
+ * 여기서 보려는 것은 숫자가 아니라 그림이다. 갓 만든 것과 다 키운 것이 한눈에 다른
  * 물건으로 보이는가, 좁은 칸에서 배지가 아이콘을 덮지 않는가, 줄 높이가 장비마다
  * 들쭉날쭉하지 않은가. 기본 캡처는 신규 세이브라 가방이 비어 있어 아무것도 안 나온다.
  */
@@ -49,7 +49,7 @@ function artifact(recipeId: string, quality: Quality, maxed: boolean, tag: strin
 }
 
 /**
- * 가방에 두 벌을 넣는다 — 갓 만든 정예와 다 키운 정예를 나란히.
+ * 가방에 두 벌을 넣는다. 갓 만든 정예와 다 키운 정예를 나란히.
  * 뒤의 셋은 모루 재료 목록이 비지 않게 하려는 것이다(등급이 같아야 후보로 뜬다).
  */
 const BAG = [
@@ -139,9 +139,9 @@ test("capture: equip-anvil", async ({ page }) => {
 
   for (const tab of ANVIL_TABS) {
     await page.getByRole("button", { name: tab, exact: true }).click();
-    // 왼쪽 목록에서 하나 골라야 오른쪽 패널이 뜬다. 합성만 정예를 고르면 안 된다 —
+    // 왼쪽 목록에서 하나 골라야 오른쪽 패널이 뜬다. 합성만 정예를 고르면 안 된다.
     // 정예는 더 올라갈 등급이 없어서 결과 미리보기가 아예 안 나온다.
-    // 레벨업은 아직 키울 게 남은 쪽(둘째)을 고른다 — 만렙을 고르면 다음 레벨 미리보기가
+    // 레벨업은 아직 키울 게 남은 쪽(둘째)을 고른다. 만렙을 고르면 다음 레벨 미리보기가
     // 안 나와서, 이 탭에서 제일 중요한 화면을 못 본다.
     const pick = page.getByText(tab === "합성" ? "정령의 부적" : "힘의 목걸이");
     await (tab === "레벨업" ? pick.nth(1) : pick.first()).click();
@@ -162,7 +162,7 @@ test("capture: equip-craft-result", async ({ page }) => {
   await page.getByText("힘의 목걸이").first().click();
   await page.getByRole("button", { name: /제작 시작|개 제작/ }).click();
 
-  // 방향키 QTE — 정확도는 상관없다. 끝까지만 가면 결과 화면이 뜬다.
+  // 방향키 QTE. 정확도는 상관없다. 끝까지만 가면 결과 화면이 뜬다.
   for (let i = 0; i < 40; i++) {
     for (const k of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) await page.keyboard.press(k);
     if (await page.getByRole("button", { name: /계속/ }).first().isVisible()) break;

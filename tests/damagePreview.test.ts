@@ -9,7 +9,7 @@ import { previewMove, formatDamageRange } from "../src/battle/damagePreview";
 import type { ElementType, Move } from "../src/shared/game";
 
 /**
- * 기술 셀의 예상 데미지가 **실제 전투 계산과 같은 값**인지 못 박는다.
+ * 기술 셀의 예상 데미지가 실제 전투 계산과 같은 값인지 못 박는다.
  * 여기서 지키려는 건 숫자 하나가 아니라 "표시가 계산식의 사본이 아니다"라는 것이다.
  */
 
@@ -37,7 +37,7 @@ test("예상 데미지가 실제 계산 함수(calculateDamage)가 내는 값과
   const p = previewMove(attacker, defender, mv);
 
   // 난수를 훑어 실제 함수가 내는 비치명타 데미지를 모은다.
-  // (치명타는 이제 장비가 없어도 기본율로 뜬다 — 굴림 결과를 보고 걸러낸다)
+  // (치명타는 이제 장비가 없어도 기본율로 뜬다. 굴림 결과를 보고 걸러낸다)
   const real = new Set<number>();
   const origRandom = Math.random;
   try {
@@ -70,7 +70,7 @@ test("장비 보너스·공격 버프·상성이 모두 예측에 반영된다",
   assert.equal(p.minDamage, expected);
   assert.ok(p.minDamage > 0);
 
-  // 보너스를 빼면 값이 줄어야 한다 — 인자를 그냥 흘려보내고 있지 않다는 확인
+  // 보너스를 빼면 값이 줄어야 한다. 인자를 그냥 흘려보내고 있지 않다는 확인
   assert.ok(previewMove(attacker, defender, mv).minDamage < p.minDamage);
 });
 
@@ -109,7 +109,7 @@ test("치명타가 떠야 닿는 경우에만 \"쓰러뜨릴 수도\"가 된다"
   const defender = mon({ id: "e", type: "normal", defense: 40, maxHp: 200 });
   const mv = move({ type: "normal", power: 40 });
 
-  // 장비가 없어도 치명타율은 0 이 아니다(BASE_CRIT_RATE) — 그래서 예측에 치명타 데미지가 있다
+  // 장비가 없어도 치명타율은 0 이 아니다(BASE_CRIT_RATE). 그래서 예측에 치명타 데미지가 있다
   const p = previewMove(attacker, defender, mv);
   assert.ok(p.critChance > 0, "기본 치명타율이 예측에 반영되지 않았다");
   assert.ok((p.critDamage ?? 0) > p.minDamage);

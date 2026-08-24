@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * 마을에서 사람에게 말을 거는 흐름을 실제로 눌러 본다.
  *
- * 단위 시험은 대사를 고르는 함수까지만 본다. 여기서 보려는 건 그 뒤다 — 고른 대사가
+ * 단위 시험은 대사를 고르는 함수까지만 본다. 여기서 보려는 건 그 뒤다. 고른 대사가
  * 화면에 뜨는가, 끝까지 넘기면 세이브에 기록이 남는가, 보상이 정말 가방에 들어오는가.
  *
  * 실행: npx playwright test e2e/questDialogue.spec.ts
@@ -15,7 +15,7 @@ const AUTH = JSON.stringify({
   version: 0,
 });
 
-/** NPC 좌표 — BaseCampScene 의 BASECAMP_NPCS 와 같은 자리 */
+/** NPC 좌표. BaseCampScene 의 BASECAMP_NPCS 와 같은 자리 */
 const NPC_AT = {
   orion: { x: 1090, y: 1950 },
   baros: { x: 430, y: 1200 },
@@ -103,7 +103,7 @@ test("엔딩까지 본 세이브 — 이야기 한 번 뒤로는 잡담이 나�
       met_orion: true, met_baros: true, first_capture: true,
       quest_baros_done: true, quest_orion_done: true, tower_cleared: true,
     },
-    // 퀘스트는 전부 끝낸 상태로 둔다 — 여기서 보려는 건 그 다음이다
+    // 퀘스트는 전부 끝낸 상태로 둔다. 여기서 보려는 건 그 다음이다
     questStatus: Object.fromEntries([
       "baros_first_hunt", "orion_mothers_medicine", "baros_gear_up",
       "orion_where_i_stopped", "baros_type_matchup", "orion_once_more",
@@ -137,7 +137,7 @@ test("엔딩까지 본 세이브 — 이야기 한 번 뒤로는 잡담이 나�
   for (let i = 1; i < tail.length; i++) {
     expect(tail[i], `${i}번째에서 같은 말이 연달아 나왔다: ${tail[i]}`).not.toBe(tail[i - 1]);
   }
-  // 여러 줄이 실제로 돌아야 한다 — 하나만 반복되면 무작위가 아니다
+  // 여러 줄이 실제로 돌아야 한다. 하나만 반복되면 무작위가 아니다
   expect(new Set(tail).size).toBeGreaterThan(2);
 });
 
@@ -153,7 +153,7 @@ test("안 본 이야기가 잡담에 묻히지 않는다", async ({ page }) => {
       "orion_where_i_stopped", "baros_type_matchup", "orion_once_more",
       "baros_change_gear", "orion_mothers_cure",
     ].map((id) => [id, "completed"])),
-    // 엔딩 후 대사만 안 읽은 상태 — 옛 세이브 마이그레이션이 만드는 바로 그 자리다
+    // 엔딩 후 대사만 안 읽은 상태. 옛 세이브 마이그레이션이 만드는 바로 그 자리다
     seenDialogues: [
       "orion_intro", "orion_after_baros", "orion_first_capture", "orion_quest_medicine",
       "orion_floor_10", "orion_floor_20", "orion_floor_40", "orion_floor_50",
@@ -181,7 +181,7 @@ test("옛 세이브(버전 1 · 기록 없음)로 열어도 안 깨지고, 지�
         quest_baros_done: true, quest_orion_done: true, tower_cleared: true,
       },
       questStatus: { baros_first_hunt: "completed", orion_mothers_medicine: "completed" },
-      // seenDialogues 가 통째로 없다 — 이 기록이 생기기 전의 세이브다
+      // seenDialogues 가 통째로 없다. 이 기록이 생기기 전의 세이브다
       craftedItems: [], craftedArtifacts: [], craftedPotions: [], equippedArtifacts: {},
       imprint: {},
     },

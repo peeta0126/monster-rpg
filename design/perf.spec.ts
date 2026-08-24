@@ -122,7 +122,7 @@ test("perf: 측정", async ({ page, context }) => {
     }
   }
 
-  // FPS — 스로틀 해제 후
+  // FPS. 스로틀 해제 후
   await throttle(cdp, NETWORKS[0]);
   const fps: Record<string, { avg: number; min: number }> = {};
   for (const s of SCREENS.filter((x) => x.phaser)) {

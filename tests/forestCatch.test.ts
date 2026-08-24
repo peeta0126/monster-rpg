@@ -16,8 +16,8 @@ import type { RpsChoice } from "../src/workshop/rps.ts";
 
 /**
  * 포획에서 지키는 것 셋.
- *   1) 상대 손이 속성마다 편향돼 있다 — 세 버튼이 진짜로 다르다.
- *   2) 그 정보는 **공짜가 아니다** — 도감과 정찰이 산다.
+ *   1) 상대 손이 속성마다 편향돼 있다. 세 버튼이 진짜로 다르다.
+ *   2) 그 정보는 공짜가 아니다. 도감과 정찰이 산다.
  *   3) 재도전에 값이 있고, 물러서기는 그 값을 안 낸다.
  * 그리고 어느 것도 시드 고정(= 새로고침 리롤 방지)을 깨지 않는다.
  */
@@ -187,7 +187,7 @@ test("시도별 소란은 0 / +5 / +10 이다", () => {
   assert.equal(ATTEMPT_ALERT.length, CATCH_ATTEMPTS, "시도 수와 비용표 길이가 어긋났다");
 });
 
-/** 소란만 보기 위한 걸음 — 흔적은 포획이 없고 소란 델타가 고정이다 */
+/** 소란만 보기 위한 걸음. 흔적은 포획이 없고 소란 델타가 고정이다 */
 function stepAlertAfter(outcome: Parameters<typeof resolveStep>[1]) {
   const run = { ...startRun("shallow", 20, { capLevel: 99, canCatch: true }, 555), current: "trace" as const, depth: 0 };
   return resolveStep(run, outcome).alert;

@@ -1,9 +1,9 @@
 /**
- * 포획 밸런스 측정 — `npx tsx scripts/sim/forestCatch.ts`
+ * 포획 밸런스 측정. `npx tsx scripts/sim/forestCatch.ts`
  *
  * 두 가지를 잰다.
- *   1) 버릇을 아는 것에 값이 있는가 — 세 손의 기대 포획률이 실제로 갈리는가.
- *   2) 재도전 비용이 "늘 3번"을 깼는가 — 조우당 평균 시도가 3에서 얼마나 내려갔는가.
+ *   1) 버릇을 아는 것에 값이 있는가. 세 손의 기대 포획률이 실제로 갈리는가.
+ *   2) 재도전 비용이 "늘 3번"을 깼는가. 조우당 평균 시도가 3에서 얼마나 내려갔는가.
  *      그리고 그 대가로 런이 얼마나 짧아졌는가. 너무 짧아지면 비용이 센 것이다.
  *
  * 표는 전부 게임 소스에서 온다(catchTells · catchRules). 여기서 수치를 다시 적으면
@@ -42,7 +42,7 @@ for (const type of SAMPLE) {
   );
 }
 
-// 시도 3회를 다 쓸 때까지의 누적 — 버릇을 아는 값이 시도 수에서 어떻게 보이는지
+// 시도 3회를 다 쓸 때까지의 누적. 버릇을 아는 값이 시도 수에서 어떻게 보이는지
 const per = { blind: 0.44, counter: expectedCatchChance("paper", "fire", 0) };
 const cum = (p: number) => 1 - Math.pow(1 - p, CATCH_ATTEMPTS);
 const tries = (p: number) => 1 + (1 - p) + Math.pow(1 - p, 2);
@@ -79,7 +79,7 @@ function measure(areaIdx: number, policy: CatchPolicy): Row {
     carried: carried / RUNS, caught: caught / RUNS, steps: steps / RUNS, peak: peak / RUNS,
     catchSteps: catchSteps / RUNS,
     perCatchStep: catchSteps > 0 ? attempts / catchSteps : 0,
-    // 물러선 비율은 조우 대비로 본다 — 런당 횟수만 보면 런 길이에 휘둘린다
+    // 물러선 비율은 조우 대비로 본다. 런당 횟수만 보면 런 길이에 휘둘린다
     retreats: catchSteps > 0 ? (retreats / catchSteps) * 100 : 0,
     attemptAlert: attemptAlert / RUNS,
     forced: (forced / RUNS) * 100,
@@ -89,7 +89,7 @@ function measure(areaIdx: number, policy: CatchPolicy): Row {
 /**
  * 정책 넷.
  *
- * "예전"은 비용을 곱셈 0 으로 지운 것이다(CatchPolicy.costScale — 비교 전용 다이얼).
+ * "예전"은 비용을 곱셈 0 으로 지운 것이다(CatchPolicy.costScale, 비교 전용 다이얼).
  * 나머지 셋이 지금 게임이고, 버릇을 아는가로 갈린다.
  */
 const RETREAT_ALERT = Number(process.env.RETREAT_ALERT ?? 60);

@@ -8,7 +8,7 @@ import { FRESH_SAVE } from "./freshSave";
  *   … --update-snapshots      의도한 변경이면 기준 이미지 갱신
  *
  * 기준 이미지는 design/visual.spec.ts-snapshots/ 에 커밋한다.
- * maxDiffPixelRatio 0.02 — 폰트 힌팅이나 안티에일리어싱 차이로 매번 깨지지 않을 만큼
+ * maxDiffPixelRatio 0.02. 폰트 힌팅이나 안티에일리어싱 차이로 매번 깨지지 않을 만큼
  * 느슨하되, 레이아웃이 밀리면 잡히는 값이다.
  */
 
@@ -28,7 +28,7 @@ const SCREENS = [
   { name: "monsters", path: "/monsters", auth: true,  phaser: false },
   { name: "workshop", path: "/workshop", auth: true,  phaser: false },
   // 2026-08-14: 하단 패널에 경험치 줄이 한 줄 늘면서 캔버스가 그만큼 짧아졌다. 몬스터
-  // 방향은 그대로다 — 뒤집기를 좌표에서 계산하도록 바꿨지만 지금 배치에서는 결과가 같다.
+  // 방향은 그대로다. 뒤집기를 좌표에서 계산하도록 바꿨지만 지금 배치에서는 결과가 같다.
   //
   // battle 기준 이미지를 2026-08-12 에 다시 갱신했다. 배경이 Graphics 로 그리던 벽돌방에서
   // 층 구간 × 적 속성으로 고르는 이미지 한 장으로 바뀌었고, 배치도 아군 앞(왼쪽·아래·크게)·
@@ -58,7 +58,7 @@ for (const screen of SCREENS) {
         window.localStorage.removeItem(playerKey);
         if (authed) {
           window.localStorage.setItem(authKey, authState);
-          // 새 세이브는 파티가 비어 있고 첫 몬스터를 이장에게서 받는다 — 그대로 두면
+          // 새 세이브는 파티가 비어 있고 첫 몬스터를 이장에게서 받는다. 그대로 두면
           // /battle 이 베이스캠프로 되돌려져 전투 대신 마을이 찍힌다.
           window.localStorage.setItem(playerKey, fresh);
         }

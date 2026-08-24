@@ -63,7 +63,7 @@ const dummy = () => createBattleMonster({
 
 /**
  * 상태이상은 전부 정해진 턴 뒤에 스스로 풀린다. 예전엔 빙결만 풀리고 화상·독·마비는
- * 전투가 끝날 때까지 갔다 — 화상 하나면 12턴에 최대 HP 전부가 날아갔다.
+ * 전투가 끝날 때까지 갔다. 화상 하나면 12턴에 최대 HP 전부가 날아갔다.
  */
 test("상태이상은 STATUS_DURATION 턴을 채우면 풀린다", () => {
   for (const status of ["paralysis", "poison", "burn", "freeze"] as const) {
@@ -104,7 +104,7 @@ test("상태이상 피해만으로도 HP 가 0 이 되고 기절로 잡힌다", 
   const after = checkStatusEffects(burning).monster;
   assert.equal(after.currentHp, 0);
   assert.equal(isFainted(after), true);
-  // 쓰러진 몬스터에게 "상태가 풀렸다"를 띄우지 않는다 — 되살아난 것처럼 읽힌다
+  // 쓰러진 몬스터에게 "상태가 풀렸다"를 띄우지 않는다. 되살아난 것처럼 읽힌다
   assert.ok(!checkStatusEffects(burning).logs.some((l) => l.includes("풀렸다")));
 });
 
@@ -117,7 +117,7 @@ test("상성표가 typeChart 의 속성을 하나도 빠뜨리지 않는다", ()
 
 /**
  * 표를 손으로 옮겨 적지 않았는지 본다. 배율이 화면 코드에 박혀 있으면 상성을 고친 날
- * 표만 옛말을 한다 — 값은 전투가 쓰는 getTypeMultiplier 에서만 나와야 한다.
+ * 표만 옛말을 한다. 값은 전투가 쓰는 getTypeMultiplier 에서만 나와야 한다.
  */
 test("상성표 화면이 배율을 직접 적고 있지 않다", () => {
   const here = path.dirname(fileURLToPath(import.meta.url));

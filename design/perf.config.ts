@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 /**
  * 성능 측정 전용 설정.
  *
- * dev 서버로 재면 의미가 없다 — 번들이 안 합쳐지고 소스맵·HMR 이 붙는다.
+ * dev 서버로 재면 의미가 없다. 번들이 안 합쳐지고 소스맵·HMR 이 붙는다.
  * 반드시 프로덕션 빌드 + preview 로 잰다.
  */
 export default defineConfig({

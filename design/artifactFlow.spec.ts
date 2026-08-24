@@ -3,14 +3,14 @@ import { openWorkshop, walkTo } from "./workshopNav";
 import { CRAFTING_STATIONS } from "../src/workshop/workshopLayout";
 
 /**
- * 아티팩트 한 살이 — 제작 → 강화 → 장착 → 스탯 반영 → 보너스 증가.
+ * 아티팩트 한 살이. 제작 → 강화 → 장착 → 스탯 반영 → 보너스 증가.
  *
  * 공방 회귀 확인에서 여기만 "모루 모달 진입·목록까지"로 남아 있었다. 흐름이 공방과
  * /monsters 두 화면에 걸쳐 있어 한 스펙으로 묶었다.
  *
  * ⚠️ 순서가 '장착 → 강화'가 아니라 '강화 → 장착'인 이유:
  *    장착하면 그 아티팩트가 가방(craftedArtifacts)에서 빠지는데(playerStore.equipArtifact),
- *    모루는 가방만 나열한다. 그래서 **장착 중인 장비는 강화할 수 없다.** 스토어의
+ *    모루는 가방만 나열한다. 그래서 장착 중인 장비는 강화할 수 없다. 스토어의
  *    updateCraftedArtifact 는 장착 위치까지 갱신하도록 돼 있어 의도된 제약인지는 불분명하다.
  *    여기서는 UI 가 실제로 허용하는 순서로만 확인한다.
  *
@@ -42,7 +42,7 @@ async function craftBatch(page: Page) {
   await page.getByTestId("craft-qty-max").click();
   await page.getByRole("button", { name: /제작 시작|개 제작/ }).click();
 
-  // 방향키 QTE — 정확도는 상관없다. 끝까지만 가면 된다.
+  // 방향키 QTE. 정확도는 상관없다. 끝까지만 가면 된다.
   for (let i = 0; i < 40; i++) {
     for (const k of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) await page.keyboard.press(k);
     if (await page.getByRole("button", { name: /계속/ }).first().isVisible()) break;
@@ -70,7 +70,7 @@ const statBonus = async (page: Page, label: string) =>
 /**
  * 장비 모달을 열고 가방의 index 번째 아티팩트를 장착한다.
  *
- * 장착 버튼은 카드마다 있던 것이 상태창의 '관리' 한 벌로 모였다 — 그래서
+ * 장착 버튼은 카드마다 있던 것이 상태창의 '관리' 한 벌로 모였다. 그래서
  * openStatus() 로 대상을 먼저 세운 뒤에만 눌린다.
  */
 async function equipNth(page: Page, index: number) {

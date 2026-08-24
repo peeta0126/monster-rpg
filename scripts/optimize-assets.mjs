@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * 에셋 최적화 — 원본을 읽어 public/ 으로 내보낸다.
+ * 에셋 최적화. 원본을 읽어 public/ 으로 내보낸다.
  *
  *   node scripts/optimize-assets.mjs           변환
  *   node scripts/optimize-assets.mjs --dry     무엇을 할지만 출력
  *   node scripts/optimize-assets.mjs --png8    픽셀아트 PNG-8 재인코딩까지 (아래 참고)
  *
  * ── 이 스크립트가 지키는 규칙 하나 ────────────────────────────────────────────
- * **출력 경로는 어떤 레시피의 입력도 될 수 없다.** 시작할 때 실제로 검사하고, 어기면
+ * 출력 경로는 어떤 레시피의 입력도 될 수 없다. 시작할 때 실제로 검사하고, 어기면
  * 아무것도 하지 않고 죽는다.
  *
  * 예전엔 이 규칙이 없어서 두 가지가 동시에 깨져 있었다.
@@ -19,9 +19,9 @@
  * 로 38개 전수 확인), 둘 중 하나만 고쳤으면 그때 터졌다.
  *
  * 그래서 입력과 출력을 물리적으로 갈랐다. 원본은 art-src/ 에 두고 public/ 에는 산출물만
- * 나간다. 몇 번을 돌려도 결과가 같다 — tests/optimizeAssets.test.mjs 가 그걸 지킨다.
+ * 나간다. 몇 번을 돌려도 결과가 같다. tests/optimizeAssets.test.mjs 가 그걸 지킨다.
  *
- * art-src/ 는 저장소에 함께 들어간다(배포되지 않는다 — public/ 밖이라 dist/ 에 안 실린다).
+ * art-src/ 는 저장소에 같이 들어간다(배포는 안 된다. public/ 밖이라 dist/ 에 안 실린다).
  * 마스터가 없는 레시피는 건너뛴다(이미 만들어진 산출물은 그대로 둔다).
  */
 import fs from "node:fs/promises";
@@ -36,7 +36,7 @@ const DRY  = process.argv.includes("--dry");
 const PNG8 = process.argv.includes("--png8");
 
 /**
- * 레시피 — { src, out, ... }.
+ * 레시피. { src, out, ... }.
  * src 는 art-src/ 기준, out 은 public/ 기준 상대 경로.
  *
  * 대부분의 마스터는 이 구조를 만들기 전에 이미 사라졌다(변환 후 원본을 지우던 시절에
@@ -54,7 +54,7 @@ const RECIPES = [
   /**
    * 흐리게 깔아 쓰는 배경의 저해상도 사본.
    * GameBackground / ForestBackground 는 blur(10~14px) + brightness(0.3) 으로 뭉개서 쓴다.
-   * 원본 517KB 를 받을 이유가 없다 — 가로 640px 이면 블러 후 구분이 안 된다.
+   * 원본 517KB 를 받을 이유가 없다. 가로 640px 이면 블러 후 구분이 안 된다.
    *
    * 처음엔 마스터가 없을 때 이미 만들어진 basecamp-bg.webp 에서 뜨도록 적었는데, 그러면
    * 같은 실행 안에서 방금 쓴 출력을 다시 입력으로 읽게 되어 순서에 따라 결과가 달라진다.
@@ -63,13 +63,13 @@ const RECIPES = [
   { src: "basecamp-bg.png", out: "assets/basecamp/basecamp-bg-blur.webp", width: 640, quality: 78 },
 
   /**
-   * 파비콘 — 로고를 정사각에 담아 PNG 로 뽑는다.
+   * 파비콘. 로고를 정사각에 담아 PNG 로 뽑는다.
    *
    * 여기만 webp 가 아니라 png 다. 파비콘으로서의 webp 는 Safari 16 미만이 못 읽는데,
    * 아이콘은 몇 KB 라 아껴 봐야 의미가 없다.
    *
    * 로고가 564×442 라 그대로 줄이면 정사각 슬롯에서 세로가 남는다. `square` 는 긴 변에
-   * 맞춰 담고 남는 자리를 투명으로 채운다 — 탭 아이콘이 찌그러지지 않는다.
+   * 맞춰 담고 남는 자리를 투명으로 채운다. 탭 아이콘이 찌그러지지 않는다.
    * 180 은 iOS 홈 화면이 요구하는 크기다(그보다 작으면 확대되어 뭉갠다).
    */
   { src: "voyager-atelier-logo.png", out: "favicon-32.png",        square: 32,  format: "png" },
@@ -80,7 +80,7 @@ const RECIPES = [
  * 손대지 않는 디렉터리.
  *
  * 이 밑의 파일은 밖에서 이미 최적화를 마치고 들어온 최종본이다. 여기서 다시 구우면
- * 화질만 깎인다 — WebP 재인코딩은 무손실이 아니라, 같은 quality 로 돌려도 세대마다
+ * 화질만 깎인다. WebP 재인코딩은 무손실이 아니라, 같은 quality 로 돌려도 세대마다
  * 뭉갠다. 숲 배경 3종은 톤 보정·스크림·비네트까지 구워져 있어 특히 되돌릴 수 없다.
  *
  * "레시피에 안 적었으니 안전하다"로 두지 않고 검사로 박아 둔 이유: 언젠가 누가
@@ -89,7 +89,7 @@ const RECIPES = [
  *
  * assets/icons 도 같은 이유로 들어 있다. 아이템 아이콘은 scripts/build-icons.mjs 가
  * art-src/icons/ 에서 64x64 무손실로 굽는다. 여기서 quality 82 로 다시 구우면 픽셀
- * 테두리가 번진다 — 24px 로 보는 그림에서 그건 바로 보인다.
+ * 테두리가 번진다. 24px 로 보는 그림에서 그건 바로 보인다.
  *
  * assets/audio 는 이 스크립트가 지금은 손댈 수단조차 없지만(sharp 는 그림만 다룬다)
  * 같은 자리에 적어 둔다. BGM 여섯 곡은 이어 붙여도 티가 안 나게 다듬어 들어온
@@ -97,7 +97,7 @@ const RECIPES = [
  */
 const PRESERVED_DIRS = ["assets/forest", "assets/icons", "assets/audio"];
 
-/** 몬스터 일러스트 — art-src/monsters/*.png 를 512px 상한으로 줄여 내보낸다 */
+/** 몬스터 일러스트. art-src/monsters/*.png 를 512px 상한으로 줄여 내보낸다 */
 const MONSTER_SRC_DIR = "monsters";
 const MONSTER_OUT_DIR = "assets/monsters";
 const MONSTER_MAX = 512;
@@ -105,7 +105,7 @@ const MONSTER_MAX = 512;
 /**
  * 픽셀아트 PNG-8 재인코딩 (--png8 일 때만).
  *
- * 이 단계만은 public/ 의 파일을 제자리에서 다시 쓴다 — 그 스프라이트들은 산출물이자
+ * 이 단계만은 public/ 의 파일을 제자리에서 다시 쓴다. 그 스프라이트들은 산출물이자
  * 마스터라 갈라놓을 데가 없다(art-src 로 옮기면 배포물이 저장소에서 사라진다).
  * 이미 전부 PNG-8 이라 지금 돌리면 0~1% 밖에 안 줄고 파일만 흔든다. 그래서 기본에서
  * 뺐다. 새 스프라이트를 넣었을 때만 명시적으로 부른다.
@@ -122,7 +122,7 @@ async function sizeOf(p) {
 
 /**
  * 출력이 입력을 덮지 않는지 확인한다. 이 스크립트가 존재하는 이유의 절반이다.
- * 어기면 아무것도 하지 않고 죽는다 — 반쯤 처리된 상태가 제일 나쁘다.
+ * 어기면 아무것도 하지 않고 죽는다. 반쯤 처리된 상태가 제일 나쁘다.
  */
 function assertNoInputIsOverwritten(recipes) {
   const inputs = new Set(recipes.map((r) => path.resolve(ART_SRC, r.src)));

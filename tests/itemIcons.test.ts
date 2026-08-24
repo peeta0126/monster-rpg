@@ -9,7 +9,7 @@ import { RASTER_ICON_IDS } from "../src/shared/ui/rasterIcons.ts";
 import { MATERIALS, POTIONS } from "../src/shared/items.ts";
 
 /**
- * 아이템 아이콘은 세 곳이 맞물려 있다 — 구운 파일(public/assets/icons), 그 목록
+ * 아이템 아이콘은 세 곳이 맞물려 있다. 구운 파일(public/assets/icons), 그 목록
  * (rasterIcons.ts), 그리고 아이템 표의 icon 이름. 하나만 어긋나면 화면에서는
  * 조용히 옛 SVG 가 나오거나 빈 칸이 뜬다. 눈으로는 "원래 이런 그림이었나" 싶어 넘어간다.
  */
@@ -68,7 +68,7 @@ test("네 모서리가 투명하다 — 배경이 남아 있으면 칸마다 네
 
 test("SVG 폴백이 아직 21종 전부 있다", () => {
   // 그림으로 갈아탔다고 SVG 를 지우면, 굽지 않고 클론한 곳에서 아이콘이 통째로 빈다.
-  // icons.ts 는 여기서 import 할 수 없다(*.svg 는 Vite 만 읽는다) — 소스와 파일을 본다.
+  // icons.ts 는 여기서 import 할 수 없다(*.svg 는 Vite 만 읽는다). 소스와 파일을 본다.
   const table = fs.readFileSync(path.join(ROOT, "src/shared/ui/icons.ts"), "utf8");
   const dirs = ["materials", "potions", "artifacts", "ui"];
   for (const id of RASTER_ICON_IDS) {

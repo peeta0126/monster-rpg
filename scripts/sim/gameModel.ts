@@ -75,14 +75,14 @@ export interface OwnedMon extends Monster {
 
 export interface SimState {
   party: OwnedMon[];
-  /** 각인 — 계열키 → 먹인 중복 수 (playerStore.imprint 와 같은 표) */
+  /** 각인. 계열키 → 먹인 중복 수 (playerStore.imprint 와 같은 표) */
   imprint: Record<string, number>;
   materials: Record<string, number>;
   potions: Record<string, number>;
   artifacts: ArtifactInstance[];                    // 가방
   equipped: Record<string, ArtifactInstance[]>;     // uid → 장착
   bestFloor: number;
-  /** 도감의 포획 기록 — 퀘스트 목표(특정 속성 포획)가 이걸 읽는다 */
+  /** 도감의 포획 기록. 퀘스트 목표(특정 속성 포획)가 이걸 읽는다 */
   dexCaught: string[];
   storyFlags: Record<PersistedStoryFlag, boolean>;
   questStatus: Record<string, QuestStatus>;
@@ -109,7 +109,7 @@ export function addMaterial(s: SimState, id: string, n: number) {
   s.materials[id] = (s.materials[id] ?? 0) + n;
 }
 
-/** 파티 전체 회복 — /monsters 화면의 회복 버튼(restorePartyHp). 비용도 쿨다운도 없다. */
+/** 파티 전체 회복. /monsters 화면의 회복 버튼(restorePartyHp). 비용도 쿨다운도 없다. */
 export function restorePartyHp(s: SimState) {
   for (const m of s.party) m.currentHp = m.maxHp;
 }
@@ -181,7 +181,7 @@ function pickHealPotion(s: SimState, missing: number): string | null {
 }
 
 /**
- * 이번 턴에 마실 물약. 회복만 보던 걸 **가방 전체**를 쓰게 넓혔다.
+ * 이번 턴에 마실 물약. 회복만 보던 걸 가방 전체를 쓰게 넓혔다.
  *
  * 예전엔 회복 물약만 골랐다. 그래서 "시스템을 다 쓰는 플레이어" 를 잰다면서 정작
  * 게임에서 제일 큰 배수(강한 집중의 물약 = 공격 ×2.0 · 5턴)를 한 번도 안 마셨다.
@@ -199,7 +199,7 @@ function pickPotionAction(
   }
   // 2) 상태이상은 오래 끄는 싸움에서만 푼다(잡몹은 그냥 맞고 이긴다)
   if (hardFloor && mon.status && (s.potions.antidote ?? 0) > 0) return "antidote";
-  // 3) 관문·보스는 첫 턴에 공격 버프부터 건다 — 사람도 그렇게 한다
+  // 3) 관문·보스는 첫 턴에 공격 버프부터 건다. 사람도 그렇게 한다
   if (hardFloor && turn === 1 && mon.attackBuffTurns <= 0) {
     for (const id of ["strong_attack_buff", "attack_buff"]) {
       if ((s.potions[id] ?? 0) > 0) return id;
@@ -216,7 +216,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
   // 플레이어는 가장 잘 키운 몬스터를 선봉에 세운다
   let activeIdx = s.party.reduce((best, m, i) => (m.level > s.party[best].level ? i : best), 0);
   const bonuses = s.party.map((m) => equipBonus(s, m.uid));
-  // 각인 배수는 전투에 들어갈 때만 얹는다(BattlePage.toBattleEntry 와 같은 순서) —
+  // 각인 배수는 전투에 들어갈 때만 얹는다(BattlePage.toBattleEntry 와 같은 순서).
   // 저장 쪽 스탯에 누적하면 전투마다 배수가 겹친다
   const battlers = s.party.map((m, i) => toBattleMon(withImprint(m, s.imprint), bonuses[i].hp));
   const enemy0 = getFloorEnemy(floor, s.party[activeIdx].id);
@@ -243,7 +243,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
     const move = pickBestMove(np, ne);
     const playerSpeed = np.speed + bonus.speed;
     const playerFirst = playerSpeed >= ne.speed;
-    // 속도 게이지 — 차이가 쌓이면 그 쪽이 이 턴에 한 번 더 움직인다 (BattlePage 와 같은 규칙)
+    // 속도 게이지. 차이가 쌓이면 그 쪽이 이 턴에 한 번 더 움직인다 (BattlePage 와 같은 규칙)
     const pTick = tickSpeedGauge(playerGauge, playerSpeed, ne.speed);
     const eTick = tickSpeedGauge(enemyGauge, ne.speed, playerSpeed);
     playerGauge = pTick.gauge.charge;
@@ -317,7 +317,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       return enemyAttack();
     };
 
-    // 누가 쓰러졌는지는 두 몬스터의 HP 가 말해 준다 — 상태이상 피해로도 죽을 수 있어서
+    // 누가 쓰러졌는지는 두 몬스터의 HP 가 말해 준다. 상태이상 피해로도 죽을 수 있어서
     // 행동 함수의 반환값 하나로는 부족하다
     let playerWon = false, enemyWon = false;
     const settle = () => { playerWon = isFainted(ne); enemyWon = isFainted(np); };
@@ -341,7 +341,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       let grown = gainExp(np, earned).updatedMonster;
       if (grown.level > prevLevel) grown = (await applyLevelGrowth(grown, prevLevel)).monster;
       const owned = s.party[activeIdx];
-      // 전투가 부풀린 값(각인 배수·장비 HP)을 걷어낸다 — 종족 기본값 + 레벨로 다시 계산한다
+      // 전투가 부풀린 값(각인 배수·장비 HP)을 걷어낸다. 종족 기본값 + 레벨로 다시 계산한다
       // (BattlePage.toPersisted 와 같은 규칙)
       const persisted = statsForLevel(grown.id, grown.level);
       owned.level = grown.level;
@@ -449,7 +449,7 @@ export interface ForestRunResult {
   metWarden: boolean;
   /** 포획을 놓친 횟수 */
   escapes: number;
-  /** 포획에 성공한 수 — 몬스터는 즉시 확정이라 정산에 안 걸린다 */
+  /** 포획에 성공한 수. 몬스터는 즉시 확정이라 정산에 안 걸린다 */
   caught: number;
   /** 실제로 데려온 몬스터. 각인 재료가 되므로 마릿수만으로는 부족하다 */
   caughtMonsters: Monster[];
@@ -469,7 +469,7 @@ export interface CatchPolicy {
    * 상대의 버릇을 읽는가.
    *
    * 도감이 찬 플레이어(또는 소란을 낮게 유지한 플레이어)를 흉내 낸다. 모르는 쪽은
-   * 예전과 같이 아무 수나 낸다 — 어떤 편향에서도 기대값이 정확히 균등값이다.
+   * 예전과 같이 아무 수나 낸다. 어떤 편향에서도 기대값이 정확히 균등값이다.
    */
   knowsTell: boolean;
   /**
@@ -486,7 +486,7 @@ export interface CatchPolicy {
    */
   retreatAlertOver: number;
   /**
-   * 시도 비용에 곱하는 배수 — **비교 전용 다이얼**이다.
+   * 시도 비용에 곱하는 배수. 비교 전용 다이얼이다.
    *
    * 0 이면 재도전이 공짜였던 예전 규칙이 된다. 게임에는 이런 다이얼이 없다.
    * 비용을 붙이기 전후를 같은 코드로 재려고만 둔다(밸런스 표를 사본으로 만들지 않는다).
@@ -501,7 +501,7 @@ export const CATCH_ALWAYS_THREE: CatchPolicy = {
 /**
  * 원정 1회. 게임과 같은 표(steps.ts)로 사건을 뽑고 같은 순서로 판정한다.
  *
- * 전략은 갈림길에서 무엇을 고르느냐다 — 소란이 덜 오르는 쪽(avoid) · 무작위(random) ·
+ * 전략은 갈림길에서 무엇을 고르느냐다. 소란이 덜 오르는 쪽(avoid) · 무작위(random) ·
  * 더 오르는 쪽(greedy). 갈림길이 아닌 걸음은 선택지가 없으므로 전략과 무관하다.
  *
  * 자진 귀환 시점은 사람이 정하는 것이라 시뮬이 대신 정할 수 없다. 여기서는
@@ -514,13 +514,13 @@ export function runForest(
   /**
    * 자진 귀환 기준. 소란이 이 값에 닿으면 스스로 돌아간다.
    *
-   * 언제 멈출지는 사람이 정하는 것이라 시뮬이 대신 정할 수 없다 — 대신 정책을
+   * 언제 멈출지는 사람이 정하는 것이라 시뮬이 대신 정할 수 없다. 대신 정책을
    * 파라미터로 두고 여러 기준을 훑는다. 기본값은 "쫓겨날 때까지" 다.
    */
   bankAlert = Infinity,
   /** 포획을 어떻게 두는가. 기본은 예전 행동(버릇 모름 · 3번 다 씀) */
   policy: CatchPolicy = CATCH_ALWAYS_THREE,
-  /** 파티 최고 레벨 — 숲이 내주는 레벨의 천장(catchLevel.ts). 기본은 천장 없음 */
+  /** 파티 최고 레벨. 숲이 내주는 레벨의 천장(catchLevel.ts). 기본은 천장 없음 */
   capLevel = Infinity,
 ): ForestRunResult {
   const canCatch = canCatchIn(area, capLevel);
@@ -583,7 +583,7 @@ export function runForest(
 
       for (let a = 0; a < CATCH_ATTEMPTS; a++) {
         const cost = Math.round(attemptAlert(a) * policy.costScale);
-        // 물러서기 — 놓치는 건 같지만 escapeAlert 도 이번 시도 비용도 안 낸다
+        // 물러서기. 놓치는 건 같지만 escapeAlert 도 이번 시도 비용도 안 낸다
         if (a > 0 && (cost > policy.retreatCostOver || alert + spent > policy.retreatAlertOver)) {
           quit = true;
           break;
@@ -631,7 +631,7 @@ export function runForest(
  * 가위바위보 포획 시도 1회.
  *
  * 플레이어는 상대 수를 모르므로 승/무/패가 균등하다. 확률표는 catchRules.ts 한 벌뿐이라
- * 여기서 사본을 만들지 않는다 — 포획률을 고쳤는데 시뮬이 옛 값을 재던 적이 있다.
+ * 여기서 사본을 만들지 않는다. 포획률을 고쳤는데 시뮬이 옛 값을 재던 적이 있다.
  */
 export function tryCatch(alert = 0): boolean {
   const r = Math.random();
@@ -714,7 +714,7 @@ export function levelUpArtifact(s: SimState, id: string): boolean {
   return true;
 }
 
-/** 강화 1회 — 같은 등급의 다른 아티팩트를 재료로 소모한다. 실패해도 재료는 사라진다. */
+/** 강화 1회. 같은 등급의 다른 아티팩트를 재료로 소모한다. 실패해도 재료는 사라진다. */
 export function enhanceArtifact(s: SimState, targetId: string, materialId: string): boolean {
   const t = findArtifact(s, targetId);
   const m = s.artifacts.find((a) => a.instanceId === materialId);

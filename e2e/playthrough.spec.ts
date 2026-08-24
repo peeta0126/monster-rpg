@@ -16,7 +16,7 @@ import { playFloor, winOverlay } from "./autoBattle";
 const MAX_FLOOR = 50;
 
 /**
- * 테스트 파티 레벨. 의도적으로 높게 잡았다 —
+ * 테스트 파티 레벨. 의도적으로 높게 잡았다.
  * 50층 오름은 실효 HP 1870 / 공격 498 / 방어 319라, 정규 난이도로는 아티팩트 파밍이 전제다.
  * (docs/notes/tower.md 참고) 밸런스를 보고 싶으면 이 값을 낮춰서 어디서 막히는지 확인하면 된다.
  */

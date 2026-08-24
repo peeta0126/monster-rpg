@@ -15,7 +15,7 @@ import { FRESH_SAVE } from "./freshSave";
  *
  * ⚠️ 로그인 우회는 zustand persist 키 "monster-rpg-auth" 에 게스트 세션을 직접 심는 방식이다.
  *    src/auth/authStore.ts 의 persist name 이 바뀌면 아래 AUTH_STORAGE_KEY 도 같이 고쳐야 한다.
- *    세이브 데이터는 "monster-rpg-player" 키를 쓰는데, 여기서는 일부러 심지 않는다 —
+ *    세이브 데이터는 "monster-rpg-player" 키를 쓰는데, 여기서는 일부러 심지 않는다.
  *    playerStore 의 createInitialState() 가 주는 신규 플레이어 상태(플레미 1마리, 재료 0개)가
  *    "가장 휑한 화면"이라 디자인 문제가 제일 잘 드러나기 때문이다.
  */
@@ -49,9 +49,9 @@ const SCREENS: Screen[] = [
   { name: "farm",     path: "/farm",     auth: true },
   { name: "monsters", path: "/monsters", auth: true },
   { name: "workshop", path: "/workshop", auth: true },
-  // /battle 은 라우트 state 없이 들어가도 동작한다 — BattlePage 가 floor=1 로 폴백해
+  // /battle 은 라우트 state 없이 들어가도 동작한다. BattlePage 가 floor=1 로 폴백해
   // getFloorEnemy() 로 적을 만들고, setBattleInitData() 를 스스로 호출한 뒤 씬을 띄운다.
-  // 필요한 건 파티에 몬스터가 1마리 이상 있는 것뿐이라 FRESH_SAVE 를 심는다 — 지금은
+  // 필요한 건 파티에 몬스터가 1마리 이상 있는 것뿐이라 FRESH_SAVE 를 심는다. 지금은
   // 새 세이브의 파티가 비어 있고, 첫 몬스터를 이장에게서 받는다(campDialogues).
   { name: "battle",   path: "/battle",   auth: true, phaser: true },
 ];
@@ -119,7 +119,7 @@ for (const tier of FOREST_TIERS) {
 }
 
 /**
- * 탐험 화면은 원화 위에 바로 얹힌다 — 배경이 무대라서 원화가 바뀌면 여기가 제일
+ * 탐험 화면은 원화 위에 바로 얹힌다. 배경이 무대라서 원화가 바뀌면 여기가 제일
  * 먼저 읽히지 않게 된다. 선택 화면과 따로 남긴다.
  */
 test("capture: forest-walk", async ({ page }) => {
@@ -135,7 +135,7 @@ test("capture: forest-walk", async ({ page }) => {
 });
 
 /**
- * 가위바위보는 두 곳에서 같은 아이콘을 쓴다 — 공방 제작 품질과 숲 포획.
+ * 가위바위보는 두 곳에서 같은 아이콘을 쓴다. 공방 제작 품질과 숲 포획.
  *
  * 아이콘이 19×19 그리드라 표시 크기가 19의 배수(57·76)일 때만 픽셀 폭이 균일하다.
  * 그건 숫자로는 확인이 안 되고 확대해서 눈으로 봐야 잡힌다. 두 화면 다 남기는 이유는
@@ -156,7 +156,7 @@ test("capture: workshop-rps", async ({ page }) => {
   await waitForVisualSettle(page);
   await page.screenshot({ path: path.join(OUT_DIR, "workshop-rps-select.png"), fullPage: false });
 
-  // 결과 화면 — 내가 고른 쪽에 테두리가 붙는다. 아이콘 색만으로는 구분이 안 되기 때문
+  // 결과 화면. 내가 고른 쪽에 테두리가 붙는다. 아이콘 색만으로는 구분이 안 되기 때문
   await page.getByRole("button", { name: /바위/ }).first().click();
   await waitForVisualSettle(page);
   await page.screenshot({ path: path.join(OUT_DIR, "workshop-rps-result.png"), fullPage: false });
@@ -164,10 +164,10 @@ test("capture: workshop-rps", async ({ page }) => {
 
 /**
  * 숲 포획 화면은 걸어서 닿으려면 조우가 나올 때까지 굴려야 한다. 저장된 원정을 직접
- * 심어 조우 한가운데로 들어간다 — 세이브 형식이 곧 게임 상태라 이게 가장 짧은 길이다.
+ * 심어 조우 한가운데로 들어간다. 세이브 형식이 곧 게임 상태라 이게 가장 짧은 길이다.
  *
  * 소란 20 은 정찰 "detail" 구간이라 버릇이 글자로 명시된다. 이 화면에서 확인할 것은
- * 남은 시도 · 다음 시도의 소란 값 · 버릇 힌트 · 물러서기가 **한 화면에 다 보이는가**다.
+ * 남은 시도 · 다음 시도의 소란 값 · 버릇 힌트 · 물러서기가 한 화면에 다 보이는가다.
  */
 const catchRun = (step: Record<string, unknown>) => JSON.stringify({
   run: {
@@ -193,7 +193,7 @@ test("capture: forest-rps", async ({ page }) => {
 });
 
 /**
- * 한 번 놓친 뒤의 화면. 여기서만 "다시 시도에 값이 붙었다"가 보인다 —
+ * 한 번 놓친 뒤의 화면. 여기서만 "다시 시도에 값이 붙었다"가 보인다.
  * 비용이 버튼에 안 적혀 있으면 물러설지 말지를 저울에 못 올린다.
  */
 test("capture: forest-rps-retry", async ({ page }) => {
@@ -210,7 +210,7 @@ test("capture: forest-rps-retry", async ({ page }) => {
 });
 
 /**
- * 각인은 "같은 몬스터가 여러 마리" 라야 화면이 성립한다 — 신규 세이브로는 후보 목록도
+ * 각인은 "같은 몬스터가 여러 마리" 라야 화면이 성립한다. 신규 세이브로는 후보 목록도
  * 배지도 빈 채로 찍혀 아무것도 확인할 수 없다. 그래서 여기서만 세이브를 심는다.
  */
 const IMPRINT_SAVE = JSON.stringify({
@@ -246,7 +246,7 @@ async function seedImprintSave(page: Page) {
 test("capture: monsters-imprint", async ({ page }) => {
   await seedImprintSave(page);
   await page.goto("/monsters");
-  // 보관함 카드를 하나 골라 상태창에 세운다 — 각인 블록도 조작 버튼도 거기 있다
+  // 보관함 카드를 하나 골라 상태창에 세운다. 각인 블록도 조작 버튼도 거기 있다
   await page.locator('[data-testid="storage-card-s1"]').click({ timeout: 20_000 });
   await expect(page.locator('[data-testid="imprint-status"]')).toBeVisible();
   await page.mouse.move(40, 600);
@@ -294,7 +294,7 @@ test("capture: forest-nest", async ({ page }) => {
 });
 
 /**
- * 50층 오름 — 탑의 마지막 적이자 유일하게 여기서만 나오는 일러스트다.
+ * 50층 오름. 탑의 마지막 적이자 유일하게 여기서만 나오는 일러스트다.
  * dragon.webp 는 알파가 없어 어두운 무대 위에 흰 네모로 떠 있었는데, 1층만 찍으면
  * 그게 안 보인다. 층은 라우트 state 로만 정해지므로 history 에 심고 다시 읽힌다
  * (react-router 는 초기 location.state 를 window.history.state.usr 에서 가져온다).
@@ -309,7 +309,7 @@ test("capture: battle-boss", async ({ page }) => {
   await page.reload();
 
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
-  // 층이 실제로 50 으로 들어갔는지 — 폴백(1층)으로 찍히면 확인할 게 없다.
+  // 층이 실제로 50 으로 들어갔는지. 폴백(1층)으로 찍히면 확인할 게 없다.
   // 화면의 층 표시는 캔버스에 그려져 접근성 트리에 안 잡히므로 패널의 data-floor 로 본다.
   await expect(page.getByTestId("battle-panel")).toHaveAttribute("data-floor", "50");
   await waitForVisualSettle(page);
@@ -318,7 +318,7 @@ test("capture: battle-boss", async ({ page }) => {
 
 /**
  * 층 구간마다 방이 바뀌고, 켜지는 창이 적 속성을 따라가는지 본다.
- * 구간과 속성이 둘 다 다른 층을 고른다 — 한 구간만 찍으면 매핑이 고정값이어도 모른다.
+ * 구간과 속성이 둘 다 다른 층을 고른다. 한 구간만 찍으면 매핑이 고정값이어도 모른다.
  */
 for (const floor of [5, 25, 45]) {
   test(`capture: battle-room-${floor}f`, async ({ page }) => {
@@ -364,7 +364,7 @@ for (const screen of MENU_SCREENS) {
   });
 }
 
-/** 소리 설정은 메뉴 안에서 펼쳐진다 — 슬라이더가 메뉴 폭에 눌리지 않는지는 눈으로만 잡힌다 */
+/** 소리 설정은 메뉴 안에서 펼쳐진다. 슬라이더가 메뉴 폭에 눌리지 않는지는 눈으로만 잡힌다 */
 test("capture: basecamp-menu-audio", async ({ page }) => {
   await seedStorage(page, true);
   await page.goto("/");
@@ -374,7 +374,7 @@ test("capture: basecamp-menu-audio", async ({ page }) => {
   await page.keyboard.press("Tab");
   await page.getByRole("menuitem", { name: "소리" }).click();
   await expect(page.getByText("SOUND")).toBeVisible();
-  // 커서를 치운다 — 눌렀던 항목에 hover 가 남으면 기본 색을 볼 수 없다
+  // 커서를 치운다. 눌렀던 항목에 hover 가 남으면 기본 색을 볼 수 없다
   await page.mouse.move(40, 600);
   await page.waitForTimeout(200);
 
@@ -420,7 +420,7 @@ for (const screen of SCREENS) {
 }
 
 /**
- * 퀘스트 로그 — 여덟 개로 늘었을 때 "지금 뭘 해야 하는지"가 한눈에 보이는지 본다.
+ * 퀘스트 로그. 여덟 개로 늘었을 때 "지금 뭘 해야 하는지"가 한눈에 보이는지 본다.
  * 진행 중 하나 · 받을 수 있는 것 하나 · 완료 여럿이 섞인 중반 상태를 심는다.
  */
 const QUEST_LOG_SAVE = JSON.stringify({
@@ -474,7 +474,7 @@ test("capture: quest-log", async ({ page }) => {
 /**
  * 몬스터 화면의 "꽉 찬" 상태.
  *
- * 위 SCREENS 의 `monsters` 는 신규 세이브라 카드가 한 장뿐이다 — 칸이 넘치는 사고는
+ * 위 SCREENS 의 `monsters` 는 신규 세이브라 카드가 한 장뿐이다. 칸이 넘치는 사고는
  * 거기서 안 보인다. 파티 3마리 전원이 장비 3종을 끼고(보너스 숫자 + 슬롯 칩), 보관함이
  * 14마리인 상태가 이 화면이 실제로 제일 자주 놓이는 모습이고, 액션 버튼이 카드 밖으로
  * 나가거나 옆 카드와 겹치는 것도 여기서만 드러난다.
@@ -520,7 +520,7 @@ const FULL_SAVE = JSON.stringify({
     bestFloor: 27,
     storyFlags: {}, questStatus: {}, seenDialogues: [],
     craftedItems: [],
-    // 가방에도 남겨 둔다 — 장비 모달의 "가방의 아티팩트" 격자가 비면 그쪽을 못 본다
+    // 가방에도 남겨 둔다. 장비 모달의 "가방의 아티팩트" 격자가 비면 그쪽을 못 본다
     craftedArtifacts: [0, 1, 2, 3].map((i) => artifactFor("bag", i)),
     craftedPotions: [], 
     equippedArtifacts: {
@@ -552,7 +552,7 @@ test("capture: monsters-full", async ({ page }) => {
 test("capture: monsters-equip-modal", async ({ page }) => {
   await seedFullSave(page);
   await page.goto("/monsters");
-  // 상태창은 아무것도 안 고른 상태에서 파티 첫 마리를 세운다 — 바로 열 수 있다
+  // 상태창은 아무것도 안 고른 상태에서 파티 첫 마리를 세운다. 바로 열 수 있다
   await expect(page.locator('[data-testid="action-equip"]')).toBeVisible({ timeout: 20_000 });
   await page.locator('[data-testid="action-equip"]').click();
   await expect(page.locator('[data-testid="equip-modal"]')).toBeVisible();
@@ -569,7 +569,7 @@ test("capture: monsters-equip-modal", async ({ page }) => {
  */
 /**
  * 교체를 걸어 둔 상태. 보관함 한 마리를 고르면 파티 쪽이 "지금 누르면 바뀌는 자리"가
- * 된다 — 예전에는 그 반대쪽을 45% 로 눌러 어둡게 했는데, 눌러야 하는 게 어두워진
+ * 된다. 예전에는 그 반대쪽을 45% 로 눌러 어둡게 했는데, 눌러야 하는 게 어두워진
  * 쪽이라 안내가 거꾸로였다. 점선이 실제로 파티 칸에만 붙는지 여기서 본다.
  */
 test("capture: monsters-swap-armed", async ({ page }) => {
@@ -592,7 +592,7 @@ test.describe("좁은 화면", () => {
     await waitForVisualSettle(page);
     await page.screenshot({ path: path.join(OUT_DIR, "monsters-full-1280.png"), fullPage: false });
 
-    // 가로 스크롤이 생기면 어딘가가 칸 밖으로 나간 것이다 — 이 화면의 원래 결함이 그거였다
+    // 가로 스크롤이 생기면 어딘가가 칸 밖으로 나간 것이다. 이 화면의 원래 결함이 그거였다
     const overflow = await page.evaluate(() => ({
       scrollW: document.documentElement.scrollWidth,
       clientW: document.documentElement.clientWidth,
@@ -603,9 +603,9 @@ test.describe("좁은 화면", () => {
 });
 
 /**
- * 넓은 화면. 글자를 못 키우니(픽셀 폰트) 넓어진 만큼을 칸이 받아야 한다 —
+ * 넓은 화면. 글자를 못 키우니(픽셀 폰트) 넓어진 만큼을 칸이 받아야 한다.
  * 안 받으면 UI 가 가운데 조금만 차지하고 나머지가 통째로 빈다.
- * 좁은 쪽 캡처와 **짝으로** 본다. 한 장만 보면 어느 쪽으로 틀어졌는지 알 수 없다.
+ * 좁은 쪽 캡처와 짝으로 본다. 한 장만 보면 어느 쪽으로 틀어졌는지 알 수 없다.
  */
 test.describe("넓은 화면", () => {
   test.use({ viewport: { width: 1920, height: 1080 } });

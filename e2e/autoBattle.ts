@@ -5,7 +5,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
  * 게임 코드는 건드리지 않고 실제 UI만 조작한다 (선택 근거는 docs/notes/testing.md 참고).
  */
 
-/** 한 층에서 허용할 최대 턴 수 — 무한 루프 방지용 안전장치 */
+/** 한 층에서 허용할 최대 턴 수. 무한 루프 방지용 안전장치 */
 const MAX_TURNS_PER_FLOOR = 300;
 
 /** 2단 메뉴의 기술 버튼들 ("기술" 하위에서만 보인다) */
@@ -37,7 +37,7 @@ export async function canAct(page: Page): Promise<boolean> {
 /**
  * 기술 교체 선택 창이 떠 있으면 응답한다.
  * 전투가 플레이어 입력을 기다리며 멈춰 있으므로, 처리하지 않으면 자동 플레이가 그대로 굳는다.
- * 정책은 게임의 자동 판단과 같게 — 위력이 가장 낮은 기술을 밀어낸다.
+ * 정책은 게임의 자동 판단과 같게. 위력이 가장 낮은 기술을 밀어낸다.
  */
 export async function resolveForgetPrompt(page: Page): Promise<boolean> {
   if (!(await isVisible(forgetPrompt(page)))) return false;
@@ -126,10 +126,10 @@ function pickMove(options: MoveOption[]): MoveOption | null {
 }
 
 /**
- * **출전 중인** 몬스터의 HP 비율.
+ * 출전 중인 몬스터의 HP 비율.
  *
  * 예전엔 패널 전체 텍스트에서 첫 `숫자/숫자` 를 집었는데, 새 배치에서 그 첫 자리는
- * 파티 칸 1번이다 — 출전 중인 몬스터가 2번이면 엉뚱한 HP 를 보고 물약을 안 마신다.
+ * 파티 칸 1번이다. 출전 중인 몬스터가 2번이면 엉뚱한 HP 를 보고 물약을 안 마신다.
  * 출전 표시(data-active)를 달아 둔 칸에서만 읽는다.
  */
 async function playerHpRatio(page: Page): Promise<number> {
@@ -161,7 +161,7 @@ async function tryUseHealingPotion(page: Page): Promise<boolean> {
   return false;
 }
 
-/** 기절 시 강제 교체 — 파티 구역에서 고를 수 있는 몬스터를 누른다 */
+/** 기절 시 강제 교체. 파티 구역에서 고를 수 있는 몬스터를 누른다 */
 async function switchToHealthyMember(page: Page): Promise<void> {
   for (let i = 0; i < 3; i++) {
     const slot = page.getByTestId(`party-${i}`);

@@ -110,7 +110,7 @@ test("갓 만든 장비(Lv.1 +0)는 원본 값 그대로다", () => {
 });
 
 test("최대 HP 부가 능력치는 HP 줄에 한 번만 더해진다", () => {
-  // 힘의 목걸이는 기본 HP 가 없다 — 부가 능력치로만 HP 가 생긴다
+  // 힘의 목걸이는 기본 HP 가 없다. 부가 능력치로만 HP 가 생긴다
   const necklace = maxedArtifact("power_necklace");
   const hpFlat   = (necklace.bonusStats ?? [])
     .filter((b) => b.type === "maxHpFlat").reduce((s, b) => s + b.value, 0);

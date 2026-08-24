@@ -8,7 +8,7 @@ import { MATERIALS, POTIONS } from "../src/shared/items";
 /**
  * 아이템 아이콘이 실제 화면에서 어떻게 보이는지 남긴다. npm run design:shot
  *
- * capture.spec.ts 는 일부러 **빈 가방**을 찍는다("가장 휑한 화면이 문제를 제일 잘 보여준다").
+ * capture.spec.ts 는 일부러 빈 가방을 찍는다("가장 휑한 화면이 문제를 제일 잘 보여준다").
  * 그래서 정작 아이콘이 한 칸도 안 나온다. 21종을 다 채운 세이브는 여기서만 심는다.
  *
  * 여기서 보는 것: 픽셀이 살아 있는가, 칸을 넘치지 않는가, 그림과 SVG 폴백이 섞인 줄이
@@ -29,7 +29,7 @@ const ARTIFACTS = [
   { itemId: "spirit_amulet",  name: "정령의 부적",   quality: "normal" },
 ] as const;
 
-/** 21종이 한 화면에 다 서는 세이브. 재료는 넉넉히 — 제작 창의 "보유"도 같이 보고 싶다. */
+/** 21종이 한 화면에 다 서는 세이브. 재료는 넉넉히. 제작 창의 "보유"도 같이 보고 싶다. */
 function fullBag() {
   return JSON.stringify({
     state: {
@@ -77,7 +77,7 @@ async function settle(page: Page) {
   await page.waitForTimeout(600);
 }
 
-/** 그림으로 나가야 할 아이콘이 정말 그림으로 나갔는지 — 화면을 보기 전에 못 박는다 */
+/** 그림으로 나가야 할 아이콘이 정말 그림으로 나갔는지. 화면을 보기 전에 못 박는다 */
 async function expectRasterIcons(page: Page, atLeast: number) {
   const srcs = await page.locator("img").evaluateAll(
     (els) => els.map((e) => (e as HTMLImageElement).getAttribute("src") ?? ""));

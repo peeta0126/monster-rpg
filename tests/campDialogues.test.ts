@@ -12,7 +12,7 @@ const NO_FLAGS = {
 
 const flags = (on: Partial<Record<PersistedStoryFlag, boolean>>) => ({ ...NO_FLAGS, ...on });
 
-/** 퀘스트가 안 끝나 있으면 퀘스트 대사가 이야기 대사를 가린다 — 그건 여기서 볼 게 아니다 */
+/** 퀘스트가 안 끝나 있으면 퀘스트 대사가 이야기 대사를 가린다. 그건 여기서 볼 게 아니다 */
 const QUEST_DONE = { baros_first_hunt: "completed" } as const;
 
 /** 말을 건다. 기본은 "아무것도 안 본" 상태 */

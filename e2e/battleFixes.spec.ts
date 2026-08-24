@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { advanceLogs, canAct } from "./autoBattle";
 
 /**
- * 이번 전투 정비가 **실제 화면에서** 되는지 확인한다. 계산 쪽은 tests/ 가 보고,
+ * 이번 전투 정비가 실제 화면에서 되는지 확인한다. 계산 쪽은 tests/ 가 보고,
  * 여기서는 사람이 눈으로 확인할 자리(메뉴·로그·기절 흐름)만 UI 로 짚는다.
  */
 
@@ -46,7 +46,7 @@ async function enterFloor(page: Page, floor: number) {
 async function logLines(page: Page): Promise<string> {
   const toggle = page.locator("button").filter({ hasText: "기록" }).first();
   const history = page.getByTestId("battle-log-history");
-  // 눌렀다고 바로 열려 있지는 않다. 열린 것을 확인하고 읽는다 — 예전에는 곧바로
+  // 눌렀다고 바로 열려 있지는 않다. 열린 것을 확인하고 읽는다. 예전에는 곧바로
   // innerText 를 읽어서, 화면이 잠깐 버벅이면 로그 대신 적 정보를 읽고 실패했다.
   await toggle.click();
   await expect(history).toBeVisible();
@@ -119,7 +119,7 @@ test("상태이상은 몇 턴 뒤 스스로 풀리고, 이미 걸린 상대에�
   // 두 번 걸면 아무 일도 없다는 걸 화면이 말해야 한다.
   //
   // ⚠ 한 번 눌러 보고 단정하면 안 된다. 이 층 보스는 설풍으로 이쪽을 얼리고, 얼면 그 턴이
-  //   통째로 날아가 기술이 아예 안 나간다 — 네 번에 한 번꼴로 "안 나간 기술"을 가지고
+  //   통째로 날아가 기술이 아예 안 나간다. 네 번에 한 번꼴로 "안 나간 기술"을 가지고
   //   게임이 틀렸다고 말하고 있었다. 기술이 실제로 나갈 때까지 눌러 본다.
   let saidNoEffect = false;
   for (let i = 0; i < 4 && !saidNoEffect && (await canAct(page)); i++) {
@@ -143,7 +143,7 @@ test("상태이상 피해로 HP 가 0 이 되면 그 자리에서 쓰러진다",
   });
   await enterFloor(page, 9);
 
-  // 적에게 계속 맞으며 진행 — 지든 이기든 "HP 0 인데 살아 있는" 상태로는 끝나지 않아야 한다
+  // 적에게 계속 맞으며 진행. 지든 이기든 "HP 0 인데 살아 있는" 상태로는 끝나지 않아야 한다
   for (let i = 0; i < 40; i++) {
     if (!(await canAct(page))) { await advanceLogs(page); continue; }
     await page.getByTestId("cmd-moves").click();
@@ -164,7 +164,7 @@ test("상태이상 피해로 HP 가 0 이 되면 그 자리에서 쓰러진다",
 // ─── 3. 치명타 · 속도 ───────────────────────────────────────────────────────────
 
 test("치명타가 장비 없이도 뜬다 (기본 치명타율)", async ({ page }) => {
-  // 오래 살아남아야 표본이 쌓인다 — 관문이 세진 지금은 레벨을 넉넉히 준다
+  // 오래 살아남아야 표본이 쌓인다. 관문이 세진 지금은 레벨을 넉넉히 준다
   await seed(page, { species: "mossyfinal", level: 150, potions: { max_potion: 30 },
     moves: [{ id: "spark", name: "전기불꽃", type: "electric", power: 1, accuracy: 100, category: "physical" }] });
   await enterFloor(page, 30);
@@ -188,7 +188,7 @@ function enemyMoveSequence(log: string, enemyName: string): string[] {
 }
 
 test("50층 오름의 기술 순서가 고정 순환이 아니다", async ({ page }) => {
-  // 오래 버티기만 하면 되는 구성 — 위력 1 짜리 기술이라 전투가 안 끝나고, HP 는 넉넉하다
+  // 오래 버티기만 하면 되는 구성. 위력 1 짜리 기술이라 전투가 안 끝나고, HP 는 넉넉하다
   await seed(page, { species: "mossyfinal", level: 150,
     moves: [{ id: "spark", name: "전기불꽃", type: "electric", power: 1, accuracy: 100, category: "physical" }] });
   await enterFloor(page, 50);
@@ -204,7 +204,7 @@ test("50층 오름의 기술 순서가 고정 순환이 아니다", async ({ pag
 
   const seq = enemyMoveSequence(log, "오름");
   expect(seq.length).toBeGreaterThanOrEqual(8);
-  // 예전엔 가진 기술 4개를 1→2→3→4→1 로 돌렸다 — 네 칸 뒤가 늘 같은 기술이었다
+  // 예전엔 가진 기술 4개를 1→2→3→4→1 로 돌렸다. 네 칸 뒤가 늘 같은 기술이었다
   const cyclic = seq.slice(4).every((m, i) => m === seq[i]);
   expect(cyclic, `순서가 여전히 4턴 주기다: ${seq.join(" → ")}`).toBe(false);
   // 그렇다고 한 기술만 반복하지도 않는다

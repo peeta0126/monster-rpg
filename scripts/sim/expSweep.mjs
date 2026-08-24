@@ -42,7 +42,7 @@ try {
       const m = section.match(new RegExp(`^\\s*${f} \\|\\s*([\\d.]+) \\|`, "m"));
       return m ? Number(m[1]) : 0;
     });
-    // 도달 레벨표의 "차이" 열 — 보스보다 몇 레벨 위에서 붙느냐
+    // 도달 레벨표의 "차이" 열. 보스보다 몇 레벨 위에서 붙느냐
     const lvSec = out.slice(out.indexOf("── 층 도달 시점"), out.indexOf("── 보스 벽"));
     const diffs = CHECK.map((f) => {
       const m = lvSec.match(new RegExp(`^\\s*${f} \\|.*\\|\\s*(-?[\\d.]+)\\s*$`, "m"));

@@ -18,7 +18,7 @@ test("fx: 타격 연출 중/후", async ({ page }) => {
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // 기술은 2단 메뉴 안에 있다 — 1단에서 "공격"을 먼저 열어야 보인다
+  // 기술은 2단 메뉴 안에 있다. 1단에서 "공격"을 먼저 열어야 보인다
   await page.getByTestId("cmd-moves").click();
   await page.locator('[data-testid^="move-"]').first().click();
   // 기술명 로그를 Q로 넘기면 곧바로 타격 연출이 시작된다
@@ -41,7 +41,7 @@ test("fx: 전투 HUD 경고", async ({ page }) => {
       state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
     localStorage.setItem("monster-rpg-player", JSON.stringify({
       state: {
-        // HP 를 미리 깎아 둔다(60/410 = 14%) — 위험 연출은 그 구간에서만 켜진다.
+        // HP 를 미리 깎아 둔다(60/410 = 14%). 위험 연출은 그 구간에서만 켜진다.
         // 기술은 100% 화상기 하나만 줘서 적 상태이상 배지를 확실히 띄운다.
         party: [{
           id: "flameling", level: 30, uid: "hud-0", currentHp: 60,
@@ -59,7 +59,7 @@ test("fx: 전투 HUD 경고", async ({ page }) => {
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // 시작부터 아군은 위험 구간이다 — 하단 상태바가 먼저 그것을 말해야 한다
+  // 시작부터 아군은 위험 구간이다. 하단 상태바가 먼저 그것을 말해야 한다
   await page.screenshot({ path: path.join(OUT, "_hud-danger.png") });
 
   await page.getByTestId("cmd-moves").click();
@@ -84,9 +84,9 @@ test("fx: 경험치 연출", async ({ page }) => {
       state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
     localStorage.setItem("monster-rpg-player", JSON.stringify({
       state: {
-        // 다음 레벨까지 1 만 남겨 둔다 — 한 판 이기면 반드시 레벨업 카드가 뜬다.
+        // 다음 레벨까지 1 만 남겨 둔다. 한 판 이기면 반드시 레벨업 카드가 뜬다.
         // ⚠️ 레벨은 층과 가까워야 한다. 레벨차가 6 이상이면 경험치가 0 이라(컷오프)
-        //    연출 자체가 안 뜬다 — 그게 정상 동작이라 여기서 잡으려는 것과 다르다.
+        //    연출 자체가 안 뜬다. 그게 정상 동작이라 여기서 잡으려는 것과 다르다.
         party: [{
           id: "flameling", level: 5, uid: "fx-0", exp: 115, expToNextLevel: 116,
           moves: [{ id: "tap", name: "톡", type: "normal", power: 20, accuracy: 100, category: "physical" }],
@@ -97,7 +97,7 @@ test("fx: 경험치 연출", async ({ page }) => {
       },
       version: 1,
     }));
-    // 수동으로 둔다 — 자동이면 연출이 알아서 지나가 버려 카드를 못 찍는다
+    // 수동으로 둔다. 자동이면 연출이 알아서 지나가 버려 카드를 못 찍는다
     localStorage.setItem("monster-rpg-battle-settings", JSON.stringify({
       state: { autoAdvance: false, logSpeed: "normal" }, version: 0 }));
   });
@@ -110,7 +110,7 @@ test("fx: 경험치 연출", async ({ page }) => {
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // 상대 카드가 상성을 미리 말해 준다 — 예전엔 T 를 눌러 7×7 표를 봐야 알았다
+  // 상대 카드가 상성을 미리 말해 준다. 예전엔 T 를 눌러 7×7 표를 봐야 알았다
   await expect(page.getByTestId("enemy-card")).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_enemy-card.png") });
 
@@ -141,7 +141,7 @@ test("fx: 경험치 연출", async ({ page }) => {
   // 쓰러질 때까지 때린다
   await fightUntilExpMoves(120);
 
-  // 하단 경험치 줄이 먼저 차오른다 — 전면 카드보다 이쪽이 매 판 보이는 화면이다
+  // 하단 경험치 줄이 먼저 차오른다. 전면 카드보다 이쪽이 매 판 보이는 화면이다
   await expect(row).not.toHaveText(String(idleRow), { timeout: 20_000 });
   await page.screenshot({ path: path.join(OUT, "_exp-row.png") });
 
@@ -154,7 +154,7 @@ test("fx: 경험치 연출", async ({ page }) => {
   await expect(page.getByTestId("exp-levelup")).toBeVisible({ timeout: 20_000 });
   await page.screenshot({ path: path.join(OUT, "_exp-levelup.png") });
 
-  // Space 한 번으로 전부 건너뛴다 — 반복 플레이를 막지 않는지 확인
+  // Space 한 번으로 전부 건너뛴다. 반복 플레이를 막지 않는지 확인
   await page.keyboard.press("Space");
   await expect(exp).toHaveCount(0, { timeout: 10_000 });
 });
@@ -171,7 +171,7 @@ test("fx: 속성 상성표", async ({ page }) => {
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // 1층 상대는 물 속성이다 — 물 행/열이 강조돼야 한다
+  // 1층 상대는 물 속성이다. 물 행/열이 강조돼야 한다
   await page.keyboard.press("t");
   await expect(page.getByTestId("type-chart")).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_type-chart.png") });
@@ -187,7 +187,7 @@ test("fx: 속성 상성표", async ({ page }) => {
 });
 
 /**
- * 레벨업이 나지 않는 승리. 이때는 전면 카드가 뜨지 않고 하단 경험치 줄만 차오른다 —
+ * 레벨업이 나지 않는 승리. 이때는 전면 카드가 뜨지 않고 하단 경험치 줄만 차오른다.
  * 잡몹 한 마리마다 화면을 덮던 예전 동작이 되살아나면 여기서 걸린다.
  *
  * 이 파일의 다른 캡처와 달리 움직임을 켜고 찍는다. design 설정은 배경 애니메이션이
@@ -255,7 +255,7 @@ test.describe("경험치 줄", () => {
 });
 
 /**
- * 상태이상 칩과 공격버프 칩이 **동시에** 뜬 상태. 순서 줄은 칩이 뜨는 대로 늘어나므로
+ * 상태이상 칩과 공격버프 칩이 동시에 뜬 상태. 순서 줄은 칩이 뜨는 대로 늘어나므로
  * 여기서 아래 경험치 줄이 밀리거나 잘리면 배치가 잘못된 것이다.
  *
  * 10층 보스만 마비를 35% 로 건다. 강화 전투 물약을 계속 들이켜며 맞아 주면
@@ -268,7 +268,7 @@ test("fx: 칩 두 개", async ({ page }) => {
       state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
     localStorage.setItem("monster-rpg-player", JSON.stringify({
       state: {
-        // 오래 버텨야 두 칩이 겹친다 — 레벨을 올려 맞아도 안 죽게 두고 공격은 안 한다
+        // 오래 버텨야 두 칩이 겹친다. 레벨을 올려 맞아도 안 죽게 두고 공격은 안 한다
         party: [{
           id: "flameling", level: 26, uid: "chip-0",
           moves: [{ id: "tap", name: "톡", type: "normal", power: 5, accuracy: 100, category: "physical" }],
@@ -319,7 +319,7 @@ test("fx: 칩 두 개", async ({ page }) => {
  * 파티 교체와 공격 모션 뒤에도 둘이 계속 마주보는지.
  *
  * 교체는 스프라이트를 새로 만들지 않고 텍스처만 갈아끼우고, 공격 모션은 x 를 흔들었다가
- * 되돌린다 — 둘 다 방향을 잃기 쉬운 자리다. 캔버스는 접근성 트리에 안 잡히니
+ * 되돌린다. 둘 다 방향을 잃기 쉬운 자리다. 캔버스는 접근성 트리에 안 잡히니
  * 사람이 그림을 봐야 한다.
  */
 test("fx: 교체·공격 뒤 방향", async ({ page }) => {
@@ -349,7 +349,7 @@ test("fx: 교체·공격 뒤 방향", async ({ page }) => {
   await page.waitForTimeout(1200);
   await page.screenshot({ path: path.join(OUT, "_facing-start.png") });
 
-  // 2번 몬스터로 교체 — 텍스처만 바뀐다
+  // 2번 몬스터로 교체. 텍스처만 바뀐다
   await page.getByTestId("party-1").click();
   await page.waitForTimeout(2200);
   await page.screenshot({ path: path.join(OUT, "_facing-after-swap.png") });

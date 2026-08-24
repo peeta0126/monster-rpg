@@ -5,13 +5,13 @@ import { applyArtifactQualityStats, rollBonusStats } from "../src/shared/craftin
 import { IMPRINT_TIERS } from "../src/monster/imprint";
 
 /**
- * 이 게임의 난이도 설계를 **실제 UI 로** 증명하는 두 판.
+ * 이 게임의 난이도 설계를 실제 UI 로 증명하는 두 판.
  *
  *   1) 장비 없이 오르면 관문에서 막힌다   ← 막히는 게 성공이다
  *   2) 관문마다 장비를 갖추면 넘어간다     ← 넘는 게 성공이다
  *
  * 둘이 한 쌍이어야 의미가 있다. 하나만 있으면 "어렵다" 나 "쉽다" 밖에 못 말하는데,
- * 우리가 확인하려는 건 **무엇이 벽을 넘게 해 주는가** 이기 때문이다.
+ * 우리가 확인하려는 건 무엇이 벽을 넘게 해 주는가 이기 때문이다.
  *
  * ⚠️ 이 자동 플레이어는 사람보다 잘한다. 매 턴 예상 데미지가 가장 큰 기술을 고르고 HP 40%
  *    아래에서 반드시 물약을 마신다. 그런데도 (1)이 막힌다는 게 이 설계의 요지다.
@@ -24,7 +24,7 @@ const PARTY_SPECIES = ["mossy", "aquabe", "leafy"];
 /** 한 층에서 이만큼 지면 벽으로 본다 */
 const MAX_RETRIES = 5;
 
-/** 그 층까지 왔다면 정비했을 법한 장비 — gateCheck.ts 의 "정규 장비" 와 같은 계단이다 */
+/** 그 층까지 왔다면 정비했을 법한 장비. gateCheck.ts 의 "정규 장비" 와 같은 계단이다 */
 function gearFor(floor: number): { quality: "normal" | "rare" | "elite"; level: number; enhancement: number } {
   if (floor <= 9)  return { quality: "normal", level: 5,  enhancement: 1 };
   if (floor <= 14) return { quality: "normal", level: 10, enhancement: 2 };
@@ -37,7 +37,7 @@ function gearFor(floor: number): { quality: "normal" | "rare" | "elite"; level: 
   return { quality: "elite", level: 30, enhancement: 4 };
 }
 
-/** 각인도 같이 오른다 — 숲에서 중복을 먹이는 플레이어를 가정한다 */
+/** 각인도 같이 오른다. 숲에서 중복을 먹이는 플레이어를 가정한다 */
 function imprintFedFor(floor: number): number {
   const tier = floor <= 14 ? 1 : floor <= 24 ? 2 : floor <= 34 ? 3 : floor <= 44 ? 4 : 5;
   return IMPRINT_TIERS.find((t) => t.tier === tier)?.fed ?? 0;
@@ -66,7 +66,7 @@ async function seedSave(page: Page, o: SeedOptions) {
     (opt: { level: number; species: string[]; artifacts: unknown[]; fed: number }) => {
       localStorage.setItem("monster-rpg-auth", JSON.stringify({
         state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
-      // ⚠️ addInitScript 는 **모든 페이지 로드마다** 돈다. 무조건 덮어쓰면 층을 넘길 때마다
+      // ⚠️ addInitScript 는 모든 페이지 로드마다 돈다. 무조건 덮어쓰면 층을 넘길 때마다
       //    세이브가 처음 상태로 돌아가서, 레벨도 장비도 영영 안 오른다(실제로 그 함정을 밟았다).
       if (localStorage.getItem("monster-rpg-player")) return;
       const party = opt.species.map((id, i) => ({ id, level: opt.level, uid: `bal-${i}` }));
@@ -101,7 +101,7 @@ async function seedSave(page: Page, o: SeedOptions) {
 /**
  * 캠프에 내려가 회복하고, 그 층부터 다시 오른다. 장비와 물약도 그 층 기준으로 채운다.
  *
- * 물약을 다시 채우는 게 중요하다 — 관문 하나가 물약 5개를 먹는데(15층 실측 4.8개),
+ * 물약을 다시 채우는 게 중요하다. 관문 하나가 물약 5개를 먹는데(15층 실측 4.8개),
  * 안 채우면 "관문이 어려워서" 가 아니라 "가방이 비어서" 막힌다. 실제 플레이에서는
  * 캠프에 내려간 김에 연금술로 만들어 온다(시뮬 기준 한 판에 70개 남짓 만든다).
  */
@@ -114,7 +114,7 @@ async function restAndReturn(page: Page, floor: number, geared: boolean) {
       m.currentHp = 9999;                       // 정규화가 최대치로 깎아 준다
       // 숲에서 그 구간 레벨의 몬스터를 잡아 오는 플레이어를 가정한다. 탑만 오르면 레벨이
       // 층을 못 따라가는데(실측: 14층에서 Lv9), 그건 숲을 안 쓴 플레이어의 곡선이다.
-      // 이 스펙이 재려는 건 레벨이 아니라 **장비**라, 레벨은 양쪽 다 층에 맞춰 둔다.
+      // 이 스펙이 재려는 건 레벨이 아니라 장비라, 레벨은 양쪽 다 층에 맞춰 둔다.
       if (m.level < f) m.level = f;
     }
     st.potions = { super_potion: 8, potion: 8, max_potion: 4, antidote: 4, strong_attack_buff: 3 };
@@ -159,7 +159,7 @@ async function climb(page: Page, geared: boolean, maxFloor: number): Promise<num
     }
 
     await expect(winOverlay(page)).toBeVisible();
-    // 레벨을 같이 찍는다 — 막혔을 때 "레벨이 안 붙어서"인지 "장비가 모자라서"인지 갈린다
+    // 레벨을 같이 찍는다. 막혔을 때 "레벨이 안 붙어서"인지 "장비가 모자라서"인지 갈린다
     const levels = await page.evaluate(() => {
       const raw = JSON.parse(localStorage.getItem("monster-rpg-player") ?? "{}");
       return (raw?.state?.party ?? []).map((m: { level: number }) => m.level).join("/");
@@ -168,7 +168,7 @@ async function climb(page: Page, geared: boolean, maxFloor: number): Promise<num
 
     if (floor < maxFloor) {
       await page.locator("button").filter({ hasText: `다음층 (${floor + 1}F)` }).click();
-      // 관문 직전(5층마다)에는 캠프에 들른다 — 회복·물약·(장비를 쓰는 판이면) 정비까지.
+      // 관문 직전(5층마다)에는 캠프에 들른다. 회복·물약·(장비를 쓰는 판이면) 정비까지.
       // 두 판이 여기서만 갈린다: 한쪽은 장비를 갖추고, 한쪽은 맨몸으로 다시 올라간다.
       if ((floor + 1) % 5 === 0) await restAndReturn(page, floor + 1, geared);
     }

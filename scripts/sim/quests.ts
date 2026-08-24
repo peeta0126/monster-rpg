@@ -1,11 +1,11 @@
 /**
  * 시뮬레이터에 퀘스트를 물린다.
  *
- * 지금까지 시뮬은 퀘스트를 **아예 몰랐다**(SimState 에 완료 칸 둘이 선언만 되어 있고 읽는
+ * 지금까지 시뮬은 퀘스트를 아예 몰랐다(SimState 에 완료 칸 둘이 선언만 되어 있고 읽는
  * 곳이 없었다). 그래서 "보상을 받았을 때와 안 받았을 때 진행이 얼마나 달라지는가"를 잴
  * 수단이 없었고, 보상 수량을 감으로 정할 수밖에 없었다.
  *
- * 여기는 게임의 판정을 그대로 부른다 — 조건도 목표도 보상 표도 게임 쪽 한 벌을 읽는다.
+ * 여기는 게임의 판정을 그대로 부른다. 조건도 목표도 보상 표도 게임 쪽 한 벌을 읽는다.
  * 사본을 두면 시뮬이 게임이 아니라 사본을 재게 된다.
  */
 import { ALL_QUESTS, questUnlocked } from "../../src/camp/campDialogues";
@@ -25,7 +25,7 @@ const STORAGE_MAX = 30;
 
 export interface QuestLogEntry {
   questId: string;
-  /** 받았을 때의 최고 도달 층 — 보상이 언제 들어오는지가 밸런스의 절반이다 */
+  /** 받았을 때의 최고 도달 층. 보상이 언제 들어오는지가 밸런스의 절반이다 */
   atFloor: number;
 }
 
@@ -90,7 +90,7 @@ async function grant(
 /**
  * 지금 받을 수 있는 퀘스트를 받고, 조건이 찬 것을 완료한다.
  *
- * 사람과 같은 순서로 돈다 — 한 사람이 한 번에 하나만 내놓으므로, 한 번 훑을 때 사람당
+ * 사람과 같은 순서로 돈다. 한 사람이 한 번에 하나만 내놓으므로, 한 번 훑을 때 사람당
  * 최대 한 개가 수락되고 최대 한 개가 완료된다. 그래서 여러 번 부른다.
  */
 export async function collectQuests(
@@ -114,7 +114,7 @@ export async function collectQuests(
         changed = true;
       }
       if (!evaluateObjective(quest.objective, snapshotOf(s, storage)).done) continue;
-      // 자리가 없으면 완료를 미룬다 — 게임과 같다
+      // 자리가 없으면 완료를 미룬다. 게임과 같다
       if (monsterReward(quest.rewards)
         && s.party.length >= PARTY_MAX && storage.length >= STORAGE_MAX) continue;
 

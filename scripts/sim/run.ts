@@ -41,7 +41,7 @@ const CRAFT_QUALITY: ItemQuality = "rare";
 
 /** 한 판이 막혔다고 판정하기까지 허용할 연속 실패 사이클 */
 const STUCK_LIMIT = Number(process.env.SIM_STUCK ?? 250);
-/** 한 판에서 허용할 총 전투 수 상한 — 이걸 넘기면 "사람이 할 짓이 아니다"로 본다 */
+/** 한 판에서 허용할 총 전투 수 상한. 이걸 넘기면 "사람이 할 짓이 아니다"로 본다 */
 const BATTLE_BUDGET = Number(process.env.SIM_BUDGET ?? 4000);
 
 interface RunStats {
@@ -67,17 +67,17 @@ interface RunStats {
   /** 각 층을 처음 시도할 때의 선봉 레벨 */
   leadLevelAtFloor: Record<number, number>;
   battlesByFloor: Record<number, number>;
-  /** 보스층을 처음 시도할 때의 파티 — 벽의 원인을 보려면 레벨만으로는 부족하다 */
+  /** 보스층을 처음 시도할 때의 파티. 벽의 원인을 보려면 레벨만으로는 부족하다 */
   bossParty: Record<number, { name: string; level: number; atk: number; hp: number; pow: number }[]>;
   /**
-   * 보스 앞에 설 때 **실제로** 들고 있는 장비와 각인.
+   * 보스 앞에 설 때 실제로 들고 있는 장비와 각인.
    *
-   * gateCheck 의 합격선이 오래 가정으로 서 있었다 — "정규 장비" 를 손으로 적은
+   * gateCheck 의 합격선이 오래 가정으로 서 있었다. "정규 장비" 를 손으로 적은
    * elite:40:5 같은 값으로 두었는데, 실제 판이 거기 못 미치면 그 표는 아무도 겪지
    * 않는 상황을 재게 된다. 그 표를 이 값으로 채우려고 여기서 뽑는다.
    */
   bossKit: Record<number, { quality: string; level: number; enh: number; tier: number }>;
-  /** 그 층 **첫 도전**의 승패. gateCheck 의 한 열과 직접 비교되는 유일한 값이다 */
+  /** 그 층 첫 도전의 승패. gateCheck 의 한 열과 직접 비교되는 유일한 값이다 */
   bossFirstTry: Record<number, boolean>;
   /** 첫 도전에 들어설 때의 파티 평균 HP 비율. 만렙 회복을 가정하는 검사와의 차이를 잰다 */
   bossHpRatio: Record<number, number>;
@@ -89,14 +89,14 @@ interface RunStats {
   imprintFed: number;
   /** 소란 100 에 걸려 쫓겨난 숲 원정 수 (재료 절반) */
   forcedRetreats: number;
-  /** 캠프로 내려가 회복한 횟수 — 이게 0 이면 소모 관리가 없다는 뜻이다 */
+  /** 캠프로 내려가 회복한 횟수. 이게 0 이면 소모 관리가 없다는 뜻이다 */
   campReturns: number;
   /** 받은 퀘스트와 받은 시점의 층 */
   questsDone: QuestLogEntry[];
 }
 
 /**
- * 몬스터의 "키울 가치" 평가 — 파티에 누구를 남길지 고르는 용도.
+ * 몬스터의 "키울 가치" 평가. 파티에 누구를 남길지 고르는 용도.
  * 진화가 남아 있으면 최종 진화체 기준으로 본다(플레이어도 그렇게 고른다).
  */
 function power(m: { id: string; attack: number; maxHp: number; defense: number; moves: { power: number }[] }) {
@@ -126,7 +126,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
     imprintFed: 0, forcedRetreats: 0, campReturns: 0, questsDone: [],
   };
 
-  /** 보관함 — 각인 재료가 된다. 전투에는 안 나오므로 능력치는 필요 없다 */
+  /** 보관함. 각인 재료가 된다. 전투에는 안 나오므로 능력치는 필요 없다 */
   const storage: OwnedMon[] = [];
 
   let uid = 1;
@@ -136,7 +136,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
   // 예전 이 함수는 게임보다 후하게 쳐 줬다. `settleBag`(강제 퇴각 50% 회수)을 안 걸고
   // `bankAlert=Infinity` 로 쫓겨날 때까지 걸어서 원재료를 그대로 적립했고(약 1.85배 과대),
   // 포획은 `runForest` 가 이미 굴린 결과를 버리고 `tryCatch()` 로 다시 굴렸다.
-  // 지금은 **소란 85 에서 자진 귀환하고 버릇을 읽는** 사람을 흉내 낸다.
+  // 지금은 소란 85 에서 자진 귀환하고 버릇을 읽는 사람을 흉내 낸다.
   const CATCH_POLICY = { knowsTell: true, retreatCostOver: 10, retreatAlertOver: 70, costScale: 1 };
 
   const doForest = () => {
@@ -146,7 +146,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
     const res = runForest(area, "avoid", 85, CATCH_POLICY, capLevel);
     st.forestRuns++;
 
-    // 가방을 한 번 합친 뒤 정산한다 — 쫓겨났으면 지목한 한 종류만 온전히 남는다
+    // 가방을 한 번 합친 뒤 정산한다. 쫓겨났으면 지목한 한 종류만 온전히 남는다
     const bag = new Map<string, number>();
     for (const d of res.drops) bag.set(d.id, (bag.get(d.id) ?? 0) + d.count);
     const entries = [...bag].map(([id, count]) => ({ id, count }));
@@ -159,7 +159,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
     // 잡아 온 것: 파티가 비면 채우고, 더 좋으면 갈아타고, 나머지는 각인 재료로 남긴다
     for (const wild of res.caughtMonsters) {
       const caught: OwnedMon = { ...wild, uid: `c${uid++}`, currentHp: wild.maxHp };
-      // 도감과 첫 포획 플래그 — 퀘스트 조건과 목표가 이 둘을 읽는다
+      // 도감과 첫 포획 플래그. 퀘스트 조건과 목표가 이 둘을 읽는다
       if (!s.dexCaught.includes(caught.id)) s.dexCaught.push(caught.id);
       s.storyFlags.first_capture = true;
       if (partySlots(s) < 3) { s.party.push(caught); continue; }
@@ -179,9 +179,9 @@ async function simulateRun(seed: number): Promise<RunStats> {
   };
 
   /**
-   * 각인 — 보관함의 중복을 계열에 먹인다 (playerStore.feedImprint 와 같은 규칙).
+   * 각인. 보관함의 중복을 계열에 먹인다 (playerStore.feedImprint 와 같은 규칙).
    *
-   * 예전 시뮬은 각인을 **한 번도 쓰지 않았다**(`imprint: {}` 고정). 각인은 능력치 전부에
+   * 예전 시뮬은 각인을 한 번도 쓰지 않았다(`imprint: {}` 고정). 각인은 능력치 전부에
    * 최대 +25% 라, 그걸 빼고 "시스템을 다 쓰는 플레이어"를 잰다고 할 수 없다.
    */
   const doImprint = () => {
@@ -287,7 +287,7 @@ async function simulateRun(seed: number): Promise<RunStats> {
   let floor = 1;
   let stuck = 0;
 
-  /** 캠프까지 내려가 쉰다. 무료지만 공짜는 아니다 — 내려간 만큼 다시 올라와야 한다 */
+  /** 캠프까지 내려가 쉰다. 무료지만 공짜는 아니다. 내려간 만큼 다시 올라와야 한다 */
   const goHomeAndRest = () => {
     restorePartyHp(s);
     st.campReturns++;
@@ -453,12 +453,12 @@ console.log(`\n── 보스 벽 (${RUNS}판) ──`);
 {
   console.log("층  | 재도전 | 첫도전승률 | 입장HP | 실제 장비(평균) | 각인 | 물약(평균) | 첫 도전 파티(평균)");
   for (const f of [10, 15, 20, 25, 30, 35, 40, 45, 50]) {
-    // ⚠️ 재도전은 n0층만 센다(bossRetries). 관문의 0.0 은 "안 졌다"가 아니라 "안 센다"다 —
-    //    첫도전 승률 열을 볼 것.
+    // ⚠️ 재도전은 n0층만 센다(bossRetries). 관문의 0.0 은 "안 졌다"가 아니라 "안 센다"다.
+    //    첫도전 승률 열을 봐라.
     const retries = results.map((r) => r.bossRetries[f] ?? 0);
     if (!results.some((r) => r.bossParty[f])) continue;
     const mean = retries.reduce((a, b) => a + b, 0) / RUNS;
-    // ⚠️ 파티도 **평균**을 낸다. 예전엔 `results.find(...)` 로 한 판만 뽑아 적었는데,
+    // ⚠️ 파티도 평균을 낸다. 예전엔 `results.find(...)` 로 한 판만 뽑아 적었는데,
     // 나머지 열은 40판 평균이라 표가 판마다 흔들렸다. gateCheck 이 이 값을 그대로
     // 받아 쓰므로, 한 칸만 표본이면 그 검사 전체가 같이 흔들린다.
     const parties = results.map((r) => r.bossParty[f]).filter(Boolean);
@@ -466,7 +466,7 @@ console.log(`\n── 보스 벽 (${RUNS}판) ──`);
     const party = Array.from({ length: slots }, (_, i) => {
       const slot = parties.map((p) => p[i]).filter(Boolean);
       if (!slot.length) return "";
-      // 종족은 최빈값, 레벨은 평균 — "그 자리에 대개 누가 몇 레벨로 서는가"
+      // 종족은 최빈값, 레벨은 평균. "그 자리에 대개 누가 몇 레벨로 서는가"
       const byName: Record<string, number> = {};
       for (const m of slot) byName[m.name] = (byName[m.name] ?? 0) + 1;
       const name = Object.entries(byName).sort((a, b) => b[1] - a[1])[0][0];
@@ -474,7 +474,7 @@ console.log(`\n── 보스 벽 (${RUNS}판) ──`);
       const atk = slot.reduce((n, m) => n + m.atk, 0) / slot.length;
       return `${name} Lv${lv.toFixed(0)}(공${atk.toFixed(0)})`;
     }).filter(Boolean).join(" ");
-    // 장비·각인은 판마다 다르므로 평균을 낸다 — 합격선은 한 판이 아니라 이 평균 위에 서야 한다
+    // 장비·각인은 판마다 다르므로 평균을 낸다. 합격선은 한 판이 아니라 이 평균 위에 서야 한다
     const tries = results.map((r) => r.bossFirstTry[f]).filter((v) => v !== undefined);
     const firstWin = tries.length ? Math.round((tries.filter(Boolean).length / tries.length) * 100) : 0;
     const hps = results.map((r) => r.bossHpRatio[f]).filter((v) => v !== undefined);

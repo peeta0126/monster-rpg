@@ -29,7 +29,7 @@ const hex   = move({ id: "hex", power: 0, type: "poison", category: "status",
 /**
  * 늘 최선만 고르면 읽힌다. 2,000번 중 한 번도 다른 수가 안 나오면 그게 예전 AI 다.
  *
- * 굴림은 씨를 고정한다 — AI 가 확률로 고르는 이상 표본이 흔들리는데, 테스트가 가끔
+ * 굴림은 씨를 고정한다. AI 가 확률로 고르는 이상 표본이 흔들리는데, 테스트가 가끔
  * 빨개지면 사람은 곧 테스트를 안 믿게 된다.
  */
 function sample(enemy: BattleMonster, target: BattleMonster, floor: number): Record<string, number> {
@@ -54,16 +54,16 @@ function sample(enemy: BattleMonster, target: BattleMonster, floor: number): Rec
 }
 
 test("적은 상성 배율이 같아도 위력이 큰 기술을 더 자주 고른다", () => {
-  // 예전엔 배율만 봤다 — 상대가 normal 이면 전부 1배라 늘 목록 첫 번째(위력 40)만 나왔다
+  // 예전엔 배율만 봤다. 상대가 normal 이면 전부 1배라 늘 목록 첫 번째(위력 40)만 나왔다
   const enemy = mon({ moves: [weak, heavy] });
   const counts = sample(enemy, mon({ id: "p", type: "normal" }), 40);
   assert.ok((counts.heavy ?? 0) > (counts.weak ?? 0) * 1.5, `위력을 안 본다: ${JSON.stringify(counts)}`);
-  // 그렇다고 늘 최선만 고르지도 않는다 — 두 수 다 나와야 읽히지 않는다
+  // 그렇다고 늘 최선만 고르지도 않는다. 두 수 다 나와야 읽히지 않는다
   assert.ok((counts.weak ?? 0) > 0, `한 가지 기술만 나온다: ${JSON.stringify(counts)}`);
 });
 
 test("적은 명중률을 기대값에 넣는다", () => {
-  // 위력 95 · 명중 20 은 기대 19, 위력 40 · 명중 100 은 기대 40 — 후자가 낫다
+  // 위력 95 · 명중 20 은 기대 19, 위력 40 · 명중 100 은 기대 40. 후자가 낫다
   const enemy = mon({ moves: [shaky, weak] });
   const counts = sample(enemy, mon({ id: "p", type: "normal" }), 20);
   assert.ok((counts.weak ?? 0) > (counts.shaky ?? 0), `명중을 안 본다: ${JSON.stringify(counts)}`);

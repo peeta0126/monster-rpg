@@ -4,7 +4,7 @@ import { test, expect, type Page } from "@playwright/test";
  * 구역 선택 화면 회귀 테스트.
  *
  * 배경을 원화 3종으로 갈아끼우면서 카드가 통째로 다시 쓰였다. 여기서 지키는 건
- * 겉모습이 아니라 그 아래 규칙이다 — 어디까지 열려 있는지, 잠긴 곳에 들어가지는
+ * 겉모습이 아니라 그 아래 규칙이다. 어디까지 열려 있는지, 잠긴 곳에 들어가지는
  * 않는지, 해금 조건이 맞는 층수를 말하는지. 이게 어긋나면 화면은 멀쩡해 보이는데
  * 플레이어만 못 들어간다.
  */
@@ -43,7 +43,7 @@ const card = (page: Page, id: string) => page.locator(`[data-testid="forest-tier
 const DEFAULT_TIER: [number, string][] = [
   [0,  "shallow"],
   [5,  "shallow"],
-  // 깊은 숲이 6층에 열린다 — 10층 관문을 넘을 장비의 재료가 그 관문 **앞에** 있어야 한다
+  // 깊은 숲이 6층에 열린다. 10층 관문을 넘을 장비의 재료가 그 관문 앞에 있어야 한다
   [6,  "deep"],
   [20, "deep"],
   [21, "ancient"],
@@ -72,7 +72,7 @@ test("잠긴 구역 — 눌러도 안 들어가고 해금 조건을 정확히 �
   await expect(ancient).toHaveAttribute("data-selected", "1");
   await expect(ancient).toContainText("무한의 탑 21층 도달 시 해금");
   await expect(ancient).toContainText("현재 최고 층: 0층");
-  // 죽은 버튼을 남기지 않는다 — 해금 조건이 그 자리를 대신한다
+  // 죽은 버튼을 남기지 않는다. 해금 조건이 그 자리를 대신한다
   await expect(ancient).not.toContainText("탐험하기");
 
   await expect(card(page, "deep")).toContainText("무한의 탑 6층 도달 시 해금");
@@ -140,7 +140,7 @@ test("스크림 — 선택 화면은 원화 그대로, 탐험 중에는 덮는�
     return el ? Number(getComputedStyle(el).opacity) : null;
   });
 
-  // 구역 선택 화면 — 원화에 이미 카드 영역 스크림이 구워져 있으니 덧씌우지 않는다
+  // 구역 선택 화면. 원화에 이미 카드 영역 스크림이 구워져 있으니 덧씌우지 않는다
   expect(await dimOpacity()).toBe(0);
 
   await card(page, "shallow").click();
@@ -149,7 +149,7 @@ test("스크림 — 선택 화면은 원화 그대로, 탐험 중에는 덮는�
   ).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(500);
 
-  // 탐험 중에도 덮기는 덮는다. 다만 얕게 — 배경이 무대라서 노드 맵 시절만큼 누르면
+  // 탐험 중에도 덮기는 덮는다. 다만 얕게. 배경이 무대라서 노드 맵 시절만큼 누르면
   // 원화가 벽지가 된다. 세기는 ForestBackdrop 의 WALK_DIM_ALPHA 가 정한다.
   expect(await dimOpacity()).toBe(1);
 });
@@ -182,7 +182,7 @@ test("얕은 숲 진입 · 상단 UI 가 바뀐다", async ({ page }) => {
   ).toBeVisible({ timeout: 20_000 });
 
   /**
-   * 들어가면 상단 바가 원정용으로 바뀐다 — 구역명·깊이 / 소란도 / 채집망.
+   * 들어가면 상단 바가 원정용으로 바뀐다. 구역명·깊이 / 소란도 / 채집망.
    *
    * 예전에는 물약 개수(🎒 ×N)가 여기 있었다. 숲에는 전투가 없어서 물약을 쓸 데가
    * 없고, 그 자리는 이제 이 원정에서 실제로 움직이는 값들이 쓴다.

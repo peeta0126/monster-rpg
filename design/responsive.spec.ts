@@ -70,7 +70,7 @@ for (const vp of VIEWPORTS) {
 
         const o = await overflowReport(page);
         const hOverflow = o.scrollW - o.clientW;
-        // 390 은 SmallScreenNotice 가 막는 폭이라 안내만 뜬다 — 거기까지 재지 않는다.
+        // 390 은 SmallScreenNotice 가 막는 폭이라 안내만 뜬다. 거기까지 재지 않는다.
         // 지원하는 폭(768 이상)에서 가로 스크롤이 생겼다면 무언가 칸 밖으로 나간 것이다.
         if (vp.w >= 768) {
           expect(hOverflow, `${vp.w}x${vp.h} ${screen.name}: 가로 스크롤 ${hOverflow}px`)

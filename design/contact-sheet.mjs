@@ -8,7 +8,7 @@
  * design/contact-sheet-<label>.png 로 저장한다. 화면을 한 장씩 열어보면
  * "화면끼리 톤이 안 맞는다" 같은 문제가 안 보이기 때문에, 항상 나란히 놓고 본다.
  *
- * 개별 스크린샷은 .gitignore 대상이지만 이 컨택트시트는 커밋한다 — 리뷰 기록으로 남긴다.
+ * 개별 스크린샷은 .gitignore 대상이지만 이 컨택트시트는 커밋한다. 리뷰 기록으로 남긴다.
  */
 import fs from "node:fs";
 import path from "node:path";

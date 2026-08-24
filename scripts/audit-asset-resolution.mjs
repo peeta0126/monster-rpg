@@ -16,7 +16,7 @@ import fs from "node:fs";
 import sharp from "sharp";
 
 /**
- * 의도적으로 줄인 것 — 파일 → 그 이유.
+ * 의도적으로 줄인 것. 파일 → 그 이유.
  * 2026-08-08 전수 확인 결과 세 건이 걸렸는데 셋 다 손실이 아니었다.
  *   start-loading.png  2624x1632 → 1312x816  KEY_ART 폴백 (WebP 는 원본 해상도 그대로)
  *   housing_bg.png     1672x941  → 1200x896  아예 다른 그림으로 두 번 교체됐다
@@ -30,7 +30,7 @@ const EXPECTED_DOWNSCALE = {
 const sh = (cmd) => execSync(cmd, { encoding: "utf8", maxBuffer: 1 << 26 });
 
 // 버퍼를 그대로 넘긴다. 임시 파일에 써서 읽으면 sharp 가 경로로 메타데이터를 캐시해
-// 두 번째부터 첫 파일 값이 돌아온다 — 처음에 그렇게 짰다가 전부 "이상 없음"이 나왔다.
+// 두 번째부터 첫 파일 값이 돌아온다. 처음에 그렇게 짰다가 전부 "이상 없음"이 나왔다.
 const metaOf = (buf) => sharp(buf).metadata();
 
 async function main() {

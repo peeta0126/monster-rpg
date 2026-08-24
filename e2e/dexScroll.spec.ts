@@ -4,7 +4,7 @@ import { test, expect, type Page } from "@playwright/test";
  * 도감 목록이 실제로 굴러가는지 본다.
  *
  * 이 게임은 스크롤바를 전역에서 숨긴다(index.css). 그래서 스크롤이 죽어도 화면은
- * 멀쩡해 보이고, 첫 화면에 들어온 몬스터만 있는 것처럼 읽힌다 — 실제로 오래 그랬다.
+ * 멀쩡해 보이고, 첫 화면에 들어온 몬스터만 있는 것처럼 읽힌다. 실제로 오래 그랬다.
  * 눈으로 안 잡히는 고장이라 굴려 보는 수밖에 없다.
  *
  * 실행: npx playwright test e2e/dexScroll.spec.ts
@@ -53,7 +53,7 @@ const scroller = (page: Page) =>
   page.locator("div.overflow-y-auto").filter({ has: page.locator("div.grid") }).first();
 
 /**
- * 넘치는 크기에서 본다. 넓고 높은 화면에서는 14종이 여섯 열로 서서 스크롤이 아예 안 생긴다 —
+ * 넘치는 크기에서 본다. 넓고 높은 화면에서는 14종이 여섯 열로 서서 스크롤이 아예 안 생긴다.
  * 그건 정상이고, 여기서 보려는 건 넘칠 때 굴러가느냐다. 세로를 낮춰 넘치는 상태를 만든다.
  */
 test("도감 목록은 넘치는 만큼 굴러간다", async ({ page }) => {
@@ -61,7 +61,7 @@ test("도감 목록은 넘치는 만큼 굴러간다", async ({ page }) => {
   await openDex(page);
 
   const box = scroller(page);
-  // 넘칠 게 있어야 시험이 성립한다 — 칸이 넓어지거나 종이 줄어 다 들어오면 여기서 알린다
+  // 넘칠 게 있어야 시험이 성립한다. 칸이 넓어지거나 종이 줄어 다 들어오면 여기서 알린다
   const { clientH, scrollH } = await box.evaluate((el) => ({
     clientH: el.clientHeight, scrollH: el.scrollHeight,
   }));

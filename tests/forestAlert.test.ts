@@ -10,7 +10,7 @@ import { STEP_DEFS, isDangerous, escapeAlert, type ForestStepKind } from "../src
 
 /**
  * 소란도는 숲이 이월하는 유일한 자원이다. 여기서 지키는 건 숫자 자체가 아니라
- * **다이얼로서 성립하는가**다 — 구간이 빈틈없이 이어지는지, 올릴수록 수확이 늘고
+ * 다이얼로서 성립하는가다. 구간이 빈틈없이 이어지는지, 올릴수록 수확이 늘고
  * 위험해지는지, 그리고 낮게 두는 쪽에 고유한 이득(정찰)이 남아 있는지.
  * 마지막 것이 무너지면 "항상 최대"가 정답이 되어 선택이 사라진다.
  */
@@ -117,7 +117,7 @@ test("주인만 소란이 판정 전에 붙는다", () => {
   const arrival = (Object.keys(STEP_ALERT) as ForestStepKind[]).filter(appliesAlertOnArrival);
   assert.deepEqual(arrival, ["warden"], "도착 시점에 소란이 붙는 사건은 주인 하나뿐이어야 한다");
 
-  // 주인은 마지막 노드라 판정 후에 붙이면 그 뒤에 걸릴 데가 없다 — 죽은 값이 된다.
+  // 주인은 마지막 노드라 판정 후에 붙이면 그 뒤에 걸릴 데가 없다. 죽은 값이 된다.
   // 앞으로 당겨야 자기 포획 확률에 스스로 걸린다.
   const base = 0.72;
   const atBoss = catchRateWithAlert(base, 60 + STEP_ALERT.warden);
@@ -127,7 +127,7 @@ test("주인만 소란이 판정 전에 붙는다", () => {
 
 test("놓침의 대가는 쫓던 것의 등급을 따른다", () => {
   // 무조건 +30 이면 소란 예산의 24% 를 한 번에 태운다. 놓치는 건 상당 부분 운이라
-  // "실패는 내가 욕심냈기 때문"이라는 원칙에 어긋났다 — 무엇을 쫓을지는 플레이어가 고른다
+  // "실패는 내가 욕심냈기 때문"이라는 원칙에 어긋났다. 무엇을 쫓을지는 플레이어가 고른다
   assert.ok(escapeAlert("encounter") < escapeAlert("nest"), "일반이 희귀만큼 시끄럽다");
   assert.ok(escapeAlert("nest") < escapeAlert("warden"), "희귀가 주인만큼 시끄럽다");
 

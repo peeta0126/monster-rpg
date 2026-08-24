@@ -5,7 +5,7 @@ import {
 } from "../src/workshop/workshopLayout";
 
 /**
- * 공방 회귀 검증 — 배경을 새 이미지로 갈고 좌표계를 통째로 바꿨으므로,
+ * 공방 회귀 검증. 배경을 새 이미지로 갈고 좌표계를 통째로 바꿨으므로,
  * 기존 기능이 살아 있는지 실제로 눌러서 확인한다. 추측으로 체크하지 않으려고 만들었다.
  *
  * 실행: npx playwright test --config design/playwright.config.ts -g "workshop:"
@@ -15,7 +15,7 @@ import {
 
 /**
  * 제작대까지 얼마나 파고들 것인가. 제작대 중심은 자기 충돌 박스 안이라 반경의
- * 절반까지는 못 들어간다 — 실제로 설 수 있는 가장 가까운 자리가 반경의 0.6~0.65배다.
+ * 절반까지는 못 들어간다. 실제로 설 수 있는 가장 가까운 자리가 반경의 0.6~0.65배다.
  */
 const APPROACH = 0.8;
 
@@ -158,7 +158,7 @@ test.describe("workshop:", () => {
     const after = await readPos(page);
     expect(after.x, "모달 중에 x 가 움직였다").toBeCloseTo(before.x, 1);
     expect(after.y, "모달 중에 y 가 움직였다").toBeCloseTo(before.y, 1);
-    // 방향 전환도 막혀야 한다 — 뒤에서 캐릭터가 빙글빙글 돌면 안 된다
+    // 방향 전환도 막혀야 한다. 뒤에서 캐릭터가 빙글빙글 돌면 안 된다
     expect(await page.locator('[aria-label="player"]').getAttribute("data-frame")).toBe(facingBefore);
 
     await page.keyboard.press("Escape");
@@ -182,7 +182,7 @@ test.describe("workshop:", () => {
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
 
     // 기준 좌표는 모달이 뜬 뒤에 찍는다. 누르고 있는 동안 찍으면 그 사이에도
-    // 계속 움직여서 기준 자체가 흔들린다 — 처음에 그렇게 짰다가 간헐적으로 깨졌다.
+    // 계속 움직여서 기준 자체가 흔들린다. 처음에 그렇게 짰다가 간헐적으로 깨졌다.
     await page.waitForTimeout(200);
     const before = await readPos(page);
 
@@ -224,7 +224,7 @@ test.describe("workshop:", () => {
     await page.getByText("작은 회복 물약").first().click();
     await page.getByRole("button", { name: /제작 시작|개 제작/ }).click();
 
-    // 가위바위보 — 무엇을 내든 판정이 나오면 된다. 낸 뒤 "제작 완료"로 확정한다.
+    // 가위바위보. 무엇을 내든 판정이 나오면 된다. 낸 뒤 "제작 완료"로 확정한다.
     await expect(page.getByRole("button", { name: /가위|바위|보/ }).first()).toBeVisible();
     await page.getByRole("button", { name: /바위/ }).first().click();
     await page.getByRole("button", { name: /제작 완료/ }).click();
@@ -245,7 +245,7 @@ test.describe("workshop:", () => {
     await page.getByText("힘의 목걸이").first().click();
     await page.getByRole("button", { name: /제작 시작|개 제작/ }).click();
 
-    // 방향키 QTE — 정확도와 무관하게 끝까지 가면 된다
+    // 방향키 QTE. 정확도와 무관하게 끝까지 가면 된다
     for (let i = 0; i < 40; i++) {
       for (const k of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) {
         await page.keyboard.press(k);

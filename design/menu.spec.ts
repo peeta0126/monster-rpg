@@ -44,7 +44,7 @@ async function seedDenseParty(page: import("@playwright/test").Page, level: numb
   }, { moves: DENSE_MOVES, level });
 }
 
-/** 층은 라우트 state 로만 정해진다 — history 에 심고 다시 읽힌다 (capture.spec.ts 와 같은 수법) */
+/** 층은 라우트 state 로만 정해진다. history 에 심고 다시 읽힌다 (capture.spec.ts 와 같은 수법) */
 async function enterFloor(page: import("@playwright/test").Page, floor: number) {
   await page.goto("/battle");
   await expect(page.locator("#root")).not.toBeEmpty();
@@ -59,7 +59,7 @@ async function enterFloor(page: import("@playwright/test").Page, floor: number) 
 test("fx: 커맨드 메뉴 기술 예측", async ({ page }) => {
   fs.mkdirSync(OUT, { recursive: true });
 
-  // ① 1층 물속성 적 — 배율(▲×2 / ▼×0.5)과 "쓰러뜨린다"가 같이 뜨는 화면
+  // ① 1층 물속성 적. 배율(▲×2 / ▼×0.5)과 "쓰러뜨린다"가 같이 뜨는 화면
   await seedDenseParty(page, 30);
   await enterFloor(page, 1);
   await page.getByTestId("cmd-moves").click();
@@ -67,7 +67,7 @@ test("fx: 커맨드 메뉴 기술 예측", async ({ page }) => {
   await expect(page.getByText("쓰러뜨린다").first()).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_menu-preview-ko.png") });
 
-  // ② 50층 오름 — type 이 null 이라 배율이 없고, 한 방에 안 죽는다
+  // ② 50층 오름. type 이 null 이라 배율이 없고, 한 방에 안 죽는다
   await enterFloor(page, 50);
   await page.getByTestId("cmd-moves").click();
   await expect(page.locator('[data-testid^="move-"]')).toHaveCount(4);
@@ -86,7 +86,7 @@ test("fx: 커맨드 메뉴 2단", async ({ page }) => {
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // 1단 — 기술 하나로 합쳤다(예전엔 공격/스킬로 갈려 있었고, 특수기가 없는 몬스터는
+  // 1단. 기술 하나로 합쳤다(예전엔 공격/스킬로 갈려 있었고, 특수기가 없는 몬스터는
   // "스킬"이 영구 비활성이었다). 시작 몬스터도 회색 버튼을 보지 않는다.
   await expect(page.getByTestId("cmd-moves")).toBeEnabled();
   await expect(page.getByTestId("cmd-bag")).toBeVisible();

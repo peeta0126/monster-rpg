@@ -8,7 +8,7 @@ const PUBLIC = path.resolve(import.meta.dirname, "..", "public");
 
 /**
  * 몬스터 일러스트는 어두운 전투 배경 위에 그대로 올라간다. 알파가 없으면 원본의 흰
- * 배경이 그대로 남아 흰 네모가 뜬다 — dragon.webp(최종 보스 ormr)가 실제로 그랬다.
+ * 배경이 그대로 남아 흰 네모가 뜬다. dragon.webp(최종 보스 ormr)가 실제로 그랬다.
  * 눈으로만 잡히는 사고라 한 번은 기계가 보게 한다.
  */
 test("몬스터 일러스트는 전부 배경이 뚫려 있다", async () => {

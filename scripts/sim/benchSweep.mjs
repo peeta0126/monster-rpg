@@ -50,7 +50,7 @@ try {
       return m ? Number(m[1]) : 0;
     });
 
-    // 최종 레벨 "57/34/51" 들을 모아 최고-최저 격차 평균을 낸다 — 이 변경이 노리는 지표다
+    // 최종 레벨 "57/34/51" 들을 모아 최고-최저 격차 평균을 낸다. 이 변경이 노리는 지표다
     const gaps = [...out.matchAll(/\|\s*(\d+(?:\/\d+)+)\s*$/gm)]
       .map((m) => m[1].split("/").map(Number))
       .map((ls) => Math.max(...ls) - Math.min(...ls));

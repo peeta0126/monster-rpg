@@ -3,10 +3,10 @@ import { test, type Page } from "@playwright/test";
 /**
  * 숲 탐험 한 판의 실제 소요 시간.
  *
- * 노드 수로는 길이를 알 수 없다 — 노드마다 이동 연출(exploreTime)과 포획 연출이
+ * 노드 수로는 길이를 알 수 없다. 노드마다 이동 연출(exploreTime)과 포획 연출이
  * 붙는다. 브라우저 게임이라 한 판이 10분을 넘어가면 안 되므로 초로 잰다.
  *
- * 여기서 나오는 건 **기계 시간**이다. 버튼이 뜨자마자 누르므로 사람이 화면을 읽는
+ * 여기서 나오는 건 기계 시간이다. 버튼이 뜨자마자 누르므로 사람이 화면을 읽는
  * 시간은 빠져 있다. 보고할 때 화면당 읽기 시간을 따로 더해서 본다.
  *
  * 실행: npx playwright test --config design/playwright.config.ts -g "measureForest:"
@@ -61,7 +61,7 @@ test.describe("measureForest:", () => {
       let alertPeak = 0;
 
       /**
-       * 회피 전략으로 걷는다 — 갈림길에서 소란이 덜 오르는 쪽을 고른다.
+       * 회피 전략으로 걷는다. 갈림길에서 소란이 덜 오르는 쪽을 고른다.
        * 회피가 가장 오래 걷는 전략이라 여기서 나온 시간이 상한이다.
        */
       for (let guard = 0; guard < 600; guard++) {
@@ -72,7 +72,7 @@ test.describe("measureForest:", () => {
         }
         if ((await page.locator('[data-testid="forest-settle"]').count()) > 0) break;
 
-        // 갈림길 — 소란 증감이 적어 보이는 쪽을 고른다. 정찰이 가려도 왼쪽을 잡는다
+        // 갈림길. 소란 증감이 적어 보이는 쪽을 고른다. 정찰이 가려도 왼쪽을 잡는다
         if (await clickTestId(page, "forest-fork-0")) continue;
         if (await clickTestId(page, "forest-step-action")) { steps++; continue; }
         if (await clickTestId(page, "forest-nest-pick-0")) continue;

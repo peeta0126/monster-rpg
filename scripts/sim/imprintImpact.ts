@@ -3,7 +3,7 @@
  *
  * 재는 방식: 층마다 "80% 이상 이기는 최소 파티 레벨"을 이분 탐색으로 찾고,
  * 각인 0등급과 5등급(+25%)에서 그 레벨이 얼마나 벌어지는지 본다. 물약·아티팩트는
- * 끄고 순수하게 능력치 배수만 남긴다 — 섞으면 무엇이 난이도를 내렸는지 알 수 없다.
+ * 끄고 순수하게 능력치 배수만 남긴다. 섞으면 무엇이 난이도를 내렸는지 알 수 없다.
  *
  * 실행: npx tsx scripts/sim/imprintImpact.ts
  */
@@ -21,7 +21,7 @@ const SEEDS = Array.from({ length: 16 }, (_, i) => 1000 + i * 7919);
 const WIN_TARGET = 0.8;
 const MAX_LEVEL = 70;
 
-/** 이 레벨의 플레이어가 들고 있을 법한 3마리 — 진화 조건을 실제로 적용해 세운다 */
+/** 이 레벨의 플레이어가 들고 있을 법한 3마리. 진화 조건을 실제로 적용해 세운다 */
 function partyAt(level: number): OwnedMon[] {
   return ["mossy", "aquabe", "flameling"].map((id, i) => {
     let base = monsters.find((m) => m.id === id)!;

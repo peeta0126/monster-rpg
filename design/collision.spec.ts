@@ -34,7 +34,7 @@ const playerHtml = (left: number, top: number) => `
  * 게임 안에서 걸어 다니며 확인하는 순서가 맞다.
  *
  * 오버레이는 게임 화면이 아니라 원화 위에 직접 그리므로 카메라·줌과 무관하다.
- * 그래서 좌표계 실수가 그대로 드러난다 — 그게 이 캡처의 목적이다.
+ * 그래서 좌표계 실수가 그대로 드러난다. 그게 이 캡처의 목적이다.
  */
 
 const OUT = path.resolve("design/screenshots");
@@ -137,15 +137,15 @@ test("collision: 베이스캠프", async ({ page }) => {
 });
 
 /**
- * 걸어 닿는 자리마다 플레이어를 세워 놓고 **게임과 같은 순서**로 겹쳐 찍는다.
+ * 걸어 닿는 자리마다 플레이어를 세워 놓고 게임과 같은 순서로 겹쳐 찍는다.
  *   배경(basecamp-bg) → 플레이어 → 전경(basecamp-bg-1)
  *
  * 위의 박스 오버레이가 못 보는 것을 본다. 오버레이는 배경 위에 사각형을 그릴 뿐이라
- * "여기 설 수 있다"까지만 보여 주는데, 정작 문제는 **서면 어떻게 보이는가** 쪽에 있었다.
+ * "여기 설 수 있다"까지만 보여 주는데, 정작 문제는 서면 어떻게 보이는가 쪽에 있었다.
  * 화단 위에 올라서 있거나, 벽 뒤로 들어가 몸이 통째로 사라지거나 하는 것은 이 그림에서만
  * 한눈에 보인다(실제로 우물 앞 0% 구간과 남쪽 소품 누락을 이걸로 찾았다).
  *
- * 소품 박스를 새로 그려 넣었으면 이 캡처를 Read 로 열어 "물건 위에 선 사람"이 없는지 볼 것.
+ * 줄을 새로 그었으면 이 캡처를 Read 로 열어서 "물건 위에 선 사람"이 없는지 봐라.
  */
 test("collision: 베이스캠프 인물 배치", async ({ page }) => {
   await page.setViewportSize({ width: CAMP_MAP_W, height: 950 });
@@ -155,7 +155,7 @@ test("collision: 베이스캠프 인물 배치", async ({ page }) => {
   const spawn = getCampPosition();
   const cells = [...reachableCells({ x: spawn.x, y: bodyYFromSpriteY(spawn.y) }, 10)];
 
-  // 격자 칸마다 중심에 가장 가까운 자리 하나만 세운다 — 촘촘하면 서로 겹쳐 못 읽는다
+  // 격자 칸마다 중심에 가장 가까운 자리 하나만 세운다. 촘촘하면 서로 겹쳐 못 읽는다
   const best = new Map<string, { d: number; x: number; y: number }>();
   const bodyToSprite = bodyYFromSpriteY(0);
   for (const k of cells) {

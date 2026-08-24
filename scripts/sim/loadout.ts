@@ -2,7 +2,7 @@
  * 측정용 파티 구성 한 벌.
  *
  * bossCurve 와 floorProbe 가 각자 파티를 만들고 있었는데, 그 둘이 서로 다른 파티를
- * 만들고 있었다 — floorProbe 는 `scaleToLevel` 만 써서 **진화를 안 시켰다**. 그래서
+ * 만들고 있었다. floorProbe 는 `scaleToLevel` 만 써서 진화를 안 시켰다. 그래서
  * 같은 층 같은 레벨을 두 도구가 13% 와 73% 로 재고 있었다. 측정 도구가 서로 다른
  * 값을 내면 어느 쪽을 믿을지부터 정해야 하므로, 파티 만드는 법은 여기 한 곳뿐이다.
  */
@@ -56,7 +56,7 @@ export function makeGear(uid: string, spec: GearSpec | null): ArtifactInstance[]
 /**
  * `종족id:레벨` 목록으로 파티를 만든다.
  *
- * ⚠️ `applyLevelGrowth` 를 반드시 태운다. 이게 기술 습득과 **진화**를 적용하는 유일한
+ * ⚠️ `applyLevelGrowth` 를 반드시 태운다. 이게 기술 습득과 진화를 적용하는 유일한
  * 경로다. 빼먹으면 Lv40 아쿠비(진화 전, 위력 45)로 40층을 재게 된다.
  */
 export async function makeParty(spec: string): Promise<OwnedMon[]> {
@@ -89,7 +89,7 @@ export function imprintAt(party: OwnedMon[], tier: number): Record<string, numbe
 }
 
 /**
- * 측정 한 판에 쓸 물약. **시행마다 새로 만들어야 한다** — 공유하면 앞 시행이 다 마신다.
+ * 측정 한 판에 쓸 물약. 시행마다 새로 만들어야 한다. 공유하면 앞 시행이 다 마신다.
  *
  * 층에 따라 다르게 준다. 한 벌로 22개를 쥐여 주면 15층 파티가 40층 파티만큼 버텨서,
  * 초반 관문이 실제보다 물러 보인다(맨몸 승률 100% 가 그렇게 나왔다). 판당 제작량이

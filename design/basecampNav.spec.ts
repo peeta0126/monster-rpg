@@ -10,7 +10,7 @@ import {
  * 실행: `npx playwright test --config design/playwright.config.ts -g "basecamp:"`
  *
  * Phaser 캔버스는 접근성 트리에 안 잡히므로 좌표는 씬에서 직접 읽는다. 게임 코드에
- * 테스트용 훅을 심지 않으려고 `game.scene.getScene(...)` 로 꺼낸다 — Phaser 인스턴스는
+ * 테스트용 훅을 심지 않으려고 `game.scene.getScene(...)` 로 꺼낸다. Phaser 인스턴스는
  * main.tsx 가 window 에 올려 두지 않으므로 캔버스 부모의 내부 참조를 쓴다.
  */
 
@@ -108,7 +108,7 @@ const DIRS: Array<{ keys: string[]; label: string }> = [
 ];
 
 /**
- * 지도 곳곳에서 출발한다. 스폰 한 곳에서만 밀면 광장 언저리밖에 못 본다 —
+ * 지도 곳곳에서 출발한다. 스폰 한 곳에서만 밀면 광장 언저리밖에 못 본다.
  * 실제로 어긋나 있던 곳(우물·좌판 앞·남쪽 아치)은 거기서 걸어 닿기까지가 멀다.
  */
 const STARTS = [
@@ -187,7 +187,7 @@ test.describe("basecamp:", () => {
    * 에서 뜨고 160px 에서 지워지는데 E 는 130px 만 받아서, 그 사이 30px 에서는
    * "E: 숲 입장" 을 보면서 눌러도 아무 일이 없었다.
    *
-   * 어느 대상이 뽑히는지(우선순위)는 여기서 다시 계산하지 않는다 — 베끼면 표가 두 벌이
+   * 어느 대상이 뽑히는지(우선순위)는 여기서 다시 계산하지 않는다. 베끼면 표가 두 벌이
    * 된다. "범위 안에 뭐라도 있으면 안내가 있다"만 본다.
    */
   test("안내 유무가 판정 범위와 일치한다", async ({ page }) => {
@@ -222,7 +222,7 @@ test.describe("basecamp:", () => {
     await openCamp(page);
     await page.screenshot({ path: path.join(OUT, "collision-ingame-basecamp.png") });
 
-    // F9 로 끄면 사라지고 다시 켜진다 — 캔버스 픽셀에서 순빨강의 양으로 확인한다
+    // F9 로 끄면 사라지고 다시 켜진다. 캔버스 픽셀에서 순빨강의 양으로 확인한다
     const on = await redPixels(page);
     expect(on, "판정선이 안 보인다").toBeGreaterThan(500);
 

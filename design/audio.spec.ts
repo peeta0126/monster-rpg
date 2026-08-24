@@ -3,7 +3,7 @@ import { FRESH_SAVE } from "./freshSave";
 import { playFloor } from "../e2e/autoBattle";
 
 /**
- * BGM 확인 — 실제로 화면을 돌아다니며 **브라우저가 만든 오디오 요소**를 들여다본다.
+ * BGM 확인. 실제로 화면을 돌아다니며 브라우저가 만든 오디오 요소를 들여다본다.
  *
  *   npx playwright test --config design/playwright.config.ts -g "audio:"
  *
@@ -12,8 +12,8 @@ import { playFloor } from "../e2e/autoBattle";
  * 소스에 시험용 구멍을 내지 않고도 "무엇이, 언제, 얼마의 음량으로 흐르는지"를 그대로
  * 읽을 수 있다.
  *
- * 귀로 듣는 것까지는 못 한다. 대신 사람이 귀로 잡아내는 사고 — 되감김·정적·이중
- * 전환·음량이 안 먹음 — 는 전부 여기서 수치로 잡힌다.
+ * 귀로 듣는 것까지는 못 한다. 대신 사람이 귀로 잡아내는 사고(되감김·정적·이중
+ * 전환·음량이 안 먹음)는 전부 여기서 수치로 잡힌다.
  */
 
 const AUTH_KEY = "monster-rpg-auth";
@@ -25,7 +25,7 @@ const GUEST = JSON.stringify({
 
 /**
  * 1층을 확실히 이기는 세이브. 시작 파티(Lv.1 플레미 한 마리)로는 1층에서도 질 수 있어서
- * 검사가 전투 결과가 아니라 운에 걸린다 — 여기서 보려는 건 곡이지 난이도가 아니다.
+ * 검사가 전투 결과가 아니라 운에 걸린다. 여기서 보려는 건 곡이지 난이도가 아니다.
  */
 const STRONG_SAVE = JSON.stringify({
   state: {
@@ -59,7 +59,7 @@ declare global {
 /**
  * 페이지 첫 스크립트보다 먼저 Audio 를 감싸고 게스트 세션·세이브를 심는다.
  *
- * ⚠️ 소리 설정(monster-rpg-audio)은 **지우지 않는다.** 이 스크립트는 새로고침마다
+ * ⚠️ 소리 설정(monster-rpg-audio)은 지우지 않는다. 이 스크립트는 새로고침마다
  * 다시 도는데, 여기서 지우면 "설정이 새로고침 뒤에도 남는가"를 검사가 스스로 깨뜨린다.
  * 테스트마다 브라우저 컨텍스트가 새로 뜨므로 처음에는 어차피 비어 있다.
  */
@@ -122,9 +122,9 @@ async function firstTouch(page: Page) {
 /**
  * 게임 안에서 화면을 옮긴다.
  *
- * ⚠️ `page.goto` 를 쓰면 안 된다 — 그건 새로고침이라 자바스크립트 문맥째로 다시 뜨고,
+ * ⚠️ `page.goto` 를 쓰면 안 된다. 그건 새로고침이라 자바스크립트 문맥째로 다시 뜨고,
  * 흐르던 오디오 요소도 같이 날아간다. 사람은 그렇게 게임하지 않는다. 여기서는 주소만
- * 갈아 끼우고 popstate 를 흘려 라우터가 화면을 갈게 한다 — 게임 안의 이동 버튼이
+ * 갈아 끼우고 popstate 를 흘려 라우터가 화면을 갈게 한다. 게임 안의 이동 버튼이
  * 부르는 것과 같은 경로다.
  *
  * 걸어가야 닿는 곳(공방·숲)은 이 방법을 쓴다. 메뉴 한 번으로 가는 곳(가방·내 몬스터)은
@@ -156,7 +156,7 @@ async function waitForTrack(page: Page, name: string) {
     { timeout: 15_000, message: `${name} 이(가) 안 나온다` }).toContain(name);
 }
 
-// ── 소리 설정은 진짜 UI 로 만진다 — 여기서 볼 것이 "슬라이더가 즉시 먹는가"다 ──
+// ── 소리 설정은 진짜 UI 로 만진다. 여기서 볼 것이 "슬라이더가 즉시 먹는가"다 ───
 async function openSoundSettings(page: Page) {
   const menu = page.getByRole("button", { name: /메뉴/ });
   await expect(menu).toBeVisible({ timeout: 20_000 });
@@ -276,7 +276,7 @@ test.describe("audio:", () => {
   /**
    * 진짜로 플레이해서 듣는다.
    *
-   * 위 검사들은 주소를 갈아 끼워 화면을 옮긴다 — 라우터가 보기엔 같은 길이지만,
+   * 위 검사들은 주소를 갈아 끼워 화면을 옮긴다. 라우터가 보기엔 같은 길이지만,
    * 사람이 실제로 지나는 길은 메뉴를 누르고 탑에 들어가고 숲으로 걸어 들어가는 쪽이다.
    * 그 길에는 화면 전환 커버(SceneTransition)와 Phaser 씬 파괴가 끼어 있어서, 곡이
    * 끊긴다면 여기서 끊긴다. 지나는 내내 소리가 한 번이라도 비면 실패한다.
@@ -298,9 +298,9 @@ test.describe("audio:", () => {
     }
 
     // ── 숲 입구까지 가서 걸어 들어간다 ──
-    // 순서가 중요하다: Phaser 를 만지는 단계를 **첫 마을 화면에서** 한다. 전투에 다녀오면
+    // 순서가 중요하다: Phaser 를 만지는 단계를 첫 마을 화면에서 한다. 전투에 다녀오면
     // 마을 화면이 통째로 다시 서면서 씬도 새로 만들어져, 창에 남아 있는 참조가 이미
-    // 버려진 씬을 가리킨다 — 거기에 대고 순간이동시키면 아무 일도 안 일어난다.
+    // 버려진 씬을 가리킨다. 거기에 대고 순간이동시키면 아무 일도 안 일어난다.
     await page.waitForFunction(() => {
       const g = (window as unknown as { __phaserGame?: { scene?: { getScene?: (k: string) => unknown } } }).__phaserGame;
       const sc = g?.scene?.getScene?.("BaseCampScene") as { player?: unknown } | null;
@@ -312,7 +312,7 @@ test.describe("audio:", () => {
       }).__phaserGame;
       g.scene.getScene("BaseCampScene").player.setPosition(px, py);
     }, [1150, 1980]);   // campCollision 의 숲 복귀 좌표 — 판정 반경 안이다
-    // 한 걸음 밀어 씬이 근접을 다시 재게 한다 — 순간이동만으로는 안내가 안 뜬다
+    // 한 걸음 밀어 씬이 근접을 다시 재게 한다. 순간이동만으로는 안내가 안 뜬다
     await page.keyboard.down("ArrowRight");
     await page.waitForTimeout(150);
     await page.keyboard.up("ArrowRight");
@@ -346,7 +346,7 @@ test.describe("audio:", () => {
   /**
    * 전투를 실제로 이겨서 결과 화면을 거쳐 마을로 돌아온다.
    *
-   * 여기가 제일 의심스러운 자리다 — 결과 화면은 전투 화면 위에 덮이는 것이라 곡이
+   * 여기가 제일 의심스러운 자리다. 결과 화면은 전투 화면 위에 덮이는 것이라 곡이
    * 바뀔 이유가 없는데, 화면이 하나 더 있는 것처럼 다뤄지면 전투곡 → 무언가 → 마을곡
    * 으로 두 번 바뀌거나 그 사이가 비게 된다. 전투 내내 전투곡 하나만 흘렀는지,
    * 마을로 나올 때 딱 한 번 넘어갔는지를 센다.
@@ -391,7 +391,7 @@ test.describe("audio:", () => {
     await firstTouch(page);
     await waitForTrack(page, "basecamp");
 
-    // 화면을 돌아 여섯 곡을 다 건드린다 — 하나라도 404 면 여기서 길이가 안 잡힌다
+    // 화면을 돌아 여섯 곡을 다 건드린다. 하나라도 404 면 여기서 길이가 안 잡힌다
     for (const [path, name] of [
       ["/workshop", "workshop"], ["/forest", "forest"], ["/battle", "battle"],
     ] as const) {
@@ -432,8 +432,8 @@ test.describe("audio:", () => {
     });
     expect(dur, "길이를 못 읽었다 — 파일이 안 받아졌다").toBeGreaterThan(5);
 
-    // 이음매를 사이에 두고 2.4초를 촘촘히 잰다. **흐른 소리의 양이 흐른 시간과 같아야**
-    // 한다 — 되감는 순간 버퍼가 비어 잠깐 멈추면 그만큼 모자라고, 그게 사람 귀에는
+    // 이음매를 사이에 두고 2.4초를 촘촘히 잰다. 흐른 소리의 양이 흐른 시간과 같아야
+    // 한다. 되감는 순간 버퍼가 비어 잠깐 멈추면 그만큼 모자라고, 그게 사람 귀에는
     // 정적으로 들린다.
     const t0 = Date.now();
     let played = 0;
@@ -458,7 +458,7 @@ test.describe("audio:", () => {
 
   /**
    * Safari 는 ogg 를 못 읽어 m4a 로 떨어진다. AAC 는 인코더가 앞뒤에 여백을 붙이는
-   * 포맷이라 **반복할 때 정적이 생기기 제일 쉬운 쪽**이다. 여기서는 못 듣는 브라우저의
+   * 포맷이라 반복할 때 정적이 생기기 제일 쉬운 쪽이다. 여기서는 못 듣는 브라우저의
    * 파일이므로, 포맷 고르는 곳을 속여 크로미움에 m4a 를 물리고 같은 자를 댄다.
    */
   test("Safari 쪽 파일(m4a)도 이음매에서 안 끊긴다", async ({ page }) => {
@@ -499,8 +499,8 @@ test.describe("audio:", () => {
   });
 
   /**
-   * 여섯 곡을 합치면 20MB 다. 처음에 다 받으면 첫 화면이 그만큼 늦는다 —
-   * **들어간 화면의 곡만** 받아야 한다.
+   * 여섯 곡을 합치면 20MB 다. 처음에 다 받으면 첫 화면이 그만큼 늦는다.
+   * 들어간 화면의 곡만 받아야 한다.
    */
   test("곡은 그 화면에 들어갈 때만 받는다", async ({ page }) => {
     const got: string[] = [];

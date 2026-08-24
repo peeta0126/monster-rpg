@@ -5,7 +5,7 @@ import { test, expect, type Page } from "@playwright/test";
  *
  * 목적은 밸런스가 아니라 "걷다가 막다른 화면에 갇히지 않는가"다. 걸음마다 다른
  * 사건 패널이 뜨는데 그중 하나라도 다음 버튼을 안 내주면 플레이어가 갇힌다.
- * 끝나는 길은 둘뿐이다 — 자진 귀환과 강제 퇴각.
+ * 끝나는 길은 둘뿐이다. 자진 귀환과 강제 퇴각.
  */
 
 const AUTH_KEY = "monster-rpg-auth";
@@ -49,7 +49,7 @@ async function enterShallow(page: Page) {
   const card = page.locator('[data-testid="forest-tier-shallow"]');
   await expect(card).toBeVisible();
   await card.click();
-  // 첫 걸음이 갈림길일 수도 있다 — 둘 중 하나가 뜨면 원정이 시작된 것이다
+  // 첫 걸음이 갈림길일 수도 있다. 둘 중 하나가 뜨면 원정이 시작된 것이다
   await expect(
     page.locator('[data-testid="forest-step-panel"], [data-testid="forest-fork"]').first(),
   ).toBeVisible({ timeout: 20_000 });
@@ -68,7 +68,7 @@ async function walkOneStep(page: Page): Promise<void> {
     if (await clickIfVisible(page, "forest-rps-retreat")) continue;    // 놓친 채로 물러선다
     await page.waitForTimeout(200);
   }
-  // 막히면 무엇이 떠 있었는지까지 남긴다 — 빈 화면이면 크래시고, 버튼이 있으면 흐름 문제다
+  // 막히면 무엇이 떠 있었는지까지 남긴다. 빈 화면이면 크래시고, 버튼이 있으면 흐름 문제다
   const buttons = await page.getByRole("button").allInnerTexts();
   const body = (await page.locator("body").innerText()).slice(0, 300);
   throw new Error(
@@ -98,7 +98,7 @@ test("숲 원정 — 걷다가 갇히지 않는다", async ({ page }) => {
 
   expect(steps, "한 걸음도 진행하지 못했습니다").toBeGreaterThan(0);
 
-  // 소란은 걷는 동안 움직여야 한다 — 안 움직이면 다이얼이 죽은 것이다
+  // 소란은 걷는 동안 움직여야 한다. 안 움직이면 다이얼이 죽은 것이다
   if ((await alert.count()) > 0) {
     const now = Number(await alert.getAttribute("data-alert"));
     expect(now, "여러 걸음을 걸었는데 소란도가 그대로다").not.toBe(startAlert);
@@ -151,7 +151,7 @@ test("정산 화면에서 새로고침해도 수확이 남는다", async ({ page
   await expect(settle).toBeVisible();
   const before = await settle.innerText();
 
-  // 런은 끝났는데 재료는 아직 창고에 안 들어간 순간이다 — 여기서 잃으면 제일 아프다
+  // 런은 끝났는데 재료는 아직 창고에 안 들어간 순간이다. 여기서 잃으면 제일 아프다
   await page.reload();
   await expect(settle).toBeVisible();
   await expect(settle).toHaveAttribute("data-reason", "voluntary");
@@ -181,14 +181,14 @@ test("읽을 수 없는 원정은 수확만 건져 100% 정산으로 돌려보�
   await expect(settle).toBeVisible();
   await expect(settle).toHaveAttribute("data-reason", "stale");
   await expect(settle).toContainText("원정을 마치고 돌아왔습니다");
-  // 등장 연출(fadeInScale .4s)이 끝난 뒤에 찍는다 — 아니면 사람이 볼 그림이 반투명하다
+  // 등장 연출(fadeInScale .4s)이 끝난 뒤에 찍는다. 아니면 사람이 볼 그림이 반투명하다
   await page.waitForTimeout(600);
   await page.screenshot({ path: "e2e/artifacts/forest-stale-settle.png" });
 
   await page.locator('[data-testid="forest-settle-confirm"]').click();
   await expect(page.locator('[data-testid="forest-tier-shallow"]')).toBeVisible();
 
-  // 화면만 띄우고 끝나면 복구가 아니다 — 건진 재료가 실제로 창고에 들어가야 한다
+  // 화면만 띄우고 끝나면 복구가 아니다. 건진 재료가 실제로 창고에 들어가야 한다
   const herb = await page.evaluate((k) =>
     JSON.parse(localStorage.getItem(k as string)!).state.materials.herb, PLAYER_KEY);
   expect(herb, "건진 재료가 창고에 안 들어갔다").toBe(3);

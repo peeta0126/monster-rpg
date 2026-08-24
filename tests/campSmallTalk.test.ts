@@ -21,7 +21,7 @@ test("구간이 층수와 엔딩으로 갈린다", () => {
   assert.equal(talkStage(30, false), "late");
   assert.equal(talkStage(49, false), "late");
   assert.equal(talkStage(50, true), "cleared");
-  // 엔딩은 층수를 이긴다 — 50층에 올랐어도 엔딩을 안 봤으면 아직 후반이다
+  // 엔딩은 층수를 이긴다. 50층에 올랐어도 엔딩을 안 봤으면 아직 후반이다
   assert.equal(talkStage(50, false), "late");
   assert.equal(talkStage(3, true), "cleared");
 });
@@ -111,7 +111,7 @@ test("엔딩 전 잡담은 용을 말하지 않는다 — 40층 대사가 먼저
       }
     }
   }
-  // 엔딩 후에는 말해도 된다. 실제로 말하는지도 같이 본다 — 아니면 이 시험이 아무것도 안 지킨다
+  // 엔딩 후에는 말해도 된다. 실제로 말하는지도 같이 본다. 아니면 이 시험이 아무것도 안 지킨다
   const after = smallTalkCandidates("orion", "cleared", CALM);
   assert.ok(after.some((l) => DRAGON.test(l)), "엔딩 후에는 용을 꺼내야 한다");
 });
@@ -127,7 +127,7 @@ const ENDED = flags({
   met_orion: true, met_baros: true, first_capture: true,
   quest_baros_done: true, quest_orion_done: true, tower_cleared: true,
 });
-/** 퀘스트가 남아 있으면 그게 잡담을 가린다 — 여기서 보려는 건 그 다음이다 */
+/** 퀘스트가 남아 있으면 그게 잡담을 가린다. 여기서 보려는 건 그 다음이다 */
 const DONE_QUESTS = Object.fromEntries(
   ALL_QUESTS.map((q) => [q.id, "completed" as const]),
 );
