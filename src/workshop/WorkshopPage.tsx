@@ -37,11 +37,11 @@ type PlayerPos = Point;
 
 // --- 이동 -------------------------------------------------------------
 
-/** %/frame (16ms 기준) — deltaTime 으로 보정한다 */
+/** %/frame (16ms 기준). deltaTime 으로 보정한다 */
 const SPEED = 0.4;
 
 // --- 무대 -------------------------------------------------------------
-// 공방은 화면 고정이다. 방 하나가 통째로 들어오고 화면은 움직이지 않는다 —
+// 공방은 화면 고정이다. 방 하나가 통째로 들어오고 화면은 안 움직인다.
 // 걸어 다녀도 배경은 제자리다. 확대해서 따라다니던 때는 어느 방향으로 가든
 // 벽이 눈앞에 있어서, 방이 몇 칸짜리인지 알 수 없었다.
 //
@@ -88,8 +88,8 @@ export default function WorkshopPage() {
 
   // ── 입력 잠금 ────────────────────────────────────────────────────────────────
   // Tab 메뉴든 제작 모달이든, 무언가 위에 떠 있으면 플레이어는 멈춘다.
-  // 예전엔 RAF 루프가 menuOpenRef 만 봐서 제작 모달 뒤에서는 계속 걸어다녔다.
-  // 두 경로를 하나로 합쳐 뒀다 — 나중에 뜨는 창이 또 생겨도 여기만 보면 된다.
+  // 원래 RAF 루프가 menuOpenRef 만 봐서 제작 모달 뒤에서는 계속 걸어다녔다.
+  // 두 경로를 하나로 합쳐 뒀다. 나중에 뜨는 창이 또 생겨도 여기만 보면 된다.
   const inputLocked = menuOpen || activeStation !== null;
   const inputLockedRef = useRef(inputLocked);
   useEffect(() => { inputLockedRef.current = inputLocked; }, [inputLocked]);
@@ -190,7 +190,7 @@ export default function WorkshopPage() {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
     };
-  }, []); // deps 없음 — ref로 최신값 접근
+  }, []); // deps 없음. ref 로 최신값 접근
 
   // ── RAF 이동 루프 ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -228,15 +228,15 @@ export default function WorkshopPage() {
           let rx = prev.x;
           let ry = prev.y;
 
-          // X축 단독 검사 / Y축 단독 검사 — 항상 원래 prev 기준으로 검사해야
-          // 대각선 이동 시 박스 모서리를 파고들어 갇히는 현상을 막을 수 있음
+          // X축 단독 검사 / Y축 단독 검사. 항상 원래 prev 기준으로 봐야
+          // 대각선으로 갈 때 박스 모서리를 파고들어 갇히는 걸 막는다
           const collideX = isPlayerBlocked({ x: nx, y: prev.y });
           const collideY = isPlayerBlocked({ x: prev.x, y: ny });
           if (!collideX) rx = nx;
           if (!collideY) ry = ny;
 
           // 대각선 이동: 각 축은 개별적으로 안전해 보여도 합쳐진 목적지가
-          // 박스 내부라면(모서리 통과) 이동 자체를 취소 — 박스 안에 끼는 버그 방지
+          // 박스 내부라면(모서리 통과) 이동 자체를 취소한다. 박스 안에 끼는 걸 막는다
           if (!collideX && !collideY && isPlayerBlocked({ x: nx, y: ny })) {
             rx = prev.x;
             ry = prev.y;
@@ -283,7 +283,7 @@ export default function WorkshopPage() {
     <div className="relative h-screen w-screen overflow-hidden bg-shadow-900">
 
       {/* ══════════════════════════════════════════════════════════════════════
-          레이어 1 — 흐림 배경 (여백을 자연스럽게 채움, 이미지 깨짐 방지)
+          레이어 1. 흐림 배경 (여백을 자연스럽게 채우고 이미지가 안 깨지게)
           ══════════════════════════════════════════════════════════════════════ */}
       <img
         src={WORKSHOP_BACKGROUND_IMAGE}
@@ -298,12 +298,12 @@ export default function WorkshopPage() {
       />
 
       {/* ══════════════════════════════════════════════════════════════════════
-          레이어 2 — 비네팅 오버레이
+          레이어 2. 비네팅 오버레이
           ══════════════════════════════════════════════════════════════════════ */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-shadow-900/35 via-transparent to-shadow-900/45" />
 
       {/* ══════════════════════════════════════════════════════════════════════
-          레이어 3 — 게임 스테이지 (원본 이미지 비율 2400:1792 고정, 화면 가운데 붙박이)
+          레이어 3. 게임 스테이지 (원본 비율 2400:1792 고정, 화면 가운데 붙박이)
           ══════════════════════════════════════════════════════════════════════ */}
       <div className="absolute inset-0 overflow-hidden">
         <div
@@ -318,7 +318,7 @@ export default function WorkshopPage() {
             cursor: SHOW_INTERACTION_DEBUG ? "crosshair" : "default",
           }}
         >
-          {/* 배경 이미지 — 스테이지가 이미 BG_RATIO와 같은 비율이라 contain으로도 꽉 찬다.
+          {/* 배경 이미지. 스테이지가 이미 BG_RATIO 와 같은 비율이라 contain으로도 꽉 찬다.
               contain 이어야 한다. fill 은 비율을 무시해 늘리므로 좌표계가 어긋난다. */}
           <img
             src={WORKSHOP_BACKGROUND_IMAGE}
@@ -340,8 +340,8 @@ export default function WorkshopPage() {
             style={{
               left: `${pos.x}%`,
               top:  `${pos.y}%`,
-              // 발밑이 좌표 기준점이 되도록 위로 올림. 프레임 안에서 발끝이 어디인지는
-              // 시트가 정하므로 여기 백분율을 손으로 적지 말 것 — 64px 시절의 90% 를
+              // 발밑이 좌표 기준점이 되게 위로 올린다. 프레임 안에서 발끝이 어디인지는
+              // 시트가 정하니까 여기 백분율을 손으로 적지 마라. 64px 시절 90% 를
               // 그대로 뒀더니 발이 판정보다 17px 아래에 붙어 있었다.
               transform: `translate(-50%, ${-PLAYER_FOOT_ANCHOR * 100}%)`,
             }}
@@ -360,7 +360,7 @@ export default function WorkshopPage() {
               }}
             />
             {/* 아틀라스 한 칸을 배경으로 잘라 쓴다. <img src> 로는 시트에서 한 칸만
-                떼어낼 수 없다 — 프레임마다 파일을 나누면 아틀라스를 쓰는 뜻이 없다. */}
+                떼어낼 수 없다. 프레임마다 파일을 나누면 아틀라스를 쓰는 뜻이 없다. */}
             <div
               role="img"
               aria-label="player"
@@ -404,7 +404,7 @@ export default function WorkshopPage() {
                   boxShadow: `0 0 6px ${PALETTE.mist300}`,
                 }}
               />
-              {/* 좌표 말풍선 — 커서 우하단에 표시 */}
+              {/* 좌표 말풍선. 커서 우하단에 표시 */}
               <div
                 className="pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 font-mono text-pixel-sm font-bold"
                 style={{

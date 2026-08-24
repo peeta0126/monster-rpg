@@ -165,7 +165,7 @@ export const POTION_RECIPES: CraftingRecipe[] = [
     costs: [
       { itemId: "ormr_essence", name: "만물의 정수", amount: 1 },
     ],
-    resultItemId:   "mothers_cure_potion",  // items.ts POTIONS엔 없음 — 전투에서 쓰이지 않는 엔딩 전용 아이템
+    resultItemId:   "mothers_cure_potion",  // items.ts POTIONS 엔 없음. 전투에서 안 쓰는 엔딩 전용 아이템
     resultItemName: "어머니의 치료약",
   },
 ];

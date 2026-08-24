@@ -27,10 +27,10 @@ const TOTAL_STAGES = 5;
 // 각 스테이지에서 입력해야 하는 방향키 수 (난이도 상승)
 const STAGE_KEY_COUNTS = [5, 7, 9, 11, 13] as const;
 
-// 스테이지별 총 제한 시간 (ms) — 키당 약 1100ms 기준
+// 스테이지별 총 제한 시간 (ms). 키당 약 1100ms 기준
 const STAGE_TIME_LIMITS = [6_000, 8_000, 10_500, 13_000, 15_500] as const;
 
-// 전체 스테이지의 총 키 입력 수 — 등급은 스테이지 클리어 여부가 아니라
+// 전체 스테이지의 총 키 입력 수. 등급은 스테이지 클리어 여부가 아니라
 // 이 값을 기준으로 한 "틀린 키 개수"로 결정된다
 export const TOTAL_KEYS = STAGE_KEY_COUNTS.reduce((a, b) => a + b, 0);
 
@@ -125,7 +125,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
   // 스테이지 결과 이력 ("s"=성공, "f"=실패)
   const [history, setHistory] = useState<Array<"s" | "f">>([]);
 
-  // 현재 스테이지의 키별 결과 — 틀려도 끝까지 진행하므로 각 키의 정오답을 개별 표시
+  // 현재 스테이지의 키별 결과. 틀려도 끝까지 진행하니까 키마다 정오답을 따로 표시한다
   const [keyResults, setKeyResults] = useState<Array<"pending" | "ok" | "miss">>(
     () => Array(stages[0].length).fill("pending"),
   );
@@ -248,7 +248,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
       // 틀려도 스테이지를 끝내지 않고 남은 키를 계속 입력받는다
       const nextIdx = idx + 1;
       if (nextIdx >= stageKeys.length) {
-        // 이 스테이지의 모든 키 입력 완료 — 틀린 키가 하나도 없어야 "성공"
+        // 이 스테이지의 키 입력 완료. 틀린 키가 하나도 없어야 "성공"이다
         const stageOk = stageMissRef.current === 0;
         if (stageOk) successRef.current++; else failRef.current++;
         advanceStage(stageOk);
@@ -394,7 +394,7 @@ export function ArrowKeyCraftingMiniGame({ recipeName, onComplete }: Props) {
         />
       </div>
 
-      {/* 키 시퀀스 스트립 — 틀린 키도 건너뛰지 않고 ✗로 표시하며 계속 진행 */}
+      {/* 키 시퀀스 스트립. 틀린 키도 건너뛰지 않고 ✗로 표시하며 계속 진행 */}
       <div className="mb-3 flex flex-wrap justify-center gap-1">
         {stageKeys.map((key, idx) => {
           const result  = keyResults[idx] ?? "pending";

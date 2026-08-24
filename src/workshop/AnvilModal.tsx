@@ -34,7 +34,7 @@ const C = {
   borderGold:   "rgba(233, 148, 65, .857)",
   textPrimary:  PALETTE.cream100,
   textMuted:    PALETTE.sand300,
-  // 카드 판(stone600) 위에서 earth500 은 3:1 아래다 — 작은 글자는 sand 계열로
+  // 카드 판(stone600) 위에서 earth500 은 3:1 아래다. 작은 글자는 sand 계열로
   textFaint:    PALETTE.sand300,
   gold:         PALETTE.ember500,
   goldDim:      PALETTE.earth500,
@@ -74,7 +74,7 @@ function artifactEnh(a: ArtifactInstance): number {
 }
 
 /**
- * 합성 후의 기본 능력치 — 예전 등급 배율을 벗기고 새 등급 배율을 씌운다.
+ * 합성 후의 기본 능력치. 예전 등급 배율을 벗기고 새 등급 배율을 씌운다.
  * 미리보기와 실제 합성이 같은 함수를 봐야 "결과가 이렇다"는 말이 참이 된다.
  */
 function synthesizedStats(a: ArtifactInstance, next: ItemQuality): ArtifactStatBonus[] {
@@ -285,7 +285,7 @@ function LevelUpPanel({
         }
       >
         {/* 반짝이 이모지 자리였다. 픽셀 폰트에 없어서 그 글자만 다른 서체로 떨어진다.
-            이름도 다른 탭에 맞춘다 — 강화하기·분해하기·합성하기 옆에서 "레벨업"만 명사였다. */}
+            이름도 다른 탭에 맞춘다. 강화하기·분해하기·합성하기 옆에서 "레벨업"만 명사였다. */}
         {isMax ? "최대 레벨" : canDo ? (
           <span className="inline-flex items-center justify-center gap-1.5">
             <PixelIcon name="levelup" size={16} />
@@ -458,7 +458,7 @@ function DisassemblePanel({
           </p>
         <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>강화석</p>
         <div className="mt-3 space-y-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
-          {/* 값을 여기 다시 적으면 규칙을 고친 날 화면만 옛말을 한다 — 실제로 3/8/18 로
+          {/* 값을 여기 다시 적으면 규칙을 고친 날 화면만 옛말을 한다. 실제로 3/8/18 로
               굳어 있어서, 아래 항목을 더해도 위에 적힌 합계와 안 맞았다 */}
           <p>기본 ({QUALITY_LABEL[artifact.quality]}): +{getDisassembleStones(artifact.quality, 1, 0) - Math.floor(1 / 5)}</p>
           <p>레벨 보너스 (Lv.{lv}): +{Math.floor(lv / 5)}</p>
@@ -545,7 +545,7 @@ function SynthesizePanel({
     { label: `Elite 미만 등급`, ok: primary.quality !== "elite" },
     { label: `첫 번째: 최대 레벨 (Lv.${pvLv}/${maxLv})`, ok: pvLv >= maxLv },
     { label: `첫 번째: 최대 강화 (+${pvEnh})`, ok: pvEnh >= MAX_EQUIPMENT_ENHANCEMENT },
-    // 두 번째는 **등급만 맞으면 된다**(craftingUtils.canSynthesizeArtifacts). 화면이 최대
+    // 두 번째는 등급만 맞으면 된다(craftingUtils.canSynthesizeArtifacts). 화면이 최대
     // 레벨·최대 강화까지 요구하는 것처럼 적어서, 실제보다 훨씬 비싼 줄 알고 안 쓰게 돼 있었다.
     { label: secondary ? `두 번째: 등급 일치 (${QUALITY_LABEL[secondary.quality]})` : "두 번째: 미선택",
       ok: secondary ? secondary.quality === primary.quality : false },
@@ -608,7 +608,7 @@ function SynthesizePanel({
         )}
       </div>
 
-      {/* 합성 결과 미리보기 — 합성은 등급만 올리고 레벨·강화를 1/+0 으로 되돌린다.
+      {/* 합성 결과 미리보기. 합성은 등급만 올리고 레벨·강화를 1/+0 으로 되돌린다.
           능력치까지 보여야 "지금 것보다 나은가"를 눈으로 잴 수 있다. */}
       {nextQual && (
         <div>
@@ -699,15 +699,15 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
   const [toast,       setToast]       = useState<string | null>(null);
   const busyRef = useRef(false);
 
-  // 탭 변경 시 선택 초기화. 효과가 아니라 이벤트에서 처리한다 —
-  // 효과로 되돌리면 "이전 탭의 선택이 그려진 렌더" 한 번이 먼저 커밋되고 그 다음에 지워진다.
+  // 탭을 바꾸면 선택을 비운다. 효과가 아니라 이벤트에서 처리하는데,
+  // 효과로 되돌리면 "이전 탭 선택이 그려진 렌더" 한 번이 먼저 커밋되고 그다음에 지워진다.
   const changeTab = (next: AnvilTab) => {
     setTab(next);
     setPrimaryId(null);
     setSecondaryId(null);
   };
 
-  // 가방에서 사라진 아티팩트를 가리키는 id는 따로 지우지 않는다 —
+  // 가방에서 사라진 아티팩트를 가리키는 id 는 따로 안 지운다.
   // 아래 primary/secondary가 항상 craftedArtifacts에서 find로 해석하므로 자연히 null이 되고,
   // 선택 표시(=== primaryId)도 일치하는 항목이 없어 저절로 풀린다.
   // (분해·강화 핸들러는 각자 자기 id를 직접 비운다.)

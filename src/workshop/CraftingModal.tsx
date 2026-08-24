@@ -30,8 +30,8 @@ const C = {
   borderGold:   "rgba(233, 148, 65, .857)",
   textPrimary:  PALETTE.cream100,
   textMuted:    PALETTE.sand300,
-  // 카드 판(stone600) 위에 얹히므로 earth500 이면 3:1 아래로 떨어진다 — 선택 안 된
-  // 레시피의 설명이 통째로 안 읽혔다. 작은 글자는 sand 계열로 둔다.
+  // 카드 판(stone600) 위에 얹히니까 earth500 이면 3:1 아래로 떨어진다. 선택 안 된
+  // 레시피 설명이 통째로 안 읽혔다. 작은 글자는 sand 계열로 둔다.
   textFaint:    PALETTE.sand300,
   gold:         PALETTE.ember500,
   goldDim:      PALETTE.earth500,
@@ -62,9 +62,9 @@ const STATION_ICON: Record<CraftingStationType, IconName> = {
 /**
  * 필요한 재료 하나를 적는 상자.
  *
- * 예전엔 `철 조각 30/2` 였다. 앞이 보유고 뒤가 필요인데 분수처럼 읽혀서 "30개 중
+ * 원래 `철 조각 30/2` 였다. 앞이 보유고 뒤가 필요인데 분수처럼 읽혀서 "30개 중
  * 2개"로 오해할 여지가 있었다. 필요한 수는 굵게, 지금 가진 수는 그 아래 작게 적고
- * 그림을 앞에 둔다 — 이름을 읽기 전에 무엇인지 알 수 있어야 한다.
+ * 그림을 앞에 둔다. 이름을 읽기 전에 뭔지 알 수 있어야 한다.
  */
 function CostBox({ cost, have }: { cost: { itemId: string; name: string; amount: number }; have: number }) {
   const ok = have >= cost.amount;
@@ -118,7 +118,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
   const [selectedRecipeId, setSelectedRecipeId] = useState(recipes[0]?.id ?? "");
   const [activeRecipe,     setActiveRecipe]     = useState<CraftingRecipe | null>(null);
   const [craftResult,      setCraftResult]      = useState<CraftedItem | null>(null);
-  /** 일괄 제작 결과 — 미니게임 한 번의 품질을 N개에 그대로 적용한다 */
+  /** 일괄 제작 결과. 미니게임 한 번의 품질을 N개에 그대로 먹인다 */
   const [batchResult,      setBatchResult]      = useState<{ item: CraftedItem; count: number } | null>(null);
   const [quantity,         setQuantity]         = useState(1);
 
@@ -127,7 +127,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
     [selectedRecipeId, recipes],
   );
 
-  // 닫힐 때 상태를 되돌리는 효과는 두지 않는다 — WorkshopPage가 열려 있을 때만 이 모달을
+  // 닫힐 때 상태를 되돌리는 효과는 안 둔다. WorkshopPage 가 열려 있을 때만 이 모달을
   // 마운트하므로(open은 항상 true) 닫히면 컴포넌트째 사라지고 상태도 함께 초기화된다.
 
   useEffect(() => {
@@ -231,7 +231,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
             </p>
           </div>
 
-          {/* 테스트 재료 지급 — 개발 환경에서만 노출 */}
+          {/* 테스트 재료 지급. 개발 환경에서만 나온다 */}
           {import.meta.env.DEV && (
             <button
               type="button"
