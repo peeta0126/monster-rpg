@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { openWorkshop, readPos, walkTo } from "./workshopNav";
 import {
-  INITIAL_POS, PLAYER_BOUNDS, CRAFTING_STATIONS, EXIT_ZONE, COLLISION_BOXES,
+  INITIAL_POS, PLAYER_BOUNDS, CRAFTING_STATIONS, EXIT_ZONE, WALL_SEGMENTS,
 } from "../src/workshop/workshopLayout";
 
 /**
@@ -58,14 +58,17 @@ test.describe("workshop:", () => {
 
   test("가구를 통과하지 못한다", async ({ page }) => {
     await openWorkshop(page);
-    // 상자(chest, x 67~79 / y 78~93) 를 향해 오른쪽 아래로 밀어붙인다
-    const chest = COLLISION_BOXES.find((b) => b.id === "chest")!;
-    await walkTo(page, { x: chest.x + chest.width / 2, y: chest.y + chest.height / 2 }, 1);
+    // 궤짝은 줄 셋(chest-w/n/e)에 둘러싸여 있다. 그 안쪽 한가운데로 밀어붙인다.
+    const seg = (id: string) => WALL_SEGMENTS.find((s) => s.id === id)!;
+    const chest = {
+      x1: seg("chest-w").x1, x2: seg("chest-e").x1,
+      y1: seg("chest-n").y1, y2: seg("chest-w").y2,
+    };
+    await walkTo(page, { x: (chest.x1 + chest.x2) / 2, y: (chest.y1 + chest.y2) / 2 }, 1);
     const p = await readPos(page);
     const inside =
-      p.x >= chest.x && p.x <= chest.x + chest.width &&
-      p.y >= chest.y && p.y <= chest.y + chest.height;
-    expect(inside, `상자 안(${p.x.toFixed(1)}, ${p.y.toFixed(1)})으로 들어갔다`).toBe(false);
+      p.x >= chest.x1 && p.x <= chest.x2 && p.y >= chest.y1 && p.y <= chest.y2;
+    expect(inside, `궤짝 안(${p.x.toFixed(1)}, ${p.y.toFixed(1)})으로 들어갔다`).toBe(false);
   });
 
   test("스테이지 밖으로 나가지 못한다", async ({ page }) => {

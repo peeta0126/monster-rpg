@@ -32,16 +32,15 @@ test("출입구가 어떤 제작대 원과도 겹치지 않는다", () => {
   }
 });
 
-// 하나로 합치면 문 앞에서 막힌다.
-// isInsideBox 는 양끝을 포함하므로 x=39(L 의 오른쪽 끝)와 x=60(R 의 왼쪽 끝)은
-// 벽 경계선 자체다. 틈은 그 사이의 열린 구간이다.
-test("아래쪽 벽 L/R 사이에 x 39~60 틈이 열려 있다", () => {
-  for (let x = 39.5; x <= 59.5; x += 0.5) {
-    assert.equal(isBlocked({ x, y: 95 }), false, `x=${x} 에서 출입구가 막혀 있다`);
+// 아래쪽 벽이 두 줄로 끊겨 있는 것은 의도다. x 39~60 이 비어 있어야 출입구까지
+// 걸어 내려갈 수 있다. 하나로 이으면 문 앞에서 막힌다.
+test("아래쪽 벽에 x 39~60 틈이 열려 있다", () => {
+  for (let x = 40; x <= 59; x += 0.5) {
+    assert.equal(isBlocked({ x, y: 93 }), false, `x=${x} 에서 출입구가 막혀 있다`);
   }
-  // 틈 바깥은 막혀 있어야 한다 — 틈이 벽 전체로 번지지 않았는지 확인
-  assert.equal(isBlocked({ x: 20, y: 95 }), true);
-  assert.equal(isBlocked({ x: 80, y: 95 }), true);
+  // 틈 바깥은 벽 위다 — 틈이 벽 전체로 번지지 않았는지 확인
+  assert.equal(isBlocked({ x: 20, y: 93 }), true);
+  assert.equal(isBlocked({ x: 80, y: 93 }), true);
 });
 
 test("러그 위는 통과할 수 있다", () => {
@@ -102,6 +101,40 @@ test("BFS: 스폰에서 제작대 3개와 출입구에 전부 도달할 수 있�
       reached.some((p) => distanceTo(p, target) <= target.radius),
       `${target.id} 의 판정 원 안으로 걸어갈 수 없다`,
     );
+  }
+
+  /**
+   * 테두리 방식에서는 **여기가 진짜 안전망이다.**
+   *
+   * 물체마다 상자를 씌우던 때는 가구 한가운데를 찍어 `isBlocked` 로 물을 수 있었다.
+   * 지금 벽은 물체 둘레를 따라 그은 얇은 줄이라, 가구 한가운데는 "상자 밖"이다 —
+   * 못 올라가는 이유는 둘러싸여 있어서지 그 자리가 막혀서가 아니다. 그러니
+   * 걸어서 닿는지로 물어야 한다.
+   */
+  const stand = (p: Point) => reached.some((r) => Math.abs(r.x - p.x) <= STEP && Math.abs(r.y - p.y) <= STEP);
+  const MUST_NOT_REACH: Array<[string, Point]> = [
+    ["통 무더기 위",   { x: 12, y: 55 }],
+    ["침대 위",        { x: 90, y: 55 }],
+    ["연금술대 위",    { x: 77, y: 35 }],
+    ["책장 뒤",        { x: 50, y: 29 }],
+    ["궤짝 위",        { x: 73, y: 86 }],
+    ["아티팩트 제작대 위", { x: 25, y: 85 }],
+    ["문 밖 왼쪽",     { x: 20, y: 95 }],
+    ["문 밖 오른쪽",   { x: 80, y: 95 }],
+  ];
+  for (const [label, p] of MUST_NOT_REACH) {
+    assert.equal(stand(p), false, `${label}(${p.x}, ${p.y}) 에 올라설 수 있다`);
+  }
+
+  const MUST_REACH: Array<[string, Point]> = [
+    ["러그 한가운데",  { x: 50, y: 52 }],
+    ["모루 위 복도",   { x: 27, y: 28.5 }],
+    ["연금술대 동쪽",  { x: 92, y: 40 }],
+    ["궤짝 왼쪽",      { x: 64, y: 86 }],
+    ["출입구 매트",    { x: 50, y: 95 }],
+  ];
+  for (const [label, p] of MUST_REACH) {
+    assert.equal(stand(p), true, `${label}(${p.x}, ${p.y}) 에 걸어갈 수 없다`);
   }
 });
 

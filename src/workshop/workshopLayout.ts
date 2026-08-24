@@ -72,39 +72,109 @@ export const PLAYER_DISPLAY_RATIO = 441 / BG_H;
 
 // ─── 충돌 박스 ───────────────────────────────────────────────────────────────
 
-export const COLLISION_BOXES: CollisionBox[] = [
-  { id: "top-wall",        x:  0, y:    0, width: 100, height: 27 },
-  { id: "left-wall",       x:  0, y:    0, width:   5, height: 100 },
-  { id: "right-wall",      x: 96.5, y:  0, width: 3.5, height: 100 },
+/** 걸을 수 있는 바닥의 테두리 한 줄. 좌표는 % 다. `t` 는 선 두께(%). */
+export interface WallSegment {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  t?: number;
+}
 
-  // ⚠️ 아래쪽 벽이 L/R 두 조각인 것은 의도다. x 39~60 이 비어 있어야 출입구까지
-  //    걸어갈 수 있다. 하나로 합치면 문 앞에서 막힌다.
-  { id: "bottom-wall-L",   x:  0, y:   93, width:  39, height:   7 },
-  { id: "bottom-wall-R",   x: 60, y:   93, width:  40, height:   7 },
+/**
+ * 기본 선 두께(%).
+ *
+ * 한 프레임에 움직이는 거리(SPEED 0.4%/16ms, dt 는 50ms 로 잘려 있으니 최대 1.25%)
+ * 보다 얇아도 된다 — 발밑 상자(3.2×1.8%)가 선보다 크니 뚫고 지나가려면 한 프레임에
+ * 2.8% 이상 움직여야 한다. 대신 선 위에 반, 아래에 반이 걸리므로 물건 경계보다
+ * 0.5% 만큼 일찍 막힌다. 그 정도가 물건에 몸이 닿는 자리다.
+ */
+const SEGMENT_THICKNESS = 1;
 
-  { id: "fireplace",       x:  4, y:    0, width:  18, height:  31 },
-  // 책장은 벽선(y 27) 아래로 4.5% 튀어나와 있다. 없으면 책장 하단을 뚫고 지나간다.
-  { id: "bookshelf",       x: 42.5, y:  26, width:  15.5, height: 6 },
-  { id: "anvil",           x: 19.5, y: 30.5, width: 12, height: 13.5 },
+/**
+ * 방을 두르는 테두리.
+ *
+ * 베이스캠프(`campCollision.ts`)와 같은 방식이다 — 물체마다 사각형을 씌우지 않고
+ * **걸을 수 있는 바닥의 바깥선**을 긋는다. 물체 스무 개를 따로 잡으면 어느 상자가
+ * 어디를 막는지 알 수 없게 되고, 상자 사이에 낀 못 쓰는 틈이 생긴다.
+ *
+ * 방 바깥 테두리(위·좌·우)는 `PLAYER_BOUNDS` 가 이미 막고 있어 줄이 없다.
+ * 아래쪽만 줄로 긋는다 — 출입구 틈(x 39~60)을 남겨야 하기 때문이다.
+ *
+ * 벽난로 앞(x 5~19.5, y 31~38.5)은 벽난로·모루·장작더미에 둘러싸여 들어갈 길이
+ * 없다. 원화에서도 그렇다. 그래서 그 안쪽에는 줄을 긋지 않는다 — 못 가는 곳에
+ * 벽을 세워 봐야 읽을 것만 늘어난다.
+ */
+export const WALL_SEGMENTS: WallSegment[] = [
+  // ─── 아래쪽 벽과 출입구 ───────────────────────────────────────────────────
+  // ⚠️ x 39~60 이 비어 있어야 출입구 매트까지 걸어 내려갈 수 있다. 두 줄을 하나로
+  //    이으면 문 앞에서 막힌다. 문설주 두 줄이 그 틈의 좌우를 막는다.
+  { id: "floor-s-w",  x1:   5, y1: 93, x2: 39,   y2: 93 },
+  { id: "floor-s-e",  x1:  60, y1: 93, x2: 96.5, y2: 93 },
+  { id: "door-jamb-w", x1: 39, y1: 93, x2: 39,   y2: 96 },
+  { id: "door-jamb-e", x1: 60, y1: 93, x2: 60,   y2: 96 },
 
-  // 장작더미와 벽난로 사이(y 31~38.5)는 실제로 비어 있는 바닥이다. 예전엔 여기까지
-  // 막혀 있어서 벽난로 앞에 설 수 없었다.
-  { id: "log-pile",        x:  4, y: 38.5, width: 15.5, height: 10 },
-  { id: "barrels",         x:  4, y: 46.5, width: 16.5, height: 26.5 },
-  // 통 무더기는 직사각형이 아니다. 오른쪽으로 튀어나온 한 줄만 따로 덮는다 —
-  // 하나로 합치면 그 아래(x 20~26, y 64~74)의 빈 바닥까지 막힌다.
-  { id: "barrels-right",   x: 18.5, y: 46, width: 8, height: 20 },
-  { id: "barrel-single",   x:  4, y:   77, width:   9, height:  16 },
-  { id: "artifact-bench",  x: 14, y:   76, width:  22, height:  17 },
-  { id: "alchemy-table",   x: 67.5, y: 29.5, width: 20, height: 11.5 },
-  { id: "bed",             x: 84, y:   48, width:  12, height:  14 },
-  // 화분은 아래쪽 테두리까지 막아야 한다. 예전엔 y 88 에서 끊겨 화분 밑동을 밟았다.
-  { id: "tree-pot",        x: 84, y:   60, width:  13, height: 31.5 },
-  { id: "lavender-pot",    x: 79.5, y:  74, width:   9, height:  17 },
-  { id: "chest",           x: 68, y:   80, width:  10, height: 11.5 },
+  // ─── 서쪽 덩어리: 벽난로 · 모루 · 장작더미 · 통 무더기 · 아티팩트 제작대 ──
+  // 위에서 아래로 한 줄기다. 모루 위 복도(y 27~30.5)는 열어 둔다 — 벽을 따라
+  // 걸을 수 있는 바닥이고, 서쪽 끝은 벽난로가 막는다.
+  { id: "fireplace-e",     x1: 22,   y1: 27,   x2: 22,   y2: 31 },
+  { id: "anvil-n",         x1: 19.5, y1: 30.5, x2: 31.5, y2: 30.5 },
+  { id: "anvil-e",         x1: 31.5, y1: 30.5, x2: 31.5, y2: 44 },
+  { id: "anvil-s",         x1: 31.5, y1: 44,   x2: 26.5, y2: 44 },
+  // 통 무더기는 직사각형이 아니다. 오른쪽으로 한 줄 튀어나와 있어 두 번 꺾인다.
+  { id: "barrels-right-e", x1: 26.5, y1: 44,   x2: 26.5, y2: 66 },
+  { id: "barrels-right-s", x1: 26.5, y1: 66,   x2: 20.5, y2: 66 },
+  { id: "barrels-e",       x1: 20.5, y1: 66,   x2: 20.5, y2: 73 },
+  { id: "barrels-s",       x1: 20.5, y1: 73,   x2: 13,   y2: 73 },
+  { id: "barrel-single-e", x1: 13,   y1: 73,   x2: 13,   y2: 76 },
+  { id: "bench-n",         x1: 13,   y1: 76,   x2: 36,   y2: 76 }, // 아티팩트 제작대
+  { id: "bench-e",         x1: 36,   y1: 76,   x2: 36,   y2: 93 },
 
-  // ⚠️ 러그(대략 x 35~64, y 42~62)에는 충돌 박스가 없다. 통과 가능해야 한다.
+  // ─── 북쪽 벽에 붙은 것 ────────────────────────────────────────────────────
+  // 책장은 벽선(y 27) 아래로 5% 튀어나와 있다. 없으면 책장 하단을 뚫고 지나간다.
+  { id: "bookshelf-w", x1: 42.5, y1: 27,   x2: 42.5, y2: 32 },
+  { id: "bookshelf-s", x1: 42.5, y1: 32,   x2: 58,   y2: 32 },
+  { id: "bookshelf-e", x1: 58,   y1: 32,   x2: 58,   y2: 27 },
+  // 연금술 제작대는 책장과 달리 상판이 깊어 y 41 까지 내려온다. 상판 앞(남쪽)이
+  // 바닥이므로 아랫변으로 긋는다 — 윗변으로 그으면 탁자 위를 걸어 다닌다.
+  { id: "alchemy-w",   x1: 67.5, y1: 27, x2: 67.5, y2: 41 },
+  { id: "alchemy-s",   x1: 67.5, y1: 41, x2: 87.5, y2: 41 },
+  { id: "alchemy-e",   x1: 87.5, y1: 41, x2: 87.5, y2: 27 },
+
+  // ─── 동쪽 덩어리: 침대 · 화분 둘 · 궤짝 ───────────────────────────────────
+  { id: "bed-n",       x1: 96.5, y1: 48, x2: 84,   y2: 48 },
+  { id: "bed-pot-w",   x1: 84,   y1: 48, x2: 84,   y2: 74 }, // 침대 + 나무 화분
+  { id: "lavender-n",  x1: 84,   y1: 74, x2: 79.5, y2: 74 },
+  { id: "lavender-w",  x1: 79.5, y1: 74, x2: 79.5, y2: 91 },
+  { id: "lavender-s",  x1: 79.5, y1: 91, x2: 78,   y2: 91 }, // 궤짝과의 1.5% 틈을 막는다
+  { id: "chest-e",     x1: 78,   y1: 91, x2: 78,   y2: 80 },
+  { id: "chest-n",     x1: 78,   y1: 80, x2: 68,   y2: 80 },
+  { id: "chest-w",     x1: 68,   y1: 80, x2: 68,   y2: 93 },
+
+  // ⚠️ 러그(대략 x 35~64, y 42~62) 위에는 아무 줄도 없다. 통과 가능해야 한다.
 ];
+
+/**
+ * 선분 → 축에 정렬된 사각형. 이동 판정과 디버그 표시가 보는 것은 이쪽이다.
+ *
+ * 비스듬한 줄은 아직 없다. 생기면 베이스캠프의 `segmentBoxes` 처럼 두께만 한
+ * 정사각형을 늘어놓아야 한다 — 여기서는 그때 가서 늘릴 것.
+ */
+function segmentBoxes(segments: readonly WallSegment[]): CollisionBox[] {
+  return segments.map((s) => {
+    const t = s.t ?? SEGMENT_THICKNESS;
+    const x1 = Math.min(s.x1, s.x2), x2 = Math.max(s.x1, s.x2);
+    const y1 = Math.min(s.y1, s.y2), y2 = Math.max(s.y1, s.y2);
+    const horizontal = x2 - x1 >= y2 - y1;
+    return horizontal
+      ? { id: s.id, x: x1, y: y1 - t / 2, width: x2 - x1, height: t }
+      : { id: s.id, x: x1 - t / 2, y: y1, width: t, height: y2 - y1 };
+  });
+}
+
+/** 페이지·테스트·오버레이가 전부 이 배열 하나만 본다. */
+export const COLLISION_BOXES: CollisionBox[] = segmentBoxes(WALL_SEGMENTS);
 
 /**
  * 플레이어 발밑 판정 상자의 반지름(스테이지 % 기준).

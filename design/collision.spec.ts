@@ -4,7 +4,7 @@ import {
   COLLISION_BOXES, CRAFTING_STATIONS, EXIT_ZONE, PLAYER_BOUNDS, BG_W, BG_H,
 } from "../src/workshop/workshopLayout";
 import {
-  CAMP_COLLISION_BOXES, CAMP_PROP_BOXES, CAMP_MAP_W, CAMP_MAP_H,
+  CAMP_COLLISION_BOXES, CAMP_WALL_SEGMENTS, CAMP_MAP_W, CAMP_MAP_H,
   reachableCells, bodyYFromSpriteY,
 } from "../src/camp/campCollision";
 import { getCampPosition } from "../src/camp/campPositionStore";
@@ -40,7 +40,6 @@ const playerHtml = (left: number, top: number) => `
 const OUT = path.resolve("design/screenshots");
 const LINE = "#ff0000"; // palette-ok: 개발용 판정 선. 게임에 없는 색이어야 눈에 띈다
 const ZONE = "#00ffcc";   // palette-ok: 상호작용 반경. 충돌 선과 구분되는 색
-const GROUND = "#ff8c00"; // palette-ok: 자동 생성된 지형. 손으로 잰 소품과 구분하려고 다른 색
 
 function grid(step: number, w: number, h: number, scale: number) {
   const cols = Array.from({ length: Math.floor(w / step) + 1 }, (_, i) => i * step);
@@ -76,7 +75,7 @@ test("collision: 공방", async ({ page }) => {
     ${COLLISION_BOXES.map((b) => `
       <div style="position:absolute;left:${b.x}%;top:${b.y}%;width:${b.width}%;height:${b.height}%;
         border:2px solid ${LINE};background:rgba(255,0,0,.14)">
-        <span style="font:11px monospace;color:${LINE};background:rgba(0,0,0,.75)">${b.id}</span></div>`).join("")}
+        <span style="font:11px monospace;white-space:nowrap;color:${LINE};background:rgba(0,0,0,.75)">${b.id}</span></div>`).join("")}
     ${[...CRAFTING_STATIONS, EXIT_ZONE].map((z) => `
       <div style="position:absolute;left:${z.x}%;top:${z.y}%;width:${z.radius * 2}%;height:${z.radius * 2}%;
         transform:translate(-50%,-50%);border-radius:50%;border:2px solid ${ZONE};background:rgba(0,255,204,.10)"></div>`).join("")}
@@ -105,15 +104,19 @@ test("collision: 베이스캠프", async ({ page }) => {
         width:${STEP * s}px;height:${STEP * s}px;background:rgba(0,255,204,.32)"></div>`;
     }).join("")}
     ${grid(100, CAMP_MAP_W, CAMP_MAP_H, s)}
-    ${CAMP_COLLISION_BOXES.map((b) => {
-      // 지형(전경 레이어에서 자동 생성)과 소품(손으로 잰 것)을 색으로 나눈다.
-      // 지형은 가장자리 40px 이 열려 있어야 정상이고, 소품은 딱 물건만 덮어야 한다.
-      const prop = CAMP_PROP_BOXES.includes(b as never);
-      const color = prop ? LINE : GROUND;
-      return `<div style="position:absolute;left:${b.x * s}px;top:${b.y * s}px;
-        width:${b.w * s}px;height:${b.h * s}px;
-        border:1px solid ${color};background:${prop ? "rgba(255,0,0,.28)" : "rgba(255,140,0,.18)"}">
-        ${prop ? `<span style="font:10px monospace;color:${color};background:rgba(0,0,0,.75)">${b.id}</span>` : ""}</div>`;
+    ${CAMP_COLLISION_BOXES.map((b) => `
+      <div style="position:absolute;left:${b.x * s}px;top:${b.y * s}px;
+        width:${b.w * s}px;height:${b.h * s}px;background:rgba(255,0,0,.30)"></div>`).join("")}
+    ${CAMP_WALL_SEGMENTS.map((seg) => {
+      // 줄 이름은 선 시작점에 한 번만 적는다. 사각형마다 적으면 비스듬한 줄에서
+      // 같은 이름이 수십 번 겹쳐 그림을 덮는다.
+      const len = Math.hypot(seg.x2 - seg.x1, seg.y2 - seg.y1) * s;
+      const deg = (Math.atan2(seg.y2 - seg.y1, seg.x2 - seg.x1) * 180) / Math.PI;
+      return `<div style="position:absolute;left:${seg.x1 * s}px;top:${seg.y1 * s}px;
+        width:${len}px;height:0;border-top:2px solid ${LINE};
+        transform-origin:0 0;transform:rotate(${deg}deg)"></div>
+        <div style="position:absolute;left:${seg.x1 * s}px;top:${seg.y1 * s}px;
+        font:10px monospace;color:${LINE};background:rgba(0,0,0,.75)">${seg.id}</div>`;
     }).join("")}`;
 
   await page.setContent(shell(w, h, overlay(scale)));

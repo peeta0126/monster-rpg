@@ -17,7 +17,7 @@ import { LOADED_MATERIAL_COUNT } from "./campSmallTalk";
 import type { SmallTalkNpcId } from "./campSmallTalk";
 import type { DialogueEntry } from "./campDialogues";
 import {
-  CAMP_COLLISION_BOXES, CAMP_PROP_BOXES, CAMP_MAP_W, CAMP_MAP_H,
+  CAMP_COLLISION_BOXES, CAMP_WALL_SEGMENTS, CAMP_MAP_W, CAMP_MAP_H,
   CAMP_INTERACTIONS, PLAYER_BODY, PLAYER_BODY_OFFSET, PLAYER_SCALE, NPC_BODY,
   footYFromSpriteY, safeSpawn,
   type CampInteraction,
@@ -226,18 +226,15 @@ export default class BaseCampScene extends Phaser.Scene {
     g.clear();
     if (!isCollisionDebugOn()) return;
 
-    // 지형은 자동 생성이라 사각형이 60개 가까이 되고 내부 경계가 많다. 얇고 흐리게
-    // 그려야 손으로 잡은 소품 박스가 묻히지 않는다.
-    const props = new Set<string>(CAMP_PROP_BOXES.map((b) => b.id));
-    g.lineStyle(2, DEBUG_LINE_HEX, 0.45);
-    for (const b of CAMP_COLLISION_BOXES) {
-      if (!props.has(b.id)) g.strokeRect(b.x, b.y, b.w, b.h);
-    }
+    // 실제로 막는 것은 사각형이라 그걸 칠하고, 그 위에 테두리 줄을 긋는다.
+    // 줄만 그리면 비스듬한 벽(좌판 앞)의 두께가 안 보이고, 사각형만 칠하면
+    // 어느 줄에서 나온 것인지 알 수 없다.
+    g.fillStyle(DEBUG_LINE_HEX, 0.18);
+    for (const b of CAMP_COLLISION_BOXES) g.fillRect(b.x, b.y, b.w, b.h);
+
     g.lineStyle(3, DEBUG_LINE_HEX, 1);
-    g.fillStyle(DEBUG_LINE_HEX, 0.14);
-    for (const b of CAMP_PROP_BOXES) {
-      g.fillRect(b.x, b.y, b.w, b.h);
-      g.strokeRect(b.x, b.y, b.w, b.h);
+    for (const s of CAMP_WALL_SEGMENTS) {
+      g.strokeLineShape(new Phaser.Geom.Line(s.x1, s.y1, s.x2, s.y2));
     }
     for (const npc of this.npcSprites) {
       g.strokeRect(npc.x - NPC_BODY.w / 2, npc.y - NPC_BODY.h, NPC_BODY.w, NPC_BODY.h);
