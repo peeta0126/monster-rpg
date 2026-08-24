@@ -353,9 +353,13 @@ function DexModal({ onClose }: { onClose: () => void }) {
             </div>
 
             {/* 몬스터 그리드 — 아래를 흐리게 덮어 "더 있다"를 표시한다.
-                안 그러면 마지막 줄이 잘린 채 끝나 스크롤이 있는지 알 수 없다. */}
-            <div className="relative flex-1 overflow-hidden">
-              <div className="h-full overflow-y-auto p-5">
+                안 그러면 마지막 줄이 잘린 채 끝나 스크롤이 있는지 알 수 없다.
+
+                흐림막을 얹으려고 감싼 칸이라 안쪽도 flex 로 이어 준다. h-full 로 두면
+                높이가 부모가 아니라 **내용**을 따라가서, 스크롤할 게 자기 안에는 없는
+                채로 부모가 잘라내기만 한다 — 도감이 첫 화면에서 멈춰 있었다. */}
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 overflow-y-auto p-5">
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                 {filteredMonsters.map((m) => {
                   const seen   = dexSeen.includes(m.id);
