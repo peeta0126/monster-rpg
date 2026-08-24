@@ -12,6 +12,7 @@ import { PALETTE } from "../shared/palette";
 import { PixelIcon } from "../shared/ui/PixelIcon";
 import { ArtifactCard } from "../shared/ui/ArtifactCard";
 import { isIconName } from "../shared/ui/icons";
+import { useBgm, BGM } from "../shared/audio";
 import { SlotGrid, EmptySlot } from "../shared/ui/SlotGrid";
 import { GameBackground } from "../shared/ui/GameBackground";
 import { EmptyState } from "../shared/ui";
@@ -95,11 +96,11 @@ function MaterialsSection({
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
-            style={{ color: "rgba(132, 75, 63, 1)" }}>MATERIALS</p>
+            style={{ color: PALETTE.sand300 }}>MATERIALS</p>
           <p className="text-pixel-sm font-black text-sand-200">보유 재료</p>
         </div>
         <p className="text-title-sm font-black font-mono"
-          style={{ color: total > 0 ? PALETTE.ember500 : "rgba(205, 178, 126, .08)" }}>
+          style={{ color: total > 0 ? PALETTE.ember500 : PALETTE.earth400 }}>
           {total}
         </p>
       </div>
@@ -159,7 +160,7 @@ function PotionsSection({
     <div>
       <div className="mb-3">
         <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
-          style={{ color: "rgba(132, 75, 63, 1)" }}>POTIONS</p>
+          style={{ color: PALETTE.sand300 }}>POTIONS</p>
         <p className="text-pixel-sm font-black text-sand-200">
           보유 물약{" "}
           <span className="font-mono text-ember-500">
@@ -238,7 +239,7 @@ function ArtifactsSection({
     <div>
       <div className="mb-3">
         <p className="text-pixel-sm font-bold uppercase tracking-widest mb-0.5"
-          style={{ color: "rgba(132, 75, 63, 1)" }}>ARTIFACTS</p>
+          style={{ color: PALETTE.sand300 }}>ARTIFACTS</p>
         <p className="text-pixel-sm font-black text-sand-200">보유 아티팩트 <span className="text-ember-500 font-mono">{craftedArtifacts.length}개</span></p>
       </div>
 
@@ -268,6 +269,9 @@ function ArtifactsSection({
 
 // ─── FarmPage ─────────────────────────────────────────────────────────────────────
 export default function FarmPage() {
+  // 가방은 마을 안이다 — 마을 곡을 그대로 잇는다(같은 키라 되감기지 않는다)
+  useBgm(BGM.basecamp);
+
   const navigate = useNavigate();
   const location = useLocation();
   const from     = (location.state as { from?: string } | null)?.from;
@@ -348,7 +352,7 @@ export default function FarmPage() {
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className="relative flex items-center gap-2 px-5 py-3 text-pixel-sm font-bold transition-all"
                 style={{
-                  color: isActive ? PALETTE.ember500 : "rgba(205, 178, 126, .12)",
+                  color: isActive ? PALETTE.ember500 : PALETTE.sand300,
                   borderBottom: isActive ? `2px solid ${PALETTE.ember500}` : "2px solid transparent",
                   background: isActive ? "rgba(233, 148, 65, .068)" : "transparent",
                 }}>
@@ -356,8 +360,8 @@ export default function FarmPage() {
                 {b > 0 && (
                   <span className="rounded-full px-1.5 text-pixel-sm font-black"
                     style={{
-                      background: isActive ? "rgba(233, 148, 65, .283)" : "rgba(132, 75, 63, .105)",
-                      color: isActive ? PALETTE.ember500 : "rgba(205, 178, 126, .12)",
+                      background: isActive ? "rgba(233, 148, 65, .283)" : "rgba(132, 75, 63, .45)",
+                      color: isActive ? PALETTE.ember500 : PALETTE.sand300,
                       minWidth: 18, textAlign: "center",
                     }}>
                     {b}

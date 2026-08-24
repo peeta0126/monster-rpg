@@ -50,8 +50,10 @@ export function AudioSettings() {
         </span>
       </PixelButton>
 
+      {/* 배경음은 화면마다 걸려 있고, 효과음은 아직 파일이 없다. 슬라이더 둘 중
+          하나만 아무 일도 안 일어나는 상태라 그 사실을 적어 둔다. */}
       <p className="text-pixel-sm text-earth-400">
-        사운드 에셋은 아직 준비 중입니다. 설정은 저장됩니다.
+        효과음은 아직 준비 중입니다. 설정은 저장됩니다.
       </p>
     </Panel>
   );

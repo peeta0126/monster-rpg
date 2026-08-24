@@ -91,8 +91,10 @@ test("장착 화면의 능력치가 몬스터 요약의 실제 합계와 같다"
   // 정예 목걸이의 공격력은 제작 직후 14, Lv.50 +5 면 52다. 배율이 빠지면 14가 찍힌다.
   expect(summary["공격력"], "레벨·강화 배율이 안 들어갔다").toBe(52);
 
-  // 파티 카드도 같은 값을 말해야 한다 — 상태창만 맞고 카드가 틀린 적이 있다
+  // 파티 카드도 같은 값을 말해야 한다 — 상태창만 맞고 카드가 틀린 적이 있다.
+  // 카드는 **합계 하나만** 적는다(장비 몫은 색으로만 알린다). 그 합계를 상태창과 맞춰 본다.
   await page.keyboard.press("Escape");
-  const card = (await page.getByText("전투 파티").locator("xpath=ancestor::*[3]").innerText()).replace(/s+/g, " ");
-  expect(card, `파티 카드: ${card}`).toContain(`+${summary["공격력"]}`);
+  const total = (await page.getByTestId("stat-공격-value").first().innerText()).trim();
+  const card = (await page.getByText("전투 파티").locator("xpath=ancestor::*[3]").innerText()).replace(/\s+/g, " ");
+  expect(card, `파티 카드: ${card}`).toContain(`공격 ${total}`);
 });

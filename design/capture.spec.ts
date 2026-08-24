@@ -246,9 +246,8 @@ async function seedImprintSave(page: Page) {
 test("capture: monsters-imprint", async ({ page }) => {
   await seedImprintSave(page);
   await page.goto("/monsters");
-  await expect(page.locator('[data-testid="imprint-open-s1"]')).toBeVisible({ timeout: 20_000 });
-  // 보관함 카드를 하나 골라 상태창에 각인 블록이 서게 한다
-  await page.locator('[data-testid="imprint-open-s1"]').locator("xpath=../..").locator("button").first().click();
+  // 보관함 카드를 하나 골라 상태창에 세운다 — 각인 블록도 조작 버튼도 거기 있다
+  await page.locator('[data-testid="storage-card-s1"]').click({ timeout: 20_000 });
   await expect(page.locator('[data-testid="imprint-status"]')).toBeVisible();
   await page.mouse.move(40, 600);
   await waitForVisualSettle(page);
@@ -258,7 +257,8 @@ test("capture: monsters-imprint", async ({ page }) => {
 test("capture: imprint-modal", async ({ page }) => {
   await seedImprintSave(page);
   await page.goto("/monsters");
-  await page.locator('[data-testid="imprint-open-s1"]').click();
+  await page.locator('[data-testid="storage-card-s1"]').click({ timeout: 20_000 });
+  await page.locator('[data-testid="action-imprint"]').click();
   await expect(page.locator('[data-testid="imprint-modal"]')).toBeVisible();
   await page.mouse.move(40, 600);
   await waitForVisualSettle(page);
@@ -469,4 +469,135 @@ test("capture: quest-log", async ({ page }) => {
   await page.mouse.move(40, 600);
   await waitForVisualSettle(page);
   await page.screenshot({ path: path.join(OUT_DIR, "quest-log.png"), fullPage: false });
+});
+
+/**
+ * 몬스터 화면의 "꽉 찬" 상태.
+ *
+ * 위 SCREENS 의 `monsters` 는 신규 세이브라 카드가 한 장뿐이다 — 칸이 넘치는 사고는
+ * 거기서 안 보인다. 파티 3마리 전원이 장비 3종을 끼고(보너스 숫자 + 슬롯 칩), 보관함이
+ * 14마리인 상태가 이 화면이 실제로 제일 자주 놓이는 모습이고, 액션 버튼이 카드 밖으로
+ * 나가거나 옆 카드와 겹치는 것도 여기서만 드러난다.
+ */
+const ARTIFACT_KINDS = [
+  { itemId: "power_necklace", name: "힘의 목걸이", stats: [{ stat: "attack", value: 12 }, { stat: "critRate", value: 3 }] },
+  { itemId: "guard_bracelet", name: "수호의 팔찌", stats: [{ stat: "defense", value: 11 }, { stat: "hp", value: 30 }] },
+  { itemId: "spirit_amulet",  name: "정령의 부적", stats: [{ stat: "elementPower", value: 9 }, { stat: "speed", value: 6 }] },
+] as const;
+const QUALITIES = ["normal", "rare", "elite"] as const;
+
+function artifactFor(uid: string, kindIndex: number) {
+  const kind = ARTIFACT_KINDS[kindIndex % ARTIFACT_KINDS.length];
+  return {
+    instanceId: `${uid}-${kind.itemId}`,
+    itemId: kind.itemId,
+    name: kind.name,
+    quality: QUALITIES[kindIndex % QUALITIES.length],
+    description: "",
+    statBonuses: kind.stats,
+    createdAt: 0,
+    level: 1,
+    enhancement: 0,
+    source: "crafting",
+  };
+}
+
+const STORAGE_SPECIES = [
+  "mossy", "flameling", "aquabe", "bubblet", "leafy", "crystafox", "frostorb",
+  "toxadon", "venomcrow", "nobi", "burno", "aquavern", "mossevo", "mossyfinal",
+] as const;
+
+const FULL_SAVE = JSON.stringify({
+  state: {
+    party: [
+      { id: "mossevo",  level: 24, uid: "p0" },
+      { id: "frostorb", level: 22, uid: "p1", currentHp: 0 },
+      { id: "toxadon",  level: 21, uid: "p2", nickname: "독하고긴이름" },
+    ],
+    storage: STORAGE_SPECIES.map((id, i) => ({ id, level: 30 - i, uid: `s${i}` })),
+    dexSeen: [...STORAGE_SPECIES], dexCaught: [...STORAGE_SPECIES],
+    materials: { monster_essence: 6, crystal: 3, herb: 9 }, potions: { potion: 3 },
+    bestFloor: 27,
+    storyFlags: {}, questStatus: {}, seenDialogues: [],
+    craftedItems: [],
+    // 가방에도 남겨 둔다 — 장비 모달의 "가방의 아티팩트" 격자가 비면 그쪽을 못 본다
+    craftedArtifacts: [0, 1, 2, 3].map((i) => artifactFor("bag", i)),
+    craftedPotions: [], 
+    equippedArtifacts: {
+      p0: [0, 1, 2].map((i) => artifactFor("p0", i)),
+      p1: [0, 1].map((i) => artifactFor("p1", i)),
+      p2: [2].map((i) => artifactFor("p2", i)),
+      s0: [0].map((i) => artifactFor("s0", i)),
+    },
+    imprint: { mossy: 7, flameling: 2 },
+  },
+  version: 2,
+});
+
+async function seedFullSave(page: Page) {
+  await seedStorage(page, true);
+  await page.addInitScript(({ k, v }) => localStorage.setItem(k as string, v as string),
+    { k: PLAYER_STORAGE_KEY, v: FULL_SAVE });
+}
+
+test("capture: monsters-full", async ({ page }) => {
+  await seedFullSave(page);
+  await page.goto("/monsters");
+  await expect(page.locator('[data-testid="storage-card-s0"]')).toBeVisible({ timeout: 20_000 });
+  await page.mouse.move(40, 880);
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "monsters-full.png"), fullPage: false });
+});
+
+test("capture: monsters-equip-modal", async ({ page }) => {
+  await seedFullSave(page);
+  await page.goto("/monsters");
+  // 상태창은 아무것도 안 고른 상태에서 파티 첫 마리를 세운다 — 바로 열 수 있다
+  await expect(page.locator('[data-testid="action-equip"]')).toBeVisible({ timeout: 20_000 });
+  await page.locator('[data-testid="action-equip"]').click();
+  await expect(page.locator('[data-testid="equip-modal"]')).toBeVisible();
+  await page.mouse.move(40, 880);
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "monsters-equip-modal.png"), fullPage: false });
+});
+
+/**
+ * 같은 세이브를 노트북 폭(1280x720)에서 한 장 더.
+ *
+ * 기준 해상도만 보면 "세 칸이 서느냐"를 못 본다. 파티 256 · 상태창 320 을 빼면
+ * 보관함에 700px 밖에 안 남는 폭이고, 상태창의 관리 버튼 넷도 여기서 제일 좁다.
+ */
+/**
+ * 교체를 걸어 둔 상태. 보관함 한 마리를 고르면 파티 쪽이 "지금 누르면 바뀌는 자리"가
+ * 된다 — 예전에는 그 반대쪽을 45% 로 눌러 어둡게 했는데, 눌러야 하는 게 어두워진
+ * 쪽이라 안내가 거꾸로였다. 점선이 실제로 파티 칸에만 붙는지 여기서 본다.
+ */
+test("capture: monsters-swap-armed", async ({ page }) => {
+  await seedFullSave(page);
+  await page.goto("/monsters");
+  await page.locator('[data-testid="storage-card-s3"]').click({ timeout: 20_000 });
+  await page.mouse.move(40, 880);
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "monsters-swap-armed.png"), fullPage: false });
+});
+
+test.describe("좁은 화면", () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  test("capture: monsters-full-1280", async ({ page }) => {
+    await seedFullSave(page);
+    await page.goto("/monsters");
+    await expect(page.locator('[data-testid="storage-card-s0"]')).toBeVisible({ timeout: 20_000 });
+    await page.mouse.move(40, 700);
+    await waitForVisualSettle(page);
+    await page.screenshot({ path: path.join(OUT_DIR, "monsters-full-1280.png"), fullPage: false });
+
+    // 가로 스크롤이 생기면 어딘가가 칸 밖으로 나간 것이다 — 이 화면의 원래 결함이 그거였다
+    const overflow = await page.evaluate(() => ({
+      scrollW: document.documentElement.scrollWidth,
+      clientW: document.documentElement.clientWidth,
+    }));
+    expect(overflow.scrollW, "가로 스크롤이 생겼다 — 무언가 칸 밖으로 나갔다")
+      .toBeLessThanOrEqual(overflow.clientW);
+  });
 });

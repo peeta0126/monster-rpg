@@ -133,6 +133,22 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
 - 회귀는 `node --import tsx --test tests/forestRunStorage.test.ts` 와
   `npx playwright test e2e/forest.spec.ts` (새로고침·정산 복원·옛 세이브).
 
+## 소리
+- **BGM 은 화면이 정한다.** 페이지 맨 위에 `useBgm(BGM.xxx)` 한 줄. 로그인·엔딩=title,
+  베이스캠프·가방·내 몬스터=basecamp, 숲=forest, 공방=workshop, 전투=battle,
+  보스 층=boss. 보스 판정은 `floorTable.isBossFloor` 하나뿐이다 — 화면에 10 을 다시 적지 말 것.
+- **화면을 떠날 때 곡을 끄지 말 것.** 다음 화면이 자기 곡을 걸면 넘어간다. 떠날 때 끄면
+  화면 사이마다 정적이 생긴다. `stopBgm()` 은 소리를 아예 없애야 하는 자리 전용이다.
+- **같은 곡이면 아무 일도 안 일어난다.** 마을·가방·내 몬스터가 전부 basecamp 라, 오갈 때
+  되감기면 안 된다. 곡이 바뀔 때만 700ms 등파워로 겹쳐 넘긴다.
+- 볼륨은 `설정값 × 페이드 계수`로 매 프레임 다시 먹인다. 요소의 volume 에 바로 쓰면
+  페이드가 도는 동안 움직인 슬라이더를 다음 프레임이 덮어써 "다음 곡부터" 처럼 보인다.
+- 곡은 그 화면에 들어갈 때 받는다(합쳐서 20MB). `public/assets/audio` 는
+  `optimize-assets.mjs` 의 보존 목록에 있다 — 다시 인코딩하지 말 것.
+- 효과음은 **아직 파일이 없다.** 없는 상태로도 게임이 도는 규칙(경고 한 줄)을 깨지 말 것.
+- 고쳤으면 `npx playwright test --config design/playwright.config.ts -g "audio:"`.
+  실제로 걸어 들어가고 전투를 이겨 보면서, 브라우저가 만든 오디오 요소를 들여다본다.
+
 ## git 규칙
 - 한 단계(phase) 작업이 끝나면 main 에 병합하고 push 한다. 브랜치에 오래 쌓아두지 않는다.
 - push 는 사용자가 요청할 때만 한다. 단 작업 완료 보고 시 "push 필요 여부"를 항상 알린다.
