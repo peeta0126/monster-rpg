@@ -4,9 +4,9 @@ import type { NextFunction, Request, Response } from "express";
  * 간단한 고정 창(fixed window) 요청 제한.
  *
  * 로그인·회원가입이 무제한으로 열려 있으면 비밀번호를 사실상 무한히 대입할 수 있다
- * (비밀번호 최소 길이가 4자라 더욱). 이 서버는 SQLite 기반 단일 프로세스라
- * 외부 저장소 없이 메모리 맵만으로 충분하다 — 프로세스를 여러 개 띄우게 되면
- * Redis 등 공유 저장소 기반으로 교체해야 한다.
+ * (비밀번호 최소 길이가 4자라 더 그렇다). 이 서버는 SQLite 기반 단일 프로세스라
+ * 외부 저장소 없이 메모리 맵만으로 충분하다. 프로세스를 여러 개 띄우게 되면
+ * Redis 같은 공유 저장소로 갈아타야 한다.
  */
 export function rateLimit({
   windowMs,

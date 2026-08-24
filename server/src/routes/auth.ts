@@ -10,7 +10,7 @@ export const authRouter = Router();
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 
-/** 같은 IP에서 15분간 20회 — 정상 플레이어는 닿지 않지만 비밀번호 대입은 막히는 수준 */
+/** 같은 IP 에서 15분간 20회. 정상 플레이어는 안 닿지만 비밀번호 대입은 막히는 수준 */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,

@@ -4,8 +4,8 @@ import { env } from "../env.js";
 
 /**
  * 길이를 흘리지 않는 비밀키 비교.
- * `!==`는 첫 다른 바이트에서 즉시 끝나 비교 시간이 값에 따라 달라진다.
- * timingSafeEqual은 길이가 다르면 던지므로 길이를 먼저 확인한다(길이 자체는 비밀이 아니다).
+ * `!==` 는 첫 다른 바이트에서 바로 끝나서 비교 시간이 값에 따라 달라진다.
+ * timingSafeEqual 은 길이가 다르면 던지니까 길이를 먼저 본다(길이 자체는 비밀이 아니다).
  */
 function safeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a, "utf8");
