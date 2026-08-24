@@ -4,12 +4,12 @@ import type { BattleMonster } from "./battleUtils";
 import { useBattleSettings, logSpeedMs } from "../shared/battleSettings";
 
 /**
- * 경험치가 들어오는 순간을 **화면에서 돌리는 쪽**.
+ * 경험치가 들어오는 순간을 화면에서 돌리는 쪽.
  *
- * 순서표는 expTimeline 이 만들고, 여기서는 그걸 시간에 얹기만 한다. 재생 상태를 훅이
- * 들고 있는 이유는 보는 곳이 둘이기 때문이다 — 하단 상태 줄의 경험치 바(항상 보임)와
- * 레벨업 카드(레벨이 올랐을 때만). 둘이 각자 타이머를 돌리면 같은 순간에 다른 값을
- * 보여주게 된다.
+ * 순서표는 expTimeline 이 만들고 여기서는 그걸 시간에 얹기만 한다. 재생 상태를 훅이
+ * 들고 있는 건 보는 곳이 둘이라서다. 하단 상태 줄의 경험치 바(항상 보임)랑 레벨업
+ * 카드(레벨이 올랐을 때만). 둘이 각자 타이머를 돌리면 같은 순간에 다른 값을 보여준다.
+ *
  *
  * 반복 플레이를 막지 않는 게 조건이라 셋을 지킨다.
  *  - 자동 진행이 켜져 있으면 레벨업 카드도 알아서 넘어간다(로그와 같은 속도 설정을 본다)
@@ -61,7 +61,7 @@ export function useExpPlayback(onLevelUp?: (level: number) => void): ExpPlayback
   const levelUpRef = useRef(onLevelUp);
   useEffect(() => { levelUpRef.current = onLevelUp; }, [onLevelUp]);
 
-  // 마운트 때 되돌려 놓는다 — StrictMode 는 붙였다 떼고 다시 붙이므로, 정리만 해 두면
+  // 마운트 때 되돌려 놓는다. StrictMode 가 붙였다 떼고 다시 붙이니까, 정리만 해 두면
   // 첫 렌더 직후 영영 "취소됨"으로 굳어 연출이 통째로 안 돈다.
   useEffect(() => {
     cancelledRef.current = false;
@@ -140,7 +140,7 @@ export function useExpPlayback(onLevelUp?: (level: number) => void): ExpPlayback
         }
       }
       advanceRef.current = null;
-      // 마지막 값을 그대로 들고 있는다 — 여기서 비우면 아직 갱신되지 않은 전투 상태로
+      // 마지막 값을 그대로 들고 있는다. 여기서 비우면 아직 갱신 안 된 전투 상태로
       // 바가 되돌아갔다가 다시 차는 게 보인다.
     })();
   }, []);

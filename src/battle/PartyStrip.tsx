@@ -7,12 +7,12 @@ import type { StatusEffect } from "../shared/game";
 /**
  * 파티 세 칸.
  *
- * 예전엔 **마우스로만** 누를 수 있었다. 그래서 키보드로 전투를 시작해도 교체 한 번에
- * 손이 마우스로 갔다 — 조작 계통이 둘로 갈라져 있었다는 뜻이다. 지금은 커맨드에서
- * ← 를 누르면 이 구역으로 넘어오고, 여기서 ↑↓ 와 Enter 로 교체까지 끝난다.
+ * 원래는 마우스로만 누를 수 있었다. 키보드로 전투를 시작해도 교체 한 번에 손이
+ * 마우스로 갔다는 얘기고, 조작 계통이 둘로 갈라져 있었다는 뜻이다. 지금은 커맨드에서
+ * ← 를 누르면 이 구역으로 넘어오고, 여기서 ↑↓ 랑 Enter 로 교체까지 끝난다.
  *
- * 교체는 한 턴을 쓴다. 그래서 커맨드의 한 칸을 차지하는 대신 이 구역이 곧 명령이다 —
- * "대상 고르기 = 실행"이라 한 단계가 준다.
+ * 교체는 한 턴을 쓴다. 커맨드 한 칸을 차지하는 대신 이 구역이 곧 명령이라,
+ * 대상 고르기가 그대로 실행이고 한 단계가 준다.
  */
 
 export interface PartyMemberView {
@@ -34,7 +34,7 @@ export interface PartyStripProps {
   /** 이 구역에 포커스가 있는가 */
   focused: boolean;
   cursor: number;
-  /** 기절해서 **반드시** 골라야 하는 상황 */
+  /** 기절해서 반드시 골라야 하는 상황 */
   mustPick: boolean;
   disabled: boolean;
   onHover: (index: number) => void;
@@ -72,7 +72,7 @@ export function PartyStrip({
               m.fainted && "cursor-not-allowed border-shadow-700 bg-shadow-800/10 opacity-40",
               !m.isActive && !m.fainted && "border-stone-600 bg-shadow-800/40",
               mustPick && selectable && "border-mist-500 bg-mist-500/10",
-              // 커서는 색이 아니라 밝기와 테두리로 — 색약에서도 보이게 (ART_DIRECTION 3-2)
+              // 커서는 색 말고 밝기와 테두리로 준다. 색약에서도 보이게 (ART_DIRECTION 3-2)
               onCursor && "brightness-125 outline outline-2 outline-mist-300",
             ].filter(Boolean).join(" ")}
           >

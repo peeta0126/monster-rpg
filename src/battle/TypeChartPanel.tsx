@@ -6,7 +6,7 @@ import { elementChip } from "../shared/palette";
 /**
  * 속성 상성표.
  *
- * 값은 typeChart 를 그대로 읽는다 — 정확히는 전투가 쓰는 getTypeMultiplier 를 칸마다
+ * 값은 typeChart 를 그대로 읽는다. 정확히는 전투가 쓰는 getTypeMultiplier 를 칸마다
  * 부른다. 표를 손으로 옮겨 적으면 상성을 고친 날 화면만 옛말을 한다.
  * 순서도 typeChart 의 선언 순서(ELEMENT_ORDER)를 따르므로 속성을 추가하면 저절로 늘어난다.
  *

@@ -2,10 +2,10 @@ import type { ElementType, Move } from "../shared/game";
 import { computeDamage, critChanceOf, getTypeMultiplier, type BattleMonster } from "./battleUtils";
 
 /**
- * 기술을 고르기 **전에** 결과를 보여주기 위한 예측.
+ * 기술을 고르기 전에 결과를 보여주는 예측.
  *
- * 계산은 한 줄도 여기서 하지 않는다 — battleUtils.computeDamage(전투가 실제로 쓰는
- * 그 함수)를 부를 뿐이다. 식을 고치면 표시도 같이 바뀐다.
+ * 계산은 한 줄도 여기서 안 한다. battleUtils.computeDamage(전투가 실제로 쓰는 그
+ * 함수)를 부를 뿐이다. 식을 고치면 표시도 같이 바뀐다.
  *
  * 치명타는 범위에 넣지 않는다. 확률 5% 짜리를 최대값에 섞으면 "이걸로 끝낼 수 있나"의
  * 답이 늘 "그럴 수도"가 되어 예측이 쓸모없어진다. 대신 확률과 치명타 시 데미지를
@@ -31,7 +31,7 @@ export interface MovePreview {
   critChance: number;
   accuracy: number;
   multiplier: number;
-  /** power 0 인 보조기 — 데미지 예측이 의미 없다 */
+  /** power 0 인 보조기. 데미지 예측이 의미 없다 */
   isStatus: boolean;
   /**
    * 이 기술로 상대를 쓰러뜨릴 수 있는가.
@@ -63,7 +63,7 @@ export function previewMove(
   const maxDamage = damage;
 
   // 치명타율은 장비가 없어도 0 이 아니다(battleUtils.BASE_CRIT_RATE). 여기서 그 값을
-  // 다시 적지 않고 전투가 쓰는 함수를 부른다 — 기본율을 고치면 표시도 같이 바뀐다.
+  // 다시 적지 않고 전투가 쓰는 함수를 부른다. 기본율을 고치면 표시도 같이 바뀐다.
   const critChance = critChanceOf(critRate);
   const crit = !isStatus && critChance > 0
     ? computeDamage(eff, defender, move, { ...mods, isCrit: true, critDamageBonus: critDamage })

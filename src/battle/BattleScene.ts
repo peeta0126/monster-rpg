@@ -38,8 +38,8 @@ import {
 /** 이 전투에서 쓰는 배경 텍스처 키. 전투마다 게임이 새로 만들어지므로 한 벌이면 된다. */
 const BG_KEY = "tower-bg";
 
-// 로그 넘기기 키. 누르고 있으면 이 간격으로 계속 넘어간다 — 연타보다 빠르되
-// 무슨 일이 있었는지는 읽히는 속도.
+// 로그 넘기기 키. 누르고 있으면 이 간격으로 계속 넘어간다. 연타보다 빠르면서
+// 무슨 일이 있었는지는 읽히는 속도로 잡았다.
 const ADVANCE_KEYS = ["Q", "SPACE"] as const;
 const HOLD_ADVANCE_MS = 110;
 
@@ -129,8 +129,8 @@ export default class BattleScene extends Phaser.Scene {
     const d = getBattleInitData();
     if (!d) return;
     // 이 전투에 쓸 배경 한 장만 받는다(약 38KB). 35장을 다 받으면 1.32MB 다.
-    // preload 에 두는 게 핵심이다 — create() 는 로딩이 끝난 뒤에 돌기 때문에
-    // "텍스처가 아직 없어서 한 프레임 검게 뜨는" 구간이 아예 생기지 않는다.
+    // preload 에 두는 게 핵심이다. create() 는 로딩이 끝난 뒤에 도니까
+    // 텍스처가 아직 없어서 한 프레임 검게 뜨는 구간이 아예 안 생긴다.
     this.load.image(BG_KEY, towerBattleBg(getTowerZone(d.floor), d.enemyType ?? "normal"));
     this.load.image("enemy-mon", d.enemyImageUrl);
     // 파티 전체 이미지를 party-mon-{i} 키로 미리 로드 (교체 즉시 텍스처 전환 가능)
@@ -173,7 +173,7 @@ export default class BattleScene extends Phaser.Scene {
       this.updateNames(d.playerName, d.playerLevel, d.enemyName, d.enemyLevel);
     }
 
-    // 보스층 뱃지 — 적 패널 바로 위, 발끝(ENEMY_FEET)과 패널 사이 띠에 앉힌다
+    // 보스층 뱃지. 적 패널 바로 위, 발끝(ENEMY_FEET)과 패널 사이 띠에 앉힌다
     if (isBoss) {
       const badgeY = this.enemy.panelCy - PANEL_H / 2 - 18;
       const bossBg = this.add.graphics().setDepth(20);
@@ -198,7 +198,7 @@ export default class BattleScene extends Phaser.Scene {
     this.safeOnHit     = safeHandler(this, this.onHit.bind(this));
     this.safeOnSparkle = safeHandler(this, this.onSparkle.bind(this));
     gameEvents.on(GAME_EVENT.BATTLE_HIT,     this.safeOnHit);
-    // 자동 진행 타이머도 Q 와 같은 경로를 탄다 — 로그 처리 경로를 둘로 만들지 않는다
+    // 자동 진행 타이머도 Q 와 같은 경로를 탄다. 로그 처리 경로를 둘로 만들지 않는다
     this.safeOnAutoAdvance = safeHandler(this, this.onAdvance.bind(this));
     gameEvents.on(GAME_EVENT.BATTLE_LOG_ADVANCE, this.safeOnAutoAdvance);
     gameEvents.on(GAME_EVENT.BATTLE_SPARKLE, this.safeOnSparkle);
@@ -219,7 +219,7 @@ export default class BattleScene extends Phaser.Scene {
   //
   // 예전엔 벽돌·바닥 격자·원형 조명 2개·횃불 2개·하단 그라디언트를 Graphics 로 그렸다.
   // 이제 그 전부가 이미지에 구워져 들어온다(안개·비네트·먼지·켜진 창·바닥에 떨어지는 빛까지).
-  // 위에 아무것도 덧대지 않는다 — 비네트가 두 겹이 되면 그냥 탁해진다.
+// 위에 아무것도 덧대지 않는다. 비네트가 두 겹 되면 그냥 탁해진다.
   // ─────────────────────────────────────────────────────────────────────────────
 
   private buildBackground(floor: number, isBoss = false) {
@@ -228,12 +228,12 @@ export default class BattleScene extends Phaser.Scene {
       // NEAREST 를 이 텍스처만 되돌린다 (ART_DIRECTION 3-4).
       this.smoothTexture(BG_KEY);
       this.add.image(0, 0, BG_KEY).setOrigin(0, 0).setDisplaySize(W, H).setDepth(0);
-      // 보스층은 같은 방을 눌러 깐다(10·20·30·40층). 50층은 예외다 — z50 은 처음부터
-      // 최종 보스방으로 어둡게 완성된 전용 그림이라, 위에 또 덮으면 아무것도 안 보인다.
+      // 보스층은 같은 방을 눌러 깐다(10·20·30·40층). 50층은 예외인데, z50 은 처음부터
+      // 최종 보스방으로 어둡게 완성된 전용 그림이라 위에 또 덮으면 아무것도 안 보인다.
       //
-      // setTint 를 쓰지 않는다 — 이 게임은 WebGL 컨텍스트 소진을 피하려고 CANVAS 렌더러로
-      // 고정돼 있고(phaserConfig), Canvas 렌더러는 이미지 틴트를 그리지 않는다. 실제로
-      // 재 보니 보스층과 일반층의 벽 밝기가 30,33,40 대 29,31,38 로 사실상 같았다.
+      // setTint 는 안 쓴다. 이 게임은 WebGL 컨텍스트 소진을 피하려고 CANVAS 렌더러로
+      // 고정돼 있고(phaserConfig), Canvas 렌더러는 이미지 틴트를 안 그린다. 실제로
+      // 재 보니 보스층이랑 일반층 벽 밝기가 30,33,40 대 29,31,38 로 사실상 같았다.
       // 그래서 어둠을 한 겹 덮는다. 비네트를 덧대는 게 아니라 방 전체를 고르게 누른다.
       if (isBoss && getTowerZone(floor) !== "z50") {
         const dim = this.add.graphics().setDepth(1);
@@ -250,8 +250,8 @@ export default class BattleScene extends Phaser.Scene {
     }
 
     // ── 층 표시 ──
-    // 화면에서 층을 적는 자리는 여기 하나뿐이다. 예전엔 캔버스·하단 칩·상대 카드
-    // 세 곳에 같은 숫자가 있었다. 무대 위가 "지금 어디에 서 있는가"의 자리다.
+    // 화면에서 층을 적는 자리는 여기 하나뿐이다. 원래는 캔버스·하단 칩·상대 카드
+    // 세 곳에 같은 숫자가 있었다. 무대 위가 지금 어디 서 있는지를 말하는 자리다.
     this.add.text(W - 30, 36, this.floorLabel, {
       fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(),
       color: PALETTE.cream100, stroke: PALETTE.shadow900, strokeThickness: 3,
@@ -263,7 +263,7 @@ export default class BattleScene extends Phaser.Scene {
   /**
    * 발밑 그림자. 바닥이 평행사변형이라 예전의 딱딱한 직사각형은 어디에도 안 맞았다.
    * 타원 세 겹을 조금씩 키우며 겹쳐 가장자리를 흐린다(Graphics 에 블러가 없다).
-   * 뒤에 선 적이 더 옅다 — 멀수록 그림자가 약해 보이는 게 원근을 거든다.
+   * 뒤에 선 적이 더 옅다. 멀수록 그림자가 약해 보이는 게 원근을 거든다.
    */
   private buildFloorShadows() {
     const g = this.add.graphics().setDepth(3);
@@ -317,10 +317,10 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 둘이 서로를 보게 뒤집는다. 판정은 **집 좌표**로 한다 — 공격 모션은 x 를 흔들었다가
-   * 되돌리는데, 그 중간 프레임으로 방향을 정하면 파고드는 동안 몸이 홱 돌아 버린다.
-   * 텍스처를 갈아끼운 뒤에도(파티 교체) 다시 불러야 한다. flipX 는 setTexture 가 건드리지
-   * 않지만, 방향을 한 곳에서만 정하는 편이 나중에 배치를 바꿀 때 안전하다.
+   * 둘이 서로를 보게 뒤집는다. 판정은 집 좌표로 한다. 공격 모션이 x 를 흔들었다가
+   * 되돌리는데 그 중간 프레임으로 방향을 정하면, 파고드는 동안 몸이 홱 돌아 버린다.
+   * 텍스처를 갈아끼운 뒤에도(파티 교체) 다시 불러야 한다. flipX 를 setTexture 가
+   * 건드리진 않지만, 방향을 한 곳에서만 정해야 나중에 배치를 바꿔도 안전하다.
    */
   private faceEachOther() {
     this.playerSprite?.setFlipX(shouldFlipX(PLAYER_X, this.enemy.x));
@@ -350,8 +350,8 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
   // HP 패널 (각자 발밑)
   //
-  // ⚠️ 패널 X 는 몬스터 X 에서 파생시키지 않는다. 예전엔 그렇게 뒀다가 패널이 몬스터를
-  // 따라다니며 겹쳤다 — 배치를 바꿀 때마다 겹침이 되살아난 원인이 이것이었다.
+  // ⚠️ 패널 X 를 몬스터 X 에서 뽑아내지 않는다. 그렇게 뒀다가 패널이 몬스터를 따라다니며
+  // 겹쳤다. 배치를 바꿀 때마다 겹침이 되살아난 원인이 이거였다.
   // ─────────────────────────────────────────────────────────────────────────────
 
   private buildHudPanels() {
@@ -368,8 +368,8 @@ export default class BattleScene extends Phaser.Scene {
    * 속성 칩. 상대가 무엇인지 모르면 교체를 판단할 수 없는데, 지금까지는 기술 셀의
    * 배율에서 거꾸로 추측해야 했다.
    *
-   * 이름 반대쪽(오른쪽 끝)에 붙인다 — "고대의 프리로 Lv.31" 처럼 이름이 길어지는 적이
-   * 있어서, 이름 뒤에 이어 붙이면 언젠가 겹친다.
+   * 이름 반대쪽(오른쪽 끝)에 붙인다. "고대의 프리로 Lv.31" 처럼 이름이 긴 적이 있어서,
+   * 이름 뒤에 이어 붙이면 언젠가 겹친다.
    * 생김새는 React 쪽 ELEMENT_CHIP_CLASS 와 같게 맞춘다(속성색 28% 바탕 + 테두리).
    */
   private buildTypeChip(rightX: number, topY: number, type: ElementType | null) {
@@ -400,7 +400,7 @@ export default class BattleScene extends Phaser.Scene {
       const sy   = side === "enemy" ? this.enemy.cy : PLAYER_CY;
       const size = side === "enemy" ? this.enemy.size : PLAYER_SIZE;
       // 일러스트를 틴트로 물들이면 그림이 상한다. 뒤에 아우라를 깔아 몬스터째로 위험해 보이게 한다.
-      // 번짐만 깔았더니 횃불 불빛과 구별이 안 됐다 — 테두리 원을 하나 둘러 형태를 준다.
+      // 번짐만 깔았더니 횃불 불빛이랑 구별이 안 됐다. 테두리 원을 하나 둘러 형태를 준다.
       const aura = this.add.graphics().setDepth(5).setVisible(false);
       aura.fillStyle(HEX.ember700, 0.5);
       aura.fillCircle(sx, sy, size * 0.42);
@@ -425,7 +425,7 @@ export default class BattleScene extends Phaser.Scene {
     for (const t of targets) t.setVisible(on).setAlpha(1);
     if (!on) return;
 
-    // 움직임을 줄여 달라고 한 사람에겐 맥박 없이 켜 둔 채로 둔다 — 경고 자체는 지우지 않는다
+    // 움직임을 줄여 달라고 한 사람에겐 맥박 없이 켜 둔 채로 둔다. 경고 자체를 지우진 않는다
     if (this.reduceMotion) {
       for (const t of targets) t.setAlpha(0.8);
       return;
@@ -482,7 +482,7 @@ export default class BattleScene extends Phaser.Scene {
       const barY = py + ph - 22;
       const barW = pw - 20;
       this.add.text(barX, barY - 13, "HP", { fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.mist300 }).setDepth(9);
-      // 적 패널과 같은 자리에 둔다 — 눈이 두 패널을 오갈 때 같은 것이 같은 곳에 있어야 한다
+      // 적 패널과 같은 자리에 둔다. 눈이 두 패널을 오갈 때 같은 게 같은 곳에 있어야 한다
       this.playerStatusBadge = this.add.text(barX + 26, barY - 14, "", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
         backgroundColor: PALETTE.shadow800, padding: { x: 2, y: 1 },
@@ -548,8 +548,8 @@ export default class BattleScene extends Phaser.Scene {
   private registerInput() {
     const safeOnAdvance = safeHandler(this, this.onAdvance.bind(this));
 
-    // 누르면 그 자리에서 넘어간다. 자동 진행이 켜져 있어도 타이머를 기다릴 필요가 없다 —
-    // 기다리는 것과 넘기는 것이 둘 다 돼야 한다.
+    // 누르면 그 자리에서 넘어간다. 자동 진행이 켜져 있어도 타이머를 안 기다려도 된다.
+    // 기다리는 것도 넘기는 것도 둘 다 돼야 하니까.
     for (const key of ADVANCE_KEYS) {
       this.input.keyboard!.on(`keydown-${key}`, () => { this.heldKeys.add(key); safeOnAdvance(); });
       this.input.keyboard!.on(`keyup-${key}`,   () => this.heldKeys.delete(key));
@@ -752,7 +752,7 @@ export default class BattleScene extends Phaser.Scene {
 
     g.fillStyle(HEX.shadow900, 1);
     g.fillRect(x, y, w, h);
-    // 잔상 — 방금 깎인 만큼이 회색으로 남았다가 뒤늦게 줄어든다
+    // 잔상. 방금 깎인 만큼이 회색으로 남았다가 뒤늦게 줄어든다
     if (ghost > r) {
       g.fillStyle(HEX.stone600, 1);
       g.fillRect(x, y, Math.floor(w * ghost), h);
@@ -817,7 +817,7 @@ export default class BattleScene extends Phaser.Scene {
     const attacker = p.target === "enemy" ? this.playerSprite : this.enemySprite;
     if (!victim || !attacker) return;
 
-    // 공격 모션 — 물리는 대상 쪽으로 파고들고, 특수는 뒤로 당겼다 앞으로
+    // 공격 모션. 물리는 대상 쪽으로 파고들고, 특수는 뒤로 당겼다 앞으로
     const towardVictim = Math.sign(victim.x - attacker.x) || 1;
     const lunge = p.category === "special" ? -14 : 22;
     const ax = p.target === "enemy" ? PLAYER_X : this.enemy.x;
@@ -835,7 +835,7 @@ export default class BattleScene extends Phaser.Scene {
     this.time.delayedCall(90, () => {
       if (!this._isActive) return;
 
-      // 흰 플래시 — 맞은 순간을 프레임 단위로 알린다
+      // 흰 플래시. 맞은 순간을 프레임 단위로 알린다
       victim.setTintFill(HEX.cream100);
       this.time.delayedCall(80, () => victim.clearTint());
 
@@ -888,7 +888,7 @@ export default class BattleScene extends Phaser.Scene {
     });
   }
 
-  /** 쓰러짐 — 페이드아웃 + 살짝 가라앉기 */
+  /** 쓰러짐. 페이드아웃 + 살짝 가라앉기 */
   private playFaint(target: "enemy" | "player") {
     const sprite = target === "enemy" ? this.enemySprite : this.playerSprite;
     const baseY  = target === "enemy" ? this.enemy.cy : PLAYER_CY;

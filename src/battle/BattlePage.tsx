@@ -22,9 +22,9 @@ import { useBgm, BGM } from "../shared/audio";
 /**
  * OwnedMonster → 배틀 진입용 OwnedMonster.
  *
- * 각인 배수를 먼저 얹고(계열 전체에 붙는 %), 그 위에 장착 장비의 HP 보너스를 더한다.
- * 공/방/속은 각인만 여기서 반영된다 — 장비 쪽 공/방/속·치명·속성 보너스는 데미지 계산
- * 시점에만 임시로 더한다(HP만 전투 내내 상태로 들고 있어야 하는 값이라 예외).
+ * 각인 배수를 먼저 얹고(계열 전체에 붙는 %), 그 위에 장착 장비 HP 보너스를 더한다.
+ * 공/방/속은 각인만 여기서 반영한다. 장비 쪽 공/방/속·치명·속성 보너스는 데미지 계산
+ * 시점에만 잠깐 더한다(HP 만 전투 내내 상태로 들고 있어야 하는 값이라 예외다).
  */
 function toBattleEntry(m: OwnedMonster): OwnedMonster {
   const { equippedArtifacts, imprint } = usePlayerStore.getState();
@@ -35,12 +35,12 @@ function toBattleEntry(m: OwnedMonster): OwnedMonster {
 }
 
 /**
- * 전투가 부풀린 값을 걷어낸 **저장용** 몬스터.
+ * 전투가 부풀린 값을 걷어낸 저장용 몬스터.
  *
- * 각인 배수도 장비 HP 보너스도 세이브에 새어들면 안 된다 — 한 번 새면 다음 전투에서
+ * 각인 배수도 장비 HP 보너스도 세이브에 새어들면 안 된다. 한 번 새면 다음 전투에서
  * 그 위에 또 곱해져 배수가 겹친다. 능력치는 종족 기본값 + 레벨 증분으로 다시 계산한다
- * (세이브를 읽을 때 playerStore 가 쓰는 규칙과 같은 것이라, 진화·레벨업이 끼어 있어도
- * 어긋나지 않는다). 현재 HP 는 비율만 지킨다.
+ * (세이브를 읽을 때 playerStore 가 쓰는 규칙과 같아서, 진화·레벨업이 끼어 있어도
+ * 안 어긋난다). 현재 HP 는 비율만 지킨다.
  */
 function toPersisted(m: OwnedMonster): OwnedMonster {
   const base = monsters.find((b) => b.id === m.id);
@@ -112,7 +112,7 @@ export default function BattlePage() {
 
   const floor       = routeState?.floor ?? 1;
 
-  // 보스 층 판정은 층 표(floorTable)의 것 하나뿐이다 — 여기서 10 을 다시 적지 않는다.
+  // 보스 층 판정은 층 표(floorTable) 하나뿐이다. 여기서 10 을 다시 적지 않는다.
   // 층이 바뀌어 이 화면이 통째로 다시 마운트돼도 같은 키면 곡이 안 끊긴다.
   useBgm(isBossFloor(floor) ? BGM.boss : BGM.battle);
 
@@ -136,8 +136,8 @@ export default function BattlePage() {
   /**
    * 키보드 포커스가 어느 구역에 있는가.
    *
-   * 두 구역(파티·커맨드)이 각자 키를 듣는데 둘 다 듣고 있으면 ← 한 번에 두 곳이 움직인다.
-   * 그래서 "지금 듣는 쪽"을 여기서 하나만 정한다 — 화면의 밝기도 이 값을 따라간다.
+   * 두 구역(파티·커맨드)이 각자 키를 듣는데, 둘 다 듣고 있으면 ← 한 번에 두 곳이 움직인다.
+   * 그래서 지금 듣는 쪽을 여기서 하나만 정한다. 화면 밝기도 이 값을 따라간다.
    */
   const [focusZone, setFocusZone] = useState<"party" | "command">("command");
   const [partyCursor, setPartyCursor] = useState(0);
@@ -149,12 +149,12 @@ export default function BattlePage() {
 
   const initialPlayer = initialParty[0] ?? usePlayerStore.getState().party[0];
   /**
-   * ⚠️ **한 전투에 한 번만 굴린다.** 맨몸으로 두면 렌더마다 다시 굴러서, 적이 랜덤으로
-   * 정해지는 층에서 캔버스와 하단 UI 가 서로 다른 굴림을 잡는다 — 49층에서 캔버스는
-   * 크리샤를, 상대 카드는 모시를 보여줬다. 첫 렌더의 굴림은 아래 useState 초기화가,
-   * 나중 렌더의 굴림은 씬 초기 데이터가 가져갔기 때문이다.
+   * ⚠️ 한 전투에 한 번만 굴린다. 맨몸으로 두면 렌더마다 다시 굴러서, 적이 랜덤으로
+   * 정해지는 층에서 캔버스랑 하단 UI 가 서로 다른 굴림을 잡는다. 49층에서 캔버스는
+   * 크리샤를, 상대 카드는 모시를 보여준 적이 있다. 첫 렌더 굴림은 아래 useState
+   * 초기화가, 나중 렌더 굴림은 씬 초기 데이터가 가져가서 그랬다.
    *
-   * 지금은 층마다 구성이 정해져 있지만 랜덤 갈래가 사라진 건 아니다 — 내 선봉과 그 층의
+   * 지금은 층마다 구성이 정해져 있지만 랜덤 갈래가 없어진 건 아니다. 내 선봉이랑 그 층
    * 적이 같은 종이면 거울 싸움을 피하려고 풀에서 다시 뽑는다(getFloorEnemy 의 excludeId).
    */
   const initialEnemy = useMemo(
@@ -177,7 +177,7 @@ export default function BattlePage() {
   const [showTypeChart, setShowTypeChart] = useState(false);
   /**
    * 승리 직후 경험치 바가 차오르는 연출. 끝나야 다음 로그로 넘어간다.
-   * 레벨업 순간의 반짝임은 씬이 그린다 — 바는 하단에 있고 몬스터는 캔버스에 있어서,
+   * 레벨업 순간의 반짝임은 씬이 그린다. 바는 하단에 있고 몬스터는 캔버스에 있어서,
    * 둘이 같이 반응해야 "쟤가 컸다"로 읽힌다.
    */
   const { view: expView, play: playExp, advance: advanceExp } = useExpPlayback(
@@ -202,7 +202,7 @@ export default function BattlePage() {
   const cancelledRef = useRef(false);
   /**
    * 속도 게이지(battleUtils.tickSpeedGauge). 빠른 쪽만 찬다.
-   * 화면에도 남은 턴을 적어야 해서 상태로 한 벌 복사해 둔다 — ref 는 다시 그리지 않는다.
+   * 화면에도 남은 턴을 적어야 해서 상태로 한 벌 복사해 둔다. ref 는 다시 안 그린다.
    */
   const playerGaugeRef = useRef(0);
   const enemyGaugeRef  = useRef(0);
@@ -213,7 +213,7 @@ export default function BattlePage() {
   // 탑의 비밀 연출은 전투당 한 번만 (같은 보스가 금지된 기술을 여러 번 써도 재생 안 함)
   const towerSecretShownRef = useRef(false);
 
-  // 50층(MAX_TOWER_FLOOR)이 탑의 끝 — 51층 이상 진입 요청은 베이스캠프로 돌려보낸다
+  // 50층(MAX_TOWER_FLOOR)이 탑의 끝이다. 51층 이상 진입 요청은 베이스캠프로 돌려보낸다
   useEffect(() => {
     if (floor > MAX_TOWER_FLOOR) navigate("/", { replace: true });
   }, [floor, navigate]);
@@ -242,7 +242,7 @@ export default function BattlePage() {
    * 결과 화면과 기술 교체 창의 키보드.
    *
    * 전투는 키보드로 다 되는데 마지막 두 화면만 마우스를 요구하면, 한 판에 한 번은 반드시
-   * 손이 마우스로 간다. Enter 는 주 행동, Esc 는 물러나기 — 게임 전체에서 같은 약속이다.
+   * 손이 마우스로 간다. Enter 는 주 행동, Esc 는 물러나기. 게임 전체에서 같은 약속이다.
    */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -268,7 +268,7 @@ export default function BattlePage() {
   }, [showResultUI, battleOutcome, forgetPrompt]);
 
   // 상성표는 T, 기록은 L. code 로 보는 건 한글 자판에서도 같은 키가 되게 하려는 것.
-  // Esc 는 쓰지 않는다 — 커맨드 메뉴의 "뒤로"와 같은 키라 표를 닫으면서 커서까지 되돌아간다.
+  // Esc 는 안 쓴다. 커맨드 메뉴의 "뒤로"와 같은 키라 표를 닫으면서 커서까지 되돌아간다.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "KeyT") { e.preventDefault(); setShowTypeChart((v) => !v); return; }
@@ -337,10 +337,10 @@ export default function BattlePage() {
     const game = createBattleGame(gameRef.current);
 
     /**
-     * 캔버스는 FIT 이라 부모 크기에 맞춰 줄어야 하는데, Phaser 는 **창** 크기가
-     * 바뀔 때만 다시 잰다. 하단 패널은 기술 목록을 펼치면 창은 그대로인 채 혼자
-     * 커지므로, 캔버스가 옛 크기로 남아 아래가 잘렸다 — 내 몬스터 HP 상자가
-     * 딱 그 자리에 있어서 기술을 고르는 동안 반쯤 사라졌다.
+     * 캔버스는 FIT 이라 부모 크기에 맞춰 줄어야 하는데, Phaser 는 창 크기가 바뀔
+     * 때만 다시 잰다. 하단 패널은 기술 목록을 펼치면 창은 그대로인 채 혼자 커지니까,
+     * 캔버스가 옛 크기로 남아서 아래가 잘렸다. 내 몬스터 HP 상자가 딱 그 자리라
+     * 기술 고르는 동안 반쯤 사라졌다.
      */
     const observer = new ResizeObserver(() => game.scale.refresh());
     observer.observe(gameRef.current);
@@ -363,8 +363,8 @@ export default function BattlePage() {
   }, [floor]);
 
   /**
-   * 기술 칸(4개)이 찼는데 새 기술을 배울 때, 무엇을 잊을지 플레이어에게 묻는다.
-   * 예전에는 가장 약한 기술이 말없이 밀려나서, 일부러 남기고 싶은 상태이상기를 지킬 수 없었다.
+   * 기술 칸(4개)이 찼는데 새 기술을 배울 때 뭘 잊을지 플레이어에게 묻는다.
+   * 원래는 제일 약한 기술이 말없이 밀려나서, 남기고 싶은 상태이상기를 못 지켰다.
    */
   const askWhichToForget = useCallback(
     (current: Move[], incoming: Move) =>
@@ -384,7 +384,7 @@ export default function BattlePage() {
   /**
    * 경험치 연출을 띄우고 끝날 때까지 기다린다. 로그 한 줄과 같은 자리를 차지하는 대신
    * 바가 차오르고, 레벨이 오르면 거기서 멈춰 오른 스탯을 보여준다.
-   * 기록 패널에는 예전과 같은 한 줄을 남긴다 — 연출은 지나가고 기록은 남아야 한다.
+   * 기록 패널에는 예전과 같은 한 줄을 남긴다. 연출은 지나가고 기록은 남아야 하니까.
    */
   const playExpGain = useCallback((before: BattleMonster, gained: number): Promise<void> => {
     setLogHistory((prev) => [...prev.slice(-49), `경험치 ${withJosa(gained, "을를")} 획득했다!`]);
@@ -393,9 +393,9 @@ export default function BattlePage() {
   }, [playExp]);
 
   /**
-   * 도망 — 전투를 포기하고 베이스캠프로 돌아간다.
-   * 이 전투에서 깎인 HP는 그대로 저장한다(도망이 완전 공짜면 위험한 층을 정찰만 하고 빠지는
-   * 무손실 전략이 되므로). 보스층은 도망 대상이 아니다.
+   * 도망. 전투를 포기하고 베이스캠프로 돌아간다.
+   * 이 전투에서 깎인 HP 는 그대로 저장한다. 도망이 완전 공짜면 위험한 층을 정찰만 하고
+   * 빠지는 무손실 전략이 된다. 보스층은 도망 대상이 아니다.
    */
   const handleFlee = useCallback(() => {
     if (isProcessing || battleOutcome !== null || isBossFloor(floor)) return;
@@ -422,8 +422,8 @@ export default function BattlePage() {
   });
 
   /**
-   * 속도 차가 쌓여 한 번 더 움직이기까지 몇 턴 남았는가. 굴림이 아니라 누적이라
-   * 미리 적을 수 있다 — "이번엔 누가 먼저 움직이지?"를 예측할 수 있어야 한다는 조건이
+   * 속도 차가 쌓여서 한 번 더 움직이기까지 몇 턴 남았는가. 굴림이 아니라 누적이라
+   * 미리 적을 수 있다. "이번엔 누가 먼저 움직이지"를 예측할 수 있어야 한다는 조건이
    * 무작위 선공을 못 쓰게 만든다.
    */
 
@@ -536,8 +536,8 @@ export default function BattlePage() {
     if (res.multiplier >= 2)    await sendLogAndWait("효과가 굉장했다!");
     else if (res.multiplier < 1) await sendLogAndWait("효과가 별로인 듯하다...");
 
-    // 이미 상태이상이 걸린 상대에게 상태기를 쓰면 그 턴은 통째로 날아간다. 예전엔 아무
-    // 반응도 없이 다음 줄로 넘어가서, 안 걸린 건지 원래 그런 건지 알 수가 없었다.
+    // 이미 상태이상이 걸린 상대한테 상태기를 쓰면 그 턴은 통째로 날아간다. 원래는 아무
+    // 반응 없이 다음 줄로 넘어가서, 안 걸린 건지 원래 그런 건지 알 수가 없었다.
     if (move.power === 0 && move.statusEffect && next.status !== null) {
       await sendLogAndWait(`${withJosa(next.name, "은는")} 이미 ${statusLabel(next.status)} 상태다. 효과가 없었다...`);
     } else if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
@@ -556,9 +556,9 @@ export default function BattlePage() {
   /**
    * 턴 머리의 상태이상 처리.
    *
-   * ⚠️ 여기서 기절 판정을 하는 게 이 함수의 존재 이유다. 예전엔 checkStatusEffects 가
-   * HP 만 깎고 아무도 확인하지 않아서, 화상으로 HP 가 0 이 된 몬스터가 그 턴에 멀쩡히
-   * 공격하고 다음에 **맞을 때까지** 계속 싸웠다. 쓰러졌으면 그 턴의 공격은 나가지 않는다.
+   * ⚠️ 여기서 기절 판정을 하는 게 이 함수가 있는 이유다. 원래는 checkStatusEffects 가
+   * HP 만 깎고 아무도 확인을 안 해서, 화상으로 HP 가 0 이 된 몬스터가 그 턴에 멀쩡히
+   * 공격하고 다음에 맞을 때까지 계속 싸웠다. 쓰러졌으면 그 턴 공격은 안 나간다.
    */
   const runStatusPhase = useCallback(async (
     mon: BattleMonster, other: BattleMonster, isPlayer: boolean,
@@ -586,22 +586,22 @@ export default function BattlePage() {
   }, [floor]);
 
   /**
-   * 승리 정산 — 경험치·성장·드랍·저장까지.
+   * 승리 정산. 경험치·성장·드랍·저장까지 여기서 한다.
    *
-   * 예전엔 이 60줄이 handleMoveClick 안에만 있었다. 그런데 이제 적은 공격을 맞고서만
-   * 쓰러지는 게 아니다(화상·독으로 죽고, 물약 턴이나 교체 턴에도 죽는다). 그때마다
-   * 정산을 베껴 두면 어느 한 길에서만 경험치가 안 들어오는 사고가 난다.
+   * 원래 이 60줄이 handleMoveClick 안에만 있었다. 그런데 적이 공격을 맞고서만 쓰러지는
+   * 게 아니다(화상·독으로 죽고, 물약 턴이나 교체 턴에도 죽는다). 그때마다 정산을 베껴
+   * 두면 어느 한 길에서만 경험치가 안 들어오는 사고가 난다.
    *
-   * activeIdx 를 인자로 받는 이유는 교체 턴 때문이다 — 그 순간의 setState 는 아직
-   * 반영 전이라 activePartyIndex 를 읽으면 교체 전 몬스터에게 경험치가 들어간다.
+   * activeIdx 를 인자로 받는 건 교체 턴 때문이다. 그 순간 setState 는 아직 반영 전이라
+   * activePartyIndex 를 읽으면 교체 전 몬스터한테 경험치가 들어간다.
    */
   const resolveVictory = useCallback(async (
     won: BattleMonster, ne: BattleMonster, activeIdx: number,
   ) => {
     let np = won;
     const bonus = getEquipCombatBonus(initialParty[activeIdx]?.uid);
-    // 레벨차 배수는 **받는 쪽마다** 다르다. 여기서 한 번 곱해 버리면 뒤처진 벤치 몬스터도
-    // 선봉의 배수를 물려받는다 — 그럼 따라잡기가 안 된다.
+    // 레벨차 배수는 받는 쪽마다 다르다. 여기서 한 번 곱해 버리면 뒤처진 벤치 몬스터도
+    // 선봉 배수를 물려받고, 그러면 따라잡기가 안 된다.
     const baseExp = ne.rewardExp * (1 + bonus.expBonus / 100);
     const leadGapMult = expLevelGapMultiplier(ne.level, np.level);
     const earnedExp = Math.floor(baseExp * leadGapMult);
@@ -614,7 +614,7 @@ export default function BattlePage() {
     if (expResult.leveledUp) {
       setLogHistory((prev) => [...prev.slice(-49), `레벨이 ${withJosa(np.level, "로")} 올랐다!`]);
     }
-    // 경험치가 왜 안 들어오는지 말해 준다. 이 줄이 없으면 플레이어는 고장으로 읽는다 —
+    // 경험치가 왜 안 들어오는지 말해 준다. 이 줄이 없으면 플레이어는 고장으로 읽는다.
     // 실제로는 "이 층은 이제 네 밥이 아니다, 위로 가라"는 설계다.
     if (leadGapMult <= 0) {
       await sendLogAndWait(`${withJosa(np.name, "은는")} 이 층의 상대에게서 더 배울 것이 없다.`);
@@ -666,7 +666,7 @@ export default function BattlePage() {
       const mate = initialParty[i];
       const hp = partyHp[mate.uid] ?? mate.currentHp;
       if (hp <= 0) continue;   // 기절한 몬스터는 분배 대상에서 제외
-      // 하한 1 을 두지 않는다 — 1 경험치라도 들어오면 죽은 갈이가 기술적으로는 살아난다
+      // 하한 1 은 안 둔다. 1 경험치라도 들어오면 죽은 갈이가 기술적으로는 살아난다
       const share = Math.floor(
         baseExp * expLevelGapMultiplier(ne.level, mate.level) * benchExpShare(mate.level, np.level),
       );
@@ -733,9 +733,9 @@ export default function BattlePage() {
   /**
    * 플레이어의 행동 한 번과 그에 딸린 적의 차례.
    *
-   * 공격이든 방어든 라운드 구조는 같아서 한 함수로 둔다 — 방어를 따로 짜면 상태이상·속도
-   * 게이지·기절 판정이 두 벌이 되고, 그 둘은 반드시 어긋난다(이 저장소에서 물약 턴이
-   * 그랬다).
+   * 공격이든 방어든 라운드 구조가 같아서 한 함수로 둔다. 방어를 따로 짜면 상태이상·속도
+   * 게이지·기절 판정이 두 벌이 되고, 그 둘은 반드시 어긋난다(여기선 물약 턴이 그랬다).
+   *
    */
   const runRound = useCallback(async (action: { kind: "move"; move: Move } | { kind: "guard" }) => {
     if (isProcessing || battleOutcome !== null || mustSwitch) return;
@@ -744,7 +744,7 @@ export default function BattlePage() {
     let np = player;
     let ne = enemyState;
 
-    // 방어는 **적이 때리기 전에** 서 있어야 한다. 적이 선공이어도 막아야 하므로 라운드 맨 앞에서 건다
+    // 방어는 적이 때리기 전에 서 있어야 한다. 적이 선공이어도 막아야 하니 라운드 맨 앞에서 건다
     if (action.kind === "guard") {
       np = { ...np, guarding: true };
       await sendLogAndWait(`${withJosa(np.name, "이가")} 몸을 웅크렸다. 다음 공격을 견딘다!`);
@@ -769,8 +769,8 @@ export default function BattlePage() {
       );
       ne = res.updated;
       if (res.fainted) return true;
-      // 보스 기믹 — 한 번은 몸을 추스른다(40층 모왕). 숫자만 큰 보스는 "몇 대 더"의 문제라
-      // 장비가 있으나 없으나 결론이 같지만, 회복이 끼면 "정해진 턴 안에 넣을 수 있나"가 된다
+      // 보스 기믹. 한 번은 몸을 추스른다(40층 모왕). 숫자만 큰 보스는 "몇 대 더"의 문제라
+      // 장비가 있든 없든 결론이 같은데, 회복이 끼면 "정해진 턴 안에 넣을 수 있나"가 된다
       if (!bossRegenUsedRef.current) {
         const heal = bossRegenAmount(floor, ne.currentHp, ne.maxHp);
         if (heal > 0) {
@@ -791,7 +791,7 @@ export default function BattlePage() {
     };
 
     /**
-     * 반환값은 둘 다 "이 차례의 주인 기준"이다 — [상대를 쓰러뜨렸나, 내가 쓰러졌나].
+     * 반환값은 둘 다 이 차례의 주인 기준이다. [상대를 쓰러뜨렸나, 내가 쓰러졌나].
      * 뒤엣것은 상태이상 피해로 자기 턴에 죽는 경우다.
      */
     const doPlayerTurn = async (): Promise<[boolean, boolean]> => {
@@ -861,16 +861,16 @@ export default function BattlePage() {
   ]);
 
   const handleMoveClick = useCallback((move: Move) => runRound({ kind: "move", move }), [runRound]);
-  /** 방어 — 그 턴 피해 절반, 새 상태이상 차단. 대신 공격이 없다 */
+  /** 방어. 그 턴 피해 절반에 새 상태이상 차단. 대신 공격이 없다 */
   const handleGuard = useCallback(() => runRound({ kind: "guard" }), [runRound]);
 
   // ─── 파티 교체 ──────────────────────────────────────────────────────────────────
-  /** 키보드에서 부를 때 쓰는 최신 참조 — 선언 순서 때문에 직접 못 부른다 */
+  /** 키보드에서 부를 때 쓰는 최신 참조. 선언 순서 때문에 직접 못 부른다 */
   const handlePartySwapRef = useRef<(i: number) => void>(() => {});
 
   /**
-   * 파티 구역의 키보드. 커맨드 메뉴와 **동시에 듣지 않는다**(focusZone 이 하나뿐).
-   * 기절해서 반드시 골라야 하는 상황에서는 자동으로 이쪽에 포커스가 온다.
+   * 파티 구역의 키보드. 커맨드 메뉴랑 동시에 듣지 않는다(focusZone 이 하나뿐이라).
+   * 기절해서 반드시 골라야 하는 상황이면 자동으로 이쪽에 포커스가 온다.
    */
   useEffect(() => {
     if (isProcessing && !mustSwitch) return;
@@ -885,7 +885,7 @@ export default function BattlePage() {
           e.preventDefault(); setPartyCursor((c) => Math.min(n - 1, c + 1)); break;
         case "ArrowRight":
         case "Escape":
-          // 기절 교체 중에는 빠져나갈 수 없다 — 고르는 것 말고 할 게 없는 상태다
+          // 기절 교체 중에는 못 빠져나간다. 고르는 것 말고 할 게 없는 상태다
           if (mustSwitch) return;
           e.preventDefault(); setFocusZone("command"); break;
         case "Enter":
@@ -933,8 +933,8 @@ export default function BattlePage() {
 
     if (mustSwitch) { setIsProcessing(false); return; }
 
-    // 새로 나온 몬스터의 속도로 게이지를 다시 잡는다 — 앞선 몬스터가 쌓아 둔 값을
-    // 물려받으면, 느린 몬스터를 내보내자마자 연속 공격이 터지는 일이 생긴다.
+    // 새로 나온 몬스터 속도로 게이지를 다시 잡는다. 앞선 몬스터가 쌓아 둔 값을
+    // 물려받으면 느린 몬스터를 내보내자마자 연속 공격이 터진다.
     playerGaugeRef.current = 0;
     enemyGaugeRef.current  = 0;
 
@@ -974,8 +974,8 @@ export default function BattlePage() {
 
     setIsProcessing(true);
 
-    // 물약을 꺼내는 것도 턴이다 — 화상·독은 여기서도 깎는다. 여기서 쓰러지면 물약은
-    // 쓰지 않은 것이 되고(재고도 그대로), 마비·빙결이면 꺼내지도 못한 채 턴만 넘어간다.
+    // 물약 꺼내는 것도 턴이다. 화상·독은 여기서도 깎는다. 여기서 쓰러지면 물약은
+    // 안 쓴 게 되고(재고도 그대로), 마비·빙결이면 꺼내지도 못한 채 턴만 넘어간다.
     const uid = initialParty[activePartyIndex]?.uid;
     const bonus = getEquipCombatBonus(uid);
     const pre = await runStatusPhase(player, enemyState, true);
@@ -1067,8 +1067,8 @@ export default function BattlePage() {
 
   /**
    * 기술 셀에 들어갈 예상 결과. 전투가 실제로 쓰는 계산 함수를 그대로 부른다
-   * (damagePreview → battleUtils.computeDamage). 보너스도 resolveAttack 에 넘기는 것과
-   * 같은 것을 넘긴다 — 여기서 하나라도 빠지면 표시와 실제가 어긋난다.
+   * (damagePreview → battleUtils.computeDamage). 보너스도 resolveAttack 에 넘기는 거랑
+   * 같은 걸 넘긴다. 여기서 하나라도 빠지면 표시랑 실제가 어긋난다.
    */
   const getMovePreview = (move: Move) =>
     previewMove(player, enemyState, move, {

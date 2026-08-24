@@ -9,17 +9,17 @@ import type { IconName } from "../shared/ui/icons";
 /**
  * 전투 커맨드 2단 메뉴.
  *
- * 1단 [기술 / 방어 / 가방 / 도망] → 기술은 2단에서 **한 목록**으로.
+ * 1단 [기술 / 방어 / 가방 / 도망] → 기술은 2단에서 한 목록으로.
  *
- * 예전엔 1단이 [공격 / 스킬 / 가방 / 도망] 이었다. 공격=물리, 스킬=특수+상태로 나뉘어
- * 있었는데 데미지 공식은 둘을 구분하지 않는다(특수공격 능력치가 없다). 의미 없는 한 겹인
- * 데다, 몬스터 15마리 중 4마리는 특수 기술이 0개라 "스킬" 버튼이 영구 비활성이었다 —
- * 그중 하나가 시작 몬스터 모시다. 첫 전투부터 회색 버튼을 보게 되는 구조였다.
+ * 원래 1단이 [공격 / 스킬 / 가방 / 도망] 이었다. 공격=물리, 스킬=특수+상태로 갈라
+ * 뒀는데 데미지 공식은 둘을 구분 안 한다(특수공격 능력치가 없다). 의미 없는 한 겹인
+ * 데다 몬스터 15마리 중 4마리는 특수 기술이 0개라 "스킬" 버튼이 영영 비활성이었다.
+ * 그중 하나가 시작 몬스터 모시고, 첫 전투부터 회색 버튼을 보게 되는 구조였다.
  *
  * category 는 지운 게 아니라 표시로 옮겼다(공격 모션 방향이 이 값을 계속 쓴다).
  *
- * 메뉴 상태는 전투 진행 상태(내 턴 / 애니메이션 중)와 분리돼 있다. 진행 상태는
- * disabled 로만 들어오고, 메뉴는 자기 커서와 페이지만 관리한다.
+ * 메뉴 상태는 전투 진행 상태(내 턴 / 애니메이션 중)랑 떨어져 있다. 진행 상태는
+ * disabled 로만 들어오고, 메뉴는 자기 커서와 페이지만 챙긴다.
  */
 
 export type MenuState =
@@ -27,7 +27,7 @@ export type MenuState =
   | { level: "moves" }
   | { level: "bag" };
 
-/** 2×2 한 화면. 넘치면 페이지로 넘긴다. */
+/** 2×2 한 화면. 넘치면 페이지로 넘긴다 */
 const PAGE_SIZE = 4;
 
 /**
@@ -65,7 +65,7 @@ interface Props {
   onUsePotion: (id: string) => void;
   onGuard: () => void;
   onFlee: () => void;
-  /** 1단에서 ← 를 눌렀다 — 파티 구역으로 넘어간다 */
+  /** 1단에서 ← 를 눌렀다. 파티 구역으로 넘어간다 */
   onLeaveLeft: () => void;
 }
 
@@ -75,7 +75,7 @@ interface Cell {
   sub?: ReactNode;
   /** 둘째 줄을 얼마나 눌러 둘지. 기본은 곁가지 취급(흐리게) */
   subClass?: string;
-  /** 셋째 줄 — 기술 칸에서 "몇 대미지"를 적는 자리 */
+  /** 셋째 줄. 기술 칸에서 "몇 대미지"를 적는 자리 */
   extra?: ReactNode;
   hint?: ReactNode;
   chipClass?: string;
@@ -85,8 +85,8 @@ interface Cell {
 }
 
 /**
- * "이 기술로 이번 턴에 끝낼 수 있나" — 이 한 줄이 셀에서 가장 중요한 정보다.
- * 확정은 채운 배지, 치명타가 떠야 닿으면 테두리만. 색이 아니라 형태로도 갈린다.
+ * "이 기술로 이번 턴에 끝낼 수 있나". 셀에서 제일 중요한 한 줄이다.
+ * 확정은 채운 배지, 치명타가 떠야 닿으면 테두리만. 색 말고 형태로도 갈린다.
  */
 function KoBadge({ ko }: { ko: MovePreview["ko"] }) {
   if (!ko) return null;
@@ -122,8 +122,8 @@ export function BattleCommandMenu({
     return {
       key: m.id,
       label: m.name,
-      // 기술이 무엇인가 — 속성·분류·위력·명중. 고르기 전에 알아야 하는 고정값들이라
-      // 한 줄로 눌러 둔다. 위력 0 은 "위력 0"이 아니라 "상태이상"이다(때리는 기술이 아니다).
+      // 기술이 뭔가. 속성·분류·위력·명중. 고르기 전에 알아야 하는 고정값이라
+      // 한 줄로 눌러 둔다. 위력 0 은 "위력 0"이 아니라 상태이상이다(때리는 기술이 아니다).
       sub: (
         <span className="flex flex-wrap items-center gap-x-1.5 whitespace-nowrap">
           <span>{ELEMENT_KO[m.type as keyof typeof ELEMENT_KO] ?? m.type}</span>
@@ -133,7 +133,7 @@ export function BattleCommandMenu({
         </span>
       ),
       subClass: "opacity-60",
-      // 이번 턴에 무슨 일이 일어나는가 — 셀에서 제일 먼저 읽혀야 하는 줄이라 굵게 둔다.
+      // 이번 턴에 무슨 일이 나는가. 셀에서 제일 먼저 읽혀야 하는 줄이라 굵게 둔다.
       extra: (
         <span className="flex flex-wrap items-center gap-x-1.5 whitespace-nowrap">
           {p.isStatus
@@ -209,7 +209,7 @@ export function BattleCommandMenu({
   const atRoot = menu.level === "root";
   const pageCount = Math.max(1, Math.ceil(cells.length / PAGE_SIZE));
   const pageCells = atRoot ? cells : cells.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-  // 커서 클램프는 렌더 시점에 한다 — effect 로 setState 하면 한 프레임 어긋난 커서가 그려진다
+  // 커서 클램프는 렌더 시점에 한다. effect 로 setState 하면 한 프레임 어긋난 커서가 그려진다
   const activeCursor = Math.min(cursor, Math.max(0, pageCells.length - 1));
 
   // ── 키보드 ─────────────────────────────────────────────────────────────────

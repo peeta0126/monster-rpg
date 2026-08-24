@@ -7,13 +7,13 @@ import { ELEMENT_CHIP_CLASS, ELEMENT_KO, HP_DANGER_PCT } from "../shared/palette
 /**
  * 상대 정보 카드.
  *
- * 상성을 알려면 T 를 눌러 7×7 표를 열어야 했다. 표는 규칙을 보여주지만 지금 이 싸움의
- * 답은 안 보여준다 — 필요한 건 "이 상대를 어떻게 다루나" 두 줄이다.
+ * 상성을 알려면 T 를 눌러 7×7 표를 열어야 했다. 표는 규칙을 보여주지 지금 이 싸움의
+ * 답은 안 보여준다. 필요한 건 "이 상대를 어떻게 다루나" 두 줄이다.
  *
- * **양쪽을 다 적는다.** 한쪽만 적었을 때 실제로 이런 화면이 나왔다: 불꽃으로 물을
- * 만나면 내 최고 배율이 1 이라 "상성 이득 없음"이라고만 떴는데, 정작 상대는 나를
- * 2배로 때리고 있었다. 상성은 때릴 때와 맞을 때가 따로 굴러가므로 "바꿀까"는
- * 받는 쪽을 봐야 정해진다.
+ * 양쪽을 다 적는다. 한쪽만 적었을 때 이런 화면이 나왔다. 불꽃으로 물을 만나면 내
+ * 최고 배율이 1 이라 "상성 이득 없음"이라고만 떴는데, 정작 상대는 나를 2배로
+ * 때리고 있었다. 상성은 때릴 때랑 맞을 때가 따로 굴러가니까, 바꿀지 말지는 받는
+ * 쪽을 봐야 정해진다.
  *
  * HP 는 숫자를 안 적는다. 정확한 수치는 캔버스 패널이 크게 보여주고 있어서, 여기까지
  * 숫자를 적으면 같은 정보가 화면에 세 번 나온다.
@@ -21,9 +21,9 @@ import { ELEMENT_CHIP_CLASS, ELEMENT_KO, HP_DANGER_PCT } from "../shared/palette
 
 export interface EnemyCardProps {
   enemy: BattleMonster;
-  /** 지금 나와 있는 몬스터의 기술 — 때릴 때의 배율을 여기서 고른다 */
+  /** 지금 나와 있는 몬스터의 기술. 때릴 때 배율을 여기서 고른다 */
   moves: Move[];
-  /** 지금 나와 있는 몬스터의 속성 — 맞을 때의 배율을 여기서 고른다 */
+  /** 지금 나와 있는 몬스터의 속성. 맞을 때 배율을 여기서 고른다 */
   playerType: ElementType | null;
 }
 
@@ -47,7 +47,7 @@ export function EnemyCard({ enemy, moves, playerType }: EnemyCardProps) {
   const outgoing = bestMultiplier(moves, enemy.type);
   const incoming = bestMultiplier(enemy.moves, playerType);
 
-  // 때릴 때는 큰 게 좋고, 맞을 때는 작은 게 좋다 — 색이 반대로 간다
+  // 때릴 때는 큰 게 좋고 맞을 때는 작은 게 좋다. 그래서 색이 반대로 간다
   const attack = outgoing === 0
     ? { text: "공격 기술이 없다", tone: "text-earth-400" }
     : { text: `내 공격 ×${fmt(outgoing)}`,
