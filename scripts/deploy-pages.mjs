@@ -21,8 +21,12 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const PAGES_REPO = "https://github.com/amugeona0159/amugeona0159.github.io.git";
 const CONFIG = path.join(ROOT, "public", "server-config.json");
 
+/**
+ * npm 은 윈도우에서 npm.cmd 라 셸을 거쳐야 하지만, git 은 거치면 안 된다.
+ * 셸을 켜면 인자를 cmd 가 다시 쪼개서, 띄어쓰기가 든 커밋 메시지가 통째로 깨진다.
+ */
 function run(cmd, args, cwd = ROOT) {
-  execFileSync(cmd, args, { cwd, stdio: "inherit", shell: process.platform === "win32" });
+  execFileSync(cmd, args, { cwd, stdio: "inherit", shell: cmd === "npm" });
 }
 
 const apiBase = process.argv[2];

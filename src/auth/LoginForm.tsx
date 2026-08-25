@@ -31,7 +31,6 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [showRegister, setShowRegister] = useState(false);
   const [showDevCode, setShowDevCode] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
 
   async function startNow() {
     if (pending) return;
@@ -39,10 +38,11 @@ export default function LoginForm() {
     setError(null);
     // 계정 발급이 실패해도 게임에는 들여보낸다(로컬 저장). 여기서 막으면 서버가 꺼져 있는 동안
     // 아무도 게임을 열지 못한다.
-    const result = await startAnonymousSession();
-    if (result === "offline") {
-      setNotice("서버에 연결하지 못했습니다. 진행은 이 브라우저에만 저장됩니다.");
-    }
+    //
+    // 실패를 여기서 알리지는 않는다. 성공이든 실패든 이 화면은 곧바로 사라져서 무슨 글씨를
+    // 띄워도 사람 눈에 안 닿는다. 서버로 저장되는 중인지는 게임 안의 저장 표시가 맡는다
+    // (shared/SaveIndicator — 서버면 "저장됨", 아니면 로컬로 표시된다).
+    await startAnonymousSession();
     setPending(false);
   }
 
@@ -102,12 +102,6 @@ export default function LoginForm() {
         <p className="text-center text-sand-300" style={{ fontSize: 12 }}>
           가입 없이 바로 플레이합니다. 진행은 자동으로 저장됩니다.
         </p>
-
-        {notice && (
-          <p className="rounded border border-stone-600 bg-shadow-800/70 px-2 py-1 text-sand-300" style={{ fontSize: 12 }}>
-            {notice}
-          </p>
-        )}
 
         <div className="mb-0.5 mt-1 flex items-center gap-2 text-ember-500/60">
           <span className="h-px flex-1 bg-gradient-to-r from-transparent to-ember-700/70" />
