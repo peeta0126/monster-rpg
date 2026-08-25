@@ -45,6 +45,6 @@ cat <<'EOF'
 
 바깥에서 접속하려면 다른 창에서:
   cloudflared tunnel --url http://localhost:4000
-나온 https 주소를 public/api-config.json 의 apiBase 에 넣고 화면을 다시 배포합니다.
+나온 https 주소를 public/server-config.json 의 apiBase 에 넣고 화면을 다시 배포합니다.
 (주소 뒤에 /api 를 붙여야 합니다)
 EOF
