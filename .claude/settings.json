@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit)",
+      "Bash(\"C:\\\\Program Files\\\\nodejs\\\\npx.cmd\" tsc --noEmit)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(./node_modules/.bin/vite build:*)",
+      "Bash(/c/Program Files/nodejs/node.exe:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(identify public/assets/housing/housing_bg.png)",
+      "Bash(node ./node_modules/.bin/tsc --noEmit)",
+      "Bash(node ./node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx.cmd tsc:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(powershell:*)",
+      "Bash(python -c \"from PIL import Image; img = Image.open\\('public/assets/housing/housing_bg.png'\\); print\\(img.size, img.mode\\)\")",
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\('public/assets/housing/housing_bg.png'\\); print\\(img.size, img.mode\\)\")",
+      "Bash(python3:*)",
+      "Bash(where node:*)",
+      "mcp__ide__getDiagnostics"
+    ],
+    "deny": []
+  }
+}
