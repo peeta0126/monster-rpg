@@ -51,6 +51,11 @@ function readEnv(): string | null {
 
 let cached: Promise<string> | null = null;
 
+/** 주소를 바꾼 뒤에는 반드시 비운다. 안 비우면 그 탭은 옛 주소로 계속 요청한다 */
+function clearCache(): void {
+  cached = null;
+}
+
 export function resolveApiBase(): Promise<string> {
   if (!cached) {
     cached = (async () => {
@@ -62,7 +67,42 @@ export function resolveApiBase(): Promise<string> {
   return cached;
 }
 
+/** 지금 저장돼 있는 주소. 없으면 `server-config.json` 을 따르고 있다는 뜻이다 */
+export function getApiBaseOverride(): string | null {
+  try {
+    const stored = localStorage.getItem(OVERRIDE_KEY);
+    return stored ? trimTrailingSlash(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 서버 주소를 이 브라우저에 고정한다. `null` 이면 지워서 `server-config.json` 으로 돌아간다.
+ * 터널 주소는 다시 켤 때마다 바뀌는데, 이게 있으면 화면을 다시 배포하지 않고도 붙일 수 있다.
+ */
+export function setApiBaseOverride(url: string | null): void {
+  try {
+    if (url) localStorage.setItem(OVERRIDE_KEY, trimTrailingSlash(url));
+    else localStorage.removeItem(OVERRIDE_KEY);
+  } catch {
+    // 저장을 못 해도(사생활 보호 모드 등) 이번 화면에서는 새 주소로 도는 편이 낫다
+  }
+  // 주소창의 ?api= 는 첫 진입용 한 번짜리다. 남겨 두면 다음 조회에서 그게 다시 이겨,
+  // 방금 넣은 주소가 조용히 무시된다.
+  try {
+    const here = new URL(window.location.href);
+    if (here.searchParams.has("api")) {
+      here.searchParams.delete("api");
+      window.history.replaceState(null, "", here.toString());
+    }
+  } catch {
+    // 주소창을 못 고쳐도 저장 자체는 끝났다
+  }
+  clearCache();
+}
+
 /** 테스트에서 캐시를 비운다 */
 export function resetApiBaseForTest(): void {
-  cached = null;
+  clearCache();
 }

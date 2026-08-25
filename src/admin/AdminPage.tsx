@@ -2,6 +2,8 @@ import { useState } from "react";
 import { fetchAdminUsers, deleteAdminUser, cleanupAnonUsers } from "./adminApi";
 import type { AdminUser } from "./adminApi";
 import SaveHistoryPanel from "./SaveHistoryPanel";
+import ServerPanel from "./ServerPanel";
+import { getApiBaseOverride, setApiBaseOverride } from "../shared/apiBase";
 
 const pixelFont = { fontFamily: "var(--font-pixel)" };
 
@@ -10,9 +12,13 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleString("ko-KR");
 }
 
+type Tab = "users" | "server";
+
 export default function AdminPage() {
   const [secret, setSecret] = useState("");
+  const [serverUrl, setServerUrl] = useState(() => getApiBaseOverride() ?? "");
   const [authedSecret, setAuthedSecret] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +30,8 @@ export default function AdminPage() {
     if (pending) return;
     setPending(true);
     setError(null);
+    // 키보다 주소를 먼저 정한다. 주소가 틀리면 키가 맞아도 접속 자체가 실패한다.
+    setApiBaseOverride(serverUrl.trim() || null);
     try {
       const list = await fetchAdminUsers(secret);
       setUsers(list);
@@ -83,6 +91,18 @@ export default function AdminPage() {
             autoFocus
             className="w-full rounded-md border border-stone-600 bg-shadow-900 px-3 py-2 text-pixel-sm text-cream-100 outline-none transition focus:border-ember-500"
           />
+          {/* 터널 주소는 서버를 다시 켤 때마다 바뀐다. 여기서 갈아 끼우면 화면을 다시 배포하지 않아도 된다 */}
+          <input
+            type="url"
+            value={serverUrl}
+            onChange={(e) => setServerUrl(e.target.value)}
+            placeholder="서버 주소 (비우면 기본값)"
+            spellCheck={false}
+            className="mt-2 w-full rounded-md border border-stone-600 bg-shadow-900 px-3 py-2 text-pixel-sm text-cream-100 outline-none transition focus:border-ember-500"
+          />
+          <p className="mt-2 text-pixel-sm text-sand-300">
+            터널 주소가 바뀌었을 때만 넣습니다. 끝에 /api 까지 붙입니다.
+          </p>
           {error && <p className="mt-2 text-pixel-sm text-ember-500">{error}</p>}
           <button
             type="submit"
@@ -99,6 +119,28 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-shadow-900 px-6 py-8 text-sand-200">
+      <nav className="mb-6 flex gap-2">
+        {([["users", "사용자"], ["server", "서버"]] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            aria-current={tab === key ? "page" : undefined}
+            className={`rounded border px-4 py-2 text-pixel-sm transition ${
+              tab === key
+                ? "border-ember-500 bg-ember-700/11 text-ember-500"
+                : "border-stone-600 text-sand-300 hover:border-mist-500 hover:text-mist-300"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "server" && <ServerPanel secret={authedSecret} />}
+
+      {tab === "users" && (
+        <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-cream-100" style={{ ...pixelFont, fontSize: 16 }}>
           유저 관리 ({users.length}명)
@@ -178,6 +220,8 @@ export default function AdminPage() {
       </div>
 
       {users.length === 0 && <p className="mt-4 text-sand-300">가입된 유저가 없습니다.</p>}
+        </>
+      )}
 
       {historyFor && (
         <SaveHistoryPanel

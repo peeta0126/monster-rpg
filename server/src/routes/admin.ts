@@ -1,4 +1,7 @@
 import { Router } from "express";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { prisma } from "../prismaClient.js";
 import { requireAdmin } from "../middleware/admin.js";
 import { asyncHandler } from "../asyncHandler.js";
@@ -6,6 +9,60 @@ import { asyncHandler } from "../asyncHandler.js";
 export const adminRouter = Router();
 
 adminRouter.use(requireAdmin);
+
+/**
+ * 세이브 파일의 실제 경로. DATABASE_URL 은 `file:./dev.db` 처럼 prisma 폴더 기준의
+ * 상대 경로로 적히므로, 그 기준점을 여기서 붙여 준다. 서버는 어디서 실행되든
+ * (`npm --prefix server start` 든 dist 든) 같은 파일을 봐야 한다.
+ */
+function resolveDbPath(): string | null {
+  const url = process.env.DATABASE_URL;
+  if (!url?.startsWith("file:")) return null;
+  const prismaDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "prisma");
+  return path.resolve(prismaDir, url.slice("file:".length));
+}
+
+/** 파일이 아직 없을 수 있다(테스트용 DB). 크기를 못 읽는다고 통계 전체를 실패시키지 않는다 */
+function readDbBytes(): number | null {
+  const dbPath = resolveDbPath();
+  if (!dbPath) return null;
+  try {
+    return fs.statSync(dbPath).size;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 서버가 지금 어떤 상태인지 한 화면에 모은다. 읽기만 한다 —
+ * 관리 화면은 공개 주소에 올라가므로 여기에 조작을 붙이지 말 것.
+ */
+adminRouter.get(
+  "/stats",
+  asyncHandler(async (_req, res) => {
+    const uptimeSeconds = Math.floor(process.uptime());
+
+    const [userCount, anonCount, saveCount, historyCount, latest] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { isAnonymous: true } }),
+      prisma.saveData.count(),
+      prisma.saveHistory.count(),
+      prisma.saveData.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
+    ]);
+
+    res.json({
+      uptimeSeconds,
+      startedAt: new Date(Date.now() - uptimeSeconds * 1000).toISOString(),
+      nodeVersion: process.version,
+      dbBytes: readDbBytes(),
+      userCount,
+      anonCount,
+      saveCount,
+      historyCount,
+      lastSavedAt: latest?.updatedAt ?? null,
+    });
+  }),
+);
 
 adminRouter.get(
   "/users",

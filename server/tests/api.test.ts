@@ -39,6 +39,18 @@ interface SaveBody {
   conflict?: boolean;
 }
 
+interface AdminStats {
+  uptimeSeconds: number;
+  startedAt: string;
+  nodeVersion: string;
+  dbBytes: number | null;
+  userCount: number;
+  anonCount: number;
+  saveCount: number;
+  historyCount: number;
+  lastSavedAt: string | null;
+}
+
 async function newAnon(): Promise<AuthBody> {
   const res = await api<AuthBody>(base(), "/api/auth/anon", { method: "POST" });
   assert.equal(res.status, 201);
@@ -360,5 +372,35 @@ describe("관리자", () => {
       adminSecret: admin,
     });
     assert.ok(swept.body.deleted > 0);
+  });
+
+  test("서버 통계는 비밀키가 있어야 나온다", async () => {
+    assert.equal((await api(base(), "/api/admin/stats")).status, 401);
+    assert.equal((await api(base(), "/api/admin/stats", { adminSecret: "wrong" })).status, 401);
+  });
+
+  test("계정과 세이브를 하나 더 만들면 통계도 하나씩 는다", async () => {
+    const admin = process.env.ADMIN_SECRET!;
+    const stats = () => api<AdminStats>(base(), "/api/admin/stats", { adminSecret: admin });
+
+    const before = (await stats()).body;
+
+    const user = await newAnon();
+    await api(base(), "/api/save", {
+      method: "PUT",
+      token: user.token,
+      body: JSON.stringify({ data: save({ bestFloor: 3 }), version: 2, baseRevision: 0 }),
+    });
+
+    const after = (await stats()).body;
+    assert.equal(after.userCount, before.userCount + 1);
+    assert.equal(after.saveCount, before.saveCount + 1);
+    assert.equal(after.anonCount, before.anonCount + 1);
+    assert.ok(after.lastSavedAt, "방금 저장했으니 마지막 저장 시각이 있어야 한다");
+
+    // 켜진 시간과 DB 크기는 값 자체를 못 박을 수 없다. 모양만 본다 —
+    // 파일을 못 읽는 환경에서도 통계 전체가 죽지 않아야 하므로 null 을 허용한다.
+    assert.equal(typeof after.uptimeSeconds, "number");
+    assert.ok(after.dbBytes === null || typeof after.dbBytes === "number");
   });
 });
