@@ -66,9 +66,9 @@ export const PLAYER_BOUNDS = { minX: 5, maxX: 96.5, minY: 28, maxY: 96 };
  * 플레이어 한 칸의 크기. 무대 높이의 백분율이다.
  *
  * 고정 px 로 두면 창을 줄였을 때 방만 작아지고 사람은 그대로라 비율이 깨진다.
- * 값은 배경 원화(높이 1792px)에서 잰 것이다: 한 칸 441px, 그 안의 인물이 430px.
+ * 값은 배경 원화(높이 1792px) 기준이다: 한 칸 360px, 그 안의 인물이 약 326px.
  */
-export const PLAYER_DISPLAY_RATIO = 441 / BG_H;
+export const PLAYER_DISPLAY_RATIO = 360 / BG_H;
 
 // ─── 충돌 박스 ───────────────────────────────────────────────────────────────
 

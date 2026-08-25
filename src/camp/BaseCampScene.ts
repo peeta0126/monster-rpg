@@ -31,7 +31,8 @@ import {
 // 여기 숫자를 다시 적지 마라. 충돌 형상이랑 같이 움직여야 하는 값이라 거기 있다.
 
 export const CAM_ZOOM = 0.5;
-const NPC_DISPLAY_HEIGHT = 192;   // 플레이어(160) × 1.2배
+/** 촌장·바로스 표시 높이. 플레이어(약 174px)보다 조금 크게 잡는다. */
+const NPC_DISPLAY_HEIGHT = 192;
 const NPC_INTERACT_DISTANCE = 160; // 디스플레이 절반(160)에 맞춰 조정
 
 type BaseCampNpc = {

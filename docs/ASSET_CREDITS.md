@@ -48,7 +48,15 @@
 
 ## 플레이어 스프라이트
 
-`public/assets/player/player.png` · `player.json` 은 이 게임을 위해 그린 8방향 아틀라스다.
+`public/assets/player/player.png` · `player.json` 은 이 게임을 위해 만든 8방향 아틀라스다.
+기본 캐릭터는 PixelLab 에서 만들고, 걷기 프레임은 Google Gemini 로 채웠다.
+
+| 파일명 | 출처 | 라이선스 | 출처 표기 필요 |
+| --- | --- | --- | --- |
+| `player.png` · `player.json` | PixelLab(기본 캐릭터) + Google Gemini(걷기 프레임) | *사용자 확인 필요* | *사용자 확인 필요* |
+
+생성 도구는 결과물의 권리 조건이 요금제·약관 판에 따라 달라진다. 두 칸 다 **사용자가
+쓰던 계정의 약관을 직접 확인해서** 채울 것.
 
 그 전에 쓰던 `player-{down,up,left,right}{,-1,-2}.png` 16장은 포켓몬 리핑 에셋이라
 지웠다. 되살리지 말 것 — 그 상태로는 공개 배포를 할 수 없다. 규격은
