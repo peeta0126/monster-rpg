@@ -3,7 +3,7 @@
 ## 구성
 
 ```
-브라우저 ──▶ Cloudflare Pages          (게임 화면. 늘 살아 있다)
+브라우저 ──▶ GitHub Pages              (게임 화면. 늘 살아 있다)
                  │
                  │ /server-config.json 이 가리키는 주소로
                  ▼
@@ -82,7 +82,10 @@ cloudflared tunnel --url http://localhost:4000
 
 ---
 
-## 3. 게임 화면 배포 (Cloudflare Pages)
+## 3. 게임 화면 배포 (GitHub Pages)
+
+화면은 `amugeona0159/amugeona0159.github.io` 저장소에 산다. 그 저장소의 **뿌리에 `dist/` 의
+내용을 통째로 올리면** `https://amugeona0159.github.io` 가 그걸 그대로 서빙한다.
 
 `public/server-config.json` 의 `apiBase` 에 **2단계 주소 + `/api`** 를 넣는다.
 
@@ -92,28 +95,39 @@ cloudflared tunnel --url http://localhost:4000
 }
 ```
 
-빌드하고 올린다:
+빌드한다:
 
 ```bash
 npm install
 npm run build
-npx wrangler pages deploy dist --project-name=voyager-atelier
 ```
 
-처음이면 `wrangler login` 으로 브라우저 로그인이 한 번 뜬다. 배포가 끝나면
-`https://voyager-atelier.pages.dev` 같은 주소가 나온다 — **이게 제출할 링크다.**
+`dist/` 를 화면 저장소에 복사해 넣고 push 한다. 이때 **빌드가 만들어 주지 않는 파일 둘을
+손으로 같이 넣어야 한다.**
+
+- `.nojekyll` — 빈 파일. 없으면 GitHub 가 Jekyll 로 처리하면서 `_` 로 시작하는 자산을 빼먹는다.
+- `404.html` — `index.html` 을 그대로 복사한 것. 이게 SPA 폴백이다.
+  없으면 `/admin` 처럼 뿌리가 아닌 주소가 진짜 404 가 된다(GitHub Pages 에는 재작성 규칙이 없다).
+  상태 코드는 404 로 나가지만 화면은 정상적으로 뜬다 — 정상이다.
 
 마지막으로 서버 `.env` 의 `CORS_ORIGIN` 에 그 주소를 더하고 서버를 다시 띄운다.
 
 ```
-CORS_ORIGIN="https://voyager-atelier.pages.dev,http://localhost:5173"
+CORS_ORIGIN="https://amugeona0159.github.io,http://localhost:5173,http://localhost:4173"
 ```
+
+**서버를 다시 띄울 때 포트를 먼저 비울 것.** 4000 을 쥔 프로세스가 남아 있으면 새 서버는
+`EADDRINUSE` 로 죽고 옛 설정을 문 서버가 계속 돈다 — 화면상으로는 "고쳤는데 그대로"로 보인다.
+
+> `npx wrangler` 를 이 저장소에서 돌리지 말 것. Vite 프로젝트를 감지해 `@cloudflare/vite-plugin`
+> 을 설치하고 `vite.config.ts`·`package.json`·`.gitignore` 를 고쳐 놓는다. `server/.env` 의
+> `CORS_ORIGIN` 까지 자기 주소로 덮어쓰고 원본을 `.env.bak` 으로 밀어낸다.
 
 ---
 
 ## 4. 연결 확인
 
-1. 시크릿 창으로 Pages 주소를 연다.
+1. 시크릿 창으로 `https://amugeona0159.github.io` 를 연다.
 2. **「바로 시작」 하나로 게임에 들어가진다** (로그인 화면에서 멈추면 안 된다 — 제출 규정 필수 조건).
 3. 베이스캠프에서 아무 것이나 하고 5초쯤 기다린다 → 저장 표시가 "저장됨" 이 되는지.
 4. 다른 브라우저(또는 다른 기기)에서 같은 주소를 열고 개발자 코드 → 「내 세이브로 입장」 →
@@ -126,18 +140,26 @@ CORS_ORIGIN="https://voyager-atelier.pages.dev,http://localhost:5173"
 
 ### 급할 때: 주소창으로 서버 갈아 끼우기
 
-`https://…pages.dev/?api=https://새터널주소/api` 로 한 번 열면 그 브라우저는 계속 그 서버를 본다.
+`https://amugeona0159.github.io/?api=https://새터널주소/api` 로 한 번 열면 그 브라우저는 계속 그 서버를 본다.
 재배포 없이 확인만 하고 싶을 때 쓴다.
 
 ---
 
 ## 5. 관리자 페이지
 
-`https://…pages.dev/admin` → 1단계에서 적어 둔 관리자 키를 넣는다.
+`https://amugeona0159.github.io/admin` → 1단계에서 적어 둔 관리자 키를 넣는다.
+관리 화면에는 **서버 주소 칸**도 있다. 터널 주소가 바뀌었을 때 여기에 넣으면 화면을 다시
+배포하지 않고도 관리 화면만 새 서버에 붙는다(그 브라우저에만 저장된다).
 
+「사용자」 탭
 - 계정 목록과 마지막 저장 시각
 - 세이브 이력(사용자당 10판) 열람 · 되돌리기
 - 세이브가 한 번도 안 올라온 익명 계정 청소
+
+「서버」 탭 — 보기 전용이다. 재시작·초기화 같은 조작은 일부러 없다. 이 화면은 공개 주소에
+그대로 올라가므로, 관리자 키 하나가 새면 그게 곧 서버 조작 권한이 된다.
+- 켜진 지 얼마나 됐는지, 어느 주소를 보고 있는지
+- 세이브 파일 크기 · 계정 수(익명 포함) · 올라온 세이브와 보관된 이력 수 · 마지막 저장 시각
 
 ---
 
