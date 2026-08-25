@@ -279,6 +279,8 @@ export default function WorkshopPage() {
       icon: "quest",
       onClick: () => { setShowCraftedPanel((v) => !v); setMenuOpen(false); },
     },
+    // 좌상단 버튼을 없앤 자리. 문 앞까지 걸어가야만 나갈 수 있으면 답답하다.
+    { label: "바깥으로", icon: "door", tone: "accent", separated: true, onClick: goToBaseCamp },
   ];
 
   return (
@@ -565,17 +567,7 @@ export default function WorkshopPage() {
       {/* 늘 떠 있는 것들은 그림 옆 어두운 띠로 내보낸다. 띠 폭은 창 비율이 정하므로
           패널 폭도 거기 맞춘다 — 폭을 박으면 좁은 화면에서 그림을 파고든다. */}
       <StageRail stage={stage} viewportW={viewport.w} side="left">
-        {/* 뒤로가기 */}
-        <button
-          type="button"
-          onClick={goToBaseCamp}
-          className="pointer-events-auto shrink-0 rounded-lg border border-earth-500 bg-shadow-900/88
-            px-3 py-2 text-pixel-sm font-bold text-cream-100 backdrop-blur transition
-            hover:brightness-125"
-        >
-          ← 바깥으로
-        </button>
-
+        {/* 뒤로가기 버튼은 뺐다. 나가는 길은 문 앞 SPACE 와 메뉴 두 곳이다. */}
         <div className="pointer-events-none mt-auto">
           <ControlHint
             items={[

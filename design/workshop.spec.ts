@@ -120,9 +120,11 @@ test.describe("workshop:", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("좌상단 '바깥으로' 버튼도 그대로 동작한다", async ({ page }) => {
+  test("메뉴의 '바깥으로' 로도 나간다", async ({ page }) => {
+    // 좌상단 버튼을 없애면서 나가는 길이 문 앞 SPACE 하나만 남지 않게 메뉴로 옮겼다.
     await openWorkshop(page);
-    await page.getByRole("button", { name: /바깥으로/ }).click();
+    await page.keyboard.press("Tab");
+    await page.getByRole("menuitem", { name: "바깥으로" }).click();
     await expect(page).toHaveURL(/\/$/);
   });
 
@@ -271,7 +273,8 @@ test.describe("workshop:", () => {
     await walkTo(page, { x: 50, y: 52 }, 3);
     expect((await readPos(page)).y).toBeLessThan(INITIAL_POS.y - 10);
 
-    await page.getByRole("button", { name: /바깥으로/ }).click();
+    await page.keyboard.press("Tab");
+    await page.getByRole("menuitem", { name: "바깥으로" }).click();
     await expect(page).toHaveURL(/\/$/);
     await page.goto("/workshop");
     await expect(page.locator('[aria-label="player"]')).toBeVisible();
