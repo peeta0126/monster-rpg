@@ -84,10 +84,17 @@ cloudflared tunnel --url http://localhost:4000
 
 ## 3. 게임 화면 배포 (GitHub Pages)
 
-화면은 `amugeona0159/amugeona0159.github.io` 저장소에 산다. 그 저장소의 **뿌리에 `dist/` 의
-내용을 통째로 올리면** `https://amugeona0159.github.io` 가 그걸 그대로 서빙한다.
+**배포 주소: https://amugeona0159.github.io/** — 이게 제출할 링크다.
+저장소는 `amugeona0159/amugeona0159.github.io` 이고, `main` 브랜치의 최상위가 그대로 서비스된다.
 
-`public/server-config.json` 의 `apiBase` 에 **2단계 주소 + `/api`** 를 넣는다.
+Cloudflare Pages 대신 여기를 쓰는 이유는 계정이 하나도 더 필요 없어서다. GitHub 은
+이미 쓰고 있고, `<계정>.github.io` 저장소는 **최상위 주소**로 나간다 — 하위 경로
+(`/monster-rpg/`)로 올리면 코드에 박힌 `"/assets/..."` 절대경로 29곳이 전부 404 난다.
+
+### 다시 올리기
+
+터널 주소가 바뀌었거나 게임을 고쳤을 때. `public/server-config.json` 의 `apiBase` 에
+**2단계 주소 + `/api`** 를 넣고 스크립트를 돌린다.
 
 ```json
 {
@@ -95,22 +102,29 @@ cloudflared tunnel --url http://localhost:4000
 }
 ```
 
-빌드한다:
-
 ```bash
-npm install
-npm run build
+node scripts/deploy-pages.mjs
 ```
 
-`dist/` 를 화면 저장소에 복사해 넣고 push 한다. 이때 **빌드가 만들어 주지 않는 파일 둘을
-손으로 같이 넣어야 한다.**
+빌드 → `404.html`·`.nojekyll` 추가 → Pages 저장소에 푸시까지 한 번에 한다.
+주소를 인자로 줘도 된다 — 그러면 `server-config.json` 도 같이 고쳐 준다.
 
-- `.nojekyll` — 빈 파일. 없으면 GitHub 가 Jekyll 로 처리하면서 `_` 로 시작하는 자산을 빼먹는다.
-- `404.html` — `index.html` 을 그대로 복사한 것. 이게 SPA 폴백이다.
-  없으면 `/admin` 처럼 뿌리가 아닌 주소가 진짜 404 가 된다(GitHub Pages 에는 재작성 규칙이 없다).
-  상태 코드는 404 로 나가지만 화면은 정상적으로 뜬다 — 정상이다.
+```bash
+node scripts/deploy-pages.mjs https://무작위-단어.trycloudflare.com/api
+```
 
-마지막으로 서버 `.env` 의 `CORS_ORIGIN` 에 그 주소를 더하고 서버를 다시 띄운다.
+반영까지 보통 1~2분 걸린다(첫 배포는 더 걸린다).
+
+### 두 가지 손질이 들어가 있다
+
+- **`404.html`** — GitHub Pages 는 SPA 폴백이 없다. `/forest` 에서 새로고침하면 404 가
+  뜨므로 `index.html` 을 그대로 복사해 둔다. 이러면 라우터가 받아서 정상 화면이 뜬다.
+- **`.nojekyll`** — Jekyll 처리를 끈다.
+
+### 마지막으로 서버에 이 주소를 알려 준다
+
+노트북의 `server/.env` 를 고치고 서버를 다시 띄운다. 안 하면 브라우저가 CORS 에서 막혀
+저장이 조용히 안 된다.
 
 ```
 CORS_ORIGIN="https://amugeona0159.github.io,http://localhost:5173,http://localhost:4173"
@@ -130,6 +144,7 @@ CORS_ORIGIN="https://amugeona0159.github.io,http://localhost:5173,http://localho
 1. 시크릿 창으로 `https://amugeona0159.github.io` 를 연다.
 2. **「바로 시작」 하나로 게임에 들어가진다** (로그인 화면에서 멈추면 안 된다 — 제출 규정 필수 조건).
 3. 베이스캠프에서 아무 것이나 하고 5초쯤 기다린다 → 저장 표시가 "저장됨" 이 되는지.
+   여기서 "로컬에는 보관됨" 이 뜨면 CORS(3단계 마지막) 아니면 터널이 안 붙은 것이다.
 4. 다른 브라우저(또는 다른 기기)에서 같은 주소를 열고 개발자 코드 → 「내 세이브로 입장」 →
    같은 진행이 보이는지.
 5. 서버를 끄고 게임을 계속해 본다 → 멈추지 않고 "로컬에는 보관됨" 이 뜨는지.
@@ -140,7 +155,8 @@ CORS_ORIGIN="https://amugeona0159.github.io,http://localhost:5173,http://localho
 
 ### 급할 때: 주소창으로 서버 갈아 끼우기
 
-`https://amugeona0159.github.io/?api=https://새터널주소/api` 로 한 번 열면 그 브라우저는 계속 그 서버를 본다.
+`https://amugeona0159.github.io/?api=https://새터널주소/api` 로 한 번 열면
+그 브라우저는 계속 그 서버를 본다.
 재배포 없이 확인만 하고 싶을 때 쓴다.
 
 ---
