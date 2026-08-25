@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { createBaseCampGame } from "../shared/phaser/phaserConfig";
+import { createBaseCampGame, GAME_VIEW } from "../shared/phaser/phaserConfig";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import type { NpcDialoguePayload } from "../shared/phaser/events";
 import { monsters } from "../monster/monsters";
@@ -9,11 +9,17 @@ import { usePlayerStore } from "../shared/playerStore";
 import type { OwnedMonster } from "../shared/playerStore";
 import { getNextObjective } from "../shared/nextObjective";
 import { ObjectiveBanner } from "../shared/ui/ObjectiveBanner";
+import { StageHud, StageRail } from "../shared/ui/StageHud";
+import { ControlHint } from "../shared/ui/ControlHint";
+import { useViewportSize } from "../shared/ui/useViewportSize";
+import { cameraRect } from "../shared/ui/stageRect";
 import { AudioSettings } from "../shared/ui/AudioSettings";
 import { useBgm, BGM } from "../shared/audio";
 import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
 import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
+import { CAM_ZOOM } from "./BaseCampScene";
+import { CAMP_MAP_W, CAMP_MAP_H } from "./campCollision";
 import { ALL_QUESTS, activeQuestFor } from "./campDialogues";
 import type { QuestDef } from "./campDialogues";
 import { evaluateObjective, objectiveWhere } from "./questObjectives";
@@ -26,6 +32,7 @@ import { getMaterial } from "../shared/items";
 import { PixelIcon } from "../shared/ui/PixelIcon";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
 import { useAuthStore } from "../auth/authStore";
+import LinkAccountModal from "../auth/LinkAccountModal";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
 import { PALETTE } from "../shared/palette";
 
@@ -901,7 +908,9 @@ function CampMenu({
 }) {
   const logout = useAuthStore((s) => s.logout);
   const isGuest = useAuthStore((s) => s.isGuest);
+  const isAnonymous = useAuthStore((s) => s.isAnonymous);
   const [showAudio, setShowAudio] = useState(false);
+  const [showLink, setShowLink] = useState(false);
 
   // 메뉴를 닫으면 소리 패널도 접는다. 다시 열었을 때 펼쳐진 채로 나오면 목록이 밀린다.
   // effect 로 하면 한 번 더 렌더되고, 그 사이 프레임에 펼쳐진 메뉴가 보인다.
@@ -929,17 +938,24 @@ function CampMenu({
       onClick: () => setShowAudio((v) => !v),
       panel: showAudio ? <div className="px-2 py-2"><AudioSettings /></div> : null,
     },
+    // 익명 계정은 이 브라우저에만 매여 있다. 아이디를 붙여야 다른 기기에서 이어받는다.
+    ...(isAnonymous
+      ? [{ label: "계정 연결", icon: "door" as const, tone: "gold" as const, onClick: () => setShowLink(true) }]
+      : []),
     { label: isGuest ? "로그인" : "로그아웃", icon: "door", tone: "accent", onClick: logout },
   ];
 
   return (
-    <GameMenu
-      open={open}
-      onOpen={onOpen}
-      onClose={onClose}
-      items={items}
-      badge={towerCleared ? "클리어" : undefined}
-    />
+    <>
+      <GameMenu
+        open={open}
+        onOpen={onOpen}
+        onClose={onClose}
+        items={items}
+        badge={towerCleared ? "클리어" : undefined}
+      />
+      {showLink && <LinkAccountModal onClose={() => setShowLink(false)} />}
+    </>
   );
 }
 
@@ -971,6 +987,14 @@ export default function BaseCampPage() {
   const partySize = usePlayerStore((s) => s.party.length);
   const storyFlags = usePlayerStore((s) => s.storyFlags);
   const craftedPotions = usePlayerStore((s) => s.craftedPotions);
+
+  // HUD 가 앉을 자리. 캔버스는 FIT 이라 창을 채우지 않고, 카메라도 맵보다 넓은 만큼을
+  // 배경색으로 채운다. 두 겹을 다 걷어낸 게 실제로 그림이 있는 칸이다.
+  const viewport = useViewportSize();
+  const stage = cameraRect(viewport.w, viewport.h, GAME_VIEW, {
+    width:  CAMP_MAP_W * CAM_ZOOM,
+    height: CAMP_MAP_H * CAM_ZOOM,
+  });
 
   // 이 화면은 캔버스뿐이라 "다음에 뭘 하지"가 어디에도 안 적혀 있었다.
   // 진행 중인 부탁이 있으면 그게 앞선다. 원래는 1층 이후로 "N층에 도전해 보세요"만
@@ -1113,33 +1137,44 @@ export default function BaseCampPage() {
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "var(--color-shadow-900)" }}>
       <div ref={gameRef} style={{ width: "100%", height: "100%" }} />
 
-      <ObjectiveBanner objective={objective} />
+      {/* 그림 위에 얹혀도 되는 것 — 목표 띠는 장면에 붙어 읽혀야 한다 */}
+      <StageHud rect={stage}>
+        <ObjectiveBanner objective={objective} />
+      </StageHud>
 
-      {/* 조작 안내. 이 화면은 캔버스뿐이라 안내가 없으면 이동법조차 알 수 없다.
-          공방 하단 안내와 같은 문구를 쓴다. */}
-      <div className="pointer-events-none fixed bottom-gutter left-gutter z-40 rounded-xl border
-        border-stone-600 bg-shadow-900/80 px-3 py-1.5 text-pixel-sm text-sand-300 backdrop-blur">
-        WASD / 방향키 이동 · E 상호작용 · TAB 메뉴
-      </div>
+      {/* 늘 떠 있는 것들은 그림 옆 어두운 띠로 내보낸다. 캔버스는 16:9 로 고정이고
+          맵이 캔버스보다 좁아서(1536×0.5=768 < 960) 좌우에 늘 띠가 남는다. */}
+      <StageRail stage={stage} viewportW={viewport.w} side="left">
+        <div className="pointer-events-none mt-auto">
+          <ControlHint
+            items={[
+              { keys: "WASD / 방향키", action: "이동" },
+              { keys: "E", action: "상호작용" },
+              { keys: "TAB", action: "메뉴" },
+            ]}
+          />
+        </div>
+      </StageRail>
 
-      {/* 우상단 메뉴. 버튼 아래로 펼쳐진다 */}
-      <CampMenu
-        open={menuOpen}
-        onOpen={() => setMenuOpen(true)}
-        onClose={() => setMenuOpen(false)}
-        onOpenQuestLog={() => { setMenuOpen(false); setQuestLogOpen(true); }}
-        onOpenDex={() => { setMenuOpen(false); setDexOpen(true); }}
-        onGoToMonsters={() => navigate("/monsters")}
-        onGoToFarm={() => navigate("/farm", { state: { from: "basecamp" } })}
-        towerCleared={towerCleared}
-        onReplayEnding={() => { setMenuOpen(false); navigate("/ending"); }}
-        onOpenTower={() => {
-          setMenuOpen(false);
-          setHealed(false);
-          setTowerPayload({ from: "menu", portalId: "none" });
-        }}
-      />
-
+      <StageRail stage={stage} viewportW={viewport.w} side="right">
+        {/* 메뉴. 버튼 아래로 펼쳐진다 */}
+        <CampMenu
+          open={menuOpen}
+          onOpen={() => setMenuOpen(true)}
+          onClose={() => setMenuOpen(false)}
+          onOpenQuestLog={() => { setMenuOpen(false); setQuestLogOpen(true); }}
+          onOpenDex={() => { setMenuOpen(false); setDexOpen(true); }}
+          onGoToMonsters={() => navigate("/monsters")}
+          onGoToFarm={() => navigate("/farm", { state: { from: "basecamp" } })}
+          towerCleared={towerCleared}
+          onReplayEnding={() => { setMenuOpen(false); navigate("/ending"); }}
+          onOpenTower={() => {
+            setMenuOpen(false);
+            setHealed(false);
+            setTowerPayload({ from: "menu", portalId: "none" });
+          }}
+        />
+      </StageRail>
 
       {dexOpen && <DexModal onClose={() => setDexOpen(false)} />}
 
@@ -1165,9 +1200,15 @@ export default function BaseCampPage() {
         />
       )}
 
+      {/* 대사창도 그림 안이다. 창 바닥에 붙이면 띠 위에 떠서 말풍선만 따로 논다 */}
       {npcDialogue && (
         <div
-          className="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 pb-6"
+          className="fixed z-50 flex justify-center p-gutter pb-6"
+          style={{
+            left:   stage.left,
+            right:  stage.left,
+            bottom: Math.max(0, viewport.h - (stage.top + stage.height)),
+          }}
           onClick={advanceNpcDialogue}
         >
           <div

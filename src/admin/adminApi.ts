@@ -1,14 +1,25 @@
-const BASE = "/api/admin";
+import { resolveApiBase } from "../shared/apiBase";
 
 export interface AdminUser {
   id: string;
   username: string;
   createdAt: string;
+  isAnonymous: boolean;
   saveUpdatedAt: string | null;
+  saveRevision: number | null;
+}
+
+export interface AdminSaveHistoryEntry {
+  id: string;
+  revision: number;
+  version: number;
+  size: number;
+  createdAt: string;
 }
 
 async function adminRequest<T>(path: string, secret: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const base = await resolveApiBase();
+  const res = await fetch(`${base}/admin${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -30,4 +41,17 @@ export function fetchAdminUsers(secret: string): Promise<AdminUser[]> {
 
 export function deleteAdminUser(secret: string, id: string): Promise<void> {
   return adminRequest(`/users/${id}`, secret, { method: "DELETE" });
+}
+
+export function fetchSaveHistory(secret: string, id: string): Promise<AdminSaveHistoryEntry[]> {
+  return adminRequest(`/users/${id}/history`, secret);
+}
+
+export function restoreSave(secret: string, id: string, historyId: string): Promise<{ revision: number }> {
+  return adminRequest(`/users/${id}/restore/${historyId}`, secret, { method: "POST" });
+}
+
+/** 세이브가 한 번도 안 올라온 익명 계정을 지운다 */
+export function cleanupAnonUsers(secret: string, hours = 24): Promise<{ deleted: number }> {
+  return adminRequest(`/cleanup-anon?hours=${hours}`, secret, { method: "POST" });
 }

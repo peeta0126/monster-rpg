@@ -166,7 +166,7 @@ function createInitialState(): PersistedPlayerState {
 // 열었을 때 없는 필드를 읽다가 깨지는 걸 막기 위한 버전 관리 + 필드 단위 보정.
 
 /** 현재 저장 스키마 버전. 구조를 또 바꾸면 이 값을 올리고 아래 migrate에 분기 추가 */
-const PERSIST_VERSION = 2;
+export const PERSIST_VERSION = 2;
 
 function normalizeRecord(raw: unknown): Record<string, number> {
   return raw && typeof raw === "object" && !Array.isArray(raw)
@@ -326,6 +326,10 @@ function normalizeImprint(raw: unknown): Record<string, number> {
  * zustand persist 의 migrate 훅. 저장된 version 이 PERSIST_VERSION 과 다를 때만 불린다
  * (version 개념이 없던 옛 세이브는 zustand 가 version=0 으로 넘겨준다).
  *
+ * 서버에서 내려온 세이브도 이 함수를 지난다(useSaveSync). 예전에는 서버 응답에 버전이
+ * 없어서 normalizeState 만 타고 여기를 건너뛰었는데, 그러면 버전 분기에만 적은 변환을
+ * 서버 세이브 사용자만 못 받는다. 지금은 서버가 version 을 같이 저장하고 같이 돌려준다.
+ *
  * 저장 구조를 또 바꿀 때:
  *   1) 위 PERSIST_VERSION 을 +1 한다.
  *   2) 아래에 `if (version < 새버전) { ... 그 버전에서만 필요한 변환 ... }` 을 붙인다.
@@ -334,7 +338,7 @@ function normalizeImprint(raw: unknown): Record<string, number> {
  *      normalizeState 의 기본값 채우기만으로 끝난다. 값의 형태가 바뀔 때(배열→객체 같은)만
  *      버전 분기를 더하면 된다.
  */
-function migrate(persistedState: unknown, version: number): PersistedPlayerState {
+export function migrateSave(persistedState: unknown, version: number): PersistedPlayerState {
   try {
     const raw = persistedState && typeof persistedState === "object" ? persistedState : {};
 
@@ -1044,7 +1048,7 @@ export const usePlayerStore = create<PlayerState>()(
     {
       name: "monster-rpg-player",
       version: PERSIST_VERSION,
-      migrate,
+      migrate: migrateSave,
       // migrate는 저장된 version이 다를 때만 실행된다. 버전이 같아도(같은 세션 내
       // 수동 localStorage 편집 등으로) 필드가 깨져 있을 수 있으니, 매 로드마다
       // normalizeState를 한 번 더 거쳐 이중으로 방어한다.

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { loginApi, ApiError } from "./api";
 import { useAuthStore } from "./authStore";
+import { startAnonymousSession } from "./anonSession";
 import RegisterModal from "./RegisterModal";
 import DevCodeModal from "./DevCodeModal";
 import { sha256Hex } from "./sha256";
@@ -23,7 +24,6 @@ function CornerBracket({ position }: { position: "tl" | "tr" | "bl" | "br" }) {
 
 export default function LoginForm() {
   const setAuthed = useAuthStore((s) => s.setAuthed);
-  const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -31,6 +31,20 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [showRegister, setShowRegister] = useState(false);
   const [showDevCode, setShowDevCode] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function startNow() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    // 계정 발급이 실패해도 게임에는 들여보낸다(로컬 저장). 여기서 막으면 서버가 꺼져 있는 동안
+    // 아무도 게임을 열지 못한다.
+    const result = await startAnonymousSession();
+    if (result === "offline") {
+      setNotice("서버에 연결하지 못했습니다. 진행은 이 브라우저에만 저장됩니다.");
+    }
+    setPending(false);
+  }
 
   async function submitLogin() {
     if (pending) return;
@@ -52,7 +66,7 @@ export default function LoginForm() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("서버에 연결할 수 없습니다. 게스트로 시작해보세요.");
+        setError("서버에 연결할 수 없습니다. 「바로 시작」으로 먼저 플레이할 수 있습니다.");
       }
     } finally {
       setPending(false);
@@ -75,9 +89,29 @@ export default function LoginForm() {
         style={{ boxShadow: "0 0 26px rgba(233,148,65,0.2), inset 0 1px 0 rgba(243,229,185,0.06)" }}
         onSubmit={(e) => { e.preventDefault(); submitLogin(); }}
       >
-        <div className="mb-0.5 flex items-center gap-2 text-ember-500/60">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={startNow}
+          className="rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 py-2.5 font-bold text-cream-100 transition [text-shadow:0_1px_1px_rgba(13,18,35,0.6)] hover:brightness-110 active:translate-y-px active:shadow-none disabled:opacity-40"
+          style={{ ...btnSize, boxShadow: "0 2px 0 rgba(168,61,31,0.7), 0 0 12px rgba(233,148,65,0.25)" }}
+        >
+          <PixelIcon name="compass" size={16} className="mr-1.5 inline-block align-middle" />
+          바로 시작
+        </button>
+        <p className="text-center text-sand-300" style={{ fontSize: 12 }}>
+          가입 없이 바로 플레이합니다. 진행은 자동으로 저장됩니다.
+        </p>
+
+        {notice && (
+          <p className="rounded border border-stone-600 bg-shadow-800/70 px-2 py-1 text-sand-300" style={{ fontSize: 12 }}>
+            {notice}
+          </p>
+        )}
+
+        <div className="mb-0.5 mt-1 flex items-center gap-2 text-ember-500/60">
           <span className="h-px flex-1 bg-gradient-to-r from-transparent to-ember-700/70" />
-          <span style={{ ...pixelFont, fontSize: 12 }}>여행자 등록</span>
+          <span style={{ ...pixelFont, fontSize: 12 }}>계정으로 이어하기</span>
           <span className="h-px flex-1 bg-gradient-to-l from-transparent to-ember-700/70" />
         </div>
 
@@ -120,8 +154,8 @@ export default function LoginForm() {
           <button
             type="submit"
             disabled={pending}
-            className="flex-1 rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 py-2 font-bold text-cream-100 transition [text-shadow:0_1px_1px_rgba(13,18,35,0.6)] hover:brightness-110 active:translate-y-px active:shadow-none disabled:opacity-40"
-            style={{ ...btnSize, boxShadow: "0 2px 0 rgba(168,61,31,0.7), 0 0 12px rgba(233,148,65,0.25)" }}
+            className="flex-1 rounded-md border border-ember-700/70 bg-shadow-800/60 py-2 font-medium text-cream-100 transition hover:border-ember-500 hover:bg-shadow-700/50 active:scale-[0.98] disabled:opacity-40"
+            style={btnSize}
           >
             {pending ? "…" : "로그인"}
           </button>
@@ -135,20 +169,12 @@ export default function LoginForm() {
             회원가입
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={continueAsGuest}
-          className="mt-0.5 text-center text-sand-300 underline decoration-dotted decoration-earth-400 underline-offset-2 transition hover:text-ember-500 hover:decoration-ember-500"
-          style={{ fontSize: 12 }}
-        >
-          <PixelIcon name="compass" size={16} className="mr-1 inline-block align-middle" />
-          게스트로 시작
-        </button>
       </form>
 
       {showRegister && <RegisterModal onClose={() => setShowRegister(false)} />}
-      {showDevCode && <DevCodeModal onClose={() => setShowDevCode(false)} />}
+      {showDevCode && (
+        <DevCodeModal onClose={() => setShowDevCode(false)} username={username.trim()} password={password} />
+      )}
     </div>
   );
 }

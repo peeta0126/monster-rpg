@@ -31,3 +31,31 @@ jobs:
       - run: npm run build
 
       - run: npm test
+
+  # server/ 는 별도 프로젝트라 위 job 이 전혀 안 본다. 세이브 서버가 생기면서
+  # 여기서 타입이 깨져도 아무도 모르는 상태가 됐다.
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    env:
+      DATABASE_URL: file:./test.db
+      JWT_SECRET: ci-secret
+      ADMIN_SECRET: ci-admin-secret
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      # postinstall 이 prisma generate 를 돌린다
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      # 테스트가 스스로 test.db 를 만들고 마이그레이션을 적용한다
+      - run: npm test

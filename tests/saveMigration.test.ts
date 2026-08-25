@@ -1,15 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeState } from "../src/shared/playerStore.ts";
+import { normalizeState, migrateSave, PERSIST_VERSION } from "../src/shared/playerStore.ts";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, satisfiedEntries } from "../src/camp/campDialogues.ts";
 import type { PersistedStoryFlag } from "../src/shared/storyFlags.ts";
 
 /**
  * 본 대사 기록(seenDialogues)이 옛 세이브에 채워지는지 본다.
  *
- * 검사 대상이 migrate 가 아니라 normalizeState 인 건 일부러 그런 거다. 서버 세이브에는 버전이
- * 없어서 migrate 를 아예 안 탄다(useSaveSync 가 normalizeState 만 거친다).
- * 두 경로가 다 지나는 곳이 여기라, 여기가 맞으면 둘 다 맞다.
+ * 검사 대상이 주로 normalizeState 인 건 일부러 그런 거다. 로컬이든 서버든 모든 로드 경로가
+ * 여기를 지나므로, 여기가 맞으면 둘 다 맞다.
+ *
+ * 서버 세이브는 예전에 버전이 없어 migrate 를 아예 건너뛰었다. 지금은 서버가 version 을
+ * 같이 저장하고 useSaveSync 가 migrateSave 를 태운다 — 그 경로를 맨 아래에서 확인한다.
  */
 
 const flags = (over: Partial<Record<PersistedStoryFlag, boolean>>): Record<PersistedStoryFlag, boolean> => ({
@@ -103,4 +105,26 @@ test("대사 이름표가 겹치지 않는다 — 겹치면 한쪽이 영영 안
   const ids = [...ORION_DIALOGUES, ...BAROS_DIALOGUES].map((e) => e.id);
   assert.equal(new Set(ids).size, ids.length, "이름표가 중복됐다");
   for (const id of ids) assert.ok(id.length > 0, "빈 이름표가 있다");
+});
+
+test("서버에서 온 세이브도 migrate 를 지난다", () => {
+  // 버전이 없던 시절의 서버 세이브. 클라이언트는 version 을 못 받으면 현재 버전으로 친다.
+  const migrated = migrateSave(oldSave(ENDED, 50), PERSIST_VERSION);
+  assert.ok(migrated.seenDialogues.length > 0, "옛 세이브의 본 대사가 안 채워졌다");
+
+  // 버전이 붙은 뒤로는 그 값이 그대로 넘어온다. 옛 버전이면 그 버전의 분기를 다 지나야 한다.
+  const fromV1 = migrateSave(oldSave(ENDED, 50), 1);
+  assert.deepEqual(fromV1, migrated, "버전만 다를 뿐 결과는 같아야 한다");
+});
+
+test("migrate 는 두 번 지나도 결과가 같다", () => {
+  const once = migrateSave(oldSave(ENDED, 50), 1);
+  const twice = migrateSave(once, PERSIST_VERSION);
+  assert.deepEqual(twice, once);
+});
+
+test("깨진 세이브가 와도 던지지 않고 초기 상태로 떨어진다", () => {
+  const broken = migrateSave("이건 객체가 아니다", 1);
+  assert.equal(broken.bestFloor, 0);
+  assert.deepEqual(broken.party, []);
 });

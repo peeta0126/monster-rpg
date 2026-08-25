@@ -27,6 +27,9 @@ server/prisma/*.db-journal
 /design/screenshots/
 !/design/contact-sheet-*.png
 
+# 제출물 확인용 프레임. 영상(demo.webm)은 다른 기기에서 제출할 수 있어야 하니 커밋한다.
+/design/submission/frames/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

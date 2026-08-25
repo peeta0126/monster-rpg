@@ -12,16 +12,19 @@ export function rateLimit({
   windowMs,
   max,
   message,
+  key: keyOf,
 }: {
   windowMs: number;
   max: number;
   message: string;
+  /** 기본은 IP 별. 로그인이 끝난 뒤의 라우트는 사용자별로 세는 편이 정확하다 */
+  key?: (req: Request) => string;
 }) {
   const hits = new Map<string, { count: number; resetAt: number }>();
 
   return (req: Request, res: Response, next: NextFunction) => {
     const now = Date.now();
-    const key = req.ip ?? "unknown";
+    const key = keyOf?.(req) ?? req.ip ?? "unknown";
 
     // 만료된 항목 정리 (요청량이 적어 전수 스캔으로 충분하다)
     for (const [k, v] of hits) {

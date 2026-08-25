@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { fetchAdminUsers, deleteAdminUser } from "./adminApi";
+import { fetchAdminUsers, deleteAdminUser, cleanupAnonUsers } from "./adminApi";
 import type { AdminUser } from "./adminApi";
+import SaveHistoryPanel from "./SaveHistoryPanel";
 
 const pixelFont = { fontFamily: "var(--font-pixel)" };
 
@@ -16,6 +17,8 @@ export default function AdminPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [historyFor, setHistoryFor] = useState<AdminUser | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function handleEnter() {
     if (pending) return;
@@ -44,6 +47,22 @@ export default function AdminPage() {
     } finally {
       setPending(false);
       setConfirmId(null);
+    }
+  }
+
+  /** 세이브가 한 번도 안 올라온 익명 계정을 지운다. 「바로 시작」은 화면만 열어도 계정을 만든다 */
+  async function handleCleanup() {
+    if (!authedSecret || pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      const { deleted } = await cleanupAnonUsers(authedSecret, 24);
+      setNotice(`빈 익명 계정 ${deleted}개를 정리했습니다.`);
+      setUsers(await fetchAdminUsers(authedSecret));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "정리에 실패했습니다.");
+    } finally {
+      setPending(false);
     }
   }
 
@@ -80,9 +99,20 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-shadow-900 px-6 py-8 text-sand-200">
-      <h1 className="mb-6 text-cream-100" style={{ ...pixelFont, fontSize: 16 }}>
-        유저 관리 ({users.length}명)
-      </h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-cream-100" style={{ ...pixelFont, fontSize: 16 }}>
+          유저 관리 ({users.length}명)
+        </h1>
+        <button
+          onClick={handleCleanup}
+          disabled={pending}
+          className="rounded border border-stone-600 px-3 py-1.5 text-pixel-sm text-sand-300 transition hover:border-ember-700 hover:text-ember-500 disabled:opacity-40"
+        >
+          빈 익명 계정 정리
+        </button>
+      </div>
+
+      {notice && <p className="mb-4 text-pixel-sm text-moss-500">{notice}</p>}
 
       {error && (
         <p className="mb-4 rounded border border-ember-700/60 bg-ember-700/11 px-3 py-2 text-pixel-sm text-ember-500">{error}</p>
@@ -95,16 +125,27 @@ export default function AdminPage() {
               <th className="px-4 py-2 font-medium">아이디</th>
               <th className="px-4 py-2 font-medium">가입일</th>
               <th className="px-4 py-2 font-medium">최종 저장</th>
+              <th className="px-4 py-2 font-medium">판</th>
               <th className="px-4 py-2 text-right font-medium">관리</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-t border-shadow-700">
-                <td className="px-4 py-2">{u.username}</td>
+                <td className="px-4 py-2">
+                  {u.username}
+                  {u.isAnonymous && <span className="ml-2 text-sand-300">(익명)</span>}
+                </td>
                 <td className="px-4 py-2 text-sand-300">{formatDate(u.createdAt)}</td>
                 <td className="px-4 py-2 text-sand-300">{formatDate(u.saveUpdatedAt)}</td>
+                <td className="px-4 py-2 text-sand-300">{u.saveRevision ?? "-"}</td>
                 <td className="px-4 py-2 text-right">
+                  <button
+                    onClick={() => setHistoryFor(u)}
+                    className="mr-2 rounded border border-stone-600 px-2 py-1 text-pixel-sm text-sand-300 transition hover:border-mist-500 hover:text-mist-300"
+                  >
+                    이력
+                  </button>
                   {confirmId === u.id ? (
                     <span className="inline-flex gap-2">
                       <button
@@ -137,6 +178,15 @@ export default function AdminPage() {
       </div>
 
       {users.length === 0 && <p className="mt-4 text-sand-300">가입된 유저가 없습니다.</p>}
+
+      {historyFor && (
+        <SaveHistoryPanel
+          secret={authedSecret}
+          userId={historyFor.id}
+          username={historyFor.username}
+          onClose={() => setHistoryFor(null)}
+        />
+      )}
     </div>
   );
 }
