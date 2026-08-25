@@ -15,8 +15,13 @@ import { effectiveVolume, useAudioStore } from "./audioStore";
 const missing = new Set<string>();
 const sfxCache = new Map<string, HTMLAudioElement>();
 
-/** 곡을 겹쳐 넘기는 시간(ms). 앞 곡이 줄어드는 동안 뒷 곡이 같이 올라온다. */
-const CROSSFADE_MS = 700;
+/**
+ * 곡을 넘기는 시간(ms). 앞 곡을 다 내린 **뒤에** 뒷 곡을 올린다 — 둘이 같이 나는
+ * 구간이 없다. 예전에는 겹쳐 넘겼는데, 곡마다 조성도 박자도 달라서 겹치는 1초 남짓이
+ * 두 곡이 싸우는 소리로 들렸다. 이어지는 느낌은 겹침이 아니라 짧은 페이드가 만든다.
+ */
+const FADE_OUT_MS = 450;
+const FADE_IN_MS = 450;
 
 interface Track {
   key: BgmKey;
@@ -28,6 +33,8 @@ interface Track {
    */
   gain: number;
   raf: number | null;
+  /** 지금 소리를 내고 있나. 다음 곡은 이게 전부 false 가 된 뒤에야 시작한다. */
+  playing: boolean;
 }
 
 /** 지금 이 화면의 곡. 페이드아웃 중인 앞 곡은 여기 없고 live 에만 남는다. */
@@ -36,6 +43,13 @@ let current: Track | null = null;
 const live = new Set<Track>();
 /** 자동재생이 막혀 아직 못 튼 곡. 첫 상호작용에서 다시 시도한다. */
 let blocked: BgmKey | null = null;
+/**
+ * 앞 곡이 사라지기를 기다리는 다음 곡. 하나만 둔다 — 기다리는 사이에 화면이 또
+ * 바뀌면 기다리던 것은 버리고 마지막 것만 켠다.
+ */
+let pending: (() => void) | null = null;
+/** 전환 세대. 늦게 도착한 콜백이 이미 지나간 곡을 켜는 걸 막는다. */
+let generation = 0;
 
 function pickFormat(): string {
   const probe = document.createElement("audio");
@@ -103,10 +117,14 @@ export function playSfx(key: SfxKey): void {
   void el.play().catch(() => warnOnce(key));
 }
 
-/** 설정값 × 페이드 계수. 등파워 곡선이라 두 곡이 겹치는 가운데가 안 꺼진다. */
+/**
+ * 설정값 × 페이드 계수. 겹치는 구간이 없으니 등파워 보정(√)은 안 쓴다 — 그건 두 곡을
+ * 겹칠 때 가운데가 꺼지지 말라고 넣는 것이고, 혼자 사라지는 곡에 쓰면 끝까지 크게
+ * 버티다 뚝 떨어지는 것처럼 들린다.
+ */
 function applyVolume(t: Track) {
   const g = Math.max(0, Math.min(1, t.gain));
-  t.el.volume = effectiveVolume("bgm") * Math.sqrt(g);
+  t.el.volume = effectiveVolume("bgm") * g;
 }
 
 function fadeTo(t: Track, to: number, ms: number, done?: () => void) {
@@ -132,39 +150,75 @@ function fadeTo(t: Track, to: number, ms: number, done?: () => void) {
 function retire(t: Track) {
   if (t.raf !== null) cancelAnimationFrame(t.raf);
   t.raf = null;
+  t.playing = false;
   t.el.pause();
   live.delete(t);
+  startPending();
+}
+
+/** 아직 소리를 내고 있는 곡이 하나라도 있나 */
+function anyPlaying(): boolean {
+  for (const t of live) if (t.playing) return true;
+  return false;
+}
+
+/** 앞 곡이 전부 사라졌으면 기다리던 곡을 켠다 */
+function startPending() {
+  if (!pending || anyPlaying()) return;
+  const go = pending;
+  pending = null;
+  go();
 }
 
 /**
  * 이 화면의 곡을 건다.
  *
  * 이미 그 곡이 나오고 있으면 아무것도 안 한다. 마을 ↔ 가방 ↔ 내 몬스터처럼 같은 곡을
- * 쓰는 화면을 오갈 때 매번 처음으로 되감기면 안 되니까. 곡이 바뀔 때만 앞 곡을
- * 줄이면서 뒷 곡을 올린다.
+ * 쓰는 화면을 오갈 때 매번 처음으로 되감기면 안 되니까.
+ *
+ * 곡이 바뀔 때는 **앞 곡 → 정적 → 뒷 곡** 순서로 간다. 겹치지 않는다.
  */
-export function playBgm(key: BgmKey, { fade = CROSSFADE_MS } = {}): void {
+export function playBgm(
+  key: BgmKey,
+  { fadeOut = FADE_OUT_MS, fadeIn = FADE_IN_MS } = {},
+): void {
   if (current?.key === key) return;
   if (missing.has(key)) return;
 
+  const gen = ++generation;
   const prev = current;
   const el = makeAudio(key);
   el.loop = true;
-  const next: Track = { key, el, gain: 0, raf: null };
+  const next: Track = { key, el, gain: 0, raf: null, playing: false };
   current = next;
   live.add(next);
-  applyVolume(next);
+  applyVolume(next);   // 0 — 아직 안 들린다
 
+  // 소리 없이 한 번 틀어 본다. 여기까지 와야 "이 곡은 실제로 난다"가 확인된다.
+  // 확인만 하고 바로 멈춘 뒤, 앞 곡이 사라지면 처음부터 다시 켠다. 확인 전에 앞 곡을
+  // 내리면 파일이 없거나 자동재생이 막혔을 때 정적만 남는다.
   void el.play().then(() => {
     blocked = null;
-    // 앞 곡은 뒷 곡이 실제로 나기 시작한 뒤에 줄인다. 먼저 끄면 파일이 없거나
-    // 자동재생이 막혔을 때 정적만 남는다.
-    //
-    // 다만 막 시작한 곡은 안 겹치고 바로 접는다. 로그인 화면의 첫 클릭이 그런데,
-    // 그 클릭이 자동재생 잠금을 풀어 타이틀 곡을 켜고 같은 클릭이 마을로 넘긴다.
-    // 여기서 700ms 를 겹치면 두 곡이 한꺼번에 뭉개져 들린다.
-    if (prev) fadeTo(prev, 0, prev.el.currentTime < 0.5 ? 120 : fade, () => retire(prev));
-    fadeTo(next, 1, fade);
+    el.pause();
+    el.currentTime = 0;
+    if (gen !== generation) { retire(next); return; }
+
+    pending = () => {
+      if (gen !== generation) { retire(next); return; }
+      next.playing = true;
+      // 페이드는 기다리지 않고 지금 시작한다. play() 가 풀리기를 기다리면 그 사이가
+      // 그대로 정적이 된다 — 이미 재생 가능한 걸 확인한 요소라 바로 이어진다.
+      void el.play().catch(() => { warnOnce(key); retire(next); });
+      fadeTo(next, 1, fadeIn);
+    };
+
+    // 막 시작한 앞 곡은 짧게 접는다. 로그인 화면의 첫 클릭이 그런데, 그 클릭이
+    // 자동재생 잠금을 풀어 타이틀 곡을 켜고 같은 클릭이 마을로 넘긴다. 두 음이
+    // 한 소절도 안 나고 사라질 거면 페이드가 길 이유가 없다.
+    if (prev && live.has(prev)) {
+      fadeTo(prev, 0, prev.el.currentTime < 0.5 ? 120 : fadeOut, () => retire(prev));
+    }
+    startPending();
   }).catch((err: unknown) => {
     // 못 틀었으면 없던 일로 되돌린다. 앞 곡은 그대로 흐르고, 다음에 다시 부르면 재시도한다
     if (current === next) current = prev;
@@ -179,14 +233,16 @@ export function playBgm(key: BgmKey, { fade = CROSSFADE_MS } = {}): void {
  * 여기서 끄면 화면 사이마다 정적이 생긴다. 소리를 아예 없애야 하는 자리
  * (엔딩 정적 연출 같은 것)에만 쓴다.
  */
-export function stopBgm({ fade = CROSSFADE_MS } = {}): void {
+export function stopBgm({ fade = FADE_OUT_MS } = {}): void {
+  generation++;   // 기다리던 다음 곡이 있으면 버린다
+  pending = null;
   const cur = current;
   if (!cur) return;
   current = null;
   fadeTo(cur, 0, fade, () => retire(cur));
 }
 
-// 설정이 바뀌면 재생 중인 BGM 볼륨을 즉시 반영한다. 겹쳐 넘기는 중이면 두 곡 다.
+// 설정이 바뀌면 재생 중인 BGM 볼륨을 즉시 반영한다. 넘어가는 중이면 사라지는 곡까지.
 useAudioStore.subscribe(() => {
   for (const t of live) applyVolume(t);
 });

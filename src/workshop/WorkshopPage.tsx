@@ -7,6 +7,9 @@ import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
 import { PALETTE, withAlpha } from "../shared/palette";
 import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { GameMenu, type GameMenuItem } from "../shared/ui/GameMenu";
+import { StageHud, StageRail } from "../shared/ui/StageHud";
+import { ControlHint } from "../shared/ui/ControlHint";
+import { containRect } from "../shared/ui/stageRect";
 import { useBgm, BGM } from "../shared/audio";
 import {
   getPlayerFrame, atlasFrameCell, PLAYER_ATLAS_PNG,
@@ -133,11 +136,10 @@ export default function WorkshopPage() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 비율을 지킨 채 화면에 꽉 채우고, 남는 쪽 여백만큼 가운데로 민다
-  const stageW = Math.min(viewport.w, viewport.h * BG_RATIO);
-  const stageH = Math.min(viewport.h, viewport.w / BG_RATIO);
-  const offsetX = (viewport.w - stageW) / 2;
-  const offsetY = (viewport.h - stageH) / 2;
+  // 비율을 지킨 채 화면에 꽉 채우고, 남는 쪽 여백만큼 가운데로 민다.
+  // HUD 도 같은 칸을 봐야 해서 계산은 stageRect 한 곳에 있다.
+  const stage = containRect(viewport.w, viewport.h, BG_RATIO);
+  const { width: stageW, height: stageH, left: offsetX, top: offsetY } = stage;
 
   // 플레이어도 무대에 맞춰 커지고 작아진다. 고정 px 이면 창을 줄였을 때
   // 방만 작아지고 사람은 그대로라 통·침대와 견준 키가 어긋난다.
@@ -529,110 +531,106 @@ export default function WorkshopPage() {
         </div>
       </div>
 
-      {/* 상호작용 안내 — 카메라가 움직여도 화면 하단에 고정돼야 하므로 스테이지 밖에 둔다.
-          제작대든 출입구든 같은 컴포넌트를 쓴다. 문구만 다르다. */}
-      {near && !activeStation && (
-        <div className="pointer-events-none absolute bottom-14 left-1/2 z-30 -translate-x-1/2">
-          <InteractionPrompt>
-            {near.kind === "exit" ? near.def.label : `${near.def.label} 사용하기`}
-          </InteractionPrompt>
-        </div>
-      )}
-
       {/* ══════════════════════════════════════════════════════════════════════
-          HUD — 화면 전체 기준 overlay (z-40)
-          모든 버튼 / 타이틀 / 조작 안내는 여기에
+          HUD (z-40)
+          배경 비율(2400:1792)이 창 비율과 달라 둘레에 어두운 띠가 남는다. 늘 떠 있는
+          것(뒤로가기·메뉴·최근 제작·조작 안내)은 그 띠로 내보내고(StageRail),
+          장면에 붙어 읽혀야 하는 것(타이틀·상호작용 안내)만 그림 위에 남긴다.
           ══════════════════════════════════════════════════════════════════════ */}
+      <StageHud rect={stage}>
+        {/* 상호작용 안내 — 걸어 다니는 동안 자리가 흔들리면 안 되니 스테이지 좌표가 아니라
+            그림 하단에 붙인다. 제작대든 출입구든 같은 컴포넌트를 쓴다. 문구만 다르다. */}
+        {near && !activeStation && (
+          <div className="pointer-events-none absolute bottom-14 left-1/2 z-30 -translate-x-1/2">
+            <InteractionPrompt>
+              {near.kind === "exit" ? near.def.label : `${near.def.label} 사용하기`}
+            </InteractionPrompt>
+          </div>
+        )}
 
-      {/* 뒤로가기 */}
-      <div className="absolute left-gutter top-gutter z-40">
+        {/* 타이틀 */}
+        <div className="pointer-events-none absolute left-1/2 top-gutter z-40 -translate-x-1/2 text-center">
+          <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
+            Workshop
+          </p>
+          <h1
+            className="text-pixel-md font-black drop-shadow-lg"
+            style={{ color: PALETTE.cream100, textShadow: "0 2px 8px rgba(13, 18, 35, .9)" }}
+          >
+            제작 공방
+          </h1>
+        </div>
+      </StageHud>
+
+      {/* 늘 떠 있는 것들은 그림 옆 어두운 띠로 내보낸다. 띠 폭은 창 비율이 정하므로
+          패널 폭도 거기 맞춘다 — 폭을 박으면 좁은 화면에서 그림을 파고든다. */}
+      <StageRail stage={stage} viewportW={viewport.w} side="left">
+        {/* 뒤로가기 */}
         <button
           type="button"
           onClick={goToBaseCamp}
-          style={{
-            background: "rgba(13, 18, 35, .88)",
-            border: "1px solid rgba(132, 75, 63, 1)",
-            color: PALETTE.cream100,
-          }}
-          className="rounded-lg px-3 py-2 text-pixel-sm font-bold backdrop-blur transition hover:brightness-125"
+          className="pointer-events-auto shrink-0 rounded-lg border border-earth-500 bg-shadow-900/88
+            px-3 py-2 text-pixel-sm font-bold text-cream-100 backdrop-blur transition
+            hover:brightness-125"
         >
           ← 바깥으로
         </button>
-      </div>
 
-      {/* 타이틀 */}
-      <div className="pointer-events-none absolute left-1/2 top-4 z-40 -translate-x-1/2 text-center">
-        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
-          Workshop
-        </p>
-        <h1
-          className="text-pixel-md font-black drop-shadow-lg"
-          style={{ color: PALETTE.cream100, textShadow: "0 2px 8px rgba(13, 18, 35, .9)" }}
-        >
-          제작 공방
-        </h1>
-      </div>
-
-      {/* 우상단 메뉴 — 버튼 아래로 펼쳐진다 */}
-      <GameMenu
-        open={menuOpen}
-        onOpen={() => setMenuOpen(true)}
-        onClose={() => setMenuOpen(false)}
-        items={menuItems}
-      />
-
-      {/* 최근 제작 아이템 패널 — 메뉴 바 바로 아래에 폭을 맞춰 붙인다.
-          폭·가장자리 여백은 메뉴와 같은 토큰을 쓴다(GameMenu 도 right-gutter · w-rail).
-          위 오프셋만 계산인데, 메뉴 버튼 높이 48 + 사이 16 이 붙기 때문이다. */}
-      {showCraftedPanel && (
-        <div
-          className="absolute right-gutter z-40 w-rail rounded-xl p-4 backdrop-blur shadow-2xl"
-          style={{
-            top: "calc(var(--spacing-gutter) + 64px)",
-            background: "rgba(13, 18, 35, .95)",
-            border: "1px solid rgba(132, 75, 63, 1)",
-          }}
-        >
-          <p className="mb-3 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
-            최근 제작 아이템
-          </p>
-          {craftedItems.length === 0 ? (
-            <p className="py-3 text-center text-pixel-sm" style={{ color: PALETTE.earth500 }}>
-              아직 제작한 아이템이 없습니다.
-            </p>
-          ) : (
-            <div className="grid max-h-80 gap-2 overflow-y-auto">
-              {craftedItems.slice(0, 15).map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-lg px-3 py-2"
-                  style={{
-                    background: "rgba(66, 61, 70, .088)",
-                    border: `1px solid ${QUALITY_COLOR[item.quality]}44`,
-                  }}
-                >
-                  <p className="text-pixel-sm font-black" style={{ color: PALETTE.cream100 }}>{item.name}</p>
-                  <p className="mt-0.5 text-pixel-sm font-bold" style={{ color: QUALITY_COLOR[item.quality] }}>
-                    {QUALITY_LABEL[item.quality]}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="pointer-events-none mt-auto">
+          <ControlHint
+            items={[
+              { keys: "WASD / 방향키", action: "이동" },
+              { keys: "SPACE", action: "상호작용" },
+              { keys: "TAB", action: "메뉴" },
+            ]}
+          />
         </div>
-      )}
+      </StageRail>
 
-      {/* 조작 안내 (좌하단, 작게) */}
-      <div
-        className="pointer-events-none absolute bottom-4 left-4 z-40 rounded-lg px-3 py-2 text-pixel-sm backdrop-blur"
-        style={{
-          background: "rgba(13, 18, 35, .75)",
-          border: "1px solid rgba(205, 178, 126, .08)",
-          color: PALETTE.earth500,
-        }}
-      >
-        WASD / 방향키 이동 &nbsp;·&nbsp; SPACE 상호작용 &nbsp;·&nbsp; TAB 메뉴
-      </div>
+      <StageRail stage={stage} viewportW={viewport.w} side="right">
+        {/* 메뉴 — 버튼 아래로 펼쳐진다 */}
+        <GameMenu
+          open={menuOpen}
+          onOpen={() => setMenuOpen(true)}
+          onClose={() => setMenuOpen(false)}
+          items={menuItems}
+        />
+
+        {/* 최근 제작 아이템. 메뉴 아래로 이어 붙는다 — 폭은 띠가 정한다 */}
+        {showCraftedPanel && (
+          <div
+            className="pointer-events-auto min-h-0 overflow-hidden rounded-xl border border-earth-500
+              bg-shadow-900/95 p-panel shadow-2xl backdrop-blur"
+          >
+            <p className="mb-3 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: PALETTE.earth500 }}>
+              최근 제작 아이템
+            </p>
+            {craftedItems.length === 0 ? (
+              <p className="py-3 text-center text-pixel-sm" style={{ color: PALETTE.earth500 }}>
+                아직 제작한 아이템이 없습니다.
+              </p>
+            ) : (
+              <div className="grid max-h-80 gap-2 overflow-y-auto">
+                {craftedItems.slice(0, 15).map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-lg px-3 py-2"
+                    style={{
+                      background: "rgba(66, 61, 70, .088)",
+                      border: `1px solid ${QUALITY_COLOR[item.quality]}44`,
+                    }}
+                  >
+                    <p className="text-pixel-sm font-black" style={{ color: PALETTE.cream100 }}>{item.name}</p>
+                    <p className="mt-0.5 text-pixel-sm font-bold" style={{ color: QUALITY_COLOR[item.quality] }}>
+                      {QUALITY_LABEL[item.quality]}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </StageRail>
 
       {/* ══════════════════════════════════════════════════════════════════════
           제작 모달 (z-50)

@@ -12,6 +12,9 @@ import type { IconName } from "./icons";
  * 열리면 머리(버튼)의 아래 모서리만 각지면서 몸통이 이어진다.
  *
  * 열고 닫는 키(Tab)는 페이지가 쥐고 있고 여기는 open/onClose 만 받는다.
+ *
+ * 자리도 폭도 `StageRail` 이 잡아 준다. 여기는 띠 폭을 그대로 채운다(w-full) —
+ * 창 모서리에 붙이면 그림 위로 얹히고, 폭을 박으면 좁은 띠에서 그림을 파고든다.
  */
 
 /** 항목 색조. 강조는 아이콘 칩에만 쓰고 글자는 sand 계열로 둔다 (12px 대비). */
@@ -64,7 +67,7 @@ export function GameMenu({
   return (
     <div
       ref={rootRef}
-      className="fixed right-gutter top-gutter z-50 w-rail overflow-hidden rounded-xl border
+      className="pointer-events-auto z-50 w-full shrink-0 overflow-hidden rounded-xl border
         border-earth-500 bg-shadow-900/92 shadow-2xl backdrop-blur"
     >
       <button
@@ -72,7 +75,7 @@ export function GameMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => (open ? onClose() : onOpen())}
-        className={`flex w-full items-center gap-2 px-4 py-3 text-pixel-sm font-bold transition
+        className={`flex w-full items-center gap-2 px-3 py-3 text-pixel-sm font-bold transition
           hover:bg-shadow-700 ${open ? "bg-shadow-800 text-cream-100" : "text-sand-200"}`}
       >
         <span className={open ? "text-ember-500" : "text-earth-400"}>{open ? "▾" : "☰"}</span>
@@ -96,9 +99,9 @@ export function GameMenu({
                     type="button"
                     role="menuitem"
                     onClick={it.onClick}
-                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-pixel-sm
-                      font-bold text-sand-200 transition hover:bg-shadow-700 hover:text-cream-100
-                      active:scale-[.98]"
+                    className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-pixel-sm
+                      font-bold break-keep text-sand-200 transition hover:bg-shadow-700
+                      hover:text-cream-100 active:scale-[.98]"
                   >
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border

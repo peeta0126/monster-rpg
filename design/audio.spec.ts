@@ -156,6 +156,26 @@ async function waitForTrack(page: Page, name: string) {
     { timeout: 15_000, message: `${name} 이(가) 안 나온다` }).toContain(name);
 }
 
+/**
+ * 곡이 넘어가는 동안을 촘촘히 들여다본다. 보는 것은 둘이다.
+ *
+ *  - **두 곡이 같이 나면 실패.** 조성도 박자도 다른 곡이 겹치면 뭉개져 들린다.
+ *    앞 곡을 다 내린 뒤에 뒷 곡을 올리는 게 규칙이다.
+ *  - **정적이 이어지면 실패.** 넘어가는 순간의 틈은 한 프레임짜리라 폴링이 운 나쁘게
+ *    한 번쯤 걸릴 수 있다. 그래서 연달아 조용한 것만 잡는다 — 그건 진짜 정적이다.
+ */
+async function watchHandover(page: Page, ms: number, where: string) {
+  const STEP = 50;
+  let silentRun = 0;
+  for (let i = 0; i * STEP < ms; i++) {
+    const now = audible(await snap(page)).map((x) => nameOf(x.file));
+    expect(now.length, `${where} — 두 곡이 같이 났다 (${now.join(", ")})`).toBeLessThan(2);
+    silentRun = now.length === 0 ? silentRun + 1 : 0;
+    expect(silentRun, `${where} — 소리가 ${silentRun * STEP}ms 넘게 끊겼다`).toBeLessThan(3);
+    await page.waitForTimeout(STEP);
+  }
+}
+
 // ── 소리 설정은 진짜 UI 로 만진다. 여기서 볼 것이 "슬라이더가 즉시 먹는가"다 ───
 async function openSoundSettings(page: Page) {
   const menu = page.getByRole("button", { name: /메뉴/ });
@@ -211,7 +231,7 @@ test.describe("audio:", () => {
     expect(camps[0].time, `되감겼다 (${before}s → ${camps[0].time}s)`).toBeGreaterThan(before);
   });
 
-  test("마을 → 공방 → 마을 — 곡이 겹쳐 넘어간다 (정적 없음)", async ({ page }) => {
+  test("마을 → 공방 → 마을 — 두 곡이 겹치지 않는다", async ({ page }) => {
     await seed(page);
     await page.goto("/");
     await firstTouch(page);
@@ -219,26 +239,14 @@ test.describe("audio:", () => {
     await page.waitForTimeout(800);
 
     await spaGoto(page, "/workshop");
-
-    // 넘어가는 동안을 촘촘히 들여다본다. 한 순간이라도 둘 다 조용하면 정적이다.
-    let sawOverlap = false;
-    const silentAt: number[] = [];
-    for (let i = 0; i < 40; i++) {
-      const now = audible(await snap(page));
-      if (now.length === 0) silentAt.push(i);
-      if (now.length >= 2) sawOverlap = true;
-      if (sawOverlap && now.length === 1 && nameOf(now[0].file) === "workshop") break;
-      await page.waitForTimeout(50);
-    }
-    expect(silentAt, "곡이 바뀌는 사이에 아무 소리도 안 나는 순간이 있었다").toEqual([]);
-    expect(sawOverlap, "앞 곡이 끊기고 뒷 곡이 시작했다 — 겹쳐 넘기지 않았다").toBe(true);
+    await watchHandover(page, 1600, "마을 → 공방");
     await waitForTrack(page, "workshop");
 
     await spaGoto(page, "/");
     await waitForTrack(page, "basecamp");
   });
 
-  test("마을 → 숲 → 전투 → 마을 — 중간에 조용해지지 않는다", async ({ page }) => {
+  test("마을 → 숲 → 전투 → 마을 — 곡이 하나씩만 난다", async ({ page }) => {
     await seed(page);
     await page.goto("/");
     await firstTouch(page);
@@ -248,12 +256,7 @@ test.describe("audio:", () => {
       ["/forest", "forest"], ["/battle", "battle"], ["/", "basecamp"],
     ] as const) {
       await spaGoto(page, path);
-      // 화면이 뜨고 곡이 넘어가는 내내 무언가는 나고 있어야 한다
-      for (let i = 0; i < 14; i++) {
-        expect(audible(await snap(page)).length,
-          `${path} 로 들어가는 동안 소리가 끊겼다`).toBeGreaterThan(0);
-        await page.waitForTimeout(60);
-      }
+      await watchHandover(page, 900, `${path} 로 들어가는 중`);
       await waitForTrack(page, expected);
     }
   });
@@ -288,14 +291,8 @@ test.describe("audio:", () => {
     await firstTouch(page);
     await waitForTrack(page, "basecamp");
 
-    /** 무언가 나고 있는지 지켜보면서 기다린다 */
-    async function watch(ms: number, where: string) {
-      const until = Date.now() + ms;
-      while (Date.now() < until) {
-        expect(audible(await snap(page)).length, `${where} — 소리가 끊겼다`).toBeGreaterThan(0);
-        await page.waitForTimeout(80);
-      }
-    }
+    /** 곡이 하나씩만, 끊기지 않고 넘어가는지 지켜보면서 기다린다 */
+    const watch = (ms: number, where: string) => watchHandover(page, ms, where);
 
     // ── 숲 입구까지 가서 걸어 들어간다 ──
     // 순서가 중요하다: Phaser 를 만지는 단계를 첫 마을 화면에서 한다. 전투에 다녀오면
@@ -372,13 +369,9 @@ test.describe("audio:", () => {
     expect(audible(await snap(page)).map((x) => nameOf(x.file)),
       "결과 화면에서 전투곡이 아니다").toEqual(["battle"]);
 
-    // 결과 화면 → 마을. 나오는 내내 소리가 있어야 하고, 곡은 한 번만 바뀐다
+    // 결과 화면 → 마을. 겹치지도 끊기지도 않아야 하고, 곡은 한 번만 바뀐다
     await page.getByRole("button", { name: /베이스캠프/ }).first().click();
-    for (let i = 0; i < 15; i++) {
-      expect(audible(await snap(page)).length, "마을로 나오는 동안 소리가 끊겼다")
-        .toBeGreaterThan(0);
-      await page.waitForTimeout(80);
-    }
+    await watchHandover(page, 1200, "결과 화면 → 마을");
     await waitForTrack(page, "basecamp");
     const made = (await snap(page)).map((x) => nameOf(x.file));
     expect(made.filter((n) => n === "basecamp").length,

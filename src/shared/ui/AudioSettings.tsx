@@ -7,29 +7,30 @@ function VolumeRow({
   label, value, onChange, disabled,
 }: { label: string; value: number; onChange: (v: number) => void; disabled: boolean }) {
   return (
-    <label className="flex items-center gap-2">
-      <span className="w-12 shrink-0 text-pixel-sm text-sand-300">{label}</span>
-      {/* min-w-0: 없으면 range 의 기본 폭(≈130px)이 최소치가 돼 좁은 메뉴에서 줄이 삐져나간다 */}
+    <label className="block">
+      {/* 이름과 값을 슬라이더 위로 올린다. 한 줄에 셋을 두면 띠가 좁은 화면에서
+          슬라이더만 눌려 손가락만 해진다 — 줄일 데가 거기밖에 없어서다. */}
+      <span className="flex items-baseline justify-between gap-2">
+        <span className="text-pixel-sm text-sand-300">{label}</span>
+        <span className="font-mono text-pixel-sm text-sand-200">{Math.round(value * 100)}</span>
+      </span>
+      {/* min-w-0: 없으면 range 의 기본 폭(≈130px)이 최소치가 돼 좁은 띠에서 줄이 삐져나간다 */}
       <input
         type="range" min={0} max={100} step={5}
         value={Math.round(value * 100)}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
-        className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-shadow-700
-          accent-ember-500 disabled:opacity-40"
+        className="mt-1 h-1.5 w-full min-w-0 cursor-pointer appearance-none rounded-full
+          bg-shadow-700 accent-ember-500 disabled:opacity-40"
       />
-      <span className="w-8 shrink-0 text-right font-mono text-pixel-sm text-sand-200">
-        {Math.round(value * 100)}
-      </span>
     </label>
   );
 }
 
 /**
- * 소리 설정. 우상단 메뉴 안에서 펼쳐지니까 메뉴 폭 안에 들어가야 한다. 그 폭은
- * 화면을 따라 움직인다(GameMenu 의 w-rail, 좁은 화면에서는 224px 까지 줄어든다).
- * 그래서 고정 폭 없이 전부 w-full 로 세로로 쌓는다. 음소거 버튼을 슬라이더 옆에
- * 두면 좁은 화면에서 슬라이더가 손가락만 해진다.
+ * 소리 설정. 메뉴 안에서 펼쳐지니까 메뉴 폭 안에 들어가야 한다. 그 폭은 그림 옆
+ * 띠가 정하고(`StageRail`), 좁은 화면에서는 136px 까지 줄어든다.
+ * 그래서 고정 폭 없이 전부 w-full 로 세로로 쌓는다.
  */
 export function AudioSettings() {
   const { bgmVolume, sfxVolume, muted, setBgmVolume, setSfxVolume, setMuted } = useAudioStore();

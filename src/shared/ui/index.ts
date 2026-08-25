@@ -13,3 +13,6 @@ export { GameMenu, type GameMenuItem } from "./GameMenu";
 export { PixelIcon, type IconSize } from "./PixelIcon";
 export { ArtifactCard, type ArtifactCardItem, type ArtifactCardSize } from "./ArtifactCard";
 export { ICONS, isIconName, type IconName } from "./icons";
+export { StageHud } from "./StageHud";
+export { useViewportSize } from "./useViewportSize";
+export { containRect, cameraRect, type StageRect } from "./stageRect";

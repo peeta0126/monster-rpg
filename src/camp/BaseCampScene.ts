@@ -30,7 +30,7 @@ import {
 // 탑·숲·집의 판정 좌표와 복귀 좌표는 campCollision.ts 의 CAMP_INTERACTIONS 한 벌뿐이다.
 // 여기 숫자를 다시 적지 마라. 충돌 형상이랑 같이 움직여야 하는 값이라 거기 있다.
 
-const CAM_ZOOM = 0.5;
+export const CAM_ZOOM = 0.5;
 const NPC_DISPLAY_HEIGHT = 192;   // 플레이어(160) × 1.2배
 const NPC_INTERACT_DISTANCE = 160; // 디스플레이 절반(160)에 맞춰 조정
 
