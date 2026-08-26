@@ -115,11 +115,23 @@ node scripts/deploy-pages.mjs https://무작위-단어.trycloudflare.com/api
 
 반영까지 보통 1~2분 걸린다(첫 배포는 더 걸린다).
 
-### 두 가지 손질이 들어가 있다
+### 세 가지 손질이 들어가 있다
 
 - **`404.html`** — GitHub Pages 는 SPA 폴백이 없다. `/forest` 에서 새로고침하면 404 가
   뜨므로 `index.html` 을 그대로 복사해 둔다. 이러면 라우터가 받아서 정상 화면이 뜬다.
 - **`.nojekyll`** — Jekyll 처리를 끈다.
+- **`/demo/`** — 제출용 플레이 영상. `design/submission/fullplay.webm` 을 배포할 때
+  얹는다. `public/` 에 두지 않는 건 녹화 산출물이라 화면 코드와 수명이 다르고, 14MB 를
+  dev 서버와 매 빌드가 다시 복사하기 때문이다. 재생 페이지는 `public/demo/index.html`
+  이라 빌드에 들어간다 — 영상 파일만 옆에 놓이면 된다.
+
+  ```
+  https://amugeona0159.github.io/demo/                 재생 페이지
+  https://amugeona0159.github.io/demo/fullplay.webm    파일 직접
+  ```
+
+  영상을 다시 찍었으면 같은 경로에 덮어쓰고 배포만 다시 하면 된다.
+  녹화는 `npx playwright test --config design/submission.config.ts -g "fullplay:"`.
 
 ### 마지막으로 서버에 이 주소를 알려 준다
 

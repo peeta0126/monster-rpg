@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Voyager Atelier — 플레이 데모</title>
+<meta property="og:title" content="Voyager Atelier — 플레이 데모" />
+<meta property="og:type" content="video.other" />
+<style>
+  :root {
+    --shadow-900: #0D1223;
+    --shadow-700: #1E354A;
+    --earth-500: #844B3F;
+    --sand-300: #CDB27E;
+    --cream-100: #F3E5B9;
+    --ember-500: #E99441;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px;
+    background: var(--shadow-900);
+    color: var(--sand-300);
+    font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  main { max-width: 1120px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; color: var(--cream-100); font-size: 28px; letter-spacing: .02em; }
+  p.sub { margin: 0 0 24px; font-size: 15px; }
+  video {
+    width: 100%;
+    display: block;
+    background: #000;
+    border: 2px solid var(--earth-500);
+    border-radius: 4px;
+  }
+  ul.links { list-style: none; padding: 0; margin: 24px 0 0; display: flex; flex-wrap: wrap; gap: 12px; }
+  a.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border: 2px solid var(--earth-500);
+    border-radius: 4px;
+    background: var(--shadow-700);
+    color: var(--cream-100);
+    text-decoration: none;
+    font-size: 15px;
+  }
+  a.btn.primary { background: var(--ember-500); color: var(--shadow-900); border-color: var(--ember-500); font-weight: 700; }
+  a.btn:hover { border-color: var(--ember-500); }
+  footer { margin-top: 24px; font-size: 13px; color: var(--sand-300); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Voyager Atelier</h1>
+  <p class="sub">전체 플레이 데모 · 3분 24초 · 1280&times;720</p>
+
+  <video controls preload="metadata" playsinline>
+    <source src="fullplay.webm" type="video/webm" />
+    이 브라우저는 WebM 재생을 지원하지 않습니다. 아래에서 내려받아 보세요.
+  </video>
+
+  <ul class="links">
+    <li><a class="btn primary" href="/">게임 플레이하기</a></li>
+    <li><a class="btn" href="fullplay.webm" download>영상 내려받기 (14MB)</a></li>
+  </ul>
+
+  <footer>재생이 안 되면 Chrome · Edge · Firefox 로 열어 주세요.</footer>
+</main>
+</body>
+</html>

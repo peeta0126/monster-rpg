@@ -63,6 +63,20 @@ for (const entry of fs.readdirSync(staging)) {
   fs.rmSync(path.join(staging, entry), { recursive: true, force: true });
 }
 fs.cpSync(path.join(ROOT, "dist"), staging, { recursive: true });
+
+// 데모 영상은 public/ 이 아니라 여기서 얹는다. 녹화 산출물이라 화면 코드와 수명이 다르고,
+// public/ 에 두면 14MB 를 dev 서버와 매 빌드가 통째로 다시 복사한다.
+// 재생 페이지(public/demo/index.html)는 빌드에 들어가므로 파일만 옆에 놓으면 된다.
+const demoVideo = path.join(ROOT, "design", "submission", "fullplay.webm");
+if (fs.existsSync(demoVideo)) {
+  fs.mkdirSync(path.join(staging, "demo"), { recursive: true });
+  fs.copyFileSync(demoVideo, path.join(staging, "demo", "fullplay.webm"));
+  console.log("      데모 영상 포함 — /demo/");
+} else {
+  // 영상만 빠진 채로 올라가면 재생 페이지가 검은 칸이 된다. 조용히 넘기지 않는다.
+  console.warn(`      경고: ${path.relative(ROOT, demoVideo)} 없음 — /demo/ 는 빈 화면이 됩니다`);
+}
+
 // GitHub Pages 에는 SPA 폴백이 없다. /forest 에서 새로고침하면 404 라 같은 문서를 404 로도 둔다.
 fs.copyFileSync(path.join(staging, "index.html"), path.join(staging, "404.html"));
 fs.writeFileSync(path.join(staging, ".nojekyll"), "");
