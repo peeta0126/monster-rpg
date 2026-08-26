@@ -25,10 +25,21 @@ export class SaveConflictError extends ApiError {
   }
 }
 
+/**
+ * 응답을 기다릴 상한.
+ *
+ * 서버가 죽어 연결이 거절되면 fetch 는 곧바로 실패하지만, 노트북이 잠들면 터널은 붙은 채로
+ * 응답만 끊긴다. 그때 fetch 는 영영 기다린다 — 「바로 시작」이 먹통으로 보이고, 서버를
+ * 못 쓸 때 오프라인으로 넘어가는 길(anonSession)도 같이 막힌다.
+ * 상한에 걸려 오프라인으로 떨어지는 쪽이 낫다. 게임은 로컬 저장으로 끝까지 돌아간다.
+ */
+const TIMEOUT_MS = 8000;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const base = await resolveApiBase();
   const res = await fetch(`${base}${path}`, {
     ...init,
+    signal: init?.signal ?? AbortSignal.timeout(TIMEOUT_MS),
     headers: {
       "Content-Type": "application/json",
       ...authHeader(),
