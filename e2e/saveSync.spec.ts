@@ -6,11 +6,10 @@ import { test, expect, type Page } from "@playwright/test";
  * 동기화가 깨져도 게임은 멀쩡히 돌아가고, 다른 기기에서 열어 봐야 비로소 드러난다.
  * 그래서 눈에 안 띄는 만큼 회귀 가치가 높다.
  *
- * 계정 준비와 서버 상태 확인은 API 로 직접 한다. UI 로 볼 것은 넷이다.
+ * 계정 준비와 서버 상태 확인은 API 로 직접 한다. UI 로 볼 것은 셋이다.
  *   1) 로그인하면 서버 세이브가 로컬로 내려온다 (pull)
  *   2) 게임 안에서 바뀐 진행도가 서버로 올라간다 (push)
- *   3) 「바로 시작」이 로그인 없이 서버 계정을 받아 온다 (익명 계정)
- *   4) 두 기기가 엇갈리면 서버 쪽이 이긴다 (충돌)
+ *   3) 두 기기가 엇갈리면 서버 쪽이 이긴다 (충돌)
  *
  * 이 테스트만 백엔드가 필요하다. server/ 가 안 떠 있으면 통째로 스킵한다.
  */
@@ -114,7 +113,7 @@ test.describe("서버 세이브 동기화", () => {
     expect(mats.crystal, "재료까지 함께 내려와야 합니다").toBe(7);
 
     // 로그인 화면이 아니라 게임 안으로 들어왔는지
-    await expect(page.getByRole("button", { name: /바로 시작/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^회원가입$/ })).toHaveCount(0);
 
     // ── push: 게임 안에서 상태를 바꾸면 서버로 올라가는가 ─────────────────────
     const before = (await getSave(token)).revision;
@@ -132,27 +131,6 @@ test.describe("서버 세이브 동기화", () => {
     const auth = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).state, AUTH_KEY);
     expect(auth.token, "로그인 토큰이 저장되지 않았습니다").toBeTruthy();
     expect(auth.isGuest).toBe(false);
-  });
-
-  test("「바로 시작」은 로그인 없이 서버 계정을 받아 온다", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: /바로 시작/ }).click();
-
-    // 버튼 문구로 판정하면 안 된다 — 요청 중에는 「로그인」이 "…" 로 바뀌어서,
-    // 아직 계정을 못 받은 시점에도 로그인 버튼이 사라진 것처럼 보인다.
-    await expect.poll(
-      () => page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).state.token, AUTH_KEY),
-      { timeout: 20_000, message: "익명 계정 토큰이 없습니다 — 진행이 이 브라우저에만 남습니다" },
-    ).toBeTruthy();
-
-    const auth = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).state, AUTH_KEY);
-    expect(auth.isAnonymous).toBe(true);
-    expect(auth.isGuest).toBe(false);
-    expect(String(auth.username)).toMatch(/^guest_/);
-
-    // 다시 붙을 수 있게 복구용 비밀번호가 보관돼 있어야 한다
-    const recovery = await page.evaluate(() => localStorage.getItem("monster-rpg-anon"));
-    expect(recovery, "복구용 비밀번호가 없으면 토큰 만료와 함께 세이브로 가는 길이 끊긴다").toBeTruthy();
   });
 
   test("두 기기가 엇갈리면 서버 쪽이 이긴다", async ({ page }) => {

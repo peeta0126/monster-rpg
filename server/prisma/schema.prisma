@@ -12,8 +12,8 @@ model User {
   username     String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
-  /// 「바로 시작」으로 만들어진 계정. 정식 계정으로 연결되면 false 가 된다
-  isAnonymous  Boolean  @default(false)
+  /// 마지막 로그인 시각. 세이브 시각만으로는 "들어왔다가 아무것도 안 하고 나간" 사람이 안 보인다
+  lastLoginAt  DateTime?
   saveData     SaveData?
   saveHistory  SaveHistory[]
 }

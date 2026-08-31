@@ -22,10 +22,9 @@ else
 DATABASE_URL="file:./dev.db"
 JWT_SECRET="$(secret)"
 JWT_EXPIRES_IN="7d"
-ANON_JWT_EXPIRES_IN="365d"
 PORT=4000
 CORS_ORIGIN="http://localhost:5173,http://localhost:4173"
-TRUST_PROXY=1
+TRUST_PROXY=0
 ADMIN_SECRET="${ADMIN_SECRET_VALUE}"
 EOF
   echo "  관리자 키: ${ADMIN_SECRET_VALUE}"
@@ -43,8 +42,5 @@ cat <<'EOF'
 끝. 이제 서버를 띄우세요:
   npm --prefix server start
 
-바깥에서 접속하려면 다른 창에서:
-  cloudflared tunnel --url http://localhost:4000
-나온 https 주소를 public/server-config.json 의 apiBase 에 넣고 화면을 다시 배포합니다.
-(주소 뒤에 /api 를 붙여야 합니다)
+화면은 저장소 뿌리에서 따로 띄웁니다 (`npm run dev`). /api 는 vite 가 여기로 넘깁니다.
 EOF

@@ -30,10 +30,7 @@
     "build:icons": "node scripts/build-icons.mjs",
     "build:icons:sheet": "node scripts/build-icons.mjs --sheet",
     "test": "node --import tsx --test tests/*.test.ts tests/*.test.mjs",
-    "fonts:subset": "node scripts/subset-fonts.mjs",
-    "submission:thumb": "playwright test --config design/submission.config.ts -g \"썸네일\"",
-    "submission:demo": "playwright test --config design/submission.config.ts -g \"데모 영상\"",
-    "deploy:pages": "node scripts/deploy-pages.mjs"
+    "fonts:subset": "node scripts/subset-fonts.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",

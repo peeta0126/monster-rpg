@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { loginApi, ApiError } from "./api";
 import { useAuthStore } from "./authStore";
-import { startAnonymousSession } from "./anonSession";
 import RegisterModal from "./RegisterModal";
 import DevCodeModal from "./DevCodeModal";
 import { sha256Hex } from "./sha256";
@@ -32,20 +31,6 @@ export default function LoginForm() {
   const [showRegister, setShowRegister] = useState(false);
   const [showDevCode, setShowDevCode] = useState(false);
 
-  async function startNow() {
-    if (pending) return;
-    setPending(true);
-    setError(null);
-    // 계정 발급이 실패해도 게임에는 들여보낸다(로컬 저장). 여기서 막으면 서버가 꺼져 있는 동안
-    // 아무도 게임을 열지 못한다.
-    //
-    // 실패를 여기서 알리지는 않는다. 성공이든 실패든 이 화면은 곧바로 사라져서 무슨 글씨를
-    // 띄워도 사람 눈에 안 닿는다. 서버로 저장되는 중인지는 게임 안의 저장 표시가 맡는다
-    // (shared/SaveIndicator — 서버면 "저장됨", 아니면 로컬로 표시된다).
-    await startAnonymousSession();
-    setPending(false);
-  }
-
   async function submitLogin() {
     if (pending) return;
     if (!username.trim() || !password) {
@@ -66,7 +51,7 @@ export default function LoginForm() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("서버에 연결할 수 없습니다. 「바로 시작」으로 먼저 플레이할 수 있습니다.");
+        setError("서버에 연결할 수 없습니다. 세이브 서버가 켜져 있는지 확인해주세요.");
       }
     } finally {
       setPending(false);
@@ -89,23 +74,12 @@ export default function LoginForm() {
         style={{ boxShadow: "0 0 26px rgba(233,148,65,0.2), inset 0 1px 0 rgba(243,229,185,0.06)" }}
         onSubmit={(e) => { e.preventDefault(); submitLogin(); }}
       >
-        <button
-          type="button"
-          disabled={pending}
-          onClick={startNow}
-          className="rounded-md border-2 border-ember-500/90 bg-gradient-to-b from-ember-500 to-ember-700 py-2.5 font-bold text-cream-100 transition [text-shadow:0_1px_1px_rgba(13,18,35,0.6)] hover:brightness-110 active:translate-y-px active:shadow-none disabled:opacity-40"
-          style={{ ...btnSize, boxShadow: "0 2px 0 rgba(168,61,31,0.7), 0 0 12px rgba(233,148,65,0.25)" }}
-        >
-          <PixelIcon name="compass" size={16} className="mr-1.5 inline-block align-middle" />
-          바로 시작
-        </button>
-        <p className="text-center text-sand-300" style={{ fontSize: 12 }}>
-          가입 없이 바로 플레이합니다. 진행은 자동으로 저장됩니다.
-        </p>
-
-        <div className="mb-0.5 mt-1 flex items-center gap-2 text-ember-500/60">
+        <div className="mb-0.5 flex items-center gap-2 text-ember-500/60">
           <span className="h-px flex-1 bg-gradient-to-r from-transparent to-ember-700/70" />
-          <span style={{ ...pixelFont, fontSize: 12 }}>계정으로 이어하기</span>
+          <span style={{ ...pixelFont, fontSize: 12 }}>
+            <PixelIcon name="compass" size={16} className="mr-1.5 inline-block align-middle" />
+            여행자 등록
+          </span>
           <span className="h-px flex-1 bg-gradient-to-l from-transparent to-ember-700/70" />
         </div>
 
@@ -163,6 +137,10 @@ export default function LoginForm() {
             회원가입
           </button>
         </div>
+
+        <p className="text-center text-sand-300" style={{ fontSize: 12 }}>
+          처음이라면 회원가입부터. 진행은 계정에 자동으로 저장돼 다른 기기에서 이어집니다.
+        </p>
       </form>
 
       {showRegister && <RegisterModal onClose={() => setShowRegister(false)} />}

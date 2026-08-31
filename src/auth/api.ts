@@ -26,7 +26,7 @@ export class SaveConflictError extends ApiError {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const base = await resolveApiBase();
+  const base = resolveApiBase();
   const res = await fetch(`${base}${path}`, {
     ...init,
     headers: {
@@ -62,12 +62,6 @@ function authHeader(): Record<string, string> {
 export interface AuthResponse {
   token: string;
   username: string;
-  isAnonymous?: boolean;
-}
-
-/** 「바로 시작」이 받는 응답. password 는 토큰이 만료된 뒤 같은 계정으로 돌아가기 위한 복구용이다 */
-export interface AnonResponse extends AuthResponse {
-  password: string;
 }
 
 export function registerApi(username: string, password: string): Promise<AuthResponse> {
@@ -78,15 +72,7 @@ export function loginApi(username: string, password: string): Promise<AuthRespon
   return request("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
 }
 
-export function startAnonApi(): Promise<AnonResponse> {
-  return request("/auth/anon", { method: "POST" });
-}
-
-export function linkAccountApi(username: string, password: string): Promise<AuthResponse> {
-  return request("/auth/link", { method: "POST", body: JSON.stringify({ username, password }) });
-}
-
-export function meApi(): Promise<{ username: string; isAnonymous: boolean }> {
+export function meApi(): Promise<{ username: string }> {
   return request("/auth/me");
 }
 

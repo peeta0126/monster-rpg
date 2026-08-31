@@ -16,6 +16,7 @@ dist-ssr
 server/.env
 server/prisma/*.db
 server/prisma/*.db-journal
+server/prisma/*.db.backup-*
 
 # Playwright (자동 플레이) 산출물
 /test-results
@@ -26,9 +27,6 @@ server/prisma/*.db-journal
 # 단 컨택트시트(3열로 합친 리뷰용 한 장)는 예외로 커밋한다.
 /design/screenshots/
 !/design/contact-sheet-*.png
-
-# 제출물 확인용 프레임. 영상(demo.webm)은 다른 기기에서 제출할 수 있어야 하니 커밋한다.
-/design/submission/frames/
 
 # Editor directories and files
 .vscode/*

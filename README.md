@@ -13,8 +13,9 @@ React, TypeScript, Phaser 기반의 몬스터 RPG 프로젝트입니다. 베이�
 - 가위바위보, 방향키 입력 미니게임을 통한 제작 품질 결정
 - 아티팩트 장착, 강화, 보너스 스탯 관리
 - Zustand persist 기반 로컬 저장
-- 로그인 없이 「바로 시작」으로 입장(익명 서버 계정 자동 발급), 세이브는 기기 간 자동 동기화
-- 세이브 충돌 시 서버 우선 + 덮이기 전 10판 보관, 관리자 페이지에서 되돌리기
+- 아이디·비밀번호 계정으로 입장, 세이브는 계정에 붙어 기기 간 자동 동기화
+- 세이브 충돌 시 서버 우선 + 덮이기 전 10판 보관
+- 관리자 페이지(`/admin`)에서 계정별 진행 상황(층·파티·도감·재료·퀘스트) 확인과 세이브 되돌리기
 
 ## 실행 방법
 
@@ -64,7 +65,8 @@ npx prisma migrate deploy
 ```
 
 새 기기에 서버를 세우는 거라면 이 과정을 한 번에 하는 스크립트가 있습니다
-(`server/setup.ps1` · `server/setup.sh`). 자세한 건 [docs/DEPLOY.md](docs/DEPLOY.md).
+(`server/setup.ps1` · `server/setup.sh`). 의존성 설치·`.env` 생성(비밀키 랜덤)·
+마이그레이션·빌드를 한 번에 합니다.
 
 `migrate deploy`는 이미 작성된 마이그레이션을 그대로 적용만 하는 명령으로, 클론 직후처럼 스키마를 새로 설계하지 않는 상황에 맞습니다 (`migrate dev`는 마이그레이션을 새로 만들거나 로컬에서 스키마를 변경할 때 씁니다).
 
@@ -172,7 +174,7 @@ monster-rpg/
 │  │  ├─ schema.prisma    # User, SaveData, SaveHistory 모델 정의
 │  │  └─ migrations/      # DB 마이그레이션
 │  ├─ src/
-│  │  ├─ routes/          # auth.ts(가입/로그인/익명/연결), save.ts(동기화), admin.ts
+│  │  ├─ routes/          # auth.ts(가입/로그인), save.ts(동기화), admin.ts(운영)
 │  │  ├─ middleware/      # auth.ts(JWT 검증), admin.ts(ADMIN_SECRET), rateLimit.ts
 │  │  ├─ env.ts           # 환경 변수 로드/검증
 │  │  ├─ prismaClient.ts  # Prisma Client 인스턴스
@@ -215,15 +217,17 @@ monster-rpg/
 | `src/shared/ErrorBoundary.tsx` | 렌더링 중 발생한 예외를 잡아 폴백 화면을 보여주는 최상위 에러 바운더리입니다. |
 | `src/shared/AppErrorBridge.tsx` | Phaser 씬/전역에서 발생한 예외를 `ErrorBoundary`로 전달합니다. |
 | `src/auth/AuthGate.tsx` | 세션 여부에 따라 로그인 화면 또는 실제 앱을 보여줍니다. |
-| `src/auth/authStore.ts` | 로그인 토큰, 익명 계정 여부 등 인증 상태를 Zustand persist로 관리합니다. |
-| `src/auth/anonSession.ts` | 「바로 시작」이 익명 계정을 발급받고, 복구용 비밀번호를 보관합니다. |
+| `src/auth/authStore.ts` | 로그인 토큰 등 인증 상태를 Zustand persist로 관리합니다. |
 | `src/auth/useSaveSync.ts` | 서버 세이브를 내려받고, 변경을 올리고, 충돌·오프라인을 처리합니다. |
 | `src/auth/api.ts` | 백엔드 인증/세이브 API 호출을 담당합니다. |
-| `src/shared/apiBase.ts` | API 서버 주소를 런타임에 정합니다(`/server-config.json`). |
+| `src/shared/apiBase.ts` | API 서버 주소를 정합니다(기본 `/api`, vite 프록시가 넘깁니다). |
 | `server/src/app.ts` | Express 앱을 조립합니다. 테스트가 이걸 그대로 씁니다. |
 | `server/src/index.ts` | 포트를 열고 종료 신호를 처리합니다. |
-| `server/src/routes/auth.ts` | 회원가입/로그인/익명 발급/계정 연결 라우트입니다. |
+| `server/src/routes/auth.ts` | 회원가입/로그인/토큰 확인 라우트입니다. |
 | `server/src/routes/save.ts` | 세이브 조회/저장, 판 번호 충돌 판정, 이력 보관을 합니다. |
+| `server/src/routes/admin.ts` | 계정 목록·진행 요약·세이브 원본·이력·되돌리기·서버 상태를 냅니다. |
+| `server/src/saveSummary.ts` | 세이브 JSON 에서 진행 정도를 숫자로만 셉니다(이름은 안 붙입니다). |
+| `src/admin/saveDigest.ts` | 세이브 원본에 게임 표의 이름을 붙여 관리 화면이 읽을 모양으로 풉니다. |
 | `server/prisma/schema.prisma` | `User`, `SaveData`, `SaveHistory` 모델을 정의합니다. |
 
 ## 상태 저장
@@ -234,9 +238,9 @@ monster-rpg/
 
 ### 서버 동기화
 
-게임에 들어가는 길은 둘 다 서버 계정을 씁니다. 「바로 시작」은 아이디를 묻지 않고 익명 계정을
-발급받고(`POST /api/auth/anon`), 로그인은 기존 계정에 붙습니다. 로컬 스토리지만 쓰는 경로는
-**서버에 못 닿았을 때의 폴백**으로만 남아 있습니다 — 그래야 서버가 꺼져 있어도 게임이 열립니다.
+게임에 들어가려면 계정이 필요합니다. 처음이면 회원가입(`POST /api/auth/register`),
+그다음부터는 로그인(`POST /api/auth/login`)입니다. 진행은 계정에 붙으므로 다른 기기에서
+같은 아이디로 들어가면 그대로 이어집니다.
 
 - **내려받기**: 세션이 생길 때 한 번, 그리고 창으로 돌아올 때(30초 간격 제한). 숲 원정이
   진행 중이면 건너뜁니다 — 정산 전 재료가 날아가기 때문입니다.
@@ -250,10 +254,22 @@ monster-rpg/
 - **오프라인**: 서버와 통신하지 못해도 로컬 저장은 항상 별도로 유지됩니다. 실패하면 간격을
   늘려 가며 재시도하고, 네트워크가 돌아오면 즉시 다시 올립니다.
 
-익명 계정은 이 브라우저에 보관된 복구용 비밀번호(`monster-rpg-anon`)에만 매여 있습니다.
-게임 메뉴의 「계정 연결」로 아이디를 붙이면 그때부터 어느 기기에서든 로그인으로 이어받습니다.
+### 관리자 페이지
 
-배포(화면은 상시 호스팅, 서버는 노트북 + 터널)는 [docs/DEPLOY.md](docs/DEPLOY.md) 를 보세요.
+`/admin` 에 `server/.env` 의 `ADMIN_SECRET` 으로 들어갑니다. 두 탭입니다.
+
+- **사용자** — 계정 목록. 줄마다 최고 층·도감·마지막 로그인·최종 저장이 보이고,
+  「진행」을 누르면 그 사람의 파티·보관함·재료·물약·만든 장비·퀘스트·이야기 진행이
+  이름 그대로 나옵니다(맨 아래에 세이브 원본도 접어 두었습니다).
+  「이력」은 덮이기 전 세이브 10판과 되돌리기입니다.
+- **서버** — 켜진 지, 계정 수, 세이브 파일 크기, 마지막 저장 시각.
+
+이름을 붙이는 일은 화면(`src/admin/saveDigest.ts`)이 게임 표를 읽어서 합니다.
+서버는 세이브 원본과 숫자 요약만 냅니다 — 몬스터·아이템 이름표를 서버에 한 벌 더 두면
+게임에서 이름을 고친 날 관리 화면만 옛 이름을 계속 보여주기 때문입니다.
+
+**배포는 하지 않습니다.** 화면과 서버가 같은 PC 에서 돌고, `/api` 는 vite 개발 서버와
+미리보기 서버가 `localhost:4000` 으로 넘깁니다.
 
 ## 개발 참고
 

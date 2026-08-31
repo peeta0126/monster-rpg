@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { prisma } from "../prismaClient.js";
 import { requireAdmin } from "../middleware/admin.js";
+import { summarizeSave } from "../saveSummary.js";
 import { asyncHandler } from "../asyncHandler.js";
 
 export const adminRouter = Router();
@@ -42,9 +43,8 @@ adminRouter.get(
   asyncHandler(async (_req, res) => {
     const uptimeSeconds = Math.floor(process.uptime());
 
-    const [userCount, anonCount, saveCount, historyCount, latest] = await Promise.all([
+    const [userCount, saveCount, historyCount, latest] = await Promise.all([
       prisma.user.count(),
-      prisma.user.count({ where: { isAnonymous: true } }),
       prisma.saveData.count(),
       prisma.saveHistory.count(),
       prisma.saveData.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
@@ -56,7 +56,6 @@ adminRouter.get(
       nodeVersion: process.version,
       dbBytes: readDbBytes(),
       userCount,
-      anonCount,
       saveCount,
       historyCount,
       lastSavedAt: latest?.updatedAt ?? null,
@@ -64,12 +63,19 @@ adminRouter.get(
   }),
 );
 
+/**
+ * 계정 목록. 세이브 본문까지 읽어 "어디까지 갔나" 를 같이 낸다.
+ *
+ * 목록에서 요약이 안 보이면 스무 명을 하나씩 눌러 봐야 누가 진짜로 플레이했는지 알 수 있다.
+ * 세이브가 사람당 수십 KB 라 몇백 명까지는 이대로 읽어도 된다 — 그보다 커지면 요약을
+ * 저장할 자리를 만들 때다.
+ */
 adminRouter.get(
   "/users",
   asyncHandler(async (_req, res) => {
     const users = await prisma.user.findMany({
       orderBy: { createdAt: "desc" },
-      include: { saveData: { select: { updatedAt: true, revision: true } } },
+      include: { saveData: { select: { updatedAt: true, revision: true, data: true } } },
     });
 
     res.json(
@@ -77,11 +83,41 @@ adminRouter.get(
         id: u.id,
         username: u.username,
         createdAt: u.createdAt,
-        isAnonymous: u.isAnonymous,
+        lastLoginAt: u.lastLoginAt,
         saveUpdatedAt: u.saveData?.updatedAt ?? null,
         saveRevision: u.saveData?.revision ?? null,
+        summary: summarizeSave(u.saveData?.data),
       })),
     );
+  }),
+);
+
+/**
+ * 한 사람의 세이브 원본. 이름을 붙이는 것은 관리 화면이 한다 — 몬스터·아이템 표가
+ * 게임 쪽에만 있어서, 여기서 풀면 같은 표를 서버에도 한 벌 두게 된다.
+ */
+adminRouter.get(
+  "/users/:id/save",
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      include: { saveData: true },
+    });
+    if (!user) {
+      res.status(404).json({ error: "계정을 찾을 수 없습니다." });
+      return;
+    }
+
+    res.json({
+      username: user.username,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      data: user.saveData?.data ?? null,
+      version: user.saveData?.version ?? null,
+      revision: user.saveData?.revision ?? 0,
+      updatedAt: user.saveData?.updatedAt ?? null,
+      summary: summarizeSave(user.saveData?.data),
+    });
   }),
 );
 
@@ -139,22 +175,5 @@ adminRouter.post(
     });
 
     res.json({ revision: restored.revision, updatedAt: restored.updatedAt });
-  }),
-);
-
-/**
- * 세이브가 한 번도 안 올라온 익명 계정 청소.
- * 「바로 시작」은 화면을 열기만 해도 계정을 만드니까, 들어왔다 바로 닫은 사람만큼 빈 행이 쌓인다.
- */
-adminRouter.post(
-  "/cleanup-anon",
-  asyncHandler(async (req, res) => {
-    const olderThanHours = Number(req.query.hours ?? 24);
-    const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
-
-    const { count } = await prisma.user.deleteMany({
-      where: { isAnonymous: true, createdAt: { lt: cutoff }, saveData: { is: null } },
-    });
-    res.json({ deleted: count });
   }),
 );

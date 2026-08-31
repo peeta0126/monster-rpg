@@ -2,6 +2,10 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const API_PROXY = {
+  "/api": { target: "http://localhost:4000", changeOrigin: true },
+};
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
@@ -16,12 +20,8 @@ export default defineConfig({
       },
     },
   },
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:4000",
-        changeOrigin: true,
-      },
-    },
-  },
+  // 화면과 서버가 같은 PC 에서 돈다. 배포가 없으니 주소를 런타임에 알아낼 길도 없애고
+  // (`src/shared/apiBase.ts`) 여기서 넘긴다 — dev 와 preview 둘 다 걸어야 빌드한 화면도 붙는다.
+  server: { proxy: API_PROXY },
+  preview: { proxy: API_PROXY },
 });

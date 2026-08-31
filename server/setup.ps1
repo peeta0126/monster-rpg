@@ -28,10 +28,9 @@ if (Test-Path $envPath) {
 DATABASE_URL="file:./dev.db"
 JWT_SECRET="$jwt"
 JWT_EXPIRES_IN="7d"
-ANON_JWT_EXPIRES_IN="365d"
 PORT=4000
 CORS_ORIGIN="http://localhost:5173,http://localhost:4173"
-TRUST_PROXY=1
+TRUST_PROXY=0
 ADMIN_SECRET="$admin"
 "@ | Out-File -FilePath $envPath -Encoding utf8
     Write-Host "  관리자 키: $admin"
@@ -48,7 +47,5 @@ Write-Host ""
 Write-Host "끝. 이제 서버를 띄우세요:"
 Write-Host "  npm --prefix server start"
 Write-Host ""
-Write-Host "바깥에서 접속하려면 다른 창에서:"
-Write-Host "  cloudflared tunnel --url http://localhost:4000"
-Write-Host "나온 https 주소를 public/server-config.json 의 apiBase 에 넣고 화면을 다시 배포합니다."
-Write-Host "(주소 뒤에 /api 를 붙여야 합니다)"
+Write-Host "화면은 저장소 뿌리에서 따로 띄웁니다: npm run dev"
+Write-Host "/api 는 vite 가 이 서버로 넘깁니다."
