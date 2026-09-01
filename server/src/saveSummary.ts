@@ -17,6 +17,7 @@ export interface SaveSummary {
   storageCount: number;
   dexSeen: number;
   dexCaught: number;
+  /** 가방에 있는 것 + 몬스터가 낀 것. 둘을 합쳐야 "몇 개 가졌나" 가 된다 */
   artifacts: number;
   materials: number;
   potions: number;
@@ -35,6 +36,19 @@ function sumCounts(value: unknown): number {
   let total = 0;
   for (const n of Object.values(value as Record<string, unknown>)) {
     if (typeof n === "number" && Number.isFinite(n) && n > 0) total += n;
+  }
+  return total;
+}
+
+/**
+ * 장비는 두 군데에 나뉘어 산다 — 가방(`craftedArtifacts`)과 몬스터가 낀 것
+ * (`equippedArtifacts`: uid → 목록). 가방만 세면 파티가 무장하고 있는데 "장비 0개" 가 된다.
+ */
+function countEquipped(value: unknown): number {
+  if (!value || typeof value !== "object") return 0;
+  let total = 0;
+  for (const list of Object.values(value as Record<string, unknown>)) {
+    if (Array.isArray(list)) total += list.length;
   }
   return total;
 }
@@ -65,7 +79,7 @@ export function summarizeSave(raw: string | null | undefined): SaveSummary | nul
     storageCount: countArray(state.storage),
     dexSeen:      countArray(state.dexSeen),
     dexCaught:    countArray(state.dexCaught),
-    artifacts:    countArray(state.craftedArtifacts),
+    artifacts:    countArray(state.craftedArtifacts) + countEquipped(state.equippedArtifacts),
     materials:    sumCounts(state.materials),
     potions:      sumCounts(state.potions),
     questsCompleted:  countStatus(state.questStatus, "completed"),

@@ -359,6 +359,9 @@ describe("관리자 — 진행 상황", () => {
     storyFlags: { tower_cleared: true },
     questStatus: { q1: "completed", q2: "in_progress", q3: "not_accepted" },
     craftedArtifacts: [{}, {}],
+    // 장비는 가방과 "몬스터가 낀 것" 두 군데에 나뉘어 산다. 가방만 세면 파티가 무장하고
+    // 있는데 0개가 된다 — 개발자 프리셋 세이브가 정확히 그 모양이었다.
+    equippedArtifacts: { a: [{}], b: [{}] },
   });
 
   interface AdminUserRow {
@@ -407,7 +410,7 @@ describe("관리자 — 진행 상황", () => {
         storageCount: 1,
         dexSeen: 3,
         dexCaught: 2,
-        artifacts: 2,
+        artifacts: 4,
         materials: 5,
         potions: 1,
         questsCompleted: 1,
@@ -416,6 +419,21 @@ describe("관리자 — 진행 상황", () => {
       },
     );
     assert.ok((row.summary?.bytes ?? 0) > 0, "세이브 크기를 세지 않았습니다");
+  });
+
+  test("가방이 비어 있어도 낀 장비는 센다", async () => {
+    const user = await newUser();
+    await api(base(), "/api/save", {
+      method: "PUT",
+      token: user.token,
+      body: JSON.stringify({
+        data: save({ craftedArtifacts: [], equippedArtifacts: { a: [{}, {}, {}] } }),
+        version: 2,
+        baseRevision: 0,
+      }),
+    });
+    const row = await rowFor(user.username);
+    assert.equal(row.summary?.artifacts, 3, "가방만 세면 무장한 파티가 장비 0개로 보인다");
   });
 
   test("세이브를 한 번도 안 올린 계정은 요약이 null 이다", async () => {

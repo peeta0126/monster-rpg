@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { usePlayerStore, type OwnedMonster } from "../shared/playerStore";
 import { MONSTER_IMAGE_MAP } from "./monsterImages";
 import { getFullLearnset } from "./learnset";
-import { monsters } from "./monsters";
+import { monsters, DEX_TOTAL, dexCount } from "./monsters";
 import {
   withImprint, imprintStatus, imprintStars, chainKeyOf, MAX_IMPRINT_TIER,
 } from "./imprint";
@@ -771,9 +771,9 @@ export default function MonstersPage() {
   const party   = useMemo(() => rawParty.map((m) => withImprint(m, imprint)), [rawParty, imprint]);
   const storage = useMemo(() => rawStorage.map((m) => withImprint(m, imprint)), [rawStorage, imprint]);
 
-  // 오름(최종 보스)은 포획 대상이 아니라 도감 분모에서 뺀다
-  const catchableTotal = monsters.filter((m) => m.id !== "ormr").length;
-  const caughtCount    = dexCaught.filter((id) => id !== "ormr").length;
+  // 규칙은 monsters.ts 한 곳(DEX_TOTAL·dexCount). 여기서 다시 세면 관리 화면과 갈린다
+  const catchableTotal = DEX_TOTAL;
+  const caughtCount    = dexCount(dexCaught);
 
   const [selParty,   setSelParty]   = useState<number | null>(null);
   const [selStorage, setSelStorage] = useState<string | null>(null);

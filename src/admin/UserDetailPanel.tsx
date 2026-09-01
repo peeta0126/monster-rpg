@@ -206,7 +206,18 @@ export default function UserDetailPanel({
                   </Section>
                 )}
 
-                <Section title="만든 장비" note={`${digest.artifacts.length}개`}>
+                {/* 장착한 것과 가방에 있는 것을 한 칸에 낸다. 가방만 세면 바로 위 파티 줄에는
+                    장비 이름이 보이는데 여기는 "0개" 라고 적힌다 — 한 화면이 자기 말을 뒤집는다 */}
+                <Section
+                  title="장비"
+                  note={
+                    digest.artifacts.length === 0
+                      ? "0개"
+                      : `${digest.artifacts.length}개 (장착 ${digest.equippedCount} · 가방 ${
+                          digest.artifacts.length - digest.equippedCount
+                        })`
+                  }
+                >
                   {digest.artifacts.length === 0 ? (
                     <p className="text-pixel-sm text-sand-300">없음</p>
                   ) : (
@@ -219,6 +230,7 @@ export default function UserDetailPanel({
                           {a.name}
                           {a.quality && <span className="ml-1 text-mist-300">{a.quality}</span>}
                           {a.grade && <span className="ml-1 text-cream-100">{a.grade}</span>}
+                          {a.equippedTo && <span className="ml-1 text-sand-300">— {a.equippedTo}</span>}
                         </li>
                       ))}
                     </ul>

@@ -9,7 +9,7 @@
  * 화면이 죽으면 안 된다 — 못 읽은 자리는 비워 두고 나머지를 보여준다.
  */
 
-import { monsters } from "../monster/monsters";
+import { monsters, DEX_TOTAL, dexCount } from "../monster/monsters";
 import { MATERIALS, POTIONS } from "../shared/items";
 import { ALL_QUESTS } from "../camp/campDialogues";
 import { QUALITY_LABEL } from "../shared/craftingUtils";
@@ -37,6 +37,8 @@ export interface ArtifactLine {
   quality: string;
   /** "Lv.4 +2" 처럼. 레벨·강화가 없는 옛 세이브는 빈 문자열 */
   grade: string;
+  /** 끼고 있는 몬스터 이름. 가방에 있는 것은 undefined */
+  equippedTo?: string;
 }
 
 export interface QuestLine {
@@ -61,7 +63,9 @@ export interface SaveDigest {
   dexTotal: number;
   materials: CountLine[];
   potions: CountLine[];
+  /** 장착한 것과 가방에 있는 것을 합친 전부. 장착분은 equippedTo 가 채워져 있다 */
   artifacts: ArtifactLine[];
+  equippedCount: number;
   quests: QuestLine[];
   flags: FlagLine[];
 }
@@ -101,13 +105,14 @@ function str(value: unknown): string | null {
 }
 
 /** 아티팩트 한 줄. 파티 몬스터의 장착 목록과 창고 목록이 같은 모양이라 같이 쓴다 */
-function artifactLine(raw: Record<string, unknown>, index: number): ArtifactLine {
+function artifactLine(raw: Record<string, unknown>, index: number, equippedTo?: string): ArtifactLine {
   const level = num(raw.level, 1);
   const enhancement = num(raw.enhancement, 0);
   const quality = str(raw.quality) as ItemQuality | null;
 
   return {
-    key: str(raw.instanceId) ?? `artifact-${index}`,
+    key: (str(raw.instanceId) ?? `artifact-${index}`) + (equippedTo ? "-eq" : ""),
+    equippedTo,
     name: str(raw.name) ?? str(raw.itemId) ?? "이름 없는 장비",
     quality: quality && quality in QUALITY_LABEL ? QUALITY_LABEL[quality] : "",
     grade: [level > 1 ? `Lv.${level}` : "", enhancement > 0 ? `+${enhancement}` : ""]
@@ -161,18 +166,35 @@ export function digestSave(raw: string | null): SaveDigest | null {
   const questStatus = asRecord(state.questStatus);
   const gear = asRecord(state.equippedArtifacts);
 
+  const party   = asArray(state.party).map((m, i) => monsterLine(m, i, gear));
+  const storage = asArray(state.storage).map((m, i) => monsterLine(m, i, {}));
+
+  /**
+   * 장비는 두 군데에 나뉘어 산다 — 가방(`craftedArtifacts`)과 몬스터가 낀 것
+   * (`equippedArtifacts`). 가방만 세면 "장비 0개" 라고 적으면서 바로 위 파티 줄에는
+   * 장비 이름 세 개가 보인다. 실제로 그렇게 나왔다.
+   */
+  const nameOfUid = new Map([...party, ...storage].map((m) => [m.key, m.name]));
+  const equipped: ArtifactLine[] = Object.entries(gear).flatMap(([uid, list]) =>
+    asArray(list).map((a, i) => artifactLine(a, i, nameOfUid.get(uid) ?? uid)),
+  );
+
+  const dexSeenIds   = Array.isArray(state.dexSeen) ? (state.dexSeen as string[]) : [];
+  const dexCaughtIds = Array.isArray(state.dexCaught) ? (state.dexCaught as string[]) : [];
+
   return {
     bestFloor: num(state.bestFloor),
     towerCleared: flags.tower_cleared === true,
-    party:   asArray(state.party).map((m, i) => monsterLine(m, i, gear)),
-    storage: asArray(state.storage).map((m, i) => monsterLine(m, i, {})),
-    // 도감은 id 문자열 배열이다. asArray 는 객체만 남기므로 여기 쓰면 0 이 된다.
-    dexCaught: Array.isArray(state.dexCaught) ? state.dexCaught.length : 0,
-    dexSeen:   Array.isArray(state.dexSeen) ? state.dexSeen.length : 0,
-    dexTotal:  monsters.length,
+    party,
+    storage,
+    // 도감 계산은 monsters.ts 한 벌(DEX_TOTAL·dexCount). 여기서 세면 「내 몬스터」 화면과 갈린다
+    dexCaught: dexCount(dexCaughtIds),
+    dexSeen:   dexCount(dexSeenIds),
+    dexTotal:  DEX_TOTAL,
     materials: countLines(state.materials, MATERIALS),
     potions:   countLines(state.potions, POTIONS),
-    artifacts: asArray(state.craftedArtifacts).map(artifactLine),
+    artifacts: [...equipped, ...asArray(state.craftedArtifacts).map((a, i) => artifactLine(a, i))],
+    equippedCount: equipped.length,
     quests: ALL_QUESTS.map((q) => ({
       id: q.id,
       title: q.title,
