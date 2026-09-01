@@ -9,7 +9,7 @@
 import type { ArtifactInstance, ItemQuality } from "../../src/shared/crafting";
 import { applyArtifactQualityStats, rollBonusStats } from "../../src/shared/craftingUtils";
 import { ARTIFACT_RECIPES } from "../../src/workshop/craftingRecipes";
-import { applyLevelGrowth } from "../../src/monster/growth";
+import { applyLevelGrowth, movesAtLevel } from "../../src/monster/growth";
 import { chainKeyOf, IMPRINT_TIERS } from "../../src/monster/imprint";
 import { monsters } from "../../src/monster/monsters";
 import { scaleToLevel } from "../../src/shared/floorTable";
@@ -67,7 +67,13 @@ export async function makeParty(spec: string): Promise<OwnedMon[]> {
     if (!base) throw new Error(`그런 몬스터가 없다: ${id}`);
     const level = Number(lv ?? 1);
     const scaled = scaleToLevel(base, level);
-    let mon: OwnedMon = { ...scaled, uid: `p${i}`, currentHp: scaled.maxHp };
+    // 종족 기본기를 그대로 두면 학습표 레벨 제한을 건너뛴다. 그러면 이 도구가
+    // 실제 판보다 센 파티를 재게 된다 — 30층 모치가 Lv32 기술 볼트크래시(80)를
+    // 들고 나와 같은 층을 90% 와 58% 로 갈라 놓았다
+    let mon: OwnedMon = {
+      ...scaled, moves: movesAtLevel(base.id, level, scaled.moves),
+      uid: `p${i}`, currentHp: scaled.maxHp,
+    };
     mon = (await applyLevelGrowth(mon, 1)).monster as OwnedMon;
     mon.currentHp = mon.maxHp;
     return mon;

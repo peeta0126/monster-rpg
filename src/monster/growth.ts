@@ -1,6 +1,6 @@
 import type { Monster, Move } from "../shared/game";
 import { monsters } from "./monsters";
-import { getLearnableAtLevel } from "./learnset";
+import { getAllLearnableUpToLevel, getLearnableAtLevel } from "./learnset";
 
 /**
  * 레벨업에 딸려오는 성장 처리. 기술 습득과 진화를 태운다.
@@ -31,6 +31,26 @@ function moveValue(m: Move): number {
   // 상태이상기(위력 0)는 위력만 보면 항상 밀려나므로 최소한의 가치를 인정해준다
   if (m.power === 0) return 35;
   return m.power * (m.accuracy / 100);
+}
+
+/**
+ * 그 레벨의 몬스터가 들고 있어야 할 기술 넷.
+ *
+ * `monsters.ts` 의 `moves` 는 그 종을 대표하는 기술 묶음이라 최종기까지 들어 있다.
+ * 그걸 잡은 몬스터에 그대로 얹으면 학습표의 레벨 제한이 통째로 무시된다 — 고대 숲에서
+ * 잡은 Lv18 모왕이 Lv52 기술인 천둥강타(95)를 들고 나오고, 얕은 숲의 버노가 Lv38 기술인
+ * 화염방사(75)를 처음부터 쓴다. 키운 개체는 학습표를 따라 올라오는데 잡은 개체만
+ * 건너뛰는 셈이라, 키우는 쪽이 손해가 된다.
+ *
+ * 학습표가 있는 종은 그 레벨까지 배울 수 있는 것 중 값이 높은 넷을 준다. 레벨업으로
+ * 하나씩 배워 올라온 결과와 같다(autoForget 이 늘 제일 값 낮은 것을 밀어내므로).
+ * 학습표가 없는 종은 종족 기본기를 그대로 쓴다.
+ */
+export function movesAtLevel(monsterId: string, level: number, base: Move[]): Move[] {
+  const learnable = getAllLearnableUpToLevel(monsterId, level).map((e) => e.move);
+  if (learnable.length === 0) return base.slice(0, MAX_MOVES);
+  const uniq = [...new Map(learnable.map((m) => [m.name, m])).values()];
+  return uniq.sort((a, b) => moveValue(b) - moveValue(a)).slice(0, MAX_MOVES);
 }
 
 /**

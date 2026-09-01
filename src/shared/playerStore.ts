@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { Monster } from "./game";
 import type { CraftingRecipe, CraftedItem, ArtifactInstance, CraftedPotionStack, ItemQuality } from "./crafting";
 import { monsters } from "../monster/monsters";
+import { movesAtLevel } from "../monster/growth";
 import { MAX_TOWER_FLOOR } from "./floorTable";
 import { expToNext } from "../battle/battleUtils";
 import { POTIONS } from "./items";
@@ -47,7 +48,8 @@ function makeUid() {
 }
 
 function monsterToOwned(m: Monster): OwnedMonster {
-  return { ...m, uid: makeUid(), currentHp: m.maxHp };
+  // 잡은 개체도 학습표를 따른다. 종족 기본기를 그대로 얹으면 레벨 제한이 무시된다
+  return { ...m, moves: movesAtLevel(m.id, m.level, m.moves), uid: makeUid(), currentHp: m.maxHp };
 }
 
 /** 개발자 모드 진입 시 지급되는 보유 몬스터 레벨 (50층 테스트 대응) */

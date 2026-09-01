@@ -17,6 +17,7 @@ import {
   type SimState, type OwnedMon,
 } from "./gameModel";
 import { monsters } from "../../src/monster/monsters";
+import { movesAtLevel } from "../../src/monster/growth";
 import { settleBag } from "../../src/camp/forest/runStore";
 import {
   chainKeyOf, essenceCostFor, imprintTier, IMPRINT_ESSENCE_ID, MAX_IMPRINT_TIER,
@@ -165,7 +166,11 @@ export async function simulateRun(seed: number): Promise<RunStats> {
 
     // 잡아 온 것: 파티가 비면 채우고, 더 좋으면 갈아타고, 나머지는 각인 재료로 남긴다
     for (const wild of res.caughtMonsters) {
-      const caught: OwnedMon = { ...wild, uid: `c${uid++}`, currentHp: wild.maxHp };
+      // 게임의 monsterToOwned 와 같은 규칙. 잡은 개체도 학습표를 따른다
+      const caught: OwnedMon = {
+        ...wild, moves: movesAtLevel(wild.id, wild.level, wild.moves),
+        uid: `c${uid++}`, currentHp: wild.maxHp,
+      };
       // 도감과 첫 포획 플래그. 퀘스트 조건과 목표가 이 둘을 읽는다
       if (!s.dexCaught.includes(caught.id)) s.dexCaught.push(caught.id);
       s.storyFlags.first_capture = true;
