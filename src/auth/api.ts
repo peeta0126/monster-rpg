@@ -72,9 +72,6 @@ export function loginApi(username: string, password: string): Promise<AuthRespon
   return request("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
 }
 
-export function meApi(): Promise<{ username: string }> {
-  return request("/auth/me");
-}
 
 export function fetchSaveApi(): Promise<SaveEnvelope> {
   return request("/save");

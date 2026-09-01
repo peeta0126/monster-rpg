@@ -57,17 +57,6 @@ export interface CraftedPotionStack {
   quantity: number;
 }
 
-// ─── 기존 타입 유지 ────────────────────────────────────────────────────────────────
-export type CraftingMaterialId =
-  | "wood"
-  | "iron"
-  | "crystal"
-  | "monster_essence"
-  | "herb"
-  | "water"
-  | "slime_extract"
-  | "magic_dust"
-  | "fiber";
 
 export interface CraftingMaterialCost {
   itemId: string;
@@ -87,7 +76,6 @@ export interface CraftingRecipe {
   baseStats?: ArtifactStatBonus[];   // 아티팩트 전용 기본 능력치
 }
 
-export type CraftingResult = "success" | "failed" | "no-materials";
 
 export interface CraftedItem {
   id: string;

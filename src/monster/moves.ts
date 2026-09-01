@@ -257,11 +257,3 @@ export const MOVE_BY_ID: Record<string, Move> = Object.fromEntries(
   ALL_MOVES.map((m) => [m.id, m]),
 );
 
-export function getMoveById(id: string): Move | undefined {
-  return MOVE_BY_ID[id];
-}
-
-/** 타입별 기술 목록 (스킬트리 UI·밸런싱 확인용) */
-export function getMovesByType(type: Move["type"]): Move[] {
-  return ALL_MOVES.filter((m) => m.type === type);
-}

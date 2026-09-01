@@ -103,6 +103,3 @@ export function getMaterial(id: string) {
   return MATERIALS.find((m) => m.id === id);
 }
 
-export function getPotion(id: string) {
-  return POTIONS.find((p) => p.id === id);
-}

@@ -22,7 +22,6 @@ export const BASECAMP_BACKGROUND_BLURRED = "/assets/basecamp/basecamp-bg-blur.we
 /** 공방 실내 배경 (2400x1792).
  *  좌표계는 이 이미지 기준 백분율. src/workshop/workshopLayout.ts 참고 */
 export const WORKSHOP_BACKGROUND_IMAGE = "/assets/housing/housing_bg.webp";
-export const WORKSHOP_BACKGROUND_ASPECT_RATIO = 2400 / 1792;
 
 /**
  * 숲 구역 배경 3종 (2603x1464, 16:9).
@@ -36,7 +35,6 @@ export const WORKSHOP_BACKGROUND_ASPECT_RATIO = 2400 / 1792;
 export const FOREST_BG_SHALLOW = "/assets/forest/forest_shallow.webp";
 export const FOREST_BG_DEEP    = "/assets/forest/forest_deep.webp";
 export const FOREST_BG_ANCIENT = "/assets/forest/forest_ancient.webp";
-export const FOREST_BACKGROUND_ASPECT_RATIO = 2603 / 1464;
 
 /**
  * 무한의 탑 전투 배경 (960x540, 35장 = 구간 5 × 속성 7).

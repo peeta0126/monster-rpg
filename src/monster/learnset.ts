@@ -301,10 +301,6 @@ export function getLearnableAtLevel(monsterId: string, level: number): Move[] {
   return (LEARNSET[monsterId] ?? []).filter((e) => e.level === level).map((e) => e.move);
 }
 
-/** 특정 레벨까지 배울 수 있는 모든 기술 */
-export function getAllLearnableUpToLevel(monsterId: string, maxLevel: number): LearnEntry[] {
-  return (LEARNSET[monsterId] ?? []).filter((e) => e.level <= maxLevel);
-}
 
 /** 도감 표시용. 레벨 순 정렬된 전체 학습 목록 */
 export function getFullLearnset(monsterId: string): LearnEntry[] {
