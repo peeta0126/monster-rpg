@@ -1,5 +1,5 @@
 {
   "_": "배포한 화면이 어느 서버를 볼지 정한다. 빈 값이면 같은 도메인의 /api 를 쓴다(개발 서버 프록시).",
   "_예시": "https://xxxx-yyyy.trycloudflare.com/api",
-  "apiBase": "https://lips-aids-continuously-fcc.trycloudflare.com/api"
+  "apiBase": ""
 }

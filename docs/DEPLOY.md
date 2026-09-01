@@ -14,7 +14,32 @@
 화면과 서버를 나눈 이유는 하나다. **노트북이 꺼져도 게임 링크는 살아 있어야 하기 때문**이다.
 서버에 못 닿으면 게임은 브라우저 저장소만 쓰고 계속 돌아간다 — 저장 표시가
 "서버 저장 실패 — 로컬에는 보관됨" 으로 바뀔 뿐이다. 노트북을 다시 켜고 창으로 돌아오면
-쌓여 있던 변경이 자동으로 올라간다.
+쌓여 있던 변경이 자동으로 올라간다. 서버가 꺼져 있을 때 처음 들어온 사람도 마찬가지다 —
+로컬 전용으로 게임을 하다가, 서버가 살아나면 화면이 알아서 계정을 받아 그동안의 진행을
+올린다(`src/auth/offlineUpgrade.ts`). 링크를 받은 쪽은 새로고침조차 할 필요가 없다.
+
+---
+
+## 0. 남에게 열어 줄 때 — 명령 하나
+
+1단계(설치)를 한 번 끝냈으면, 그다음부터는 이것만 켜 두면 된다.
+
+```bash
+npm run host
+```
+
+서버를 띄우고 · 터널을 열고 · **배포된 화면에 새 터널 주소를 알려 주기까지** 한다.
+끝나면 보낼 주소가 찍힌다. 상대는 그 링크를 열고 「바로 시작」만 누르면 된다.
+
+이게 있는 이유는 터널 주소가 켤 때마다 바뀌기 때문이다. 게임 화면은 **실행 중에**
+`server-config.json` 을 읽으므로, 그 한 장만 Pages 에 올리면 붙는다 — 다시 빌드할 이유가 없다
+(3초. 전체 재배포는 2분). 터널이 도중에 끊기면 다시 켜고 새 주소를 또 올린다.
+
+Ctrl+C 로 서버와 터널이 함께 정리된다. 게임을 고쳐서 화면 자체를 다시 올려야 할 때만
+3단계(`deploy:pages`)가 필요하다.
+
+> `npm run host -- --no-tunnel` 은 서버만 띄운다(로컬 확인용).
+> `-- --no-publish` 는 터널까지 열고 주소만 찍는다. `--` 를 빠뜨리면 npm 이 삼킨다.
 
 ---
 
@@ -67,6 +92,8 @@ powercfg /change monitor-timeout-ac 0
 
 ## 2. 터널 열기
 
+`npm run host` 가 대신 해 준다(0단계). 손으로 할 때만 아래를 본다.
+
 [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
 를 설치하고 **서버와 다른 창에서**:
 
@@ -93,27 +120,25 @@ Cloudflare Pages 대신 여기를 쓰는 이유는 계정이 하나도 더 필�
 
 ### 다시 올리기
 
-터널 주소가 바뀌었거나 게임을 고쳤을 때. `public/server-config.json` 의 `apiBase` 에
-**2단계 주소 + `/api`** 를 넣고 스크립트를 돌린다.
-
-```json
-{
-  "apiBase": "https://무작위-단어.trycloudflare.com/api"
-}
-```
+**게임을 고쳤을 때** 돌린다. 터널 주소만 바뀐 거라면 `npm run host` 가 알아서 한다(0단계).
 
 ```bash
-node scripts/deploy-pages.mjs
+npm run deploy:pages
 ```
 
 빌드 → `404.html`·`.nojekyll` 추가 → Pages 저장소에 푸시까지 한 번에 한다.
-주소를 인자로 줘도 된다 — 그러면 `server-config.json` 도 같이 고쳐 준다.
+**지금 올라가 있는 서버 주소는 그대로 살려 둔다** — 게임을 고쳤다고 해서 붙어 있던 사람이
+떨어지면 안 되니까. 주소를 같이 바꾸려면 인자로 준다.
 
 ```bash
 node scripts/deploy-pages.mjs https://무작위-단어.trycloudflare.com/api
 ```
 
 반영까지 보통 1~2분 걸린다(첫 배포는 더 걸린다).
+
+> **저장소의 `public/server-config.json` 은 비워 둘 것.** 여기에 터널 주소를 적으면
+> 개발 서버와 e2e 까지 그 주소를 보게 되어, 로컬 서버를 켜 두고도 아무 것도 안 붙는다.
+> 실제 주소는 Pages 저장소의 사본에만 산다.
 
 ### 세 가지 손질이 들어가 있다
 
@@ -136,11 +161,16 @@ node scripts/deploy-pages.mjs https://무작위-단어.trycloudflare.com/api
 ### 마지막으로 서버에 이 주소를 알려 준다
 
 노트북의 `server/.env` 를 고치고 서버를 다시 띄운다. 안 하면 브라우저가 CORS 에서 막혀
-저장이 조용히 안 된다.
+저장이 조용히 안 된다. `npm run host` 는 켤 때마다 이 두 줄을 확인하고 모자라면 채운다 —
+손으로 할 때만 아래를 본다.
 
 ```
 CORS_ORIGIN="https://amugeona0159.github.io,http://localhost:5173,http://localhost:4173"
+TRUST_PROXY=1
 ```
+
+`TRUST_PROXY` 를 안 켜면 `req.ip` 가 터널의 IP 라, 요청 제한이 사람별이 아니라 전역으로 걸린다.
+한 사람이 「바로 시작」을 몇 번 누르면 뒤에 온 사람이 막힌다.
 
 **서버를 다시 띄울 때 포트를 먼저 비울 것.** 4000 을 쥔 프로세스가 남아 있으면 새 서버는
 `EADDRINUSE` 로 죽고 옛 설정을 문 서버가 계속 돈다 — 화면상으로는 "고쳤는데 그대로"로 보인다.

@@ -155,6 +155,53 @@ test.describe("서버 세이브 동기화", () => {
     expect(recovery, "복구용 비밀번호가 없으면 토큰 만료와 함께 세이브로 가는 길이 끊긴다").toBeTruthy();
   });
 
+  test("서버가 꺼져 있을 때 들어와도, 서버가 돌아오면 알아서 붙는다", async ({ page }) => {
+    // 링크를 받은 사람은 "열어서 하는" 게 전부다. 여기서 오프라인으로 굳으면 그 진행은
+    // 서버를 나중에 켜도 브라우저에만 남고, 새로고침하라고 전할 방법도 없다.
+    await page.route("**/api/auth/anon", (route) => route.abort("connectionrefused"));
+
+    // 오프라인 동안 쌓인 진행. 붙고 나면 이게 그 계정의 첫 세이브가 되어야 한다.
+    await page.addInitScript(
+      ({ k, v }: { k: string; v: string }) => {
+        if (!localStorage.getItem(k)) localStorage.setItem(k, v);
+      },
+      { k: PLAYER_KEY, v: JSON.stringify({ state: sampleSave(19), version: 2 }) },
+    );
+
+    await page.goto("/");
+    await page.getByRole("button", { name: /바로 시작/ }).click();
+
+    await expect.poll(
+      () => page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).state.isGuest, AUTH_KEY),
+      { timeout: 20_000, message: "서버가 없으면 로컬 전용으로라도 들어가야 합니다" },
+    ).toBe(true);
+
+    // 서버가 돌아왔다. 사람은 아무 것도 안 한다 — 창을 다시 보는 것까지가 전부다.
+    await page.unroute("**/api/auth/anon");
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+
+    await expect.poll(
+      () => page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).state.token, AUTH_KEY),
+      { timeout: 40_000, message: "서버가 돌아왔는데도 오프라인으로 굳었습니다" },
+    ).toBeTruthy();
+
+    const auth = await page.evaluate(
+      (k) => JSON.parse(localStorage.getItem(k)!).state as { token: string; isGuest: boolean; isAnonymous: boolean },
+      AUTH_KEY,
+    );
+    expect(auth.isGuest, "붙었으면 로컬 전용 표시가 풀려야 합니다").toBe(false);
+    expect(auth.isAnonymous).toBe(true);
+
+    // 오프라인 동안의 진행이 그대로 첫 세이브로 올라간다
+    await expect.poll(
+      async () => {
+        const save = await getSave(auth.token);
+        return save.data ? (JSON.parse(save.data) as { bestFloor?: number }).bestFloor : null;
+      },
+      { timeout: 30_000, message: "붙은 뒤에도 로컬 진행이 안 올라갔습니다" },
+    ).toBe(19);
+  });
+
   test("두 기기가 엇갈리면 서버 쪽이 이긴다", async ({ page }) => {
     const username = uniqueName();
     const token = await register(username);

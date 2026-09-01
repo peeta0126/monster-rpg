@@ -35,6 +35,11 @@ function writeRecovery(recovery: Recovery): void {
   }
 }
 
+/** 이 브라우저가 전에 받은 계정이 있는가. 서버에 이미 세이브가 있다는 뜻이기도 하다 */
+export function hasRecovery(): boolean {
+  return readRecovery() !== null;
+}
+
 export function clearRecovery(): void {
   try {
     localStorage.removeItem(RECOVERY_KEY);
