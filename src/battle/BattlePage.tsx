@@ -85,6 +85,7 @@ import { previewMove } from "./damagePreview";
 import { statusDetail, statusLabel, STATUS_META } from "./statusInfo";
 import { TypeChartPanel } from "./TypeChartPanel";
 import { ExpGainOverlay } from "./ExpGainOverlay";
+import { ExpStatusRow } from "./ExpStatusRow";
 import { useExpPlayback } from "./expPlayback";
 import { useBattleSettings, logSpeedMs, LOG_SPEEDS } from "../shared/battleSettings";
 
@@ -1106,7 +1107,7 @@ export default function BattlePage() {
           </div>
         )}
 
-        {/* ── 턴 바 ──────────────────────────────────────────────────────────
+        {/* ── ① 턴 바 ──────────────────────────────────────────────────────────
             예전 이 자리는 플레이어 HP 바였는데, 그건 캔버스 패널이 이미 크게 보여준다.
             같은 걸 두 번 그리는 대신 캔버스가 못 하는 것, 이번 라운드의 순서를 놓는다. */}
         <div className="flex items-center justify-between gap-3 border-b border-earth-500/40 px-3 py-2 text-pixel-sm">
@@ -1175,6 +1176,17 @@ export default function BattlePage() {
             </button>
           </div>
         </div>
+
+        {/* ── ② 경험치 줄 ────────────────────────────────────────────────────
+            자기 줄을 쓴다. 위 줄은 칩이 뜨는 대로 늘어나므로 거기 끼우면 칩 둘에 눌린다. */}
+        <ExpStatusRow
+          name={expView?.name ?? player.name}
+          level={expView?.level ?? player.level}
+          exp={expView ? Math.round(expView.ratio * expView.expToNext) : player.exp}
+          expToNext={expView?.expToNext ?? player.expToNextLevel}
+          fillMs={expView?.fillMs ?? 0}
+          levelUp={expView?.card !== null && expView !== null}
+        />
 
         {/* 로그 한 줄. 캔버스 로그 상자와 같은 내용이다. 접근성·테스트용으로 DOM 에도 남기되
             자리를 적게 쓴다(예전엔 56px 짜리 띠가 대부분 비어 있었다). */}

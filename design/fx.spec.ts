@@ -116,9 +116,12 @@ test("fx: 경험치 연출", async ({ page }) => {
 
   // 경험치가 움직이기 시작하면 손을 뗀다. Q 를 계속 눌러 대면 레벨업 카드까지
   // 지나쳐 버려서, 카드가 안 뜬 것인지 눌러 넘긴 것인지 구분이 안 된다.
+  const row = page.getByTestId("exp-row");
+  const idleRow = await row.textContent();
   const fightUntilExpMoves = async (rounds: number) => {
     for (let i = 0; i < rounds; i++) {
       if (await page.getByTestId("exp-gain").count()) return true;
+      if ((await row.textContent()) !== idleRow) return true;
       if (await page.getByTestId("cmd-moves").isEnabled().catch(() => false)) {
         await page.getByTestId("cmd-moves").click();
         await page.getByTestId("move-tap").click();
@@ -137,6 +140,10 @@ test("fx: 경험치 연출", async ({ page }) => {
 
   // 쓰러질 때까지 때린다
   await fightUntilExpMoves(120);
+
+  // 하단 경험치 줄이 먼저 차오른다. 전면 카드보다 이쪽이 매 판 보이는 화면이다
+  await expect(row).not.toHaveText(String(idleRow), { timeout: 20_000 });
+  await page.screenshot({ path: path.join(OUT, "_exp-row.png") });
 
   // 레벨이 올랐으면 거기서 멈춰 선다. 수동이라 사람이 넘길 때까지 기다린다.
   const exp = page.getByTestId("exp-gain");
@@ -180,8 +187,76 @@ test("fx: 속성 상성표", async ({ page }) => {
 });
 
 /**
+ * 레벨업이 나지 않는 승리. 이때는 전면 카드가 뜨지 않고 하단 경험치 줄만 차오른다.
+ * 잡몹 한 마리마다 화면을 덮던 예전 동작이 되살아나면 여기서 걸린다.
+ *
+ * 이 파일의 다른 캡처와 달리 움직임을 켜고 찍는다. design 설정은 배경 애니메이션이
+ * 위상마다 다르게 찍히는 걸 막으려고 reduce 로 고정해 두는데, 그러면 차오르는 연출
+ * 자체가 없어져(그게 정상 동작이다) 무엇을 보려는 건지 알 수 없는 그림이 남는다.
+ */
+test.describe("경험치 줄", () => {
+  test.use({ reducedMotion: "no-preference" });
+
+  test("fx: 경험치 줄", async ({ page }) => {
+    fs.mkdirSync(OUT, { recursive: true });
+    await page.addInitScript(() => {
+      localStorage.setItem("monster-rpg-auth", JSON.stringify({
+        state: { token: null, username: null, isGuest: true, isDev: false }, version: 0 }));
+      localStorage.setItem("monster-rpg-player", JSON.stringify({
+        state: {
+          // 갓 레벨을 올린 상태. 1층 한 판으로는 다음 레벨에 한참 못 미친다 → 카드가 안 뜬다
+          party: [{
+            id: "flameling", level: 5, uid: "fx-0", exp: 0,
+            moves: [{ id: "tap", name: "톡", type: "normal", power: 20, accuracy: 100, category: "physical" }],
+          }],
+          storage: [], dexSeen: [], dexCaught: [], materials: {}, potions: {},
+          bestFloor: 0, storyFlags: {}, questStatus: {},
+          craftedItems: [], craftedArtifacts: [], craftedPotions: [], equippedArtifacts: {},
+        },
+        version: 1,
+      }));
+      localStorage.setItem("monster-rpg-battle-settings", JSON.stringify({
+        state: { autoAdvance: false, logSpeed: "normal" }, version: 0 }));
+    });
+    await page.goto("/battle");
+    await expect(page.locator("#root")).not.toBeEmpty();
+    await page.evaluate(() => {
+      history.replaceState({ ...(history.state ?? {}), usr: { floor: 1 } }, "");
+    });
+    await page.reload();
+    await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
+    await page.waitForTimeout(1200);
+
+    const row = page.getByTestId("exp-row");
+    await expect(row).toContainText("Lv.5");
+    const idleRow = await row.textContent();
+    await page.screenshot({ path: path.join(OUT, "_exp-row-before.png") });
+
+    for (let i = 0; i < 150; i++) {
+      if ((await row.textContent()) !== idleRow) break;
+      if (await page.getByTestId("cmd-moves").isEnabled().catch(() => false)) {
+        await page.getByTestId("cmd-moves").click();
+        await page.getByTestId("move-tap").click();
+      } else {
+        await page.keyboard.press("q");
+      }
+      await page.waitForTimeout(110);
+    }
+    // 차오르는 중간을 잡는다. 0.5초에 걸쳐 차므로 여기서 바는 아직 목표에 못 미친다.
+    await page.screenshot({ path: path.join(OUT, "_exp-row-filling.png") });
+
+    // 바는 찼는데 레벨은 그대로고, 화면을 덮는 카드도 없다
+    await expect(row).not.toHaveText(String(idleRow), { timeout: 20_000 });
+    await expect(row).toContainText("Lv.5");
+    await expect(page.getByTestId("exp-gain")).toHaveCount(0);
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: path.join(OUT, "_exp-row-after.png") });
+  });
+});
+
+/**
  * 상태이상 칩과 공격버프 칩이 동시에 뜬 상태. 순서 줄은 칩이 뜨는 대로 늘어나므로
- * 여기서 순서가 밀려 잘리거나 오른쪽 버튼들을 밀어내면 배치가 잘못된 것이다.
+ * 여기서 아래 경험치 줄이 밀리거나 잘리면 배치가 잘못된 것이다.
  *
  * 10층 보스만 마비를 35% 로 건다. 강화 전투 물약을 계속 들이켜며 맞아 주면
  * 두 칩이 겹치는 순간이 온다.
@@ -235,9 +310,8 @@ test("fx: 칩 두 개", async ({ page }) => {
 
   await expect(status).toBeVisible();
   await expect(buff).toBeVisible();
-  // 칩이 둘 다 뜬 채로도 순서 줄과 오른쪽 버튼이 제자리에 온전히 있어야 한다
-  await expect(page.getByTestId("turn-order")).toBeVisible();
-  await expect(page.getByTestId("cmd-exit")).toBeVisible();
+  // 칩이 둘 다 뜬 채로도 경험치 줄은 제자리에 온전히 있어야 한다
+  await expect(page.getByTestId("exp-row")).toContainText("EXP");
   await page.screenshot({ path: path.join(OUT, "_chips-two.png") });
 });
 
