@@ -249,7 +249,13 @@ function normalizeOwnedMonster(raw: unknown): OwnedMonster | null {
     ...base,
     ...r,
     uid: typeof r.uid === "string" ? r.uid : makeUid(),
-    moves: (Array.isArray(r.moves) && r.moves.length > 0 ? r.moves : base.moves) as OwnedMonster["moves"],
+    // 저장된 기술이 있으면 그대로 둔다. 없을 때 종족 대표 기술(base.moves)로 채우면
+    // 학습표의 레벨 제한이 통째로 무시된다 — 그 목록은 최종기까지 들어 있어서, 예컨대
+    // Lv40 모왕이 전기 일색이 되고 전기 보스인 40층에서 모든 공격이 ×0.5 가 된다.
+    // 키워 온 개체는 학습표를 따라 노말 계열 기술도 함께 들고 있다.
+    moves: (Array.isArray(r.moves) && r.moves.length > 0
+      ? r.moves
+      : movesAtLevel(base.id, level, base.moves)) as OwnedMonster["moves"],
     level,
     ...recomputed,
     // 요구 경험치도 레벨에서 다시 계산한다. 잡은 몬스터는 scaleToLevel 이 만든 값을 그대로

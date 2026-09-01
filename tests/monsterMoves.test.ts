@@ -40,3 +40,14 @@ test("기술은 최대 넷이고, 레벨이 오르면 줄지 않는다", () => {
     }
   }
 });
+
+test("세이브에 기술이 없으면 그 레벨의 학습표로 채운다", () => {
+  // 종족 대표 기술(monsters.ts 의 moves)로 채우면 레벨 제한이 무시된다. 모왕이면
+  // 전기 일색이 되어, 전기 보스인 40층에서 모든 공격이 ×0.5 가 된다.
+  const base = monsters.find((m) => m.id === "mossyfinal")!;
+  const filled = movesAtLevel(base.id, 40, base.moves);
+  assert.ok(
+    filled.some((m) => m.type !== base.type),
+    "Lv40 모왕이 자기 속성 기술만 들고 있다 — 같은 속성 보스 앞에서 답이 없어진다",
+  );
+});

@@ -8,7 +8,7 @@
  */
 import type { PersistedStoryFlag, QuestStatus } from "../../src/shared/storyFlags";
 import { DEFAULT_STORY_FLAGS } from "../../src/shared/storyFlags";
-import {
+import { bossRegenAmount,
   getFloorEnemy, getFloorEnemySkill, isHardFloor, MAX_TOWER_FLOOR, scaleToLevel,
 } from "../../src/shared/floorTable";
 import { rollBattleDrop } from "../../src/shared/dropTables";
@@ -234,6 +234,8 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
   let playerGauge = 0;
   let enemyGauge = 0;
   let lastEnemyMove: string | undefined;
+  /** 40층 보스가 회복을 이미 썼는가. 한 전투에 한 번뿐이다(BattlePage 의 bossRegenUsedRef) */
+  let bossRegenUsed = false;
 
   const startIdx = activeIdx;
   void startIdx;
@@ -265,7 +267,18 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       if (move.statusEffect && (move.statusChance ?? 0) > 0 && Math.random() * 100 <= (move.statusChance ?? 0)) {
         ne = applyStatusEffect(ne, move.statusEffect);
       }
-      return isFainted(ne);
+      if (isFainted(ne)) return true;
+      // 보스 기믹. 한 번은 몸을 추스른다(40층 모왕). BattlePage.tsx:773-783 에서 옮겼다.
+      // 이게 없으면 시뮬이 40층을 실제보다 후하게 잰다 — 실제 UI 로 열두 판 돌려 보니
+      // 시뮬이 17% 로 본 자리가 0% 였다.
+      if (!bossRegenUsed) {
+        const heal = bossRegenAmount(floor, ne.currentHp, ne.maxHp);
+        if (heal > 0) {
+          bossRegenUsed = true;
+          ne = { ...ne, currentHp: Math.min(ne.maxHp, ne.currentHp + heal) };
+        }
+      }
+      return false;
     };
 
     const enemyAttack = (): boolean => {

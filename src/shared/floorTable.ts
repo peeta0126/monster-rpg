@@ -425,7 +425,7 @@ const GATE_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: 
   15: { hp: 1.34, attack: 1.10, defense: 1.36 },
   25: { hp: 3.10, attack: 2.30, defense: 3.10 },
   35: { hp: 1.98, attack: 1.48, defense: 2.00 },
-  45: { hp: 2.20, attack: 1.72, defense: 2.20 },
+  45: { hp: 2.22, attack: 1.73, defense: 2.22 },
 };
 
 export function gateMultiplier(floor: number) {
@@ -608,7 +608,7 @@ const BOSS_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: 
   10: { hp: 1.70, attack: 1.36, defense: 1.24, exp: 2.4 },
   20: { hp: 1.26, attack: 0.95, defense: 1.00, exp: 2.4 },
   30: { hp: 2.32, attack: 2.02, defense: 2.12, exp: 2.4 },
-  40: { hp: 1.70, attack: 1.35, defense: 1.90, exp: 2.8 },
+  40: { hp: 1.58, attack: 1.27, defense: 1.77, exp: 2.8 },
   50: { hp: 2.05, attack: 1.30, defense: 1.65, exp: 3.5 },
 };
 

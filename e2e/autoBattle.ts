@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { isHardFloor } from "../src/shared/floorTable";
 
 /**
  * 전투 화면을 자동으로 진행시키는 공용 헬퍼.
@@ -161,6 +162,33 @@ async function tryUseHealingPotion(page: Page): Promise<boolean> {
   return false;
 }
 
+/**
+ * 관문·보스에서 첫 턴에 공격 버프를 마신다.
+ *
+ * 이걸 안 쓰면 이 헬퍼가 재는 난이도가 시뮬(`gameModel.pickPotionAction`)과 다른
+ * 사람의 것이 된다. 실제로 40층 가방은 회복 1개에 공격 버프 5~6개인데, 버프를 안 쓰는
+ * 쪽으로 열두 판 돌리니 0% 였고 쓰는 쪽(시뮬)은 25% 였다. 게임이 어려운 게 아니라
+ * 자동 플레이어가 가방의 절반을 안 쓰고 있었다.
+ *
+ * 강한 집중의 물약이 공격 ×2·5턴이라 보스전에서 제일 큰 배수다. 사람도 그걸 쓴다.
+ */
+async function tryUseAttackBuff(page: Page): Promise<boolean> {
+  const bag = page.getByTestId("cmd-bag");
+  if ((await bag.count()) === 0 || !(await bag.first().isEnabled())) return false;
+
+  await bag.first().click();
+  for (const id of ["strong_attack_buff", "attack_buff"]) {
+    const potion = page.getByTestId(`potion-${id}`);
+    if ((await potion.count()) > 0 && (await potion.first().isEnabled())) {
+      await potion.first().click();
+      await advanceLogs(page);
+      return true;
+    }
+  }
+  await page.getByTestId("cmd-back").click();
+  return false;
+}
+
 /** 기절 시 강제 교체. 파티 구역에서 고를 수 있는 몬스터를 누른다 */
 async function switchToHealthyMember(page: Page): Promise<void> {
   for (let i = 0; i < 3; i++) {
@@ -176,6 +204,7 @@ async function switchToHealthyMember(page: Page): Promise<void> {
 
 /** 한 층을 승리할 때까지 진행한다. 패배하면 예외를 던진다. */
 export async function playFloor(page: Page, floor: number): Promise<void> {
+  let buffed = false;
   // BATTLE_READY 전까지는 모든 버튼이 disabled 상태다
   await expect
     .poll(() => canAct(page), { timeout: 60_000, message: `${floor}층 전투 준비 실패` })
@@ -198,6 +227,12 @@ export async function playFloor(page: Page, floor: number): Promise<void> {
 
     // HP가 위험하면 먼저 회복
     if ((await playerHpRatio(page)) < 0.4 && (await tryUseHealingPotion(page))) continue;
+
+    // 관문·보스는 첫 턴에 공격 버프부터. 시뮬의 pickPotionAction 과 같은 규칙이다
+    if (!buffed && isHardFloor(floor)) {
+      buffed = true;                       // 못 마셨어도 다시 시도하지 않는다(가방에 없는 것이다)
+      if (await tryUseAttackBuff(page)) continue;
+    }
 
     const options = await readMoves(page);
     const choice = pickMove(options);
