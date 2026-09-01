@@ -49,29 +49,19 @@ export function StatBar({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* 홈. 테두리가 stone600 이라 어떤 판 위에 놓여도 바의 시작과 끝이 보인다.
-          예전엔 테두리가 shadow900 이라 같은 색 패널 위에서 사라졌고, 그러면 빈 칸이
-          어디까지인지 몰라서 "반 남았다"가 "거의 없다"처럼 보였다. */}
       <div
-        className="relative flex-1 overflow-hidden rounded-full border border-stone-600 bg-shadow-900"
+        className="flex-1 overflow-hidden rounded-full border border-shadow-900 bg-shadow-700"
         style={{ height: height ?? BAR_HEIGHT[variant] }}
       >
         <div
-          className={`relative h-full rounded-full transition-[width] motion-reduce:transition-none ${
+          className={`h-full rounded-full transition-[width] motion-reduce:transition-none ${
             critical ? "animate-pulse" : ""}`}
           style={{
             width: `${pct}%`,
             backgroundColor: fillColor(variant, pct),
             transitionDuration: `${fillMs}ms`,
           }}
-        >
-          {/* 윗면 광택 한 줄. 채워진 곳만 도드라져서 홈과 구분된다 */}
-          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-full bg-cream-100/25" />
-          {/* 지금 값이 짚이는 자리. 8px 바에서는 색 경계만으로 눈금을 못 읽는다 */}
-          {pct > 0 && (
-            <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-cream-100/70" />
-          )}
-        </div>
+        />
       </div>
       {showNumbers && (
         <span className="shrink-0 font-mono text-pixel-sm font-bold text-sand-200">

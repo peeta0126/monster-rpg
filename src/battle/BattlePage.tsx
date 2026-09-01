@@ -1177,6 +1177,17 @@ export default function BattlePage() {
           </div>
         </div>
 
+        {/* ── ② 경험치 줄 ────────────────────────────────────────────────────
+            자기 줄을 쓴다. 위 줄은 칩이 뜨는 대로 늘어나므로 거기 끼우면 칩 둘에 눌린다. */}
+        <ExpStatusRow
+          name={expView?.name ?? player.name}
+          level={expView?.level ?? player.level}
+          exp={expView ? Math.round(expView.ratio * expView.expToNext) : player.exp}
+          expToNext={expView?.expToNext ?? player.expToNextLevel}
+          fillMs={expView?.fillMs ?? 0}
+          levelUp={expView?.card !== null && expView !== null}
+        />
+
         {/* 로그 한 줄. 캔버스 로그 상자와 같은 내용이다. 접근성·테스트용으로 DOM 에도 남기되
             자리를 적게 쓴다(예전엔 56px 짜리 띠가 대부분 비어 있었다). */}
         <div className="flex h-7 items-center border-b border-earth-500/40 bg-shadow-700/50 px-3">
@@ -1258,22 +1269,6 @@ export default function BattlePage() {
         {battleOutcome !== null && (
           <p className="py-2 text-center text-pixel-sm text-earth-400">잠시 후 선택 화면이 표시됩니다...</p>
         )}
-
-        {/* ── 경험치 줄 (패널 맨 아래) ──────────────────────────────────────
-            HP 바 아래에 산다. 예전엔 파티 카드 바로 위 줄이라 EXP 바와 파티 HP 바가
-            수십 px 사이에 나란히 놓였고, 둘 다 가로 게이지라 어느 게 누구 것인지
-            한눈에 안 갈렸다. 지금은 HP(캔버스 패널 · 파티 카드)를 다 지나서 나온다.
-
-            자기 줄을 쓰는 건 그대로다. 위의 순서 줄은 상태이상 칩이 뜨는 대로 늘어나서
-            거기 끼우면 칩이 둘 뜨는 순간 경험치부터 눌린다. */}
-        <ExpStatusRow
-          name={expView?.name ?? player.name}
-          level={expView?.level ?? player.level}
-          exp={expView ? Math.round(expView.ratio * expView.expToNext) : player.exp}
-          expToNext={expView?.expToNext ?? player.expToNextLevel}
-          fillMs={expView?.fillMs ?? 0}
-          levelUp={expView?.card !== null && expView !== null}
-        />
       </div>
 
       {/* 레벨업 카드. 오른 스탯은 상태 줄 한 칸에 안 들어간다 */}
