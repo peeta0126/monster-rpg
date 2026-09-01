@@ -66,3 +66,27 @@ test("엔딩을 봤어도 남은 부탁이 있으면 그걸 가리킨다", () =>
     activeQuest: { text: "어머니의 치료약", where: "집" },
   }));
 });
+
+test("관문 직전에 회복 물약이 없으면 공방부터 가리킨다", () => {
+  const base = {
+    storyFlags: all({ met_orion: true, met_baros: true, first_capture: true }),
+    potionCount: 12,        // 해독제만 잔뜩 있는 가방
+    activeQuest: { text: "부탁 진행중", where: "마을 안쪽" },
+  };
+  // 다음이 15층(관문)인데 회복이 1개뿐 — 부탁보다 이게 앞선다
+  const warn = getNextObjective({ ...base, bestFloor: 14, healPotionCount: 1 });
+  assert.match(warn!.text, /15층은 관문입니다/);
+  assert.equal(warn!.where, "집");
+
+  // 채워 갔으면 원래 순서대로 부탁이 앞선다
+  const ok = getNextObjective({ ...base, bestFloor: 14, healPotionCount: 5 });
+  assert.equal(ok!.text, "부탁 진행중");
+
+  // 일반 층 앞에서는 재고를 따지지 않는다. 캠프 회복이 무료라 물약 없이도 오른다
+  const plain = getNextObjective({ ...base, bestFloor: 12, healPotionCount: 0 });
+  assert.equal(plain!.text, "부탁 진행중");
+
+  // 보스층(n0)도 같은 자리에서 걸리되, 관문이라고 부르지는 않는다
+  const boss = getNextObjective({ ...base, bestFloor: 19, healPotionCount: 0 });
+  assert.match(boss!.text, /20층에는 보스가 있습니다/);
+});

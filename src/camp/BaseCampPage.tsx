@@ -28,7 +28,7 @@ import { monsterReward, grantedMonsterLevel, rewardDisplay } from "./questReward
 import type { QuestReward, RewardDisplay } from "./questRewards";
 import { scaleToLevel } from "../shared/floorTable";
 import { applyLevelGrowth } from "../monster/growth";
-import { getMaterial } from "../shared/items";
+import { HEAL_POTION_IDS, getMaterial } from "../shared/items";
 import { PixelIcon } from "../shared/ui/PixelIcon";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
 import { useAuthStore } from "../auth/authStore";
@@ -1013,6 +1013,10 @@ export default function BaseCampPage() {
     storyFlags,
     bestFloor,
     potionCount: craftedPotions.reduce((a, p) => a + p.quantity, 0),
+    // 회복만 따로 센다. 해독제·버프만 남은 가방으로 관문에 붙는 게 제일 흔한 패배 경로다
+    healPotionCount: craftedPotions
+      .filter((p) => (HEAL_POTION_IDS as readonly string[]).includes(p.itemId))
+      .reduce((a, p) => a + p.quantity, 0),
     activeQuest: activeQuestLine,
   });
   const acceptQuest = usePlayerStore((s) => s.acceptQuest);

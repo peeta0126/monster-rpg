@@ -106,3 +106,11 @@ export function getMaterial(id: string) {
 export function getPotion(id: string) {
   return POTIONS.find((p) => p.id === id);
 }
+
+/**
+ * HP 를 되돌리는 물약. 해독제·공격 버프는 여기 없다.
+ *
+ * "물약이 몇 개 있나"를 전부 세면 해독제만 열몇 개 남은 가방이 넉넉해 보인다. 관문
+ * 앞에서 정작 모자란 건 회복 쪽이라, 안내 문구는 이 목록으로 센다.
+ */
+export const HEAL_POTION_IDS = ["potion", "super_potion", "max_potion"] as const;
