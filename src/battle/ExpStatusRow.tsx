@@ -1,7 +1,11 @@
 import { StatBar } from "../shared/ui";
 
 /**
- * 하단 상태 줄의 경험치 칸.
+ * 하단 패널 맨 아랫줄의 경험치 칸.
+ *
+ * **HP 바보다 아래에 산다.** 예전엔 파티 카드 바로 위 줄이었는데, 그러면 EXP 바와
+ * 파티 HP 바가 수십 px 사이에 나란히 놓여 어느 게 누구 것인지 안 갈렸다. 위로는
+ * 캔버스 HP 패널, 아래로는 이 줄 — 세로 순서 자체가 "생존이 먼저, 성장은 그 다음"이다.
  *
  * 자기 줄을 쓴다. 위의 순서 줄은 상태이상 칩·공격버프 칩이 뜨는 대로 늘어나는 줄이라,
  * 여기 끼워 넣으면 칩이 둘 뜨는 순간 경험치부터 눌린다. 자리 다툼을 시키지 않는다.
@@ -24,7 +28,7 @@ export function ExpStatusRow({
   return (
     <div
       data-testid="exp-row"
-      className="flex items-center gap-2 border-b border-earth-500/40 px-3 py-1 text-pixel-sm"
+      className="flex items-center gap-2 border-t border-earth-500/40 px-3 py-1 text-pixel-sm"
     >
       <span className="max-w-28 shrink-0 truncate font-semibold text-sand-200">{name}</span>
       <span data-testid="exp-level" className="shrink-0 font-bold text-sand-300">Lv.{level}</span>
