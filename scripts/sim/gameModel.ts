@@ -192,8 +192,14 @@ function pickPotionAction(
 ): string | null {
   const hpRatio = mon.currentHp / mon.maxHp;
 
-  // 1) 위험하면 회복이 최우선
-  if (hpRatio < 0.4) {
+  // 1) 위험하면 회복이 최우선. 단 **관문·보스에서만** 마신다.
+  //
+  // 캠프 회복은 무료·무제한이라(restorePartyHp) 일반 층에서 물약을 태울 이유가 없다.
+  // 지고 내려가 공짜로 회복하고 다시 오르면 그만이다. 예전엔 층을 가리지 않고
+  // HP 40% 아래면 마셔서, 한 판에 135개를 만들고 135개를 쓰면서도 정작 40·50층에는
+  // 회복 물약 1개로 붙었다. 보급을 늘려도 소모가 같이 늘어 아무것도 안 변했다.
+  // 물약을 아끼는 건 사람이 하는 일이고, 이 시뮬이 재려는 것도 그 사람이다.
+  if (hpRatio < 0.4 && hardFloor) {
     const heal = pickHealPotion(s, mon.maxHp - mon.currentHp);
     if (heal) return heal;
   }

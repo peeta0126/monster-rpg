@@ -16,6 +16,7 @@ import {
   FOREST_AREAS, MAX_TOWER_FLOOR, ALL_RECIPES,
   type SimState, type OwnedMon,
 } from "./gameModel";
+import { isHardFloor } from "../../src/shared/floorTable";
 import { monsters } from "../../src/monster/monsters";
 import { movesAtLevel } from "../../src/monster/growth";
 import { settleBag } from "../../src/camp/forest/runStore";
@@ -312,6 +313,20 @@ export async function simulateRun(seed: number): Promise<RunStats> {
     const hurt = s.party.filter((m) => m.currentHp > 0).length === 0
       || s.party.reduce((sum, m) => sum + m.currentHp / m.maxHp, 0) / s.party.length < 0.5;
     if (hurt) goHomeAndRest();
+
+    // 관문·보스 앞에서는 정비하고 올라간다.
+    //
+    // 이걸 안 넣었을 때 이 시뮬은 "평균 HP 가 절반 아래로 떨어져야" 내려갔다. 그래서
+    // 40·50층에 입장 HP 79~82% 에 회복 물약 0~1개로 붙었고, 그 승률(8~18%)을 보고
+    // 보스가 세다고 읽었다. 캠프 회복은 무료·무제한이고 다음 층이 관문인 것도 화면에
+    // 적혀 있으니(탑 모달), 사람은 반드시 들르고 만들어서 올라간다.
+    // e2e/balanceRun.spec.ts 도 5층 배수마다 같은 일을 한다.
+    if (isHardFloor(floor) && st.leadLevelAtFloor[floor] === undefined) {
+      goHomeAndRest();
+      await doQuests();
+      doCrafting();
+      doAnvil();
+    }
 
     if (st.leadLevelAtFloor[floor] === undefined) {
       st.leadLevelAtFloor[floor] = Math.max(...s.party.map((m) => m.level));

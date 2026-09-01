@@ -23,8 +23,13 @@ export const AREA_MATERIAL_POOL: Record<string, string[]> = {
   // 세 구역 모두 두 자리씩 준다.
   deep:    ["herb", "herb", "berry", "root", "crystal", "wood_plank", "leather",
             "slime_extract", "iron_fragment", "magic_dust", "monster_essence"],
-  ancient: ["herb", "herb", "root", "crystal", "crystal", "iron_fragment",
-            "magic_dust", "monster_essence", "monster_essence", "enhancement_stone"],
+  // ⚠️ 열매와 나무뿌리도 세 구역에 다 둔다. 원래 고대 숲에는 열매가 아예 없고 뿌리가
+  // 1/10 이었다. 그런데 21층부터는 이 구역이 주력이라, 거기서부터 해독제(열매 2)와
+  // 강력 회복 물약(뿌리 2)의 재료 공급이 통째로 끊겼다. 한 판 끝의 잔여가
+  // 열매 0 · 뿌리 0 인데 가죽 58 · 수정 44 로 남는 건 그래서다.
+  ancient: ["herb", "herb", "berry", "root", "root", "crystal", "crystal", "iron_fragment",
+            "magic_dust", "monster_essence", "monster_essence", "enhancement_stone",
+            "enhancement_stone"],
 };
 
 /**
@@ -62,10 +67,15 @@ export function rollBattleDrop(floor: number): { id: string; count: number }[] {
   const picked = pool[Math.floor(Math.random() * pool.length)];
   drops.push({ id: picked, count });
 
-  // 보스 층은 추가 드랍
-  if (isHardFloor(floor) && Math.random() < 0.6) {
-    const extra = pool.filter((p) => p !== picked)[Math.floor(Math.random() * (pool.length - 1))];
-    drops.push({ id: extra, count: 1 });
+  // 관문·보스의 추가 드랍은 회복 재료로 못 박는다.
+  //
+  // "그 층 넘느라 쓴 물약을 돌려받는다" 가 이 자리의 뜻인데, 일반 풀에서 뽑으면
+  // 21층부터 열매·나무뿌리가 풀에 아예 없어서(약초 하나뿐) 돌려받는 게 철 조각이었다.
+  // 회복 물약 다섯 종이 전부 약초 2~3, 강력 회복은 뿌리 2, 해독제는 열매 2 를 먹는다.
+  if (isHardFloor(floor)) {
+    const potionPool = ["herb", "herb", "root", "berry"];
+    const extra = potionPool[Math.floor(Math.random() * potionPool.length)];
+    drops.push({ id: extra, count: 2 });
   }
 
   return drops;
