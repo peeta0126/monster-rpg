@@ -11,6 +11,9 @@ import {
   overlaps, shouldFlipX, type Box,
 } from "../src/battle/battleLayout";
 import { getTowerZone, isBossFloor, MAX_TOWER_FLOOR } from "../src/shared/floorTable";
+import {
+  MONSTER_IMAGE_MAP, MONSTER_ART_FACING, artFacingOfImage, type ArtFacing,
+} from "../src/monster/monsterImages";
 import { towerBattleBg } from "../src/shared/assetPaths";
 import type { ElementType } from "../src/shared/game";
 
@@ -162,23 +165,67 @@ test("z41 까지의 경로 규칙이 구간·속성 35 조합을 다 만든다",
 });
 
 // ── 마주보기 ──────────────────────────────────────────────────────────────────
-// 원화는 왼쪽 아니면 정면을 본다. 오른쪽을 보는 그림이 없으니 "왼쪽에 선 쪽만 뒤집는다"
-// 한 줄로 전 층이 해결된다. 상수로 박아 두면 배치를 옮길 때마다 서로 등진다.
+// 왼쪽에 선 쪽이 오른쪽을 본다. 뒤집을지는 거기에 원화가 원래 보던 쪽을 더해야 나온다 —
+// 자리만 보고 정하면 오른쪽을 보는 원화(아쿠번·모치final)에서 둘이 같은 쪽을 본다.
 
-test("왼쪽에 선 쪽만 뒤집는다 — 둘이 마주본다", () => {
-  assert.equal(shouldFlipX(PLAYER_X, ENEMY_X), true);
-  assert.equal(shouldFlipX(ENEMY_X, PLAYER_X), false);
+/** 뒤집기까지 먹인 뒤 실제로 보는 쪽. 테스트는 "마주보는가"만 묻는다 */
+function facesAfterFlip(art: ArtFacing, flipped: boolean): "left" | "right" | "front" {
+  if (art === "front") return "front";
+  const flipOf = { left: "right", right: "left" } as const;
+  return flipped ? flipOf[art] : art;
+}
+
+test("왼쪽을 보는 원화는 왼쪽에 선 쪽만 뒤집는다", () => {
+  assert.equal(shouldFlipX(PLAYER_X, ENEMY_X, "left"), true);
+  assert.equal(shouldFlipX(ENEMY_X, PLAYER_X, "left"), false);
 });
 
-test("좌우를 뒤바꿔도 규칙 하나로 계속 마주본다", () => {
-  // 언젠가 아군을 오른쪽에 세우더라도 두 값이 서로 반대이기만 하면 된다
-  assert.notEqual(shouldFlipX(800, 250), shouldFlipX(250, 800));
+test("오른쪽을 보는 원화는 뒤집기가 정반대다", () => {
+  assert.equal(shouldFlipX(PLAYER_X, ENEMY_X, "right"), false);
+  assert.equal(shouldFlipX(ENEMY_X, PLAYER_X, "right"), true);
 });
 
-test("모든 층에서 아군과 적의 뒤집기가 서로 반대다 (50층 오름 포함)", () => {
+test("정면 원화는 뒤집지 않는다 — 뒤집어도 정면이라 빛 방향만 어긋난다", () => {
+  assert.equal(shouldFlipX(PLAYER_X, ENEMY_X, "front"), false);
+  assert.equal(shouldFlipX(ENEMY_X, PLAYER_X, "front"), false);
+});
+
+test("인자를 안 주면 예전처럼 왼쪽 원화로 본다", () => {
+  assert.equal(shouldFlipX(PLAYER_X, ENEMY_X), shouldFlipX(PLAYER_X, ENEMY_X, "left"));
+});
+
+test("원화 조합이 무엇이든 아군은 오른쪽을, 적은 왼쪽을 본다 (50층 오름 포함)", () => {
+  const arts: ArtFacing[] = ["left", "right", "front"];
   for (const floor of [1, 10, 25, 30, 49, MAX_TOWER_FLOOR]) {
     const e = getEnemyLayout(floor);
-    assert.equal(shouldFlipX(PLAYER_X, e.x), true, `${floor}층 아군은 왼쪽이라 뒤집는다`);
-    assert.equal(shouldFlipX(e.x, PLAYER_X), false, `${floor}층 적은 오른쪽이라 안 뒤집는다`);
+    for (const pArt of arts) {
+      const pFaces = facesAfterFlip(pArt, shouldFlipX(PLAYER_X, e.x, pArt));
+      assert.notEqual(pFaces, "left", `${floor}층 아군(${pArt} 원화)이 등졌다`);
+      for (const eArt of arts) {
+        const eFaces = facesAfterFlip(eArt, shouldFlipX(e.x, PLAYER_X, eArt));
+        assert.notEqual(eFaces, "right", `${floor}층 적(${eArt} 원화)이 등졌다`);
+        // 정면끼리가 아닌 한, 둘이 같은 쪽을 보는 일은 없어야 한다
+        if (pFaces !== "front" && eFaces !== "front") {
+          assert.notEqual(pFaces, eFaces, `${floor}층 ${pArt}/${eArt} 가 같은 쪽을 본다`);
+        }
+      }
+    }
   }
+});
+
+// ── 원화 방향 표 ──────────────────────────────────────────────────────────────
+// 표에 빠진 그림은 조용히 "left" 로 떨어져 예전 버그가 그대로 돌아온다.
+
+test("모든 몬스터 원화에 방향이 적혀 있다", () => {
+  for (const id of Object.keys(MONSTER_IMAGE_MAP)) {
+    assert.ok(MONSTER_ART_FACING[id], `${id} 의 원화 방향이 없다`);
+  }
+});
+
+test("이미지 URL 로 방향을 되찾는다 — 씬은 몬스터 id 를 모른다", () => {
+  assert.equal(artFacingOfImage(MONSTER_IMAGE_MAP.aquavern), "right");
+  assert.equal(artFacingOfImage(MONSTER_IMAGE_MAP.mossyfinal), "right");
+  assert.equal(artFacingOfImage(MONSTER_IMAGE_MAP.flameling), "left");
+  assert.equal(artFacingOfImage(MONSTER_IMAGE_MAP.ormr), "front");
+  assert.equal(artFacingOfImage(undefined), "left");
 });

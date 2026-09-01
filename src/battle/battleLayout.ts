@@ -10,6 +10,7 @@
  */
 
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
+import type { ArtFacing } from "../monster/monsterImages";
 
 export const W = 960;
 export const H = 540;
@@ -43,15 +44,26 @@ export const ENEMY_CY  = ENEMY_FEET  - ENEMY_SIZE  / 2;
 /**
  * 마주보기.
  *
- * 몬스터 원화 15장 중 12장이 왼쪽을 보고, 3장(크리샤·프로스톨·리피)이 정면을 본다.
- * 오른쪽을 보는 그림은 하나도 없다. 그래서 왼쪽에 선 쪽만 뒤집으면 둘은 늘 마주본다.
- * 정면 3장은 뒤집어도 정면이라 예외를 두지 않는다.
+ * 봐야 할 쪽은 자리가 정한다 — 왼쪽에 선 쪽이 오른쪽을 본다. 뒤집을지 말지는 거기에
+ * **원화가 원래 보던 쪽**(`MONSTER_ART_FACING`)을 더해야 나온다.
+ *
+ * 예전엔 "원화 15장이 왼쪽 아니면 정면"이라 믿고 왼쪽에 선 쪽을 무조건 뒤집었다.
+ * 그런데 오른쪽을 보는 그림이 두 장(아쿠번·모치final) 있어서, 그 둘이 나오는 순간
+ * 뒤집기가 거꾸로 돌아 둘이 같은 쪽을 봤다. 자리만 보고 정하면 안 된다.
+ *
+ * 정면 원화는 뒤집어도 정면이라 건드리지 않는다 — 빛 방향만 어긋난다.
  *
  * 아군에 `setFlipX(true)` 를 박아 두던 시절엔 자리를 옮길 때마다 서로 등졌다. 좌우 배치는
  * 층마다 다르고(50층 오름은 x 가 다르다) 앞으로도 바뀌므로, 상수가 아니라 좌표에서 나온다.
  */
-export function shouldFlipX(selfX: number, opponentX: number): boolean {
-  return selfX < opponentX;
+export function shouldFlipX(
+  selfX: number,
+  opponentX: number,
+  artFacing: ArtFacing = "left",
+): boolean {
+  if (artFacing === "front") return false;
+  const wantsRight = selfX < opponentX;
+  return artFacing === "left" ? wantsRight : !wantsRight;
 }
 
 // ── HP 패널 ───────────────────────────────────────────────────────────────────
