@@ -58,11 +58,31 @@ test("getPlayerFrame: 8방향 전부 아틀라스에 있는 프레임으로 떨�
   }
 });
 
-test("getPlayerFrame: 서쪽 셋만 반전으로 만든다", () => {
+/**
+ * 원래 규칙은 "서쪽 셋(NW·W·SW)만 반전" 이었다. 지금은 SE 가 그 자리에 끼어 있고
+ * SW 가 빠져 있는데, 오타가 아니라 **아틀라스의 SE 줄이 좌우 반대로 그려져 있어서**다.
+ *
+ * 확인한 방법: E 줄은 짐이 몸 왼쪽에 있다(= 오른쪽을 본다). 그런데 SE 줄은 짐이
+ * 오른쪽에 있어서 왼쪽을 보고 있다 — 즉 그려진 건 SE 가 아니라 SW 다. 그래서
+ * SE 를 그릴 때 뒤집고, SW 는 원본을 그대로 쓴다.
+ *
+ * 아틀라스를 다시 구워 SE 줄을 뒤집으면 이 예외가 사라지고 규칙이 "서쪽 셋만 반전"
+ * 으로 돌아간다. 그때는 이 테스트도 같이 되돌릴 것.
+ */
+test("반전 목록은 아틀라스에 없는 방향 + 반대로 그려진 SE", () => {
   const flipped = DIRS_8.filter((d) => getPlayerFrame(d, 0).flipX);
-  assert.deepEqual([...flipped], ["NW", "W", "SW"]);
-  // 반전해서 쓰는 방향은 아틀라스에 자기 줄이 없다
-  for (const dir of flipped) assert.equal(PLAYER_ATLAS_ROW_DIRS.includes(dir), false);
+  assert.deepEqual([...flipped], ["SE", "NW", "W"]);
+
+  // 자기 줄이 없는 방향은 반드시 어딘가를 빌려 쓴다
+  for (const dir of DIRS_8) {
+    if (PLAYER_ATLAS_ROW_DIRS.includes(dir)) continue;
+    const cell = atlasFrameCell(getPlayerFrame(dir, 0).source);
+    assert.ok(cell.row >= 0, `${dir} 가 빌릴 줄이 없다`);
+  }
+  // SW 만 예외적으로 원본을 그대로 쓴다. 나머지 서쪽 둘은 뒤집는다
+  assert.equal(getPlayerFrame("SW", 0).flipX, false);
+  assert.equal(getPlayerFrame("W", 0).flipX, true);
+  assert.equal(getPlayerFrame("NW", 0).flipX, true);
 });
 
 test("getPlayerFrame: 걷기 프레임은 네 장을 순환한다", () => {
@@ -72,10 +92,14 @@ test("getPlayerFrame: 걷기 프레임은 네 장을 순환한다", () => {
   ]);
 });
 
-test("getPlayerFrame: 왼쪽 대각선은 오른쪽 프레임을 뒤집어 쓴다", () => {
-  const sw = getPlayerFrame("SW", 2);
-  assert.deepEqual(sw, { source: "walk_SE_01", flipX: true });
+test("왼쪽 방향은 오른쪽 줄을 빌려 쓴다", () => {
+  // 아래쪽 대각선 둘은 같은 SE 줄을 쓰되 반전이 서로 반대다. SE 줄이 반대로
+  // 그려져 있어서 그렇다(위 테스트 주석 참고)
+  assert.deepEqual(getPlayerFrame("SW", 2), { source: "walk_SE_01", flipX: false });
+  assert.deepEqual(getPlayerFrame("SE", 2), { source: "walk_SE_01", flipX: true });
+
   assert.deepEqual(getPlayerFrame("W", 0), { source: "idle_E", flipX: true });
+  assert.deepEqual(getPlayerFrame("NW", 0), { source: "idle_NE", flipX: true });
 });
 
 test("atlasFrameCell: 이름에서 격자 칸이 나온다", () => {

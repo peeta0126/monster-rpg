@@ -32,6 +32,13 @@ public/assets/player/player.json    Aseprite JSON (Array 형식, "Output File" �
 (`playerSprite.ts` 의 `MIRROR`). 실제로 그려야 하는 방향은 **S, SE, E, NE, N 다섯 개**다.
 시트의 **줄 순서가 곧 이 순서**고(`PLAYER_ATLAS_ROW_DIRS`), 칸 순서는 idle → walk 00~03 이다.
 
+⚠️ **지금 시트의 SE 줄은 좌우가 반대로 그려져 있다.** E 줄은 짐이 몸 왼쪽에 있어서
+오른쪽을 보는데, SE 줄은 짐이 오른쪽에 있어 왼쪽을 본다 — 그려진 건 SE 가 아니라 SW 다.
+그래서 `resolveDir` 이 예외를 하나 들고 있다: **SE 를 그릴 때 뒤집고, SW 는 원본을
+그대로 쓴다.** 시트를 다시 굽는다면 SE 줄을 좌우 반전해서 넣고, 그 예외와
+`tests/playerSprite.test.ts` 의 반전 목록을 같이 되돌릴 것. 반쯤 고치면 아래쪽
+대각선 둘이 서로 반대를 보게 된다.
+
 ## 3. 프레임 이름 규칙
 
 Aseprite 태그명이 그대로 프레임 이름이 된다. `playerSprite.ts` 의 `atlasFrameName()` 과
