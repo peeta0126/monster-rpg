@@ -403,8 +403,7 @@ export default class BattleScene extends Phaser.Scene {
       const barY = side === "enemy" ? this.enemy.barY : P_BAR_Y;
       const frame = this.add.graphics().setDepth(11).setVisible(false);
       frame.lineStyle(2, HEX.ember700, 1);
-      // 바가 둥근 끝이라 네모 테두리를 두르면 네 귀퉁이만 남아 뜬다
-      frame.strokeRoundedRect(barX - 3, barY - 3, BAR_W_INNER + 6, BAR_H + 6, (BAR_H + 6) / 2);
+      frame.strokeRect(barX - 3, barY - 3, BAR_W_INNER + 6, BAR_H + 6);
 
       const sx   = side === "enemy" ? this.enemy.x  : PLAYER_X;
       const sy   = side === "enemy" ? this.enemy.cy : PLAYER_CY;
@@ -755,15 +754,6 @@ export default class BattleScene extends Phaser.Scene {
   // 그리기 헬퍼
   // ─────────────────────────────────────────────────────────────────────────────
 
-  /**
-   * 캔버스 HP 바.
-   *
-   * ⚠️ 이 게임에서 제일 오래 보는 게이지인데 `shared/ui/StatBar` 를 못 쓴다 — 저건 DOM
-   * 부품이고 여기는 Phaser Graphics 다. 그래서 **생김새를 손으로 맞춰 둔다.** 한쪽만
-   * 고치면 같은 화면 위아래에서 HP 바가 서로 다른 물건처럼 보인다(실제로 그랬다).
-   * StatBar 를 손보면 여기도 같이 손볼 것:
-   *   홈 shadow900 · 테두리 stone600 · 채운 칸 위 광택 한 줄 · 채운 끝을 짚는 세로선.
-   */
   private drawBar(
     g: Phaser.GameObjects.Graphics,
     x: number, y: number, w: number, h: number,
@@ -772,36 +762,20 @@ export default class BattleScene extends Phaser.Scene {
     g.clear();
     const r = Math.max(0, Math.min(1, ratio));
     const ghost = Math.max(r, Math.min(1, ghostRatio));
-    const rad = h / 2;
-    // 폭이 지름보다 좁아지면 둥근 끝이 서로를 파고들어 모양이 깨진다
-    const span = (width: number) => Math.min(rad, width / 2);
 
-    // 홈. 채운 칸이 사라져도 바가 어디까지인지 보여야 한다
     g.fillStyle(HEX.shadow900, 1);
-    g.fillRoundedRect(x, y, w, h, rad);
-
+    g.fillRect(x, y, w, h);
     // 잔상. 방금 깎인 만큼이 회색으로 남았다가 뒤늦게 줄어든다
     if (ghost > r) {
-      const gw = Math.max(2, Math.floor(w * ghost));
       g.fillStyle(HEX.stone600, 1);
-      g.fillRoundedRect(x, y, gw, h, span(gw));
+      g.fillRect(x, y, Math.floor(w * ghost), h);
     }
-
     if (r > 0) {
-      const fw = Math.max(2, Math.floor(w * r));
       g.fillStyle(HEX[hpToken(r * 100)], 1);
-      g.fillRoundedRect(x, y, fw, h, span(fw));
-      // 윗면 광택 한 줄. 채운 칸만 도드라져서 홈과 갈린다
-      g.fillStyle(HEX.cream100, 0.25);
-      g.fillRect(x + 2, y + 1, Math.max(0, fw - 4), 1);
-      // 지금 값이 짚이는 자리. 10px 바에서는 색 경계만으로 눈금을 못 읽는다
-      g.fillStyle(HEX.cream100, 0.7);
-      g.fillRect(x + fw - 1, y + 1, 1, h - 2);
+      g.fillRect(x, y, Math.floor(w * r), h);
     }
-
-    // 테두리. earth500 은 패널 테두리와 같은 색이라 바가 패널에 녹아 있었다
-    g.lineStyle(1, HEX.stone600, 1);
-    g.strokeRoundedRect(x, y, w, h, rad);
+    g.lineStyle(1, HEX.earth500, 0.8);
+    g.strokeRect(x, y, w, h);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
