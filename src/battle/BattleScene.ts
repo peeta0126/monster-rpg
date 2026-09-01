@@ -473,7 +473,7 @@ export default class BattleScene extends Phaser.Scene {
       this.enemyStatusBadge = this.add.text(barX + 26, barY - 14, "", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
         backgroundColor: PALETTE.shadow900, padding: { x: 2, y: 1 },
-      }).setOrigin(0, 0).setDepth(10);
+      }).setOrigin(0, 0).setDepth(10).setVisible(false);
       this.enemyHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.enemyHpBar, barX, barY, barW, BAR_H, 1);
       // HP 수치는 "몇 대 더 때려야 하나"를 판단하는 핵심 정보라 캔버스가 축소돼도 읽히도록
@@ -495,7 +495,7 @@ export default class BattleScene extends Phaser.Scene {
       this.playerStatusBadge = this.add.text(barX + 26, barY - 14, "", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
         backgroundColor: PALETTE.shadow800, padding: { x: 2, y: 1 },
-      }).setOrigin(0, 0).setDepth(10);
+      }).setOrigin(0, 0).setDepth(10).setVisible(false);
       this.playerHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.playerHpBar, barX, barY, barW, BAR_H, 1);
       this.playerHpText = this.add.text(barX + barW, barY - 2, "", {
@@ -655,10 +655,8 @@ export default class BattleScene extends Phaser.Scene {
     this.setDanger("enemy",  isHpDanger((p.enemyHp  / p.enemyMaxHp)  * 100));
     this.setDanger("player", isHpDanger((p.playerHp / p.playerMaxHp) * 100));
 
-    this.enemyStatusBadge.setText(statusBadge(p.enemyStatus, p.enemyStatusTurns));
-    this.playerStatusBadge.setText(statusBadge(p.playerStatus, p.playerStatusTurns));
-    if (p.enemyStatus) this.enemyStatusBadge.setColor(PALETTE[STATUS_META[p.enemyStatus].color]);
-    if (p.playerStatus) this.playerStatusBadge.setColor(PALETTE[STATUS_META[p.playerStatus].color]);
+    this.setStatusBadge(this.enemyStatusBadge,  p.enemyStatus,  p.enemyStatusTurns);
+    this.setStatusBadge(this.playerStatusBadge, p.playerStatus, p.playerStatusTurns);
 
     // 흔들림·플래시는 BATTLE_HIT 이 담당한다(데미지 크기와 치명타 여부를 알아야 해서).
     // 여기서는 쓰러짐만 본다.
@@ -753,6 +751,23 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
   // 그리기 헬퍼
   // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * HP 패널의 상태이상 배지.
+   *
+   * **상태이상이 없으면 숨긴다.** Phaser Text 는 글자가 빈 문자열이어도 backgroundColor 와
+   * padding 만큼을 칠하기 때문에, 안 숨기면 `HP` 와 `1003/1003` 사이에 정체 모를 작은
+   * 네모가 매 판 떠 있다. 아무 뜻도 없는 자국이라 무엇이 걸린 줄 알고 들여다보게 된다.
+   */
+  private setStatusBadge(
+    badge: Phaser.GameObjects.Text,
+    status: StatusEffect,
+    turnsLeft: number | undefined,
+  ) {
+    badge.setText(statusBadge(status, turnsLeft));
+    badge.setVisible(!!status);
+    if (status) badge.setColor(PALETTE[STATUS_META[status].color]);
+  }
 
   private drawBar(
     g: Phaser.GameObjects.Graphics,
