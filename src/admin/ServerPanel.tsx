@@ -104,6 +104,16 @@ export default function ServerPanel({ secret }: { secret: string }) {
           <Row label="올라온 세이브" value={`${stats.saveCount}개`} />
           <Row label="보관된 이력" value={`${stats.historyCount}판`} />
           <Row label="마지막 저장" value={formatDate(stats.lastSavedAt)} />
+          {/* 기록이 언제부터인지를 같이 적는다. 안 적으면 적은 숫자가 "사람이 안 온다" 로 읽힌다 */}
+          <Row
+            label="접속 기록"
+            value={
+              stats.trackingSince
+                ? `${stats.loginCount}회 (${formatDate(stats.trackingSince)} 부터)`
+                : "아직 없음"
+            }
+          />
+          <Row label="로그인 실패" value={`${stats.failCount}회`} />
         </div>
       )}
 
