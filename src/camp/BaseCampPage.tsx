@@ -32,7 +32,6 @@ import { HEAL_POTION_IDS, getMaterial } from "../shared/items";
 import { PixelIcon } from "../shared/ui/PixelIcon";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
 import { useAuthStore } from "../auth/authStore";
-import LinkAccountModal from "../auth/LinkAccountModal";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
 import { PALETTE } from "../shared/palette";
 
@@ -908,9 +907,7 @@ function CampMenu({
 }) {
   const logout = useAuthStore((s) => s.logout);
   const isGuest = useAuthStore((s) => s.isGuest);
-  const isAnonymous = useAuthStore((s) => s.isAnonymous);
   const [showAudio, setShowAudio] = useState(false);
-  const [showLink, setShowLink] = useState(false);
 
   // 메뉴를 닫으면 소리 패널도 접는다. 다시 열었을 때 펼쳐진 채로 나오면 목록이 밀린다.
   // effect 로 하면 한 번 더 렌더되고, 그 사이 프레임에 펼쳐진 메뉴가 보인다.
@@ -938,10 +935,6 @@ function CampMenu({
       onClick: () => setShowAudio((v) => !v),
       panel: showAudio ? <div className="px-2 py-2"><AudioSettings /></div> : null,
     },
-    // 익명 계정은 이 브라우저에만 매여 있다. 아이디를 붙여야 다른 기기에서 이어받는다.
-    ...(isAnonymous
-      ? [{ label: "계정 연결", icon: "door" as const, tone: "gold" as const, onClick: () => setShowLink(true) }]
-      : []),
     { label: isGuest ? "로그인" : "로그아웃", icon: "door", tone: "accent", onClick: logout },
   ];
 
@@ -954,7 +947,6 @@ function CampMenu({
         items={items}
         badge={towerCleared ? "클리어" : undefined}
       />
-      {showLink && <LinkAccountModal onClose={() => setShowLink(false)} />}
     </>
   );
 }

@@ -251,3 +251,20 @@ export const monsters: Monster[] = [
   },
 
 ];
+
+// ─── 도감 ────────────────────────────────────────────────────────────────────────
+//
+// 오름(최종 보스)은 포획 대상이 아니라 도감의 분모에서도 분자에서도 뺀다. 그 규칙이
+// 화면마다 흩어져 있으면 같은 세이브를 보고 「내 몬스터」는 14/14, 관리 화면은 14/15 라고
+// 적는다 — 실제로 그랬다. 세는 곳은 여기 하나다.
+
+/** 도감에 안 오르는 몬스터. 잡을 수 없는 것들이다 */
+export const NOT_IN_DEX: readonly string[] = ["ormr"];
+
+/** 도감 분모 */
+export const DEX_TOTAL = monsters.filter((m) => !NOT_IN_DEX.includes(m.id)).length;
+
+/** 세이브의 dexSeen·dexCaught 를 도감 기준으로 센다 */
+export function dexCount(ids: readonly string[]): number {
+  return ids.filter((id) => !NOT_IN_DEX.includes(id)).length;
+}

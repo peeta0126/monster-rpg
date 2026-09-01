@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuthStore, isSessionActive } from "./authStore";
 import { useSaveSync } from "./useSaveSync";
-import { useOfflineUpgrade } from "./offlineUpgrade";
 import LoginPage from "./LoginPage";
 
 export default function AuthGate({ children }: { children: ReactNode }) {
@@ -12,8 +11,6 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const isGuest = useAuthStore((s) => s.isGuest);
 
   useSaveSync();
-  // 서버가 꺼져 있을 때 들어온 사람은 여기서 다시 붙는다
-  useOfflineUpgrade();
 
   // /admin은 플레이어 로그인과 무관한 별도 비밀키로 보호되므로 게이팅에서 제외
   if (location.pathname.startsWith("/admin")) return <>{children}</>;

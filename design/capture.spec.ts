@@ -396,12 +396,12 @@ for (const screen of SCREENS) {
     if (screen.auth) {
       // 세션 주입이 실패하면 전 화면이 로그인 페이지로 찍힌다. 조용히 넘어가면 안 된다.
       await expect(
-        page.getByRole("button", { name: /바로 시작/ }),
+        page.getByRole("button", { name: /^회원가입$/ }),
         `${screen.name}: 게스트 세션 주입 실패 — 로그인 화면이 떠 있다. ` +
         `authStore 의 persist name 이 "${AUTH_STORAGE_KEY}" 에서 바뀌지 않았는지 확인할 것.`,
       ).toHaveCount(0);
     } else {
-      await expect(page.getByRole("button", { name: /바로 시작/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: /^회원가입$/ })).toBeVisible();
     }
 
     if (screen.phaser) {

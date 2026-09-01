@@ -103,10 +103,6 @@ export function getMaterial(id: string) {
   return MATERIALS.find((m) => m.id === id);
 }
 
-export function getPotion(id: string) {
-  return POTIONS.find((p) => p.id === id);
-}
-
 /**
  * HP 를 되돌리는 물약. 해독제·공격 버프는 여기 없다.
  *

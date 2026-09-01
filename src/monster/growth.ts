@@ -1,6 +1,6 @@
 import type { Monster, Move } from "../shared/game";
 import { monsters } from "./monsters";
-import { getAllLearnableUpToLevel, getLearnableAtLevel } from "./learnset";
+import { LEARNSET, getLearnableAtLevel } from "./learnset";
 
 /**
  * 레벨업에 딸려오는 성장 처리. 기술 습득과 진화를 태운다.
@@ -47,7 +47,9 @@ function moveValue(m: Move): number {
  * 학습표가 없는 종은 종족 기본기를 그대로 쓴다.
  */
 export function movesAtLevel(monsterId: string, level: number, base: Move[]): Move[] {
-  const learnable = getAllLearnableUpToLevel(monsterId, level).map((e) => e.move);
+  const learnable = (LEARNSET[monsterId] ?? [])
+    .filter((e) => e.level <= level)
+    .map((e) => e.move);
   if (learnable.length === 0) return base.slice(0, MAX_MOVES);
   const uniq = [...new Map(learnable.map((m) => [m.name, m])).values()];
   return uniq.sort((a, b) => moveValue(b) - moveValue(a)).slice(0, MAX_MOVES);

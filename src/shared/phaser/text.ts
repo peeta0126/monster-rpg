@@ -9,7 +9,6 @@ import Phaser from "phaser";
  *    Galmuri가 아직 없어서 fallback으로 그려진 텍스처가 그대로 남는다.
  */
 export const PIXEL_FONT = '"Galmuri11", monospace';
-export const TITLE_FONT = '"Galmuri14", "Galmuri11", monospace';
 
 export const textResolution = () => Math.max(1, Math.round(window.devicePixelRatio || 1));
 

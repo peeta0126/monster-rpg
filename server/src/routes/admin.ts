@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { prisma } from "../prismaClient.js";
 import { requireAdmin } from "../middleware/admin.js";
+import { summarizeSave } from "../saveSummary.js";
 import { asyncHandler } from "../asyncHandler.js";
 
 export const adminRouter = Router();
@@ -42,13 +43,16 @@ adminRouter.get(
   asyncHandler(async (_req, res) => {
     const uptimeSeconds = Math.floor(process.uptime());
 
-    const [userCount, anonCount, saveCount, historyCount, latest] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { isAnonymous: true } }),
-      prisma.saveData.count(),
-      prisma.saveHistory.count(),
-      prisma.saveData.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
-    ]);
+    const [userCount, saveCount, historyCount, latest, loginCount, failCount, firstEvent] =
+      await Promise.all([
+        prisma.user.count(),
+        prisma.saveData.count(),
+        prisma.saveHistory.count(),
+        prisma.saveData.findFirst({ orderBy: { updatedAt: "desc" }, select: { updatedAt: true } }),
+        prisma.loginEvent.count({ where: { kind: { in: ["login", "register"] } } }),
+        prisma.loginEvent.count({ where: { kind: "fail" } }),
+        prisma.loginEvent.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+      ]);
 
     res.json({
       uptimeSeconds,
@@ -56,32 +60,84 @@ adminRouter.get(
       nodeVersion: process.version,
       dbBytes: readDbBytes(),
       userCount,
-      anonCount,
       saveCount,
       historyCount,
       lastSavedAt: latest?.updatedAt ?? null,
+      loginCount,
+      failCount,
+      // 접속 기록은 이 기능이 들어간 날부터 쌓인다. 그 전의 접속은 어디에도 없으므로
+      // 화면이 "0회" 로 적지 않게 언제부터인지를 같이 준다.
+      trackingSince: firstEvent?.createdAt ?? null,
     });
   }),
 );
 
+/**
+ * 계정 목록. 세이브 본문까지 읽어 "어디까지 갔나" 를 같이 낸다.
+ *
+ * 목록에서 요약이 안 보이면 스무 명을 하나씩 눌러 봐야 누가 진짜로 플레이했는지 알 수 있다.
+ * 세이브가 사람당 수십 KB 라 몇백 명까지는 이대로 읽어도 된다 — 그보다 커지면 요약을
+ * 저장할 자리를 만들 때다.
+ */
 adminRouter.get(
   "/users",
   asyncHandler(async (_req, res) => {
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      include: { saveData: { select: { updatedAt: true, revision: true } } },
-    });
+    const [users, logins] = await Promise.all([
+      prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        include: { saveData: { select: { updatedAt: true, revision: true, data: true } } },
+      }),
+      // 사람마다 세면 계정 수만큼 질의가 나간다. 한 번에 묶어 세고 여기서 나눠 붙인다.
+      prisma.loginEvent.groupBy({
+        by: ["userId"],
+        where: { kind: { in: ["login", "register"] } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const countByUser = new Map(logins.map((g) => [g.userId, g._count._all]));
 
     res.json(
       users.map((u) => ({
         id: u.id,
         username: u.username,
         createdAt: u.createdAt,
-        isAnonymous: u.isAnonymous,
+        lastLoginAt: u.lastLoginAt,
         saveUpdatedAt: u.saveData?.updatedAt ?? null,
         saveRevision: u.saveData?.revision ?? null,
+        loginCount: countByUser.get(u.id) ?? 0,
+        summary: summarizeSave(u.saveData?.data),
       })),
     );
+  }),
+);
+
+/**
+ * 한 사람의 세이브 원본. 이름을 붙이는 것은 관리 화면이 한다 — 몬스터·아이템 표가
+ * 게임 쪽에만 있어서, 여기서 풀면 같은 표를 서버에도 한 벌 두게 된다.
+ */
+adminRouter.get(
+  "/users/:id/save",
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      include: { saveData: true },
+    });
+    if (!user) {
+      res.status(404).json({ error: "계정을 찾을 수 없습니다." });
+      return;
+    }
+
+    res.json({
+      username: user.username,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      data: user.saveData?.data ?? null,
+      version: user.saveData?.version ?? null,
+      revision: user.saveData?.revision ?? 0,
+      updatedAt: user.saveData?.updatedAt ?? null,
+      summary: summarizeSave(user.saveData?.data),
+    });
   }),
 );
 
@@ -142,19 +198,102 @@ adminRouter.post(
   }),
 );
 
-/**
- * 세이브가 한 번도 안 올라온 익명 계정 청소.
- * 「바로 시작」은 화면을 열기만 해도 계정을 만드니까, 들어왔다 바로 닫은 사람만큼 빈 행이 쌓인다.
- */
-adminRouter.post(
-  "/cleanup-anon",
-  asyncHandler(async (req, res) => {
-    const olderThanHours = Number(req.query.hours ?? 24);
-    const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+/** 접속 화면이 한 번에 받아 간다. 사람 목록·요약·최근 기록이 따로 오면 세 번 왕복한다 */
+const ACCESS_WINDOW_DAYS = 7;
+const RECENT_LIMIT = 200;
 
-    const { count } = await prisma.user.deleteMany({
-      where: { isAnonymous: true, createdAt: { lt: cutoff }, saveData: { is: null } },
+/**
+ * "누가 언제 들어왔나".
+ *
+ * `User.lastLoginAt` 은 마지막 한 번뿐이라 매일 오는 사람과 두 달 전에 한 번 온 사람이
+ * 같아 보인다. 그 차이를 내는 것이 이 라우트의 전부다 — 조작은 없다.
+ *
+ * **`trackingSince` 를 반드시 같이 낸다.** 이 표는 기능이 들어간 날부터 쌓이므로 그 전에
+ * 들어온 사람은 0회로 보인다. 화면이 그걸 "한 번도 안 들어옴" 으로 읽으면, 없는 사실을
+ * 지어내는 셈이 된다.
+ */
+adminRouter.get(
+  "/access",
+  asyncHandler(async (req, res) => {
+    const days = Math.min(Math.max(Number(req.query.days) || ACCESS_WINDOW_DAYS, 1), 365);
+    const since = new Date(Date.now() - days * 86400_000);
+
+    const [users, rollup, recent, firstEvent, windowCounts] = await Promise.all([
+      prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        include: { saveData: { select: { updatedAt: true } } },
+      }),
+      prisma.loginEvent.groupBy({ by: ["userId", "kind"], _count: { _all: true } }),
+      prisma.loginEvent.findMany({ orderBy: { createdAt: "desc" }, take: RECENT_LIMIT }),
+      prisma.loginEvent.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+      prisma.loginEvent.groupBy({
+        by: ["userId"],
+        where: { kind: { in: ["login", "register"] }, createdAt: { gte: since } },
+        _count: { _all: true },
+        _max: { createdAt: true },
+      }),
+    ]);
+
+    const count = (userId: string, kind: string) =>
+      rollup.find((g) => g.userId === userId && g.kind === kind)?._count._all ?? 0;
+    const inWindow = new Map(windowCounts.map((g) => [g.userId, g]));
+
+    // 마지막 접속은 기록에서 읽되, 기록이 없으면 lastLoginAt 으로 물러난다.
+    // 기록 이전에 들어온 사람의 마지막 접속을 "없음" 으로 적으면 안 된다.
+    const lastEventByUser = new Map<string, Date>();
+    for (const e of recent) {
+      if (!e.userId || e.kind === "fail") continue;
+      const prev = lastEventByUser.get(e.userId);
+      if (!prev || e.createdAt > prev) lastEventByUser.set(e.userId, e.createdAt);
+    }
+
+    res.json({
+      days,
+      trackingSince: firstEvent?.createdAt ?? null,
+      users: users.map((u) => ({
+        id: u.id,
+        username: u.username,
+        createdAt: u.createdAt,
+        lastLoginAt: u.lastLoginAt,
+        saveUpdatedAt: u.saveData?.updatedAt ?? null,
+        loginCount: count(u.id, "login") + count(u.id, "register"),
+        failCount: count(u.id, "fail"),
+        recentLoginCount: inWindow.get(u.id)?._count._all ?? 0,
+        lastEventAt: lastEventByUser.get(u.id) ?? null,
+      })),
+      // 계정이 없는 실패(없는 아이디를 찍어 본 것)는 사람 목록에 안 붙으므로 여기서만 보인다
+      recent: recent.map((e) => ({
+        id: e.id,
+        userId: e.userId,
+        username: e.username,
+        kind: e.kind,
+        ip: e.ip,
+        userAgent: e.userAgent,
+        createdAt: e.createdAt,
+      })),
+      truncated: recent.length === RECENT_LIMIT,
     });
-    res.json({ deleted: count });
+  }),
+);
+
+/** 한 사람의 접속 기록. 목록에서 누르면 펼친다 */
+adminRouter.get(
+  "/users/:id/logins",
+  asyncHandler(async (req, res) => {
+    const events = await prisma.loginEvent.findMany({
+      where: { userId: req.params.id },
+      orderBy: { createdAt: "desc" },
+      take: RECENT_LIMIT,
+    });
+    res.json(
+      events.map((e) => ({
+        id: e.id,
+        kind: e.kind,
+        username: e.username,
+        ip: e.ip,
+        userAgent: e.userAgent,
+        createdAt: e.createdAt,
+      })),
+    );
   }),
 );

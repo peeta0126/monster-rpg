@@ -8,6 +8,7 @@ import { PALETTE, HEX, hpToken, isHpDanger, elementChip } from "../shared/palett
 import { STATUS_META, statusBadge } from "./statusInfo";
 import { towerBattleBg } from "../shared/assetPaths";
 import { getTowerZone } from "../shared/floorTable";
+import { artFacingOfImage, type ArtFacing } from "../monster/monsterImages";
 import type { ElementType, StatusEffect } from "../shared/game";
 import type { BattleResultPayload, BattlePlayerSwitchPayload, BattleHitPayload } from "../shared/phaser/events";
 
@@ -57,6 +58,9 @@ export default class BattleScene extends Phaser.Scene {
   // ── 스프라이트 ──
   private playerSprite!: Phaser.GameObjects.Image;
   private enemySprite!: Phaser.GameObjects.Image;
+  /** 지금 걸린 원화가 원래 보던 쪽. 뒤집기 판정에 자리와 함께 들어간다(faceEachOther) */
+  private playerFacing: ArtFacing = "left";
+  private enemyFacing: ArtFacing = "left";
 
   // ── HP 바 ──
   private enemyHpBar!: Phaser.GameObjects.Graphics;
@@ -287,6 +291,11 @@ export default class BattleScene extends Phaser.Scene {
     this.smoothTexture("enemy-mon");
     for (let i = 0; i < 6; i++) this.smoothTexture(`party-mon-${i}`);
 
+    // 뒤집기는 자리만으로 못 정한다. 원화가 원래 보던 쪽을 그림 파일에서 읽어 둔다.
+    const d = getBattleInitData();
+    this.enemyFacing  = artFacingOfImage(d?.enemyImageUrl);
+    this.playerFacing = artFacingOfImage(d?.partyImageUrls?.[0] ?? d?.playerImageUrl);
+
     // 적. 뒤(오른쪽·위·작게)
     if (this.textures.exists("enemy-mon")) {
       this.enemySprite = this.add.image(this.enemy.x, this.enemy.cy, "enemy-mon")
@@ -323,8 +332,8 @@ export default class BattleScene extends Phaser.Scene {
    * 건드리진 않지만, 방향을 한 곳에서만 정해야 나중에 배치를 바꿔도 안전하다.
    */
   private faceEachOther() {
-    this.playerSprite?.setFlipX(shouldFlipX(PLAYER_X, this.enemy.x));
-    this.enemySprite?.setFlipX(shouldFlipX(this.enemy.x, PLAYER_X));
+    this.playerSprite?.setFlipX(shouldFlipX(PLAYER_X, this.enemy.x, this.playerFacing));
+    this.enemySprite?.setFlipX(shouldFlipX(this.enemy.x, PLAYER_X, this.enemyFacing));
   }
 
   private smoothTexture(key: string) {
@@ -464,7 +473,7 @@ export default class BattleScene extends Phaser.Scene {
       this.enemyStatusBadge = this.add.text(barX + 26, barY - 14, "", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
         backgroundColor: PALETTE.shadow900, padding: { x: 2, y: 1 },
-      }).setOrigin(0, 0).setDepth(10);
+      }).setOrigin(0, 0).setDepth(10).setVisible(false);
       this.enemyHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.enemyHpBar, barX, barY, barW, BAR_H, 1);
       // HP 수치는 "몇 대 더 때려야 하나"를 판단하는 핵심 정보라 캔버스가 축소돼도 읽히도록
@@ -486,7 +495,7 @@ export default class BattleScene extends Phaser.Scene {
       this.playerStatusBadge = this.add.text(barX + 26, barY - 14, "", {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.ember500,
         backgroundColor: PALETTE.shadow800, padding: { x: 2, y: 1 },
-      }).setOrigin(0, 0).setDepth(10);
+      }).setOrigin(0, 0).setDepth(10).setVisible(false);
       this.playerHpBar = this.add.graphics().setDepth(9);
       this.drawBar(this.playerHpBar, barX, barY, barW, BAR_H, 1);
       this.playerHpText = this.add.text(barX + barW, barY - 2, "", {
@@ -646,10 +655,8 @@ export default class BattleScene extends Phaser.Scene {
     this.setDanger("enemy",  isHpDanger((p.enemyHp  / p.enemyMaxHp)  * 100));
     this.setDanger("player", isHpDanger((p.playerHp / p.playerMaxHp) * 100));
 
-    this.enemyStatusBadge.setText(statusBadge(p.enemyStatus, p.enemyStatusTurns));
-    this.playerStatusBadge.setText(statusBadge(p.playerStatus, p.playerStatusTurns));
-    if (p.enemyStatus) this.enemyStatusBadge.setColor(PALETTE[STATUS_META[p.enemyStatus].color]);
-    if (p.playerStatus) this.playerStatusBadge.setColor(PALETTE[STATUS_META[p.playerStatus].color]);
+    this.setStatusBadge(this.enemyStatusBadge,  p.enemyStatus,  p.enemyStatusTurns);
+    this.setStatusBadge(this.playerStatusBadge, p.playerStatus, p.playerStatusTurns);
 
     // 흔들림·플래시는 BATTLE_HIT 이 담당한다(데미지 크기와 치명타 여부를 알아야 해서).
     // 여기서는 쓰러짐만 본다.
@@ -701,6 +708,10 @@ export default class BattleScene extends Phaser.Scene {
       onComplete: () => {
         if (this.textures.exists(key)) {
           this.playerSprite.setTexture(key);
+          // 교체한 몬스터는 원화 방향이 다를 수 있다. 그림과 방향을 같이 갈아끼운다.
+          this.playerFacing = artFacingOfImage(
+            getBattleInitData()?.partyImageUrls?.[payload.partyIndex],
+          );
         }
         // setTexture 후 반드시 origin + displaySize 재설정
         // (Phaser가 새 텍스처의 natural size로 리셋하기 때문)
@@ -740,6 +751,23 @@ export default class BattleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────────────────────────────────────
   // 그리기 헬퍼
   // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * HP 패널의 상태이상 배지.
+   *
+   * **상태이상이 없으면 숨긴다.** Phaser Text 는 글자가 빈 문자열이어도 backgroundColor 와
+   * padding 만큼을 칠하기 때문에, 안 숨기면 `HP` 와 `1003/1003` 사이에 정체 모를 작은
+   * 네모가 매 판 떠 있다. 아무 뜻도 없는 자국이라 무엇이 걸린 줄 알고 들여다보게 된다.
+   */
+  private setStatusBadge(
+    badge: Phaser.GameObjects.Text,
+    status: StatusEffect,
+    turnsLeft: number | undefined,
+  ) {
+    badge.setText(statusBadge(status, turnsLeft));
+    badge.setVisible(!!status);
+    if (status) badge.setColor(PALETTE[STATUS_META[status].color]);
+  }
 
   private drawBar(
     g: Phaser.GameObjects.Graphics,

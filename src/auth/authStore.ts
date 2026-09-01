@@ -7,18 +7,14 @@ interface AuthState {
   /**
    * 서버를 쓰지 않는 로컬 전용 세션.
    *
-   * 화면에는 이 길로 들어가는 버튼이 없다 — 「바로 시작」이 익명 계정을 발급받아 서버에 붙는다.
-   * 남겨 둔 건 둘 때문이다: 서버가 꺼져 있어 계정 발급이 실패했을 때의 폴백,
-   * 그리고 세션을 localStorage 로 직접 심는 테스트들.
+   * 화면에는 이 길로 들어가는 버튼이 없다 — 사람은 아이디·비밀번호로만 들어온다.
+   * 남겨 둔 것은 둘 때문이다: 개발자 프리셋 모드, 그리고 세션을 localStorage 로
+   * 직접 심는 테스트들(`design/`·`e2e/`가 전부 이 모양을 쓴다).
    */
   isGuest: boolean;
   isDev: boolean;
-  /** 아이디 없이 발급받은 계정. 서버 동기화는 정식 계정과 똑같이 된다 */
-  isAnonymous: boolean;
   hasHydrated: boolean;
-  setAuthed: (token: string, username: string, opts?: { isAnonymous?: boolean; isDev?: boolean }) => void;
-  /** 서버에 못 붙었을 때만 쓰는 폴백. 진행은 이 브라우저에만 남는다 */
-  continueOffline: () => void;
+  setAuthed: (token: string, username: string, opts?: { isDev?: boolean }) => void;
   /** 개발자 코드로 테스트 프리셋을 볼 때. 프리셋이 서버 세이브를 덮지 않도록 일부러 로컬 전용이다 */
   enterDevPresetMode: () => void;
   logout: () => void;
@@ -32,20 +28,12 @@ export const useAuthStore = create<AuthState>()(
       username: null,
       isGuest: false,
       isDev: false,
-      isAnonymous: false,
       hasHydrated: false,
 
       setAuthed: (token, username, opts) =>
-        set({
-          token,
-          username,
-          isGuest: false,
-          isDev: opts?.isDev ?? false,
-          isAnonymous: opts?.isAnonymous ?? false,
-        }),
-      continueOffline: () => set({ token: null, username: null, isGuest: true, isDev: false, isAnonymous: false }),
-      enterDevPresetMode: () => set({ token: null, username: "admin", isGuest: true, isDev: true, isAnonymous: false }),
-      logout: () => set({ token: null, username: null, isGuest: false, isDev: false, isAnonymous: false }),
+        set({ token, username, isGuest: false, isDev: opts?.isDev ?? false }),
+      enterDevPresetMode: () => set({ token: null, username: "admin", isGuest: true, isDev: true }),
+      logout: () => set({ token: null, username: null, isGuest: false, isDev: false }),
       setHydrated: () => set({ hasHydrated: true }),
     }),
     {
@@ -55,7 +43,6 @@ export const useAuthStore = create<AuthState>()(
         username: s.username,
         isGuest: s.isGuest,
         isDev: s.isDev,
-        isAnonymous: s.isAnonymous,
       }),
       onRehydrateStorage: () => (state) => state?.setHydrated(),
     },

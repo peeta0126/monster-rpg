@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { fetchAdminUsers, deleteAdminUser, cleanupAnonUsers } from "./adminApi";
+import { fetchAdminUsers, deleteAdminUser } from "./adminApi";
 import type { AdminUser } from "./adminApi";
 import SaveHistoryPanel from "./SaveHistoryPanel";
+import UserDetailPanel from "./UserDetailPanel";
 import ServerPanel from "./ServerPanel";
-import { getApiBaseOverride, setApiBaseOverride } from "../shared/apiBase";
+import AccessPanel from "./AccessPanel";
 
 const pixelFont = { fontFamily: "var(--font-pixel)" };
 
@@ -12,11 +13,10 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleString("ko-KR");
 }
 
-type Tab = "users" | "server";
+type Tab = "users" | "access" | "server";
 
 export default function AdminPage() {
   const [secret, setSecret] = useState("");
-  const [serverUrl, setServerUrl] = useState(() => getApiBaseOverride() ?? "");
   const [authedSecret, setAuthedSecret] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -24,14 +24,12 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [historyFor, setHistoryFor] = useState<AdminUser | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [detailFor, setDetailFor] = useState<AdminUser | null>(null);
 
   async function handleEnter() {
     if (pending) return;
     setPending(true);
     setError(null);
-    // 키보다 주소를 먼저 정한다. 주소가 틀리면 키가 맞아도 접속 자체가 실패한다.
-    setApiBaseOverride(serverUrl.trim() || null);
     try {
       const list = await fetchAdminUsers(secret);
       setUsers(list);
@@ -58,17 +56,14 @@ export default function AdminPage() {
     }
   }
 
-  /** 세이브가 한 번도 안 올라온 익명 계정을 지운다. 「바로 시작」은 화면만 열어도 계정을 만든다 */
-  async function handleCleanup() {
+  async function handleRefresh() {
     if (!authedSecret || pending) return;
     setPending(true);
     setError(null);
     try {
-      const { deleted } = await cleanupAnonUsers(authedSecret, 24);
-      setNotice(`빈 익명 계정 ${deleted}개를 정리했습니다.`);
       setUsers(await fetchAdminUsers(authedSecret));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "정리에 실패했습니다.");
+      setError(err instanceof Error ? err.message : "목록을 못 읽었습니다.");
     } finally {
       setPending(false);
     }
@@ -91,18 +86,6 @@ export default function AdminPage() {
             autoFocus
             className="w-full rounded-md border border-stone-600 bg-shadow-900 px-3 py-2 text-pixel-sm text-cream-100 outline-none transition focus:border-ember-500"
           />
-          {/* 터널 주소는 서버를 다시 켤 때마다 바뀐다. 여기서 갈아 끼우면 화면을 다시 배포하지 않아도 된다 */}
-          <input
-            type="url"
-            value={serverUrl}
-            onChange={(e) => setServerUrl(e.target.value)}
-            placeholder="서버 주소 (비우면 기본값)"
-            spellCheck={false}
-            className="mt-2 w-full rounded-md border border-stone-600 bg-shadow-900 px-3 py-2 text-pixel-sm text-cream-100 outline-none transition focus:border-ember-500"
-          />
-          <p className="mt-2 text-pixel-sm text-sand-300">
-            터널 주소가 바뀌었을 때만 넣습니다. 끝에 /api 까지 붙입니다.
-          </p>
           {error && <p className="mt-2 text-pixel-sm text-ember-500">{error}</p>}
           <button
             type="submit"
@@ -120,7 +103,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-shadow-900 px-6 py-8 text-sand-200">
       <nav className="mb-6 flex gap-2">
-        {([["users", "사용자"], ["server", "서버"]] as const).map(([key, label]) => (
+        {([["users", "사용자"], ["access", "접속"], ["server", "서버"]] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -137,6 +120,8 @@ export default function AdminPage() {
         ))}
       </nav>
 
+      {tab === "access" && <AccessPanel secret={authedSecret} />}
+
       {tab === "server" && <ServerPanel secret={authedSecret} />}
 
       {tab === "users" && (
@@ -146,15 +131,13 @@ export default function AdminPage() {
           유저 관리 ({users.length}명)
         </h1>
         <button
-          onClick={handleCleanup}
+          onClick={() => void handleRefresh()}
           disabled={pending}
-          className="rounded border border-stone-600 px-3 py-1.5 text-pixel-sm text-sand-300 transition hover:border-ember-700 hover:text-ember-500 disabled:opacity-40"
+          className="rounded border border-stone-600 px-3 py-1.5 text-pixel-sm text-sand-300 transition hover:border-mist-500 hover:text-mist-300 disabled:opacity-40"
         >
-          빈 익명 계정 정리
+          {pending ? "…" : "새로고침"}
         </button>
       </div>
-
-      {notice && <p className="mb-4 text-pixel-sm text-moss-500">{notice}</p>}
 
       {error && (
         <p className="mb-4 rounded border border-ember-700/60 bg-ember-700/11 px-3 py-2 text-pixel-sm text-ember-500">{error}</p>
@@ -165,23 +148,46 @@ export default function AdminPage() {
           <thead className="bg-shadow-800 text-sand-300">
             <tr>
               <th className="px-4 py-2 font-medium">아이디</th>
-              <th className="px-4 py-2 font-medium">가입일</th>
+              <th className="px-4 py-2 font-medium">진행</th>
+              <th className="px-4 py-2 font-medium">도감</th>
+              <th className="px-4 py-2 font-medium">접속</th>
+              <th className="px-4 py-2 font-medium">마지막 로그인</th>
               <th className="px-4 py-2 font-medium">최종 저장</th>
-              <th className="px-4 py-2 font-medium">판</th>
               <th className="px-4 py-2 text-right font-medium">관리</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-t border-shadow-700">
+                <td className="px-4 py-2 text-cream-100">{u.username}</td>
+                {/* 세이브가 없는 계정은 "0층" 이 아니라 "아직" 이다. 0 으로 적으면
+                    한 번도 안 들어온 사람과 1층에서 진 사람이 같아 보인다. */}
                 <td className="px-4 py-2">
-                  {u.username}
-                  {u.isAnonymous && <span className="ml-2 text-sand-300">(익명)</span>}
+                  {u.summary ? (
+                    <span className="text-cream-100">
+                      {u.summary.bestFloor}층
+                      {u.summary.towerCleared && <span className="ml-1 text-ember-500">클리어</span>}
+                    </span>
+                  ) : (
+                    <span className="text-sand-300">아직</span>
+                  )}
                 </td>
-                <td className="px-4 py-2 text-sand-300">{formatDate(u.createdAt)}</td>
+                <td className="px-4 py-2 text-sand-300">
+                  {u.summary ? `${u.summary.dexCaught}마리` : "-"}
+                </td>
+                {/* 기록이 켜지기 전에 들어온 사람은 0 회가 아니다. 그렇게 적으면 없던 사실이 생긴다 */}
+                <td className="px-4 py-2 text-sand-300">
+                  {u.loginCount === 0 && u.lastLoginAt ? "기록 전" : `${u.loginCount}회`}
+                </td>
+                <td className="px-4 py-2 text-sand-300">{formatDate(u.lastLoginAt)}</td>
                 <td className="px-4 py-2 text-sand-300">{formatDate(u.saveUpdatedAt)}</td>
-                <td className="px-4 py-2 text-sand-300">{u.saveRevision ?? "-"}</td>
-                <td className="px-4 py-2 text-right">
+                <td className="px-4 py-2 text-right whitespace-nowrap">
+                  <button
+                    onClick={() => setDetailFor(u)}
+                    className="mr-2 rounded border border-mist-500/60 px-2 py-1 text-pixel-sm text-mist-300 transition hover:border-mist-500 hover:bg-shadow-700"
+                  >
+                    진행
+                  </button>
                   <button
                     onClick={() => setHistoryFor(u)}
                     className="mr-2 rounded border border-stone-600 px-2 py-1 text-pixel-sm text-sand-300 transition hover:border-mist-500 hover:text-mist-300"
@@ -221,6 +227,15 @@ export default function AdminPage() {
 
       {users.length === 0 && <p className="mt-4 text-sand-300">가입된 유저가 없습니다.</p>}
         </>
+      )}
+
+      {detailFor && (
+        <UserDetailPanel
+          secret={authedSecret}
+          userId={detailFor.id}
+          username={detailFor.username}
+          onClose={() => setDetailFor(null)}
+        />
       )}
 
       {historyFor && (

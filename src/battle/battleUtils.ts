@@ -585,7 +585,6 @@ export interface SpeedGauge {
   need: number;
 }
 
-export const EMPTY_SPEED_GAUGE: SpeedGauge = { charge: 0, need: 0 };
 
 /**
  * 이번 턴이 끝난 뒤의 게이지. `extra` 가 true 면 그 턴에 한 번 더 움직인다.

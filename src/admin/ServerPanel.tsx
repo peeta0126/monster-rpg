@@ -44,12 +44,11 @@ function Row({ label, value, tone }: { label: string; value: string; tone?: "nor
 /**
  * 서버가 지금 어떤 상태인지만 본다.
  *
- * 재시작·초기화 같은 조작은 일부러 없다. 이 화면은 공개 주소에 그대로 올라가므로,
- * 관리자 키 하나가 새면 그게 그대로 서버 조작 권한이 된다.
+ * 재시작·초기화 같은 조작은 일부러 없다. 관리자 키 하나가 새면 그게 그대로 서버 조작
+ * 권한이 되는데, 여기서 얻는 것은 "버튼 하나로 껐다 켜기" 정도라 남는 장사가 아니다.
  */
 export default function ServerPanel({ secret }: { secret: string }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [apiBase, setApiBase] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -67,7 +66,6 @@ export default function ServerPanel({ secret }: { secret: string }) {
 
   useEffect(() => {
     void load();
-    resolveApiBase().then(setApiBase).catch(() => setApiBase("알 수 없음"));
   }, [load]);
 
   return (
@@ -99,21 +97,28 @@ export default function ServerPanel({ secret }: { secret: string }) {
           <Row label="상태" value="살아 있음" tone="good" />
           <Row label="켜진 지" value={formatUptime(stats.uptimeSeconds)} />
           <Row label="켜진 시각" value={formatDate(stats.startedAt)} />
-          <Row label="서버 주소" value={apiBase || "…"} />
+          <Row label="서버 주소" value={resolveApiBase()} />
           <Row label="Node" value={stats.nodeVersion} />
           <Row label="세이브 파일" value={formatBytes(stats.dbBytes)} />
-          <Row
-            label="계정"
-            value={`${stats.userCount}명 (익명 ${stats.anonCount}명)`}
-          />
+          <Row label="계정" value={`${stats.userCount}명`} />
           <Row label="올라온 세이브" value={`${stats.saveCount}개`} />
           <Row label="보관된 이력" value={`${stats.historyCount}판`} />
           <Row label="마지막 저장" value={formatDate(stats.lastSavedAt)} />
+          {/* 기록이 언제부터인지를 같이 적는다. 안 적으면 적은 숫자가 "사람이 안 온다" 로 읽힌다 */}
+          <Row
+            label="접속 기록"
+            value={
+              stats.trackingSince
+                ? `${stats.loginCount}회 (${formatDate(stats.trackingSince)} 부터)`
+                : "아직 없음"
+            }
+          />
+          <Row label="로그인 실패" value={`${stats.failCount}회`} />
         </div>
       )}
 
       <p className="mt-4 text-pixel-sm text-sand-300">
-        세이브는 전부 이 파일 하나에 들어 있습니다. 백업 방법은 docs/DEPLOY.md 6절.
+        세이브는 전부 이 파일 하나(server/prisma/dev.db)에 들어 있습니다. 복사해 두는 것이 곧 백업입니다.
       </p>
     </div>
   );

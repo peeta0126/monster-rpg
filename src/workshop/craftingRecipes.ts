@@ -1,5 +1,4 @@
 import type { ArtifactStatBonus, CraftingDifficulty, CraftingRecipe, CraftingStationType } from "../shared/crafting";
-import { PALETTE } from "../shared/palette";
 
 export const DIFFICULTY_LABEL: Record<CraftingDifficulty, string> = {
   easy:   "쉬움",
@@ -7,11 +6,6 @@ export const DIFFICULTY_LABEL: Record<CraftingDifficulty, string> = {
   hard:   "어려움",
 };
 
-export const DIFFICULTY_COLOR: Record<CraftingDifficulty, string> = {
-  easy:   PALETTE.moss500,
-  normal: PALETTE.ember500,
-  hard:   PALETTE.ember700,
-};
 
 export const STATION_LABEL: Record<CraftingStationType, string> = {
   artifact: "아티팩트 제작대",
@@ -172,6 +166,3 @@ export const POTION_RECIPES: CraftingRecipe[] = [
 
 export const CRAFTING_RECIPES: CraftingRecipe[] = [...ARTIFACT_RECIPES, ...POTION_RECIPES];
 
-export function getCraftingRecipe(id: string) {
-  return CRAFTING_RECIPES.find((r) => r.id === id);
-}
