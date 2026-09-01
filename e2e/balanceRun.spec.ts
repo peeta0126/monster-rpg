@@ -86,7 +86,10 @@ async function seedSave(page: Page, o: SeedOptions) {
         state: {
           party, storage: [], dexSeen: [], dexCaught: [], materials: {},
           // 정식 플레이라면 물약을 무한정 들고 다니지 않는다. 층당 한두 개 쓸 만큼만.
-          potions: { super_potion: 12, potion: 12, max_potion: 6, antidote: 6, strong_attack_buff: 4 },
+          // 맨몸 판은 공방을 안 쓴 사람이라 가방도 비어 있다(restAndReturn 주석 참고).
+          potions: opt.artifacts.length
+            ? { super_potion: 12, potion: 12, max_potion: 6, antidote: 6, strong_attack_buff: 4 }
+            : {},
           bestFloor: 0, storyFlags: {}, questStatus: {},
           craftedItems: [], craftedArtifacts: [], craftedPotions: [],
           equippedArtifacts, imprint,
@@ -117,7 +120,12 @@ async function restAndReturn(page: Page, floor: number, geared: boolean) {
       // 이 스펙이 재려는 건 레벨이 아니라 장비라, 레벨은 양쪽 다 층에 맞춰 둔다.
       if (m.level < f) m.level = f;
     }
-    st.potions = { super_potion: 8, potion: 8, max_potion: 4, antidote: 4, strong_attack_buff: 3 };
+    // 물약도 공방에서 나온다. 장비를 안 만든 사람은 물약도 없다 — 여기서 양쪽에 똑같이
+    // 가방을 채워 주면 "제작을 쓴 사람과 안 쓴 사람"이 아니라 "장비만 다른 사람" 을 재게 된다.
+    // 실제로 그 상태에서는 맨몸 판이 5층마다 가득 찬 가방으로 40층까지 올라갔다.
+    st.potions = g
+      ? { super_potion: 8, potion: 8, max_potion: 4, antidote: 4, strong_attack_buff: 3 }
+      : {};
     if (g) {
       for (const m of st.party ?? []) {
         st.equippedArtifacts[m.uid] = (st.equippedArtifacts[m.uid] ?? []).map(
@@ -183,8 +191,18 @@ test("장비 없이 오르면 관문에서 막힌다", async ({ page }) => {
 
   const wall = await climb(page, false, 50);
   expect(wall, "장비 없이 50층까지 갔다 — 관문이 관문 노릇을 못 하고 있다").not.toBeNull();
-  // 첫 관문(10층)이나 그 언저리에서 막혀야 한다. 30층까지 맨몸으로 가면 너무 무르다
-  expect(wall!).toBeLessThanOrEqual(20);
+
+  /**
+   * 첫 보스에서 막힌다.
+   *
+   * 두 판의 차이는 **공방을 썼는가** 하나다. 장비도 물약도 거기서 나오므로 맨몸 판은
+   * 가방까지 비어 있다. 예전에는 양쪽에 물약을 똑같이 채워 주고 있었는데, 그러면
+   * "제작을 쓴 사람과 안 쓴 사람"이 아니라 "장비만 다른 사람"을 재게 된다 — 그 상태로는
+   * 맨몸 판이 5층마다 가득 찬 가방으로 40층까지 올라갔다.
+   *
+   * 지금은 10층(분노한 모시)에서 멈춘다. 관문 검사의 맨몸 열도 그 층이 0% 다.
+   */
+  expect(wall!, "맨몸으로 탑 전반을 넘겼다 — 장비 축이 무의미해졌다").toBeLessThanOrEqual(20);
   console.log(`맨몸 등반은 ${wall}층에서 멈췄다`);
 });
 
