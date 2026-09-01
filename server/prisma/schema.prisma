@@ -16,6 +16,7 @@ model User {
   lastLoginAt  DateTime?
   saveData     SaveData?
   saveHistory  SaveHistory[]
+  logins       LoginEvent[]
 }
 
 model SaveData {
@@ -41,4 +42,24 @@ model SaveHistory {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// 들어온 흔적을 한 줄씩 남긴다. User.lastLoginAt 은 덮어써서 "몇 번 · 언제언제" 를 못 센다.
+/// 실패까지 같이 담는 건 남의 계정을 두드린 흔적이 여기 말고는 안 남기 때문이다.
+model LoginEvent {
+  id        String   @id @default(cuid())
+  /// 실패는 없는 아이디로도 들어오므로 계정이 안 붙는다. 계정이 지워지면 null 로 풀린다
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// 계정이 지워져도 "누구였나" 는 남아야 한다. 그래서 userId 와 따로 적는다
+  username  String
+  /// login | register | fail
+  kind      String
+  /// 이 PC 한 대로 도는 동안은 대개 127.0.0.1 이다. 밖으로 내보내는 날 쓸모가 생긴다
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }

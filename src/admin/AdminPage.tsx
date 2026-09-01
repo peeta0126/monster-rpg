@@ -4,6 +4,7 @@ import type { AdminUser } from "./adminApi";
 import SaveHistoryPanel from "./SaveHistoryPanel";
 import UserDetailPanel from "./UserDetailPanel";
 import ServerPanel from "./ServerPanel";
+import AccessPanel from "./AccessPanel";
 
 const pixelFont = { fontFamily: "var(--font-pixel)" };
 
@@ -12,7 +13,7 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleString("ko-KR");
 }
 
-type Tab = "users" | "server";
+type Tab = "users" | "access" | "server";
 
 export default function AdminPage() {
   const [secret, setSecret] = useState("");
@@ -102,7 +103,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-shadow-900 px-6 py-8 text-sand-200">
       <nav className="mb-6 flex gap-2">
-        {([["users", "사용자"], ["server", "서버"]] as const).map(([key, label]) => (
+        {([["users", "사용자"], ["access", "접속"], ["server", "서버"]] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -118,6 +119,8 @@ export default function AdminPage() {
           </button>
         ))}
       </nav>
+
+      {tab === "access" && <AccessPanel secret={authedSecret} />}
 
       {tab === "server" && <ServerPanel secret={authedSecret} />}
 
@@ -147,6 +150,7 @@ export default function AdminPage() {
               <th className="px-4 py-2 font-medium">아이디</th>
               <th className="px-4 py-2 font-medium">진행</th>
               <th className="px-4 py-2 font-medium">도감</th>
+              <th className="px-4 py-2 font-medium">접속</th>
               <th className="px-4 py-2 font-medium">마지막 로그인</th>
               <th className="px-4 py-2 font-medium">최종 저장</th>
               <th className="px-4 py-2 text-right font-medium">관리</th>
@@ -170,6 +174,10 @@ export default function AdminPage() {
                 </td>
                 <td className="px-4 py-2 text-sand-300">
                   {u.summary ? `${u.summary.dexCaught}마리` : "-"}
+                </td>
+                {/* 기록이 켜지기 전에 들어온 사람은 0 회가 아니다. 그렇게 적으면 없던 사실이 생긴다 */}
+                <td className="px-4 py-2 text-sand-300">
+                  {u.loginCount === 0 && u.lastLoginAt ? "기록 전" : `${u.loginCount}회`}
                 </td>
                 <td className="px-4 py-2 text-sand-300">{formatDate(u.lastLoginAt)}</td>
                 <td className="px-4 py-2 text-sand-300">{formatDate(u.saveUpdatedAt)}</td>

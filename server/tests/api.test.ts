@@ -504,3 +504,150 @@ describe("관리자 — 진행 상황", () => {
     );
   });
 });
+
+/**
+ * 접속 기록.
+ *
+ * `User.lastLoginAt` 은 덮어쓰기라 "마지막 한 번" 밖에 못 말한다. 매일 오는 사람과 두 달 전에
+ * 한 번 온 사람을 가르려고 한 줄씩 쌓는 표를 따로 뒀다 — 여기서 지키는 것은 그 표가
+ * **세 갈래(로그인·가입·실패)를 다 담고**, **성공 기록이 조용히 줄지 않는다**는 것이다.
+ */
+describe("관리자 — 접속 기록", () => {
+  const admin = () => process.env.ADMIN_SECRET!;
+
+  interface AccessUser {
+    id: string;
+    username: string;
+    loginCount: number;
+    failCount: number;
+    recentLoginCount: number;
+    lastEventAt: string | null;
+  }
+  interface AccessBody {
+    days: number;
+    trackingSince: string | null;
+    users: AccessUser[];
+    recent: { id: string; userId: string | null; username: string; kind: string; ip: string | null }[];
+    truncated: boolean;
+  }
+
+  const access = () =>
+    api<AccessBody>(base(), "/api/admin/access", { adminSecret: admin() });
+
+  async function accessRow(username: string): Promise<AccessUser> {
+    const res = await access();
+    const row = res.body.users.find((u) => u.username === username);
+    assert.ok(row, `접속 목록에 ${username} 이 없습니다`);
+    return row;
+  }
+
+  const login = (username: string, password: string) =>
+    api<AuthBody>(base(), "/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+
+  test("비밀키가 없으면 401", async () => {
+    assert.equal((await api(base(), "/api/admin/access")).status, 401);
+    assert.equal((await api(base(), "/api/admin/access", { adminSecret: "wrong" })).status, 401);
+  });
+
+  test("가입도 접속 한 번으로 센다", async () => {
+    const user = await newUser();
+    const row = await accessRow(user.username);
+    assert.equal(row.loginCount, 1, "가입은 곧바로 로그인 상태가 되므로 한 번이다");
+    assert.equal(row.failCount, 0);
+    assert.ok(row.lastEventAt, "언제 들어왔는지가 있어야 한다");
+  });
+
+  test("로그인할 때마다 는다 — 덮어쓰지 않는다", async () => {
+    const user = await newUser();
+    assert.equal((await login(user.username, "pw1234")).status, 200);
+    assert.equal((await login(user.username, "pw1234")).status, 200);
+
+    const row = await accessRow(user.username);
+    // 가입 1 + 로그인 2. lastLoginAt 이었다면 여기서 1 이 나온다 — 그게 이 표를 만든 이유다.
+    assert.equal(row.loginCount, 3);
+    assert.equal(row.recentLoginCount, 3, "방금 한 것이니 최근 창 안에 있어야 한다");
+  });
+
+  test("실패도 남는다. 성공 횟수에는 안 섞인다", async () => {
+    const user = await newUser();
+    assert.equal((await login(user.username, "wrong-password")).status, 401);
+
+    const row = await accessRow(user.username);
+    assert.equal(row.failCount, 1);
+    assert.equal(row.loginCount, 1, "실패가 접속 횟수에 섞이면 안 된다");
+  });
+
+  test("없는 아이디로 온 실패는 계정에 안 붙고 목록에만 남는다", async () => {
+    const ghost = `ghost_${Date.now().toString(36)}`;
+    assert.equal((await login(ghost, "whatever")).status, 401);
+
+    const res = await access();
+    const row = res.body.recent.find((e) => e.username === ghost);
+    assert.ok(row, "없는 아이디로 두드린 흔적이 어디에도 안 남았습니다");
+    assert.equal(row.kind, "fail");
+    assert.equal(row.userId, null, "계정이 없으니 userId 는 null 이어야 한다");
+    assert.equal(
+      res.body.users.some((u) => u.username === ghost),
+      false,
+      "없는 계정이 사람 목록에 생기면 안 된다",
+    );
+  });
+
+  test("한 사람의 기록을 따로 볼 수 있다", async () => {
+    const user = await newUser();
+    await login(user.username, "pw1234");
+    await login(user.username, "nope");
+
+    const list = await api<{ kind: string; createdAt: string }[]>(
+      base(),
+      `/api/admin/users/${(await accessRow(user.username)).id}/logins`,
+      { adminSecret: admin() },
+    );
+    assert.equal(list.status, 200);
+    const kinds = list.body.map((e) => e.kind);
+    assert.deepEqual(kinds, ["fail", "login", "register"], "최신순으로 세 줄이어야 한다");
+  });
+
+  test("사용자 목록도 접속 횟수를 같이 낸다", async () => {
+    const user = await newUser();
+    const res = await api<{ username: string; loginCount: number }[]>(base(), "/api/admin/users", {
+      adminSecret: admin(),
+    });
+    const row = res.body.find((u) => u.username === user.username);
+    assert.ok(row);
+    assert.equal(row.loginCount, 1);
+  });
+
+  test("기록이 언제부터인지를 같이 낸다", async () => {
+    // 이게 없으면 화면이 "0회" 를 "한 번도 안 들어옴" 으로 읽는다. 기록이 켜지기 전에
+    // 들어온 사람은 셀 수 없다는 사실 자체를 같이 내보내야 한다.
+    const res = await access();
+    assert.ok(res.body.trackingSince, "한 줄이라도 쌓였으면 시작 시각이 있어야 한다");
+
+    const stats = await api<AdminStats & { loginCount: number; trackingSince: string | null }>(
+      base(),
+      "/api/admin/stats",
+      { adminSecret: admin() },
+    );
+    assert.ok(stats.body.loginCount > 0);
+    assert.ok(stats.body.trackingSince);
+  });
+
+  test("계정을 지워도 그 계정을 두드린 기록은 남는다", async () => {
+    const user = await newUser();
+    const row = await accessRow(user.username);
+    assert.equal((await api(base(), `/api/admin/users/${row.id}`, {
+      method: "DELETE",
+      adminSecret: admin(),
+    })).status, 204);
+
+    const res = await access();
+    const left = res.body.recent.find((e) => e.username === user.username);
+    // userId 는 SetNull 로 풀리지만 username 을 따로 적어 둬서 "누구였나" 는 남는다.
+    assert.ok(left, "계정을 지웠다고 접속 기록까지 사라지면 안 됩니다");
+    assert.equal(left.userId, null);
+  });
+});

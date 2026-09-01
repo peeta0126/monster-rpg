@@ -6,6 +6,7 @@ import { env } from "../env.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
+import { recordLogin } from "../loginLog.js";
 
 export const authRouter = Router();
 
@@ -66,6 +67,7 @@ authRouter.post("/register", registerLimiter, asyncHandler(async (req, res) => {
   const user = await prisma.user.create({
     data: { username, passwordHash, lastLoginAt: new Date() },
   });
+  await recordLogin(req, "register", user.username, user.id);
 
   res.status(201).json({ token: issueToken(user.id), username: user.username });
 }));
@@ -80,17 +82,22 @@ authRouter.post("/login", loginLimiter, asyncHandler(async (req, res) => {
 
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user) {
+    // 없는 아이디로 온 실패다. 계정이 안 붙으므로 userId 는 null 이고, 적어 둔 username 이
+    // "무엇을 두드렸나" 를 말해 준다 -- 오타인지 남의 아이디를 찍어 보는 중인지가 갈린다.
+    await recordLogin(req, "fail", username, null);
     res.status(401).json({ error: "아이디 또는 비밀번호가 올바르지 않습니다." });
     return;
   }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
+    await recordLogin(req, "fail", user.username, user.id);
     res.status(401).json({ error: "아이디 또는 비밀번호가 올바르지 않습니다." });
     return;
   }
 
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  await recordLogin(req, "login", user.username, user.id);
 
   res.json({ token: issueToken(user.id), username: user.username });
 }));
