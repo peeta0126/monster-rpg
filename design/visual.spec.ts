@@ -27,6 +27,9 @@ const SCREENS = [
   { name: "farm",     path: "/farm",     auth: true,  phaser: false },
   { name: "monsters", path: "/monsters", auth: true,  phaser: false },
   { name: "workshop", path: "/workshop", auth: true,  phaser: false },
+  // 2026-09-01: 하단 경험치 줄을 걷어냈다. 전투 중에 볼 값이 아니고(레벨업은 전면 카드가
+  // 알린다), 상대에게도 있는 줄로 오해받았다. 그만큼 캔버스가 다시 길어졌다.
+  //
   // 2026-08-14: 하단 패널에 경험치 줄이 한 줄 늘면서 캔버스가 그만큼 짧아졌다. 몬스터
   // 방향은 그대로다. 뒤집기를 좌표에서 계산하도록 바꿨지만 지금 배치에서는 결과가 같다.
   //
