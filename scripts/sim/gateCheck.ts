@@ -104,6 +104,21 @@ function stepUp(a: ArtifactInstance): { level: number; enhancement: number } {
   };
 }
 
+/**
+ * 제작대에 한 번 더 다녀온 뒤의 장비 세 칸.
+ *
+ * 끼고 있던 것은 한 단계 올리고, 비어 있던 칸은 그 사람 수준(gearLabel)으로 새로 만든다.
+ * 실제로 제작대에 다시 가는 사람이 하는 일이 그것이다 — 있는 걸 올리고, 없는 걸 만든다.
+ */
+function aheadKit(uid: string, worn: ArtifactInstance[], label: string): ArtifactInstance[] {
+  const stepped = worn.map((a) => ({ ...a, ...stepUp(a) }));
+  const spec = parseGear(label);
+  if (!spec) return stepped;
+  const filled = makeGear(uid, { ...spec, ...stepUp({ level: spec.level, enhancement: spec.enhancement } as ArtifactInstance) });
+  const have = new Set(stepped.map((a) => a.itemId));
+  return [...stepped, ...filled.filter((a) => !have.has(a.itemId))];
+}
+
 /** 그 층에서 가능한 최선 */
 function fullKit(floor: number): string {
   return `elite:${floor}:5`;
@@ -141,8 +156,11 @@ async function winRate(floor: number, samples: Snapshot[], column: Column): Prom
       equipped[m.uid] =
         column === "bare"  ? []
         : column === "real"  ? worn.map((a) => ({ ...a }))
-        // 제작대에 한 번 더 다녀온 사람. 낀 것을 그대로 올린다 — 안 낀 칸은 여전히 빈 칸이다
-        : column === "ahead" ? worn.map((a) => ({ ...a, ...stepUp(a) }))
+        // 제작대에 한 번 더 다녀온 사람. 낀 것을 올리고 **빈 칸도 채운다**.
+        // 빈 칸을 그대로 두면 이 열이 실측과 10%p 밖에 안 벌어져서, 보스층에서
+        // 60~90% 밴드에 구조적으로 못 들어간다. 제작대에 다시 가는 사람이 하는 일이
+        // 정확히 그 빈 칸을 메우는 것이다.
+        : column === "ahead" ? aheadKit(m.uid, worn, sample.gearLabel)
         : makeGear(m.uid, parseGear(fullKit(floor)));
     });
 

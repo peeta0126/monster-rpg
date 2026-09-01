@@ -416,13 +416,16 @@ export function isGateFloor(floor: number): boolean {
  * 걸면 25층도 맨몸 100%, 45층도 맨몸 100% 인데 무너지는 이유가 서로 다르다.
  * 배수는 파티가 그 층에서 실제로 내는 화력에 맞춰야 한다.
  *
- * 값은 scripts/sim/gateCheck.ts 로 맞췄다(맨몸 35~60% · 정규 장비 ≥82%).
+ * 값은 scripts/sim/gateCheck.ts 로 맞췄다(2026-09-02 · 맨몸 ≤60% · 실측 60~88% ·
+ * 한 발 앞선 ≥85% · 완비 ≥95%). 그 도구가 실제 판을 표본으로 쓰므로, 여기를
+ * 만졌으면 반드시 다시 돌려야 한다 — 한 층을 올리면 그 앞에서 더 파밍하게 되어
+ * 뒷층의 입력이 통째로 바뀐다.
  */
 const GATE_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number }> = {
-  15: { hp: 1.55, attack: 1.28, defense: 1.62 },
-  25: { hp: 1.95, attack: 1.45, defense: 2.00 },
-  35: { hp: 1.88, attack: 1.40, defense: 1.92 },
-  45: { hp: 1.88, attack: 1.44, defense: 1.88 },
+  15: { hp: 1.34, attack: 1.10, defense: 1.36 },
+  25: { hp: 3.10, attack: 2.30, defense: 3.10 },
+  35: { hp: 1.98, attack: 1.48, defense: 2.00 },
+  45: { hp: 2.20, attack: 1.72, defense: 2.20 },
 };
 
 export function gateMultiplier(floor: number) {
@@ -602,11 +605,11 @@ function applyCorridor(m: Monster, floor: number): Monster {
  * `exp` 는 보상 경험치 배수. 벽 뒤에 보상이 없으면 벽이 아니라 통행세가 된다.
  */
 const BOSS_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number; exp: number }> = {
-  10: { hp: 1.50, attack: 1.25, defense: 1.15, exp: 2.4 },
-  20: { hp: 1.38, attack: 1.15, defense: 1.50, exp: 2.4 },
-  30: { hp: 1.95, attack: 1.78, defense: 1.95, exp: 2.4 },
-  40: { hp: 1.70, attack: 1.37, defense: 1.94, exp: 2.8 },
-  50: { hp: 2.15, attack: 1.38, defense: 1.75, exp: 3.5 },
+  10: { hp: 1.70, attack: 1.36, defense: 1.24, exp: 2.4 },
+  20: { hp: 1.26, attack: 0.95, defense: 1.00, exp: 2.4 },
+  30: { hp: 2.32, attack: 2.02, defense: 2.12, exp: 2.4 },
+  40: { hp: 1.70, attack: 1.35, defense: 1.90, exp: 2.8 },
+  50: { hp: 2.05, attack: 1.30, defense: 1.65, exp: 3.5 },
 };
 
 /** 그 층의 보스 배수를 스케일된 능력치에 얹는다 */
