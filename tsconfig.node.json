@@ -26,5 +26,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts", "tests"]
+  /* scripts 도 넣는다. 여기 없으면 시뮬레이터가 깨져도 `tsc -b` 가 못 잡는다 */
+  "include": ["vite.config.ts", "tests", "scripts"]
 }

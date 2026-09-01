@@ -6,6 +6,7 @@ import { installSeededRandom } from "./gameModel";
 import { getFloorEnemy, scaleToLevel } from "../../src/shared/floorTable";
 import { monsters } from "../../src/monster/monsters";
 import { getTypeMultiplier } from "../../src/battle/battleUtils";
+import type { ElementType } from "../../src/shared/game";
 import { AREA_MATERIAL_POOL, battleDropPool } from "../../src/shared/dropTables";
 import { FOREST_AREAS } from "../../src/camp/forest/areas";
 import { CRAFTING_RECIPES } from "../../src/workshop/craftingRecipes";
@@ -60,9 +61,9 @@ for (const floor of [10, 20, 30, 40, 50]) {
     for (let lv = 1; lv <= 200; lv++) {
       const me = scaleToLevel(base, lv);
       const mv = bestMove(me, boss.type);
-      const myDmg = Math.max(1, Math.floor((me.attack * mv.power / boss.defense) * getTypeMultiplier(mv.type, boss.type)) * (mv.accuracy / 100));
+      const myDmg = Math.max(1, Math.floor((me.attack * mv.power / boss.defense) * getTypeMultiplier(mv.type as ElementType, boss.type)) * (mv.accuracy / 100));
       const bossMv = bestMove(boss, me.type);
-      const bossDmg = Math.max(1, Math.floor((boss.attack * bossMv.power / me.defense) * getTypeMultiplier(bossMv.type, me.type)) * (bossMv.accuracy / 100));
+      const bossDmg = Math.max(1, Math.floor((boss.attack * bossMv.power / me.defense) * getTypeMultiplier(bossMv.type as ElementType, me.type)) * (bossMv.accuracy / 100));
       const turnsToKill = boss.maxHp / myDmg;
       const turnsToDie = me.maxHp / bossDmg;
       // 파티 3마리 = 대략 3배 버팀
