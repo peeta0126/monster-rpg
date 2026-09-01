@@ -43,7 +43,10 @@ const MIRROR: Partial<Record<Dir8, Dir8>> = { SW: "SE", W: "E", NW: "NE" };
  */
 export function resolveDir(dir: Dir8): { dir: Dir8; flipX: boolean } {
   const mirrored = MIRROR[dir];
-  return { dir: mirrored ?? dir, flipX: mirrored !== undefined };
+  // 아래쪽 대각선 모션은 원본 SE 프레임의 좌우 방향이 반대로 제작되어 있어
+  // SE에서 반전하고 SW에서는 원본 프레임을 그대로 사용한다.
+  const flipX = dir === "SE" || (mirrored !== undefined && dir !== "SW");
+  return { dir: mirrored ?? dir, flipX };
 }
 
 export interface PlayerFrame {
