@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { DEV_PARTY_IDS, DEV_PARTY_LEVEL } from "../src/shared/playerStore";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -22,8 +23,11 @@ import { playFloor, winOverlay } from "./autoBattle";
 
 const ARTIFACT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "artifacts");
 
-const DEV_PARTY_LEVEL = 50;
-const DEV_PARTY_SPECIES = ["mossyfinal", "aquavern", "frostorb"]; // playerStore의 DEV_PARTY_IDS와 동일
+// ⚠️ 예전엔 여기 종 이름을 손으로 적어 뒀다("playerStore의 DEV_PARTY_IDS와 동일"이라는
+// 주석까지 달고서). 그러다 프리셋 파티가 아쿠사·프리로에서 아쿠곤·젬로드로 바뀌자
+// 이 스펙만 옛 파티로 50층을 재게 됐다 — 통과해도 실제 프리셋을 증명하지 못한다.
+// 표는 한 벌만 둔다.
+const DEV_PARTY_SPECIES = DEV_PARTY_IDS;
 
 /** loadDevPreset이 만드는 것과 동일한 만렙 엘리트 아티팩트 세트 */
 function devArtifacts(seed: string) {
