@@ -10,10 +10,11 @@ import {
   // 26~49층 고정 구성이 쓰는 것들. 전부 그 종 학습표에 실제로 있는 기술이어야 한다.
   // 없는 걸 주면 isAnomalyMove 가 "쓸 수 있는 기술이 아니다"를 띄우는데,
   // 그건 n0층 보스한테만 허락된 연출이다.
-  twister, headbutt, heavyBlow, hyperBeam,
+  twister, headbutt, heavyBlow,
+  heatWave, iceShard,
   firePunch, cinderToss, flameSlash,
   waterPulse,
-  zap, boltStrike, thunder,
+  zap, thunder,
   leafBlade, sporeCloud, seedBomb, rootSpear,
   frostMist, crystalLance, sheerCold,
   poisonSting, acidSpray, poisonFog, poisonJab, venomFang,
@@ -217,9 +218,9 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["seed-bomb", "leaf-blade", "spore-cloud", "seed-bomb"],
   },
   27: {
-    monsterId: "crystafox",
-    moves: [icePunch, iceBeam, crystalBurst, frostMist],
-    skillOrder: ["crystal-burst", "ice-beam", "frost-mist", "ice-punch"],
+    monsterId: "bingrok",
+    moves: [crystalBurst, iceBeam, frostMist, iceShard],
+    skillOrder: ["crystal-burst", "ice-beam", "frost-mist", "crystal-burst"],
   },
   28: {
     monsterId: "venomcrow",
@@ -229,9 +230,9 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
   // 30층 보스(고대의 프리로) 직전. 때리는 힘보다 버티는 힘이 앞서는 층이라,
   // 물약을 얼마나 남기고 들어갈지를 여기서 정하게 된다.
   29: {
-    monsterId: "nobi",
-    moves: [headbutt, bodySlam, leafBlade, twister],
-    skillOrder: ["body-slam", "leaf-blade", "body-slam", "headbutt"],
+    monsterId: "bunggom",
+    moves: [bodySlam, poisonFog, headbutt, twister],
+    skillOrder: ["body-slam", "poison-fog", "body-slam", "headbutt"],
   },
 
   // ── z31 구간(31~40). 31 불 · 32 물 · 33 노말 · 34 얼음 · 35 독 · 36 전기 · 39 풀
@@ -267,9 +268,9 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     skillOrder: ["volt-crash", "thunderbolt", "zap", "volt-crash"],
   },
   37: {
-    monsterId: "crystafox",
-    moves: [crystalLance, crystalBurst, waterPulse, iceBeam],
-    skillOrder: ["crystal-lance", "crystal-burst", "water-pulse", "crystal-lance"],
+    monsterId: "gemto",
+    moves: [bodySlam, iceBeam, waterPulse, icePunch],
+    skillOrder: ["body-slam", "ice-beam", "water-pulse", "body-slam"],
   },
   38: {
     monsterId: "venomcrow",
@@ -286,24 +287,24 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
 
   // ── z41 구간(41~49). 41 불 · 42 노말 · 43 풀 · 44 얼음 · 45 물 · 46 독 · 47 전기
   41: {
-    monsterId: "burno",
-    moves: [flamethrower, flameSlash, boltStrike, firePunch],
-    skillOrder: ["flamethrower", "flame-slash", "bolt-strike", "flamethrower"],
+    monsterId: "hwarong",
+    moves: [heatWave, bodySlam, firePunch, cinderToss],
+    skillOrder: ["heat-wave", "body-slam", "cinder-toss", "heat-wave"],
   },
   42: {
-    monsterId: "nobi",
-    moves: [hyperBeam, heavyBlow, icePunch, bodySlam],
-    skillOrder: ["heavy-blow", "ice-punch", "hyper-beam", "body-slam"],
+    monsterId: "bunggom",
+    moves: [heavyBlow, firePunch, bodySlam, poisonFog],
+    skillOrder: ["heavy-blow", "fire-punch", "body-slam", "heavy-blow"],
   },
   43: {
-    monsterId: "leafy",
+    monsterId: "sporemus",
     moves: [solarBeam, rootSpear, poisonJab, seedBomb],
     skillOrder: ["solar-beam", "root-spear", "poison-jab", "solar-beam"],
   },
   44: {
-    monsterId: "crystafox",
-    moves: [blizzard, crystalLance, crystalBurst, waterPulse],
-    skillOrder: ["blizzard", "crystal-lance", "water-pulse", "blizzard"],
+    monsterId: "bingrok",
+    moves: [blizzard, crystalBurst, iceBeam, iceLeaf],
+    skillOrder: ["blizzard", "crystal-burst", "ice-leaf", "blizzard"],
   },
   // 관문의 아쿠사. 물리·특수를 겸하는 만능 진화체라 한쪽만 막아서는 안 넘어간다
   45: {
@@ -342,11 +343,43 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
 
 // ─── 층 티어별 랜덤 풀 ──────────────────────────────────────────────────────────────
 
+// 티어는 종족값 총합으로 가른다. 여기 섞을 때는 그 층에 이미 서 있는 종과 총합이
+// 비슷한 것만 넣을 것 — 층 난이도는 레벨 스케일(scaleToLevel)이 대부분을 정하지만
+// 종족 기본값이 아직 4분의 1쯤을 쥐고 있어서, 188 짜리 자리에 477 을 넣으면 그 층만 튄다.
+//
+// 신규 11종도 같은 규칙으로 들어갔다:
+//   1티어(~200) 젬토 193 · 빙록 200      2티어(~205) 화롱 202 · 포자무스 206 · 붕곰 208
+//   3티어(~336) 버녹스 336 · 젬가드 335 · 버블록 332
+//   4티어(477)  아쿠곤 477 · 버블돈 477 · 젬로드 477   ← 모왕과 같은 값
+// 티어는 종족값 총합으로 가른다. 섞을 때는 그 티어의 평균을 크게 흔들지 말 것 —
+// 층 난이도는 레벨 스케일(scaleToLevel)이 대부분을 정하지만 종족 기본값이 아직
+// 4분의 1쯤을 쥐고 있다. 신규 11종도 총합이 맞는 자리에만 넣었다:
+//   1티어 젬토 193 · 빙록 200        2티어 화롱 202 · 포자무스 206 · 붕곰 208
+//   3티어 버녹스 336 · 젬가드 335 · 버블록 332
+// ⚠️ 1·2티어(11~19층)에는 아무것도 더하지 않았다. 신규 1·2티어 다섯(젬토 193 ·
+// 빙록 200 · 화롱 202 · 포자무스 206 · 붕곰 208)이 기존 다섯(플레미 195 · 아쿠비 188 ·
+// 리피 188 · 베노까 179 · 버블릿 183)보다 조금씩 높은데, 이 구간은 파티가 제일 약해서
+// 그 조금이 그대로 나온다 — 넣었더니 60판 클리어율이 98% → 95% 로 떨어졌다.
+// 이 다섯은 고정 층(27·29·37·41·42·43·44)과 숲에서 만난다.
 const POOL_TIER_1  = ["flameling", "aquabe", "leafy", "venomcrow"];
 const POOL_TIER_2  = ["burno", "bubblet", "mossy", "crystafox", "toxadon"];
+// 3티어도 원래대로. 20~29층에 쓰이는데 25층 관문이 그 안이라, 여기 평균을 295 →
+// 315 로 올린 것만으로 60판 클리어율이 1% 씩 깎였다.
 const POOL_TIER_3  = ["mossevo", "frostorb", "aquavern"];
-const POOL_TIER_4  = ["mossyfinal", "mossevo", "frostorb", "aquavern"];
-const POOL_ALL     = [...POOL_TIER_1, ...POOL_TIER_2, ...POOL_TIER_3, ...POOL_TIER_4];
+const POOL_TIER_4  = ["mossyfinal", "mossevo", "frostorb", "aquavern",
+                      "burnox", "gemguard", "bublock"];
+
+/**
+ * 총합 477 짜리 최종 진화체 셋. 40층부터만 나온다.
+ *
+ * ⚠️ 4티어에 그냥 넣지 말 것. 4티어는 30~39층에도 쓰이는데, 거기에 477 을 셋이나
+ * 더하면 그 풀의 평균이 340 에서 399 로 뛴다. 실제로 그렇게 넣었더니 60판
+ * 클리어율이 98% → 95% 로 떨어졌다. 모왕이 4티어에 혼자 있던 것도 같은 이유다.
+ */
+const POOL_FINALS  = ["aquagon", "bubldon", "gemlord"];
+
+const POOL_ALL     = [...POOL_TIER_1, ...POOL_TIER_2, ...POOL_TIER_3, ...POOL_TIER_4,
+                      ...POOL_FINALS];
 
 function getPool(floor: number): string[] {
   if (floor <= 13) return POOL_TIER_1;
@@ -423,7 +456,17 @@ export function isGateFloor(floor: number): boolean {
  */
 const GATE_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number }> = {
   15: { hp: 1.34, attack: 1.10, defense: 1.36 },
-  25: { hp: 3.26, attack: 2.42, defense: 3.26 },
+  // ⚠️ 3.26 / 2.42 / 3.26 이었다. 곡선에서 혼자 튀는 값이었고(15층 1.34 · 35층 1.90 ·
+  // 45층 2.22), 그 결과 이 층은 "장비로 넘는 벽"이 아니라 "모치를 데려왔는가"가 됐다.
+  // Lv26 · elite L25+5 · 각인3 으로 층마다 100판을 재 보면 모치 99%, 아쿠사 0%,
+  // 프리로 0%, 젬가드 0%, 버녹스 6%, 버블록 12% 였다. 적이 전기(모치)라 전기·풀만
+  // 0.5배로 덜 맞는데, 이 구간에 서는 전기 진화체가 모치 하나뿐이라 사실상 종족 검사였다.
+  // 관문은 제작·강화로 넘는 자리라는 규칙(CLAUDE.md)과 정반대다.
+  // 35층(1.90)보다 살짝 아래로 내려 곡선에 얹는다.
+  // 3.26(맨몸 8% · 실측 43%) → 1.95(74% · 91%) → 2.40(63% · 80%) 을 재고 고른 값.
+  // 실측은 60~88 안에 여유가 있으니 맨몸을 합격선(≤60) 아래로 내리는 쪽에 쓴다 —
+  // 관문은 맨몸으로 뚫리면 안 되는 자리다.
+  25: { hp: 2.72, attack: 2.02, defense: 2.72 },
   35: { hp: 1.90, attack: 1.43, defense: 1.92 },
   45: { hp: 2.22, attack: 1.73, defense: 2.22 },
 };

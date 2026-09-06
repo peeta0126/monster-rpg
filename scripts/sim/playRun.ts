@@ -104,13 +104,28 @@ export interface RunStats {
 }
 
 /**
- * 몬스터의 "키울 가치" 평가. 파티에 누구를 남길지 고르는 용도.
- * 진화가 남아 있으면 최종 진화체 기준으로 본다(플레이어도 그렇게 고른다).
+ * 사람이 진화를 내다보는 거리. 이 레벨 안에 닿는 진화까지만 값으로 친다.
+ *
+ * 예전엔 거리를 안 봤다. 무조건 사슬 끝까지 따라가 최종 진화체로 값을 매겼는데,
+ * 진화가 전부 2단계(모시 Lv20 · 아쿠비 Lv22)일 때는 그 근사가 맞았다 — 잡은 시점과
+ * 최종체 사이가 열 몇 레벨이라 곧 도착한다.
+ *
+ * 3단계 라인이 생기면서 그 근사가 깨졌다. Lv5 버블릿을 Lv34 짜리 버블돈으로 쳐서
+ * 값이 세 배로 뛰고, 파티가 물 계열로 채워졌다. 그리고 25층은 볼트크래시를 든
+ * 전기 관문이라(전기 → 물 2배) 40판 중 그 층 패배율이 97% 로 올랐다.
+ * 도착하지 않은 힘을 지금 가진 힘으로 세면 안 된다.
  */
-function power(m: { id: string; attack: number; maxHp: number; defense: number; moves: { power: number }[] }) {
+const EVOLUTION_HORIZON = 10;
+
+/**
+ * 몬스터의 "키울 가치" 평가. 파티에 누구를 남길지 고르는 용도.
+ * 지금 레벨에서 내다보이는 진화까지만 쳐서 본다(플레이어도 그렇게 고른다).
+ */
+function power(m: { id: string; level: number; attack: number; maxHp: number; defense: number; moves: { power: number }[] }) {
   let spec = monsters.find((x) => x.id === m.id) ?? null;
   let guard = 0;
   while (spec?.evolvesTo && guard++ < 5) {
+    if ((spec.evolvesAtLevel ?? Infinity) > m.level + EVOLUTION_HORIZON) break;
     spec = monsters.find((x) => x.id === spec!.evolvesTo) ?? spec;
   }
   const finalForm = spec ?? m;
@@ -175,8 +190,22 @@ export async function simulateRun(seed: number): Promise<RunStats> {
       // 도감과 첫 포획 플래그. 퀘스트 조건과 목표가 이 둘을 읽는다
       if (!s.dexCaught.includes(caught.id)) s.dexCaught.push(caught.id);
       s.storyFlags.first_capture = true;
-      if (partySlots(s) < 3) { s.party.push(caught); continue; }
-      const weakest = s.party.reduce((a, b) => (power(a) <= power(b) ? a : b));
+      // ── 같은 계열은 파티에 둘까지 ────────────────────────────────────────
+      //
+      // 이 규칙이 없으면 파티가 한 계열로 굳는다. 값이 제일 높은 계열이 세 자리를
+      // 다 먹고 나면, 1.15 배 문턱을 넘는 후보가 그 계열 말고는 없어서 영영 안 바뀐다
+      // (버블록 셋으로 굳은 판이 그랬다). 그리고 관문은 전부 속성 시험이다 —
+      // 25층은 볼트크래시를 든 전기고, 물로 채운 파티는 거기서 2배로 맞고 멈춘다.
+      // 사람은 한 종을 셋 데리고 관문에 가지 않으므로, 재는 쪽도 그러면 안 된다.
+      const sameChain = s.party.filter((m) => chainKeyOf(m) === chainKeyOf(caught));
+      const chainFull = sameChain.length >= 2;
+
+      if (partySlots(s) < 3 && !chainFull) { s.party.push(caught); continue; }
+
+      // 계열이 이미 찼으면 갈아탈 자리를 그 계열 안으로 제한한다. 같은 계열의 더 나은
+      // 개체로 바꾸는 것은 되지만, 세 번째 자리를 새로 얻지는 못한다.
+      const pool = chainFull ? sameChain : s.party;
+      const weakest = pool.reduce((a, b) => (power(a) <= power(b) ? a : b));
       // 키워둔 몬스터를 레벨이 훨씬 낮은 신규 포획으로 갈아타지는 않는다.
       // (종족 잠재력이 좋아도 레벨 차이를 메우는 비용이 더 크다)
       const levelOk = caught.level >= weakest.level * 0.8;

@@ -22,14 +22,30 @@
  *   프리로  얼음 + 물/노말 : 둔중한 방벽형(약점이 불 하나뿐이라 방어 특화)
  *   노비    노말 + 만능    : 정체성이 옅은 대신 여러 타입을 얕게 (대boss 서브).
  *                            상태이상기 없음 + 노말 약점 0개라 범용 탱커로 보상
+ *   버녹스  불 + 전기      : 버노의 진화체. 정전기 뿔을 그대로 물려받는다
+ *   화롱    불 + 노말      : 화로를 짊어진 둔한 몸. 육탄으로 버틴다
+ *   아쿠곤  물 + 얼음/노말 : 아쿠사의 진화체. 두 갈래 종착점을 한 몸에 모은다
+ *   버블록  물 + 독        : 버블릿의 바위 갑주 단계. 독을 그대로 이어간다
+ *   버블돈  물 + 독/노말   : 요새형 최종체. 무게로 누른다
+ *   젬토    얼음 + 물/노말 : 수정 띠 새끼 거북. 방벽 라인의 시작
+ *   젬가드  얼음 + 노말    : 등껍질이 수정 가시로 솟는다
+ *   젬로드  얼음 + 노말    : 요새형 최종체. 게임에서 제일 단단하다
+ *   빙록    얼음 + 풀/노말 : 수정 뿔이 나뭇가지를 닮았다. 얼음 유일의 속도형
+ *   독무스  독 + 풀        : 꼬리의 버섯에서 포자를 뿌린다. 지속 피해형
+ *   붕곰    노말 + 독/불   : 붕대와 부적. 정면으로 치고받는 노말
  *
  * 진화 계통 전용 기술 (⭐이번 재설계의 핵심):
  *   아쿠비 전용(아쿠사는 못 배움) : frostBreath, acidSpray
  *   아쿠사 전용(진화 후에만)      : bodySlam, crystalLance, tidalCrash
+ *   아쿠곤 전용(최종체만)         : hydroPump 재습득. 아쿠비 쪽 특수 종착점과
+ *                                   아쿠사 쪽 물리 종착점(tidalCrash)을 둘 다 갖는
+ *                                   유일한 단계다 — 3단계까지 키운 값이 여기 있다
  *   모시 전용(모치·모왕은 못 배움): stunNeedle. 확정 마비, 포획 보조가 필요하면
  *                                   진화 전에 반드시 챙겨야 하는 라인 최고의 선택지
  *   모치 전용(모왕은 못 배움)     : voltCrash
  *   모왕 전용(최종체만)           : hyperBeam, thunderStrike, gigaImpact
+ *   버블릿 전용(진화하면 잃는다)  : hydroPump. 버블록·버블돈은 못 배운다
+ *   버블돈 전용(최종체만)         : gigaImpact
  *
  * "위력이 낮아 상위 호환에 밀려 보이는" 기술의 역할 재정의(삭제 없이 배치로 해결):
  *   tackle       : 최저 안정 딜러. 대부분의 초반종이 Lv1부터 보유해 첫 전투부터
@@ -100,6 +116,41 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: overheat },
   ],
 
+  // ═══ 버녹스 (불꽃 족제비·진화체): 불 + 전기. 유리대포 심화 ════════════════
+  // 버노가 Lv21·32 에 배우던 전기를 그대로 물려받되 한 단계씩 늦다. 대신 최상급
+  // 화염기를 버노보다 빨리 잡는다(flamethrower 45 vs 38 은 버노 쪽이 이르지만,
+  // 버노는 그 레벨까지 진화를 참아야 한다). 진화를 24 에 하면 화염권·불꽃베기를
+  // 버녹스 쪽 표로 다시 주워 담으므로 손해가 없다.
+  burnox: [
+    { level:  1, move: tackle },
+    { level:  1, move: ember },
+    { level:  5, move: fireScratch },
+    { level: 10, move: quickAttack },      // 교차: 노말
+    { level: 15, move: cinderToss },       // 확정 화상
+    { level: 20, move: firePunch },
+    { level: 26, move: heatWave },
+    { level: 32, move: flameSlash },
+    { level: 38, move: boltStrike },       // 교차: 전기(버노 라인의 정전기)
+    { level: 45, move: flamethrower },
+    { level: 52, move: overheat },
+  ],
+
+  // ═══ 화롱 (불꽃 화로쥐): 불 + 노말(육탄). 불 유일의 방어형 ════════════════
+  // 상태이상기(확정 화상)를 Lv17 로 늦게 준다. 느린 종이라 먼저 못 때리는데
+  // 확정 화상까지 이르면 초반 숲에서 혼자만 너무 안정적이 된다.
+  hwarong: [
+    { level:  1, move: tackle },
+    { level:  1, move: ember },
+    { level:  6, move: headbutt },         // 교차: 노말
+    { level: 12, move: fireScratch },
+    { level: 17, move: cinderToss },       // 확정 화상
+    { level: 23, move: firePunch },
+    { level: 29, move: bodySlam },         // 교차: 노말
+    { level: 35, move: heatWave },
+    { level: 42, move: heavyBlow },        // 교차: 노말
+    { level: 49, move: flamethrower },
+  ],
+
   // ═══ 아쿠비 (물 도롱뇽): 물 + 얼음(냉수). 특수형 ═════════════════════════
   // 진화 라인 재설계: frostBreath·acidSpray는 "아쿠비 전용". 아쿠사는 못 배운다.
   // 어린 도롱뇽 특유의 냉수 분사·점액 독이라는 설정이라, 진화하면 잃는다.
@@ -136,6 +187,26 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 47, move: tidalCrash },       // ★아쿠사 전용. 진화체 물리 최종기
   ],
 
+  // ═══ 아쿠곤 (물 용): 물 + 얼음/노말. 라인의 종착점 ════════════════════════
+  // 아쿠비는 특수 피니셔(hydroPump)로, 아쿠사는 물리 피니셔(tidalCrash)로 갈라졌다.
+  // 아쿠곤은 그 둘을 다시 합치는 유일한 단계다 — 40 에 진화해 55 까지 키우면
+  // 물리·특수 최종기를 한 몸에 갖는다. 갈림길을 만들어 놓은 라인이라, 끝에서
+  // 한 번은 합쳐 줘야 3단계까지 키운 이유가 생긴다.
+  // tackle 이 없는 것도 의도(모왕과 같은 규칙 — 완성형은 기본기를 안 쓴다).
+  aquagon: [
+    { level:  1, move: waterGun },
+    { level:  1, move: aquaTail },
+    { level:  5, move: bubbleCannon },
+    { level: 10, move: waterPulse },
+    { level: 16, move: aquaWhirl },
+    { level: 22, move: icePunch },         // 교차: 얼음
+    { level: 28, move: surf },
+    { level: 35, move: crystalLance },     // 교차: 얼음
+    { level: 42, move: bodySlam },         // 교차: 노말
+    { level: 48, move: tidalCrash },       // 물리 종착점(아쿠사에서 이어받는다)
+    { level: 55, move: hydroPump },        // ★아쿠곤 전용. 특수 종착점까지 합류
+  ],
+
   // ═══ 버블릿 (물 벌레): 물 + 독(독침). 상태이상 전문 ═══════════════════════
   bubblet: [
     { level:  1, move: tackle },
@@ -148,7 +219,42 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 30, move: surf },
     { level: 36, move: venomFang },        // 교차: 독
     { level: 43, move: venomStorm },       // 교차: 독
-    { level: 50, move: hydroPump },
+    { level: 50, move: hydroPump },        // ★버블릿 전용. 진화하면 잃는다
+  ],
+
+  // ═══ 버블록 (바위 갑주 벌레·1차 진화): 독 + 물. 방어형 ════════════════════
+  // 버블릿의 독 계열을 레벨까지 그대로 물려받는다(16 에 진화해도 표가 어긋나지
+  // 않게 맞춰 둔 것). 다른 것은 둘뿐 — 30 의 압박(바위 갑주 육탄)이 들어오고,
+  // 버블릿의 종착점이던 hydroPump 가 빠진다. 특수 최종기를 원하면 진화를 미뤄야 한다.
+  bublock: [
+    { level:  1, move: tackle },
+    { level:  1, move: waterGun },
+    { level:  5, move: poisonSting },      // 교차: 독
+    { level:  9, move: bubbleCannon },
+    { level: 14, move: toxic },            // 확정 독
+    { level: 19, move: poisonFog },        // 교차: 독
+    { level: 24, move: poisonJab },        // 교차: 독
+    { level: 30, move: bodySlam },         // 교차: 노말(바위 갑주)
+    { level: 36, move: venomFang },        // 교차: 독
+    { level: 43, move: surf },
+    { level: 50, move: venomStorm },       // 교차: 독
+  ],
+
+  // ═══ 버블돈 (거대 갑충·최종): 독 + 물/노말. 요새형 ════════════════════════
+  // 방어 88 로 버티면서 독을 걸어 두고 시간을 이기는 종이다. 그래서 확정 독을
+  // 17 로 조금 늦추는 대신, 무게로 누르는 노말 계열을 두 개(강타·기가임팩트) 준다.
+  bubldon: [
+    { level:  1, move: waterGun },
+    { level:  1, move: poisonSting },
+    { level:  6, move: bubbleCannon },
+    { level: 12, move: poisonJab },
+    { level: 17, move: toxic },            // 확정 독
+    { level: 23, move: poisonFog },
+    { level: 30, move: heavyBlow },        // 교차: 노말
+    { level: 37, move: venomFang },
+    { level: 44, move: venomStorm },
+    { level: 50, move: surf },
+    { level: 56, move: gigaImpact },       // ★버블돈 전용. 교차: 노말
   ],
 
   // ═══ 리피 (풀 곰): 풀 + 얼음/독(서리잎·포자). 상태이상형 ══════════════════
@@ -250,6 +356,75 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 49, move: sheerCold },
   ],
 
+  // ═══ 젬토 (수정 거북·기초): 얼음 + 물/노말. 방벽 라인의 시작 ══════════════
+  // 3단계 라인이라 표를 넓게 편다(최종기 blizzard 가 50). 프리로는 같은 방벽형인데
+  // 49 에 절대영도까지 가므로, 젬토를 키우는 값은 지금 세지는 것이 아니라
+  // 젬로드까지 갔을 때의 방어 96 에 있다.
+  gemto: [
+    { level:  1, move: tackle },
+    { level:  1, move: frostBreath },
+    { level:  6, move: iceShard },
+    { level: 11, move: waterPulse },       // 교차: 물
+    { level: 16, move: frostMist },        // 확정 빙결
+    { level: 22, move: icePunch },
+    { level: 28, move: iceBeam },
+    { level: 35, move: bodySlam },         // 교차: 노말
+    { level: 42, move: crystalBurst },
+    { level: 50, move: blizzard },
+  ],
+
+  // ═══ 젬가드 (수정 거북·1차 진화): 얼음 + 노말. 방벽 심화 ══════════════════
+  // 18 에 진화하는 라인이라 젬토보다 표가 한 칸씩 빠르다. 물(waterPulse)이 빠지고
+  // 대신 수정 계열이 둘 들어온다 — 등껍질이 굳으면서 물기를 잃는다는 설정.
+  gemguard: [
+    { level:  1, move: tackle },
+    { level:  1, move: frostBreath },
+    { level:  5, move: iceShard },
+    { level: 10, move: icePunch },
+    { level: 15, move: frostMist },        // 확정 빙결
+    { level: 21, move: iceBeam },
+    { level: 27, move: bodySlam },         // 교차: 노말
+    { level: 33, move: crystalLance },
+    { level: 40, move: crystalBurst },
+    { level: 47, move: blizzard },
+  ],
+
+  // ═══ 젬로드 (수정 요새 거북·최종): 얼음 + 노말. 게임 최고 방어 ════════════
+  // 모왕·아쿠곤과 같이 tackle 없이 시작한다. 확정 빙결(frostMist)이 없는 유일한
+  // 젬 계열인 것도 의도 — 방어 96 에 확정 행동 봉쇄까지 붙으면 상대가 손을 못 쓴다.
+  // 벽은 벽까지만 하고, 끝내는 것은 설풍·절대영도가 맡는다.
+  gemlord: [
+    { level:  1, move: frostBreath },
+    { level:  1, move: iceShard },
+    { level:  6, move: icePunch },
+    { level: 12, move: iceBeam },
+    { level: 18, move: crystalLance },
+    { level: 25, move: heavyBlow },        // 교차: 노말
+    { level: 32, move: crystalBurst },
+    { level: 40, move: blizzard },
+    { level: 48, move: gigaImpact },       // 교차: 노말
+    { level: 56, move: sheerCold },
+  ],
+
+  // ═══ 빙록 (수정 뿔 사슴): 얼음 + 풀/노말. 얼음 유일의 속도형 ══════════════
+  // 수정 뿔이 나뭇가지를 닮아 풀을 교차로 쓴다. 얼음은 풀에 2배로 강한데(typeChart)
+  // 정작 얼음 넷이 전부 느려서 먼저 못 때렸다. 이 종만 quickAttack 을 Lv1 에 준다.
+  bingrok: [
+    { level:  1, move: quickAttack },      // 교차: 노말. 속도형 정체성
+    { level:  1, move: frostBreath },
+    { level:  6, move: iceShard },
+    { level: 11, move: leafGust },         // 교차: 풀(가지를 닮은 뿔)
+    { level: 15, move: frostMist },        // 확정 빙결
+    { level: 20, move: iceBeam },
+    // 25·44 는 탑 27·44층이 이 종을 세우는 자리다. 층의 고정 구성은 그 종이 그 레벨까지
+    // 배우는 기술만 들 수 있어서(floorTable 규칙 ②), 표가 층보다 늦으면 그 층만 물러진다.
+    { level: 25, move: crystalBurst },
+    { level: 31, move: twister },          // 교차: 노말
+    { level: 38, move: iceLeaf },          // 교차: 풀
+    { level: 44, move: blizzard },
+    { level: 50, move: sheerCold },
+  ],
+
   // ═══ 톡사룡 (독 도마뱀): 독 + 노말(육탄 포식자). 물리 어태커 ══════════════
   toxadon: [
     { level:  1, move: tackle },
@@ -278,6 +453,34 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 45, move: venomStorm },
   ],
 
+  // ═══ 포자무스 (버섯 큰사슴): 풀 + 독. 관문용 상성 요원 ════════════════════
+  // 확정 독을 독가시(toxic)가 아니라 포자구름(sporeCloud)으로 준다. 둘 다 "확정 독"
+  // 이지만 이쪽은 풀 기술이라, 꼬리 버섯에서 포자가 나온다는 원화가 표에 그대로 남는다.
+  // 톡사룡·베노까가 둘 다 toxic 을 쓰므로 같은 기술이 셋으로 겹치지도 않는다.
+  //
+  // 잎바람(Lv6)을 일찍 주는 것이 이 종의 요점이다. 25층 전기 관문 전에 풀 기술이
+  // 손에 있어야 하는데, 리피 말고는 그걸 들고 오는 종이 없었다.
+  // ⚠️ 풀 공격기를 일찍 줄 것. 처음엔 잎바람(45) 하나로 Lv38 까지 버티게 짜 놨는데,
+  // 그러면 이 종이 관문에서 아무 일도 못 한다. 25층 전기 관문에서 풀은 상성이 두 겹으로
+  // 유리한 자리다 — 전기 → 풀이 0.5배라 덜 맞고, 풀 → 전기가 2배라 더 때린다.
+  // 그런데 때릴 기술이 45 짜리뿐이면 그 2배가 아무것도 아니다. Lv26 실측 승률이
+  // 1% 였다(같은 레벨·장비의 모치는 99%). 잎날 11 · 씨앗폭탄 22 로 리피의 곡선에 맞춘다.
+  sporemus: [
+    { level:  1, move: tackle },
+    { level:  1, move: leafGust },
+    { level:  6, move: poisonSting },      // 교차: 독(꼬리의 버섯)
+    { level: 11, move: leafBlade },
+    { level: 17, move: sporeCloud },       // 확정 독. 교차: 독 — 이 종의 상징
+    { level: 22, move: seedBomb },
+    { level: 28, move: poisonFog },        // 교차: 독
+    { level: 34, move: poisonJab },        // 교차: 독
+    { level: 41, move: rootSpear },
+    // 광합성포는 이 종의 종착점이다. 43 은 탑 43층이 포자무스를 세우는 자리라
+    // 그 층이 예전 리피와 같은 위력을 들 수 있게 맞춘 것이기도 하다.
+    { level: 43, move: solarBeam },
+    { level: 49, move: venomFang },
+  ],
+
   // ═══ 노비 (노말): 만능형. 여러 타입을 얕게. 대boss 서브 요원 ══════════════
   nobi: [
     { level:  1, move: tackle },
@@ -291,6 +494,24 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 36, move: icePunch },         // 교차: 얼음
     { level: 42, move: hyperBeam },
     { level: 48, move: gigaImpact },
+  ],
+
+  // ═══ 붕곰 (붕대 곰): 노말 + 독/불(부적). 정면 완력형 ══════════════════════
+  // 노비가 다섯 타입을 얕게 훑는 만능형이라, 같은 노말을 하나 더 그렇게 만들면
+  // 고를 이유가 없어진다. 붕곰은 노말 계열을 끝까지 타고 교차는 둘만 둔다 —
+  // 몸에 감긴 붕대의 저주(독)와 등에 붙은 부적(불).
+  bunggom: [
+    { level:  1, move: tackle },
+    { level:  1, move: quickAttack },
+    { level:  6, move: headbutt },
+    { level: 12, move: poisonSting },      // 교차: 독(붕대의 저주)
+    { level: 17, move: twister },
+    { level: 23, move: bodySlam },
+    { level: 29, move: poisonFog },        // 교차: 독
+    { level: 35, move: heavyBlow },
+    { level: 42, move: firePunch },        // 교차: 불(등의 부적)
+    { level: 49, move: hyperBeam },
+    { level: 56, move: gigaImpact },
   ],
 };
 
