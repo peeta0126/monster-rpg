@@ -42,7 +42,11 @@ export const FOREST_AREAS: ForestArea[] = [
   {
     id: "shallow", name: "얕은 숲", subtitle: "SHALLOW WOODS",
     description: "햇빛이 스며드는 고요한 숲. 초보 탐험가도 부담 없이 도전할 수 있습니다.",
-    monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow", "mossy"],
+    // ⚠️ 구역마다 "진화 라인의 1단계"가 차지하는 몫을 지킬 것. 여기 새로 넣은 것은
+    // 젬토 하나뿐인데, 그게 진화 라인이라 몫이 안 줄기 때문이다(아쿠비·모시·젬토 = 3/7).
+    // 안 크는 종만 늘리면 같은 판수를 걸어도 파티가 약해진다 — 실제로 여기와 깊은 숲에
+    // 안 크는 종을 다섯 넣었더니 40판 클리어율이 100% 에서 88% 로 떨어졌다.
+    monsterPool: ["flameling", "aquabe", "leafy", "nobi", "venomcrow", "mossy", "gemto"],
     levelRange: [1, 8], unlockFloor: 0, encounterRate: 0.55, materialRate: 0.40, materialBonus: 0,
     startingAlert: 0,
     exploreTime: 1200,
@@ -56,7 +60,10 @@ export const FOREST_AREAS: ForestArea[] = [
   {
     id: "deep", name: "깊은 숲", subtitle: "DEEP FOREST",
     description: "빛이 닿지 않는 울창한 구역. 강한 몬스터와 희귀 재료가 기다립니다.",
-    monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb", "toxadon"],
+    // 진화 라인 셋(버노·버블릿·모시)이 여덟 중 셋. 원래 여섯 중 셋이었으니 몫을 거의
+    // 지킨다. 안 크는 둘(화롱·빙록)만 더하고 나머지 신규는 고대 숲으로 보냈다.
+    monsterPool: ["burno", "bubblet", "mossy", "crystafox", "frostorb", "toxadon",
+                  "hwarong", "bingrok", "sporemus"],
     // 해금이 11층이었다. 그런데 10층 관문을 넘으려면 여기 재료(철 조각·마법 가루·정수)로
     // 만든 장비가 있어야 한다. 관문 뒤에 그 관문의 답을 두면 답이 아니라서 6층으로 당겼다.
     levelRange: [8, 18], unlockFloor: 6, encounterRate: 0.68, materialRate: 0.55, materialBonus: 1,
@@ -72,7 +79,15 @@ export const FOREST_AREAS: ForestArea[] = [
   {
     id: "ancient", name: "고대 숲", subtitle: "ANCIENT DEPTHS",
     description: "마력이 깃든 태고의 숲. 전설적인 몬스터가 출몰하며, 생환을 장담할 수 없습니다.",
-    monsterPool: ["mossevo", "mossyfinal", "aquavern", "crystafox", "frostorb"],
+    // 최종 진화체가 넷으로 늘었다(모왕·아쿠곤·버블돈·젬로드). 넷 다 여기 두는 것은
+    // 모왕이 이미 그렇게 서 있던 규칙 그대로다 — 레벨 천장(catchLevel)이 파티를
+    // 따라가므로, Lv18 짜리 파티로 왔다고 Lv18 짜리 최종체를 공짜로 받지는 못한다.
+    // ⚠️ 여기는 칸을 늘리지도, 강한 종을 빼지도 말 것. 한 칸을 더했더니 40판
+    // 클리어율이 98% → 95% 로, 크리샤를 포자무스로 바꿨더니 98% → 97% 로 떨어졌다.
+    // 고대 숲은 파티의 마지막 세 자리를 정하는 곳이라 여기 섞는 것이 제일 비싸다.
+    monsterPool: ["mossevo", "mossyfinal", "aquavern", "crystafox", "frostorb",
+                  "burnox", "gemguard", "aquagon", "bubldon", "gemlord",
+                  "bunggom"],
     levelRange: [18, 32], unlockFloor: 21, encounterRate: 0.75, materialRate: 0.65, materialBonus: 2,
     startingAlert: 30,
     exploreTime: 1800,
