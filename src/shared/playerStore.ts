@@ -2,11 +2,11 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Monster } from "./game";
 import type { CraftingRecipe, CraftedItem, ArtifactInstance, CraftedPotionStack, ItemQuality } from "./crafting";
-import { monsters } from "../monster/monsters";
+import { monsters, NOT_IN_DEX } from "../monster/monsters";
 import { movesAtLevel } from "../monster/growth";
 import { MAX_TOWER_FLOOR } from "./floorTable";
 import { expToNext } from "../battle/battleUtils";
-import { POTIONS } from "./items";
+import { POTIONS, MATERIALS } from "./items";
 import {
   rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats,
   getEquipmentMaxLevel, MAX_EQUIPMENT_ENHANCEMENT,
@@ -53,10 +53,19 @@ function monsterToOwned(m: Monster): OwnedMonster {
 }
 
 /** 개발자 모드 진입 시 지급되는 보유 몬스터 레벨 (50층 테스트 대응) */
-const DEV_PARTY_LEVEL = 50;
+export const DEV_PARTY_LEVEL = 50;
 
-/** 개발자 프리셋 파티(선두 3마리). 50층 시험이 목적이라 최종 진화체 위주로 고른다. */
-const DEV_PARTY_IDS = ["mossyfinal", "aquavern", "frostorb"];
+/**
+ * 개발자 프리셋 파티(선두 3마리). 50층 시험이 목적이라 최종 진화체로만 세운다.
+ *
+ * 예전엔 모왕·아쿠사·프리로였다. 그런데 아쿠사는 이제 3단계 중 2단계고(아쿠곤이 최종),
+ * 프리로는 진화가 없는 종이라 둘 다 50층 상대가 못 된다. 지금 최종체는 넷이다 —
+ * 모왕·아쿠곤·버블돈·젬로드(전부 총합 477). 속성이 겹치지 않게 셋을 고른다.
+ */
+export const DEV_PARTY_IDS = ["mossyfinal", "aquagon", "gemlord"];
+
+/** 개발자 프리셋 재료. 표를 읽어서 채우므로 재료를 더해도 여기 손댈 일이 없다 */
+const DEV_PRESET_MATERIAL_COUNT = 99;
 
 /** 개발자 프리셋이 파티에 채워 주는 아티팩트. 정식 레시피(ARTIFACT_RECIPES)의 만렙 엘리트판 */
 const DEV_PRESET_ARTIFACTS = ARTIFACT_RECIPES.map((r) => ({
@@ -1011,8 +1020,10 @@ export const usePlayerStore = create<PlayerState>()(
       },
 
       loadDevPreset: () => {
-        // 오름(최종 보스)은 포획 불가능한 존재라 개발자 모드에서도 보유/도감 대상에서 제외한다
-        const catchableMonsters = monsters.filter((m) => m.id !== "ormr");
+        // 오름(최종 보스)은 포획 불가능한 존재라 개발자 모드에서도 보유/도감 대상에서 제외한다.
+        // 목록은 monsters.ts 의 NOT_IN_DEX 한 벌만 본다 — 여기 "ormr" 을 직접 적어 두면
+        // 나중에 잡을 수 없는 종이 하나 더 생겼을 때 이 화면만 옛 규칙으로 남는다.
+        const catchableMonsters = monsters.filter((m) => !NOT_IN_DEX.includes(m.id));
         const ids = catchableMonsters.map((m) => m.id);
         // monsters.ts 앞 3종은 초반 스타터(플레미·버노·아쿠비)라, 그대로 파티에 넣으면
         // 만렙 장비를 껴도 50층을 시험할 수 없다. 최종 진화체 위주로 강한 순서대로 세운다.
@@ -1040,6 +1051,31 @@ export const usePlayerStore = create<PlayerState>()(
           equippedArtifacts[m.uid] = DEV_PRESET_ARTIFACTS.map(makeDevArtifact);
         }
 
+        // ── 가방 ──────────────────────────────────────────────────────────
+        //
+        // ⚠️ 가방은 전투 재고와 다른 필드를 읽는다. 물약은 `potions`(전투에서 마시는 수)와
+        // `craftedPotions`(가방에 보이는 스택)를 **같이** 채워야 한다 — 예전엔 앞의 것만
+        // 채워서, 전투에는 물약이 20개인데 가방은 "보유 물약이 없습니다" 였다.
+        // 아티팩트도 마찬가지로 파티에 끼운 것(`equippedArtifacts`)과 가방에 남는
+        // 것(`craftedArtifacts`)이 딴 곳이라, 장착만 시키면 가방 장비 칸이 빈다.
+        const materials: Record<string, number> = {};
+        for (const mat of MATERIALS) materials[mat.id] = DEV_PRESET_MATERIAL_COUNT;
+
+        const craftedPotions: CraftedPotionStack[] = Object.entries(DEV_PRESET_POTIONS)
+          .map(([itemId, quantity]) => {
+            const def = POTIONS.find((p) => p.id === itemId);
+            return {
+              stackId:  `${itemId}_elite`,
+              itemId,
+              name:     def?.name ?? itemId,
+              quality:  "elite" as ItemQuality,
+              quantity,
+            };
+          });
+
+        // 갈아 끼워 보라고 가방에도 한 벌 더 넣는다(파티 셋은 이미 끼고 있다)
+        const craftedArtifacts = DEV_PRESET_ARTIFACTS.map(makeDevArtifact);
+
         set({
           party,
           storage:    owned.slice(3),
@@ -1047,6 +1083,9 @@ export const usePlayerStore = create<PlayerState>()(
           dexCaught:  ids,
           bestFloor:  MAX_TOWER_FLOOR - 1,
           potions:    { ...DEV_PRESET_POTIONS },
+          materials,
+          craftedPotions,
+          craftedArtifacts,
           equippedArtifacts,
         });
       },
