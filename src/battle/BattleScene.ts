@@ -4,7 +4,7 @@ import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandle
 import { getBattleInitData } from "./battleInitStore";
 import { markSceneReady } from "../shared/phaser/sceneReady";
 import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
-import { PALETTE, HEX, hpToken, isHpDanger, elementChip } from "../shared/palette";
+import { PALETTE, HEX, hpToken, isHpDanger, elementChips, type PaletteName } from "../shared/palette";
 import { STATUS_META, statusBadge } from "./statusInfo";
 import { towerBattleBg } from "../shared/assetPaths";
 import { getTowerZone } from "../shared/floorTable";
@@ -381,9 +381,20 @@ export default class BattleScene extends Phaser.Scene {
    * 이름 뒤에 이어 붙이면 언젠가 겹친다.
    * 생김새는 React 쪽 ELEMENT_CHIP_CLASS 와 같게 맞춘다(속성색 28% 바탕 + 테두리).
    */
-  private buildTypeChip(rightX: number, topY: number, type: ElementType | null) {
-    const { label, color: token, ink } = elementChip(type);
+  private buildTypeChip(rightX: number, topY: number, type: ElementType | null, type2?: ElementType) {
+    // 이중 속성이면 칩이 둘이다. 오른쪽 끝에서 왼쪽으로 쌓으므로 뒤에서부터 그린다 —
+    // 그래야 주속성이 왼쪽(먼저 읽는 자리)에 온다.
+    let cursor = rightX;
+    for (const chip of elementChips({ type, type2 }).reverse()) {
+      cursor = this.drawTypeChip(cursor, topY, chip) - 3;
+    }
+  }
 
+  /** 칩 한 개. 왼쪽 끝 x 를 돌려준다(다음 칩이 그 왼쪽에 붙는다) */
+  private drawTypeChip(
+    rightX: number, topY: number,
+    { label, color: token, ink }: { label: string; color: PaletteName; ink: PaletteName },
+  ): number {
     const text = this.add.text(rightX - 5, topY + 2, label, {
       fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE[ink],
     }).setOrigin(1, 0).setDepth(10);
@@ -395,6 +406,7 @@ export default class BattleScene extends Phaser.Scene {
     box.fillRect(rightX - w, topY, w, h);
     box.lineStyle(1, HEX[token], 1);
     box.strokeRect(rightX - w, topY, w, h);
+    return rightX - w;
   }
 
   private buildDangerCues() {
@@ -462,7 +474,8 @@ export default class BattleScene extends Phaser.Scene {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand200,
       }).setDepth(9);
 
-      this.buildTypeChip(px + pw - 8, py + 5, getBattleInitData()?.enemyType ?? null);
+      const init = getBattleInitData();
+      this.buildTypeChip(px + pw - 8, py + 5, init?.enemyType ?? null, init?.enemyType2);
 
       // HP 바 레이아웃
       const barX = px + 10;

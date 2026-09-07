@@ -23,6 +23,31 @@ import type { ElementType } from "../shared/game";
  *
  * normal 은 때리는 쪽 줄이 빈 채로 둔다(상성이 없는 대신 최상급 기술 위력이 제일
  * 높은 게 이 속성의 성격이다). 맞는 쪽에만 약점을 하나 줬다.
+ *
+ * ── crystal(크리스탈)을 더할 때 지킨 것 ────────────────────────────────────
+ * 크리스탈을 쓰는 것은 셋이다 — 젬 계열(순수 크리스탈), 크리샤(얼음/크리스탈),
+ * 그리고 오름이 최상급 기술 하나로. 크리샤가 둘을 겹쳐 들기 때문에 표를 짤 때
+ * 기준이 하나 더 붙었다 — **얼음과 약점이 겹치면 안 된다.** 겹치면 그 한 속성이
+ * 크리샤를 통째로 지우는 답이 되고, 이중 속성이 곱이라 배율이 두 배로 뛴다.
+ *
+ *   ice   의 약점: fire
+ *   crystal 의 약점: poison   ← 산이 광물을 부식시킨다. 불과 안 겹친다
+ *
+ * 젬 계열이 순수 크리스탈이라 **약점이 독 하나뿐인 계열**이 하나 생겼다. 그게
+ * 이 라인의 값이다 — 대신 속도가 전 종에서 제일 낮아 선공을 거의 못 잡는다.
+ *
+ * 때리는 쪽은 바깥 고리를 닫는 데 썼다. 예전엔 ice → poison → normal 이 끝이
+ * 막힌 길이었는데, poison → crystal → ice 를 이으면 **ice → poison → crystal
+ * → ice** 로 돈다. 안쪽 4고리(fire·grass·electric·water) 바깥에 3고리가 하나
+ * 더 생기는 셈이다.
+ *
+ *   crystal → ice      2배. 더 단단한 결정이 언 것을 쪼갠다
+ *   crystal → electric 2배. 결정이 전류를 한 점에 모아 되쏜다(압전)
+ *
+ * electric 에 두 번째 약점을 준 것은 계산된 것이다. 25층 관문(모치)이 오랫동안
+ * "모치를 데려왔는가" 검사였다 — 전기를 0.5배로 받는 게 전기·풀뿐인데 그 구간의
+ * 전기 진화체가 모치 하나였다. 젬가드(크리스탈)가 전기를 1배로 받으면서 2배로
+ * 때리니, 그 관문에 두 번째 답이 생긴다.
  */
 export const typeChart: Record<ElementType, Partial<Record<ElementType, number>>> = {
   fire: {
@@ -47,6 +72,7 @@ export const typeChart: Record<ElementType, Partial<Record<ElementType, number>>
     electric: 2,   // 풀 → 전기: 2배 (뿌리가 전기를 땅으로 흘린다)
     fire: 0.5,     // 풀 → 불: 0.5배
     grass: 0.5,
+    crystal: 0.5,  // 풀 → 크리스탈: 0.5배 (뿌리는 광물을 못 갉는다)
   },
   ice: {
     grass: 2,      // 얼음 → 풀: 2배
@@ -58,7 +84,14 @@ export const typeChart: Record<ElementType, Partial<Record<ElementType, number>>
   poison: {
     grass: 2,    // 독 → 풀: 2배
     normal: 2,   // 독 → 노말: 2배 (평범한 살일수록 독이 잘 돈다)
+    crystal: 2,  // 독 → 크리스탈: 2배 (산이 결정을 부식시킨다) — 크리스탈의 유일한 약점
     poison: 0.5, // 독 → 독: 0.5배
+  },
+  crystal: {
+    ice: 2,        // 크리스탈 → 얼음: 2배 (더 단단한 결정이 언 것을 쪼갠다)
+    electric: 2,   // 크리스탈 → 전기: 2배 (결정이 전류를 한 점에 모아 되쏜다)
+    poison: 0.5,   // 크리스탈 → 독: 0.5배 (기체·액체에는 날이 안 선다)
+    crystal: 0.5,
   },
 };
 

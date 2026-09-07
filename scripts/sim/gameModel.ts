@@ -161,7 +161,7 @@ function pickBestMove(attacker: BattleMonster, defender: BattleMonster): Move {
   let bestScore = -1;
   for (const mv of attacker.moves) {
     if (mv.power === 0) continue;
-    const score = mv.power * (mv.accuracy / 100) * getTypeMultiplier(mv.type, defender.type);
+    const score = mv.power * (mv.accuracy / 100) * getTypeMultiplier(mv.type, defender.type, defender.type2);
     if (score > bestScore) { bestScore = score; best = mv; }
   }
   return best;
@@ -374,6 +374,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       owned.id = grown.id;
       owned.name = grown.name;
       owned.type = grown.type;
+      owned.type2 = grown.type2;   // 부속성도 같이. 안 옮기면 시뮬만 진화체를 단일 속성으로 잰다
       owned.moves = grown.moves;
       owned.rewardExp = grown.rewardExp;
       owned.evolvesTo = grown.evolvesTo;
@@ -398,7 +399,8 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
         mate.level = g.level; mate.exp = g.exp; mate.expToNextLevel = g.expToNextLevel;
         mate.maxHp = mateStats.maxHp; mate.attack = mateStats.attack;
         mate.defense = mateStats.defense; mate.speed = mateStats.speed;
-        mate.id = g.id; mate.name = g.name; mate.type = g.type; mate.moves = g.moves;
+        mate.id = g.id; mate.name = g.name; mate.moves = g.moves;
+        mate.type = g.type; mate.type2 = g.type2;
         mate.rewardExp = g.rewardExp; mate.evolvesTo = g.evolvesTo; mate.evolvesAtLevel = g.evolvesAtLevel;
         mate.currentHp = Math.min(mate.maxHp, Math.max(1, mate.currentHp));
       }

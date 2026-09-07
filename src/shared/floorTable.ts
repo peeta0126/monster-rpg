@@ -16,18 +16,24 @@ import {
   waterPulse,
   zap, thunder,
   leafBlade, sporeCloud, seedBomb, rootSpear,
-  frostMist, crystalLance, sheerCold,
+  frostMist, crystalChip, crystalLance, sheerCold, prismStorm,
   poisonSting, acidSpray, poisonFog, poisonJab, venomFang,
 } from "../monster/moves";
 
 // ─── 오름(Ormr) 전용 기술 풀 ──────────────────────────────────────────────────────
 
-/** 오름이 보유한 7개 타입 대표 최상급 기술 (매 전투 이 중 4개만 사용) */
+/**
+ * 오름이 보유한 8개 타입 대표 최상급 기술 (매 전투 이 중 4개만 사용).
+ *
+ * ⚠️ 속성을 더하면 여기도 같이 늘려야 한다. 오름의 정체성이 "모든 속성을 한 벌씩
+ * 갖는 존재"라서, 하나가 빠지면 최종 보스만 그 속성을 모른다. monsters.ts 의
+ * ormr.moves 와 같은 목록이어야 하는 것도 그래서다.
+ */
 const ORMR_MOVE_POOL: Move[] = [
-  overheat, hydroPump, thunderStrike, solarBeam, blizzard, venomStorm, gigaImpact,
+  overheat, hydroPump, thunderStrike, solarBeam, blizzard, venomStorm, prismStorm, gigaImpact,
 ];
 
-/** 7개 중 4개를 무작위 추출 (7C4 = 35가지 조합 전체가 나올 수 있도록 균등 셔플 후 4개 슬라이스) */
+/** 8개 중 4개를 무작위 추출 (8C4 = 70가지 조합 전체가 나올 수 있도록 균등 셔플 후 4개 슬라이스) */
 function pickOrmrMoves(): Move[] {
   const pool = [...ORMR_MOVE_POOL];
   for (let i = pool.length - 1; i > 0; i--) {
@@ -199,9 +205,13 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
   // 관문은 뽑기에 따라 「관문의 플레미」가 되기도 했다.
   //
   // 배정 규칙 셋:
-  //  ① 구간마다 7속성을 한 번씩 채운다. 배경이 towerBattleBg(구간, 적 속성)이라
+  //  ① 구간마다 방 일곱을 한 번씩 채운다. 배경이 towerBattleBg(구간, 적 주속성)이라
   //     층의 속성을 정하는 게 곧 방을 고르는 것이다. 랜덤일 때는 어떤 방이 거의
   //     안 나왔다.
+  //     ⚠️ **속성은 여덟인데 방은 일곱이다.** 수정 방 그림이 없다 — 젬 계열(순수
+  //     크리스탈)은 towerBattleBg 의 표를 타고 얼음 방에 선다(assetPaths 참고).
+  //     그래서 젬 계열을 세운 층은 구간의 얼음 칸을 채운 것으로 안 친다. 37층이
+  //     그 자리고, 이 구간의 얼음은 34층(프리로)이 따로 채운다.
   //  ② 기술은 그 종 학습표에서, 그 층 레벨까지 배우는 것만. 층 레벨 = 층수라
   //     "그 레벨의 야생 개체"로 읽힌다. 학습표 밖 기술은 이상 기술 연출을 켜 버린다.
   //  ③ skillOrder 의 id 는 moves 에 전부 있어야 한다. 하나라도 빠지면
@@ -267,10 +277,13 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     moves: [voltCrash, thunderbolt, zap, headbutt],
     skillOrder: ["volt-crash", "thunderbolt", "zap", "volt-crash"],
   },
+  // 젬토는 순수 크리스탈이라 서리 기술이 자속이 아니다. Lv37 까지 배우는 크리스탈은
+  // 수정조각(45) 하나뿐이라 — 수정파열은 42 다 — 이 층은 원래보다 한 칸 물러진다.
+  // 규칙 ② 때문에 여기서 더 줄 수 있는 게 없다. 세게 하려면 종을 바꿀 자리다.
   37: {
     monsterId: "gemto",
-    moves: [bodySlam, iceBeam, waterPulse, icePunch],
-    skillOrder: ["body-slam", "ice-beam", "water-pulse", "body-slam"],
+    moves: [bodySlam, iceBeam, crystalChip, icePunch],
+    skillOrder: ["body-slam", "ice-beam", "crystal-chip", "body-slam"],
   },
   38: {
     monsterId: "venomcrow",
@@ -306,11 +319,19 @@ const FLOOR_FIXED: Record<number, FloorFixedConfig> = {
     moves: [blizzard, crystalBurst, iceBeam, iceLeaf],
     skillOrder: ["blizzard", "crystal-burst", "ice-leaf", "blizzard"],
   },
-  // 관문의 아쿠사. 물리·특수를 겸하는 만능 진화체라 한쪽만 막아서는 안 넘어간다
+  // 관문의 아쿠사. 물리·특수를 겸하는 만능 진화체라 한쪽만 막아서는 안 넘어간다.
+  //
+  // ⚠️ 여기 수정창(crystalLance)을 들려 두지 말 것. 그 기술이 얼음이던 시절에는
+  // "얼음 교차 한 방"이었는데 크리스탈로 옮겨지면서 전기·얼음을 2배로 때리게 됐다.
+  // 후반 파티는 거의 항상 모왕(전기)을 선봉에 세우므로, 그대로 두면 이 관문이
+  // 「전기를 안 데려왔는가」 검사가 된다 — 25층이 「모치를 데려왔는가」 였던 것과
+  // 같은 사고다(GATE_MULT_BY_FLOOR 25 주석 참고). 관문은 제작·강화로 넘는 자리다.
+  // 실제로 그대로 뒀더니 실측 통과율이 24% → 10% 로 내려앉았다.
+  // 얼음주먹으로 바꾸면 얼음 교차라는 성격은 남고 상성 검사만 빠진다.
   45: {
     monsterId: "aquavern",
-    moves: [crystalLance, surf, bodySlam, aquaWhirl],
-    skillOrder: ["crystal-lance", "surf", "body-slam", "aqua-whirl"],
+    moves: [icePunch, surf, bodySlam, aquaWhirl],
+    skillOrder: ["surf", "aqua-whirl", "body-slam", "ice-punch"],
   },
   46: {
     monsterId: "toxadon",
@@ -449,26 +470,39 @@ export function isGateFloor(floor: number): boolean {
  * 걸면 25층도 맨몸 100%, 45층도 맨몸 100% 인데 무너지는 이유가 서로 다르다.
  * 배수는 파티가 그 층에서 실제로 내는 화력에 맞춰야 한다.
  *
- * 값은 scripts/sim/gateCheck.ts 로 맞췄다(2026-09-02 · 맨몸 ≤60% · 실측 60~88% ·
+ * 값은 scripts/sim/gateCheck.ts 로 맞췄다(2026-09-07 · 맨몸 ≤60% · 실측 60~88% ·
  * 한 발 앞선 ≥85% · 완비 ≥95%). 그 도구가 실제 판을 표본으로 쓰므로, 여기를
  * 만졌으면 반드시 다시 돌려야 한다 — 한 층을 올리면 그 앞에서 더 파밍하게 되어
  * 뒷층의 입력이 통째로 바뀐다.
+ *
+ * 2026-09-07 에 넷을 다 다시 잡았다. 크리스탈 속성이 들어오면서 상성이 여덟으로
+ * 늘었고, 버블록이 독에서 물로 돌아가면서 이 구간 파티가 전기를 2배로 맞게 됐다.
+ * 그 전의 표는 넷 다 합격선 밖이었다(GATE_RUNS=60 · 200회 기준 15층 실측 92% ·
+ * 25층 완비 80% · 45층 실측 24%). 지금 값의 실측은 15/25/35/45 = 68 / 88 / 88 / 82%다.
  */
 const GATE_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number }> = {
-  15: { hp: 1.34, attack: 1.10, defense: 1.36 },
-  // ⚠️ 3.26 / 2.42 / 3.26 이었다. 곡선에서 혼자 튀는 값이었고(15층 1.34 · 35층 1.90 ·
-  // 45층 2.22), 그 결과 이 층은 "장비로 넘는 벽"이 아니라 "모치를 데려왔는가"가 됐다.
-  // Lv26 · elite L25+5 · 각인3 으로 층마다 100판을 재 보면 모치 99%, 아쿠사 0%,
-  // 프리로 0%, 젬가드 0%, 버녹스 6%, 버블록 12% 였다. 적이 전기(모치)라 전기·풀만
-  // 0.5배로 덜 맞는데, 이 구간에 서는 전기 진화체가 모치 하나뿐이라 사실상 종족 검사였다.
-  // 관문은 제작·강화로 넘는 자리라는 규칙(CLAUDE.md)과 정반대다.
-  // 35층(1.90)보다 살짝 아래로 내려 곡선에 얹는다.
-  // 3.26(맨몸 8% · 실측 43%) → 1.95(74% · 91%) → 2.40(63% · 80%) 을 재고 고른 값.
-  // 실측은 60~88 안에 여유가 있으니 맨몸을 합격선(≤60) 아래로 내리는 쪽에 쓴다 —
-  // 관문은 맨몸으로 뚫리면 안 되는 자리다.
-  25: { hp: 2.72, attack: 2.02, defense: 2.72 },
-  35: { hp: 1.90, attack: 1.43, defense: 1.92 },
-  45: { hp: 2.22, attack: 1.73, defense: 2.22 },
+  15: { hp: 1.40, attack: 1.14, defense: 1.42 },
+  // ⚠️ 이 층은 두 번 물렸다. 둘 다 같은 실수의 앞뒤다 — **관문 배수로 상성을 대신하려
+  // 한 것.** 관문은 제작·강화로 넘는 자리지, 특정 종을 데려왔는지 묻는 자리가 아니다.
+  //
+  //  ① 3.26 / 2.42 / 3.26 이던 시절. 적이 전기(모치)인데 전기·풀만 0.5배로 덜 맞고
+  //     이 구간의 전기 진화체가 모치 하나뿐이라, Lv26 · elite L25+5 · 각인3 으로
+  //     100판씩 재면 모치 99% / 아쿠사 0% / 프리로 0% / 젬가드 0% / 버녹스 6% 였다.
+  //     사실상 종족 검사라 2.72 까지 내렸다(실측 74%).
+  //  ② 그 2.72 는 버블록이 **독**이던 시절에 맞은 값이다. 이 구간의 파티를 자주 채우는
+  //     그 라인이 전기를 1배로 받았으니 관문을 무겁게 세울 수 있었다. 버블록이 물로
+  //     돌아온 뒤 그대로 두자 실측 74% → 56%, 완비마저 68% 가 됐다 — 장비를 다 갖추고도
+  //     셋에 하나는 지는 층이다.
+  //
+  // 지금 1.94 에서 맨몸 54% · 실측 88% · 앞선 97% · 완비 99% 다. 젬가드가 결정격
+  // (Lv27, 크리스탈 → 전기 2배)이라는 두 번째 답을 들고 오는 것은 답이 하나 더 생긴
+  // 것이지 벽이 낮아진 게 아니다 — 그 답은 젬토를 20에 진화시켜 27까지 키운 사람 것이다.
+  25: { hp: 1.94, attack: 1.50, defense: 1.94 },
+  35: { hp: 1.68, attack: 1.30, defense: 1.70 },
+  // 2.22 였는데 실측이 24% 로 이미 합격선 한참 아래였다(관문은 60~88%). 이 층은
+  // 오래 「장비로 넘는 벽」이 아니라 그냥 벽이었다. 여기 서던 수정창을 얼음주먹으로
+  // 바꾼 것(FLOOR_FIXED 45 주석)과 같이 봐야 한다 — 둘을 같이 고쳐 82% 가 됐다.
+  45: { hp: 1.68, attack: 1.36, defense: 1.68 },
 };
 
 export function gateMultiplier(floor: number) {
@@ -647,12 +681,35 @@ function applyCorridor(m: Monster, floor: number): Monster {
  *
  * `exp` 는 보상 경험치 배수. 벽 뒤에 보상이 없으면 벽이 아니라 통행세가 된다.
  */
+/*
+ * 2026-09-07 실측(GATE_RUNS=60 · 200회): 맨몸 / 실측 / 한 발 앞선 / 완비
+ *   10층  3 / 25 / 60 / 100   ✓
+ *   20층  6 / 34 / 47 / 100   ✗ 앞선
+ *   30층  8 / 44 / 55 /  93   ✗ 앞선
+ *   40층  1 / 45 / 63 / 100   ✓
+ *   50층  4 / 46 / 59 / 100   두 열 다 1%p 차 (200시행 노이즈 안)
+ *
+ * ⚠️ 20·30층은 **배수로 못 고친다.** 두 열의 간격은 배수가 아니라 「제작대에 한 번 더
+ * 다녀온 것이 얼마나 값이 되는가」가 정한다(gateCheck 의 정의: 장비 레벨 ×1.6+2 ·
+ * 강화 +1). 20층은 그 한 걸음이 13%p, 30층은 11%p 밖에 안 움직이는데, 밴드는 실측
+ * ≤45 와 앞선 ≥60 사이에 **최소 15%p** 를 요구한다. 실제로 20층을 1.22 까지 내려 재
+ * 보면 앞선이 65% 로 올라가는 대신 실측이 53% 가 된다(보스는 25~45 여야 한다).
+ * 고칠 자리는 장비 성장 곡선(craftingUtils)이고, 그건 이 표와 다른 축이다.
+ *
+ * 40·50층은 달랐다. 간격이 18~22%p 라 여유가 있어서, 실측을 밴드 위쪽(45 언저리)에
+ * 맞추자 앞선이 따라 들어왔다. **"보스는 원래 앞선 열을 못 맞춘다"고 넘기지 말 것** —
+ * 층마다 간격이 다르니 층마다 재 봐야 안다. 한 번 그렇게 넘겼다가 두 층을 놓쳤다.
+ *
+ * ⚠️ 50층은 창이 아주 좁다. 1.82 → 실측 36·앞선 48 / 1.76 → 44·56 / 1.75 → 46·59 /
+ * 1.74 → 48·61 / 1.70 → 51·69. 두 열이 같이 밴드에 드는 구간이 200시행 노이즈보다
+ * 좁아서, 여기를 1%p 때문에 더 돌리지 마라. 돌린 만큼 앞뒤 층 입력이 같이 움직인다.
+ */
 const BOSS_MULT_BY_FLOOR: Record<number, { hp: number; attack: number; defense: number; exp: number }> = {
-  10: { hp: 1.70, attack: 1.36, defense: 1.24, exp: 2.4 },
-  20: { hp: 1.26, attack: 0.95, defense: 1.00, exp: 2.4 },
-  30: { hp: 2.22, attack: 1.94, defense: 2.02, exp: 2.4 },
-  40: { hp: 1.50, attack: 1.22, defense: 1.68, exp: 2.8 },
-  50: { hp: 2.05, attack: 1.30, defense: 1.65, exp: 3.5 },
+  10: { hp: 1.45, attack: 1.18, defense: 1.10, exp: 2.4 },
+  20: { hp: 1.28, attack: 0.98, defense: 1.03, exp: 2.4 },
+  30: { hp: 2.66, attack: 2.25, defense: 2.38, exp: 2.4 },
+  40: { hp: 1.47, attack: 1.20, defense: 1.62, exp: 2.8 },
+  50: { hp: 1.75, attack: 1.18, defense: 1.44, exp: 3.5 },
 };
 
 /** 그 층의 보스 배수를 스케일된 능력치에 얹는다 */
@@ -769,7 +826,7 @@ function buildFloorEnemy(floor: number, excludeId?: string): Monster {
  * 오름이 몇 턴에 한 번 겨냥하는가. 그 턴만 AI 가 상성을 계산하고, 나머지 턴은
  * 가진 기술을 마구잡이로 던진다(직전에 쓴 건 빼고).
  *
- * 오름은 7속성 최상급 기술을 전부 들고 있는 유일한 몬스터다. 모든 속성에 약점이
+ * 오름은 8속성 최상급 기술을 전부 들고 있는 유일한 몬스터다. 모든 속성에 약점이
  * 생긴 지금(typeChart 참고) 매 턴 상성을 계산하게 두면 어떤 파티를 데려가도 2배를
  * 맞는다. 시뮬(scripts/sim/floorProbe.ts, Lv55 파티 120판) 승률이 이렇게 갈렸다:
  *

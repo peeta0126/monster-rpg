@@ -329,6 +329,7 @@ export default function BattlePage() {
       enemyName:      initialEnemy.name,
       enemyLevel:     initialEnemy.level,
       enemyType:      initialEnemy.type,
+      enemyType2:     initialEnemy.type2,
       floor, floorLabel: floorLabelOf(floor), isBoss: isBossFloor(floor),
       partyImageUrls: initialParty.map(m => MONSTER_IMAGE_MAP[m.id] ?? ""),
       partyNames:     initialParty.map(m => m.name),
@@ -1261,6 +1262,7 @@ export default function BattlePage() {
                 enemy={enemyState}
                 moves={player.moves}
                 playerType={player.type}
+                playerType2={player.type2}
               />
             </div>
           </div>

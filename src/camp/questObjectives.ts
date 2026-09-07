@@ -50,9 +50,17 @@ export interface QuestProgress {
   label: string;
 }
 
-/** 그 속성으로 잡아 둔 종이 있는가 */
+/**
+ * 그 속성으로 잡아 둔 종이 있는가.
+ *
+ * 부속성도 센다. 화면이 「독」 칩을 달아 준 몬스터를 잡아 왔는데 퀘스트가 안 끝나면
+ * 그건 버그로 읽힌다 — 포자무스(풀/독)·버블돈(물/독)이 그 자리다.
+ */
 function caughtOfType(dexCaught: string[], elementType: ElementType): boolean {
-  return dexCaught.some((id) => monsters.find((m) => m.id === id)?.type === elementType);
+  return dexCaught.some((id) => {
+    const m = monsters.find((x) => x.id === id);
+    return m?.type === elementType || m?.type2 === elementType;
+  });
 }
 
 export function evaluateObjective(o: QuestObjective, s: QuestSnapshot): QuestProgress {

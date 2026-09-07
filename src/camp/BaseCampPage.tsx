@@ -34,31 +34,39 @@ import { PixelIcon } from "../shared/ui/PixelIcon";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
 import { useAuthStore } from "../auth/authStore";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
-import { PALETTE } from "../shared/palette";
+import { PALETTE, ELEMENT_CHIP_CLASS, ELEMENT_KO } from "../shared/palette";
+import { ELEMENT_ORDER } from "../battle/typeChart";
+import { elementIdsOf, type ElementType } from "../shared/game";
 
 // ── 속성 한글/색상 ──────────────────────────────────────────────────────────────
+//
+// ⚠️ 표를 여기서 만들지 마라. 이 화면은 한동안 자기 사본을 셋(TYPE_KO·TYPE_COLOR·
+// MOVE_TYPE_COLOR) 들고 있었는데, 색상환 자리가 모자라 손으로 접다 보니 불꽃과
+// 전기가 **완전히 같은 클래스 문자열**이었고 물·얼음·독도 셋이 같았다. 화면은
+// 속성이 일곱인데 색은 넷이었던 셈이다. 공용 표(shared/palette)는 여덟을 전부
+// 다르게 두고 있었으니, 사본이 있다는 사실 자체가 그 버그였다.
+//
+// 무속성(none)만 이 화면에서 쓰는 값이라 여기서 잇는다 — elementChip(null) 이
+// 이미 "?" 로 답하지만, 도감은 이름을 적는 자리라 "무속성" 이라고 쓴다.
 
-const TYPE_KO: Record<string, string> = {
-  fire: "불꽃", water: "물", grass: "풀",
-  electric: "전기", ice: "얼음", normal: "노말", poison: "독",
-  none: "무속성",
-};
+const NONE_CHIP = "bg-shadow-700/70 text-sand-300 border-stone-600";
 
-const TYPE_COLOR: Record<string, string> = {
-  fire:     "bg-ember-700/25 text-ember-500 border-ember-700",
-  water:    "bg-mist-500/25 text-mist-300 border-mist-500",
-  grass:    "bg-moss-500/25 text-moss-500 border-moss-500",
-  electric: "bg-ember-700/25 text-ember-500 border-ember-700",
-  ice:      "bg-mist-500/25 text-mist-300 border-mist-500",
-  normal:   "bg-shadow-700/70 text-sand-200 border-stone-600",
-  poison:   "bg-mist-500/25 text-mist-300 border-mist-500",
-  none:     "bg-gradient-to-r from-mist-500/70 to-mist-500/70 text-mist-300 border-mist-500",
-};
-
-const TYPE_GROUP_LABEL: Record<string, string> = {
-  fire: "불꽃", water: "물", grass: "풀",
-  electric: "전기", ice: "얼음", normal: "노말", poison: "독",
-};
+/** 도감 카드·헤더의 속성 칩. 이중 속성이면 둘이 나온다 */
+function TypeChips({ m }: { m: { type: ElementType | null; type2?: ElementType } }) {
+  if (!m.type) {
+    return <span className={`inline-block rounded border px-2 py-0.5 text-pixel-sm ${NONE_CHIP}`}>무속성</span>;
+  }
+  const ids = elementIdsOf(m);
+  return (
+    <span className="inline-flex gap-1">
+      {ids.map((t) => (
+        <span key={t} className={`inline-block rounded border px-2 py-0.5 text-pixel-sm ${ELEMENT_CHIP_CLASS[t]}`}>
+          {ELEMENT_KO[t]}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 const STATUS_KO: Record<string, string> = {
   burn: "화상", paralysis: "마비", freeze: "빙결", poison: "독",
@@ -72,16 +80,6 @@ const QUEST_STATUS_BADGE: Record<QuestStatus, { label: string; className: string
   not_accepted: { label: "미수락", className: "border-stone-600 text-sand-300" },
   in_progress:  { label: "진행중", className: "border-ember-700 text-ember-500" },
   completed:    { label: "완료",   className: "border-moss-500 text-moss-500" },
-};
-
-const MOVE_TYPE_COLOR: Record<string, string> = {
-  fire:     "bg-ember-700/25 text-ember-500 border-ember-700",
-  water:    "bg-mist-500/25 text-mist-300 border-mist-500",
-  grass:    "bg-moss-500/25 text-moss-500 border-moss-500",
-  electric: "bg-ember-700/25 text-ember-500 border-ember-700",
-  ice:      "bg-mist-500/25 text-mist-300 border-mist-500",
-  normal:   "bg-shadow-700/60 text-sand-200 border-stone-600",
-  poison:   "bg-mist-500/25 text-mist-300 border-mist-500",
 };
 
 // ── 진화 체인 헬퍼 ───────────────────────────────────────────────────────────────
@@ -124,9 +122,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
         <div className="flex-1">
           <h3 className="text-title-sm font-bold text-cream-100">{seen ? m.name : "???"}</h3>
           {seen && (
-            <span className={`inline-block rounded border px-2 py-0.5 text-pixel-sm mt-0.5 ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
-              {TYPE_KO[m.type ?? "none"]}
-            </span>
+            <span className="mt-0.5 inline-block"><TypeChips m={m} /></span>
           )}
         </div>
         {caught && <span className="text-pixel-sm font-bold text-moss-500 border border-moss-500 rounded px-2 py-0.5">포획</span>}
@@ -230,8 +226,8 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                       <td className="px-4 py-2 font-bold text-ember-500">{entry.level}</td>
                       <td className="px-4 py-2 text-cream-100 font-medium">{entry.move.name}</td>
                       <td className="px-4 py-2">
-                        <span className={`rounded border px-1.5 py-0.5 text-pixel-sm font-semibold ${MOVE_TYPE_COLOR[entry.move.type] ?? MOVE_TYPE_COLOR.normal}`}>
-                          {TYPE_KO[entry.move.type] ?? entry.move.type}
+                        <span className={`rounded border px-1.5 py-0.5 text-pixel-sm font-semibold ${ELEMENT_CHIP_CLASS[entry.move.type]}`}>
+                          {ELEMENT_KO[entry.move.type]}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-right text-sand-200 font-mono">
@@ -273,14 +269,17 @@ function DexModal({ onClose }: { onClose: () => void }) {
   const [filter, setFilter]     = useState<string>("all");
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  const typeGroups = ["fire", "water", "grass", "electric", "ice", "normal", "poison"];
+  // 속성을 더하면 여기도 저절로 늘어난다. 손으로 적어 두면 새 속성이 필터에서만 빠진다.
+  // 크리스탈은 주속성으로 가진 종이 없지만 부속성으로 거르면 젬 계열 넷이 나오므로 남긴다.
+  const typeGroups = ELEMENT_ORDER;
 
   // 오름(최종 보스)은 포획 불가능한 존재라 도감 완성률에 포함시키지 않는다
   const visibleMonsters = monsters.filter((m) => m.id !== "ormr");
 
   const filteredMonsters = filter === "all"
     ? visibleMonsters
-    : visibleMonsters.filter((m) => m.type === filter);
+    // 부속성으로도 걸린다. 「독」 칩을 단 포자무스가 독 탭에 없으면 칩이 거짓말이 된다
+    : visibleMonsters.filter((m) => m.type === filter || m.type2 === filter);
 
   return (
     <div
@@ -337,7 +336,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                   className={`rounded-lg px-3 py-1 text-pixel-sm font-semibold whitespace-nowrap transition
                     ${filter === t ? "bg-stone-600 text-cream-100" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
                 >
-                  {TYPE_GROUP_LABEL[t]}
+                  {ELEMENT_KO[t]}
                 </button>
               ))}
             </div>
@@ -393,9 +392,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                         {seen ? (
                           <>
                             <p className="font-bold text-cream-100 text-pixel-sm">{m.name}</p>
-                            <span className={`mt-0.5 inline-block rounded border px-2 py-0.5 text-pixel-sm ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
-                              {TYPE_KO[m.type ?? "none"] ?? m.type}
-                            </span>
+                            <span className="mt-0.5 inline-block"><TypeChips m={m} /></span>
                           </>
                         ) : (
                           <>

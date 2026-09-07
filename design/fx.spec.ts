@@ -110,7 +110,7 @@ test("fx: 경험치 연출", async ({ page }) => {
   await page.waitForFunction(() => window.__PHASER_READY__ === true, undefined, { timeout: 30_000 });
   await page.waitForTimeout(1200);
 
-  // 상대 카드가 상성을 미리 말해 준다. 예전엔 T 를 눌러 7×7 표를 봐야 알았다
+  // 상대 카드가 상성을 미리 말해 준다. 예전엔 T 를 눌러 8×8 표를 봐야 알았다
   await expect(page.getByTestId("enemy-card")).toBeVisible();
   await page.screenshot({ path: path.join(OUT, "_enemy-card.png") });
 

@@ -9,6 +9,8 @@ export interface BattleSceneInitData {
   enemyLevel: number;
   /** null 은 무속성(오름). 상성이 전부 1배라 화면에는 "?" 로 나간다 */
   enemyType: ElementType | null;
+  /** 이중 속성의 부속성. 캔버스 칩을 둘 그리고, 배경 방은 주속성만 본다 */
+  enemyType2?: ElementType;
   floor: number;
   /** 화면 우상단에 적는 층 표시. 층 표시는 이 한 곳뿐이다(예전엔 세 군데였다) */
   floorLabel: string;

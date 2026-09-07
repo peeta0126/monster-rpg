@@ -17,6 +17,7 @@ import type { Move } from "../shared/game";
  *   fire→화상  electric→마비  ice→빙결  poison·grass→독
  *   water는 상태이상이 없는 대신 명중·위력이 안정적(범용 딜러)
  *   normal은 상성이 없는 대신 피니셔 위력이 최고
+ *   crystal은 상태이상이 없는 대신 같은 단계에서 위력이 한 칸 위다(명중은 한 칸 아래)
  */
 
 // ═══ NORMAL: 상성 없음. 약점도 이점도 없다. ════════════════════════════════
@@ -195,14 +196,6 @@ export const iceBeam: Move = {
   id: "ice-beam", name: "얼음살", type: "ice", power: 65, accuracy: 95, category: "special",
   statusEffect: "freeze", statusChance: 15,
 };
-export const crystalLance: Move = {
-  id: "crystal-lance", name: "수정창", type: "ice", power: 75, accuracy: 95, category: "physical",
-  statusEffect: "freeze", statusChance: 15,
-};
-export const crystalBurst: Move = {
-  id: "crystal-burst", name: "수정파열", type: "ice", power: 75, accuracy: 95, category: "special",
-  statusEffect: "freeze", statusChance: 15,
-};
 export const blizzard: Move = {
   id: "blizzard", name: "설풍", type: "ice", power: 85, accuracy: 85, category: "special",
   statusEffect: "freeze", statusChance: 20,
@@ -210,6 +203,41 @@ export const blizzard: Move = {
 export const sheerCold: Move = {
   id: "sheer-cold", name: "절대영도", type: "ice", power: 90, accuracy: 75, category: "special",
   statusEffect: "freeze", statusChance: 30,
+};
+
+// ═══ CRYSTAL: 얼음·전기에 강, 독에 약. 상태이상이 없는 대신 한 방이 무겁다. ═══
+//
+// 이 속성을 쓰는 것은 젬 계열 셋(순수 크리스탈)과 크리샤(얼음/크리스탈), 그리고
+// 오름이다. 크리샤가 둘을 겹쳐 드니 트리를 짤 때 규칙이 하나 더 붙었다 —
+// **얼음과 역할이 겹치면 안 된다.** 얼음이 확정 빙결로 턴을 빼앗는 속성이라,
+// 크리스탈은 상태이상을 아예 안 준다. 대신 같은 단계에서 위력이 5 높고 명중이
+// 5 낮다. 묶어 두는 것은 얼음이 하고, 때리는 것은 크리스탈이 한다.
+//
+// 수정창·수정파열은 원래 얼음이었다. 이름이 이미 「수정」인데 속성만 얼음이면 표가
+// 두 벌이 되고, 무엇보다 젬 계열의 자속이 아니게 된다. 옮기면서 빙결 15% 가 빠졌는데
+// 그건 크리스탈이 상태이상을 안 갖는다는 규칙 그대로다. 이 둘을 교차로 배우던 종
+// (프리로·빙록·아쿠사·아쿠곤)은 이제 「얼음 + 수정」을 쓰는 셈이고, 셋 다 원화가
+// 수정을 달고 있는 종이라 설정이 오히려 맞는다.
+export const crystalChip: Move = {
+  id: "crystal-chip", name: "수정조각", type: "crystal", power: 45, accuracy: 100, category: "physical",
+};
+export const lightRefract: Move = {
+  id: "light-refract", name: "굴절", type: "crystal", power: 45, accuracy: 100, category: "special",
+};
+export const gemStrike: Move = {
+  id: "gem-strike", name: "결정격", type: "crystal", power: 60, accuracy: 95, category: "physical",
+};
+export const prismFlare: Move = {
+  id: "prism-flare", name: "프리즘섬광", type: "crystal", power: 60, accuracy: 95, category: "special",
+};
+export const crystalLance: Move = {
+  id: "crystal-lance", name: "수정창", type: "crystal", power: 75, accuracy: 95, category: "physical",
+};
+export const crystalBurst: Move = {
+  id: "crystal-burst", name: "수정파열", type: "crystal", power: 75, accuracy: 95, category: "special",
+};
+export const prismStorm: Move = {
+  id: "prism-storm", name: "프리즘폭풍", type: "crystal", power: 90, accuracy: 85, category: "special",
 };
 
 // ═══ POISON: 풀에 강. 지속 피해·포획 보조 전문. ═══════════════════════════
@@ -249,7 +277,8 @@ export const ALL_MOVES: Move[] = [
   waterGun, aquaTail, bubbleCannon, waterPulse, aquaWhirl, surf, tidalCrash, hydroPump,
   spark, zap, stunNeedle, discharge, thunderbolt, boltStrike, voltCrash, thunder, thunderStrike,
   vineWhip, leafGust, sporeCloud, leafBlade, iceLeaf, seedBomb, rootSpear, solarBeam,
-  frostBreath, iceShard, frostMist, icePunch, iceBeam, crystalLance, crystalBurst, blizzard, sheerCold,
+  frostBreath, iceShard, frostMist, icePunch, iceBeam, blizzard, sheerCold,
+  crystalChip, lightRefract, gemStrike, prismFlare, crystalLance, crystalBurst, prismStorm,
   poisonSting, acidSpray, toxic, poisonFog, poisonJab, venomFang, venomStorm,
 ];
 

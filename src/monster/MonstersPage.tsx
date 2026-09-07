@@ -14,6 +14,7 @@ import {
   QUALITY_COLOR, QUALITY_LABEL, sumEquippedStatBonuses,
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
+import { ELEMENT_KO, elementIdsOf } from "../shared/game";
 import { GameBackground } from "../shared/ui/GameBackground";
 import { josa, withJosa } from "../shared/josa";
 import { StatBar, PixelButton } from "../shared/ui";
@@ -27,11 +28,10 @@ export interface EquipStatBonus { attack: number; defense: number; speed: number
 const ZERO_EQUIP_BONUS: EquipStatBonus = { attack: 0, defense: 0, speed: 0 };
 
 // ─── 속성 상수 ────────────────────────────────────────────────────────────────────
-const TYPE_KO: Record<string, string> = {
-  fire:"불꽃", water:"물", grass:"풀", electric:"전기", ice:"얼음", normal:"노말",
-  poison:"독",
-  none:"무속성",
-};
+// 한글 이름은 공용 표(shared/game 의 ELEMENT_KO)를 그대로 쓴다. 여기에 사본을 두면
+// 속성을 더한 날 이 화면만 빈 칩을 그린다 — 실제로 크리스탈이 그럴 뻔했다.
+// 무속성(none)만 이 화면에서 쓰는 값이라 여기서 잇는다.
+const TYPE_KO: Record<string, string> = { ...ELEMENT_KO, none: "무속성" };
 
 // 속성 색은 shared/palette.ts 의 ELEMENT_COLOR 가 단일 출처다 (숲·전투와 동일).
 // 무속성(none)만 이 화면에서 쓰는 값이라 여기서 노말과 같게 둔다.
@@ -354,6 +354,7 @@ function MonsterStatusPanel({
   }
 
   const acc = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
+  const typeIds = elementIdsOf(monster);
   const stats: [string, number, number][] = [
     ["HP", monster.maxHp, 0],
     ["공격", monster.attack, equipBonus.attack],
@@ -387,9 +388,12 @@ function MonsterStatusPanel({
             <p className="truncate text-title-sm font-black text-cream-100">{monster.nickname ?? monster.name}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
               <span className="text-pixel-sm font-bold text-sand-300">Lv.{monster.level}</span>
-              <span className={`rounded-full border px-1.5 text-pixel-sm font-bold ${acc.label}`}>
-                {TYPE_KO[monster.type ?? "none"] ?? ""}
-              </span>
+              {typeIds.map((t) => (
+                <span key={t}
+                  className={`rounded-full border px-1.5 text-pixel-sm font-bold ${TYPE_ACCENT[t].label}`}>
+                  {TYPE_KO[t]}
+                </span>
+              ))}
               {/* 파티인지 보관함인지가 곧 뭘 할 수 있는지다. 아래 버튼의 근거를 여기서 밝힌다 */}
               <span className="rounded-full border px-1.5 text-pixel-sm font-bold"
                 style={{
@@ -606,6 +610,7 @@ function MonsterCard({
 }) {
   const isFainted = monster.currentHp === 0;
   const acc       = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
+  const typeIds   = elementIdsOf(monster);
   const imgSize   = size === "lg" ? "w-20 h-20" : size === "md" ? "w-14 h-14" : "w-11 h-11";
   const row       = layout === "row";
 
@@ -655,10 +660,12 @@ function MonsterCard({
           </p>
           <div className={`mt-0.5 flex flex-wrap items-center gap-1 ${row ? "" : "justify-center"}`}>
             <span className="text-pixel-sm font-bold text-sand-300">Lv.{monster.level}</span>
-            <span className={`rounded-full border px-1 text-pixel-sm font-bold ${acc.label}`}
-              style={{ paddingTop: 0, paddingBottom: 0 }}>
-              {TYPE_KO[monster.type ?? "none"] ?? ""}
-            </span>
+            {typeIds.map((t) => (
+              <span key={t} className={`rounded-full border px-1 text-pixel-sm font-bold ${TYPE_ACCENT[t].label}`}
+                style={{ paddingTop: 0, paddingBottom: 0 }}>
+                {TYPE_KO[t]}
+              </span>
+            ))}
             {/* 기절은 카드 전체를 덮는 오버레이였다. 그 밑의 HP 숫자가 안 읽혔다.
                 칩으로 내려 세우고, 흑백이 된 그림과 빈 HP 바가 같은 말을 거든다. */}
             {isFainted && (
@@ -894,11 +901,12 @@ export default function MonstersPage() {
     return { attack: totals.attack, defense: totals.defense, speed: totals.speed };
   };
 
-  const storageTypes = [...new Set(storage.map((m) => m.type))]
-    .filter((t): t is NonNullable<typeof t> => t !== null);
+  // 부속성까지 센다. 칩을 둘 달아 놓고 한쪽으로는 못 거르면 그 칩이 장식이 된다
+  const storageTypes = [...new Set(storage.flatMap((m) => [m.type, m.type2]))]
+    .filter((t): t is NonNullable<typeof t> => !!t);
 
   const filteredStorage = [...storage]
-    .filter((m) => typeFilter === "all" || m.type === typeFilter)
+    .filter((m) => typeFilter === "all" || m.type === typeFilter || m.type2 === typeFilter)
     .sort((a, b) => {
       if (sortBy === "level") return b.level - a.level;
       if (sortBy === "hp")    return (b.currentHp / b.maxHp) - (a.currentHp / a.maxHp);

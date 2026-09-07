@@ -1,4 +1,5 @@
 import { monsters } from "../../monster/monsters";
+import { elementIdsOf } from "../../shared/game";
 import { ELEMENT_CHIP_CLASS, ELEMENT_KO, rgba } from "../../shared/palette";
 import { unlockLabel, type ForestArea } from "./areas";
 import { encounterLevelRange } from "./catchLevel";
@@ -26,9 +27,14 @@ const CARD_STYLES = `
 /** 고대 숲은 속성을 숨긴다. 칸 수는 그대로 셋. 비면 카드가 헐거워 보인다 */
 const HIDDEN_TYPES = ["?", "?", "?"];
 
+/**
+ * 이 구역에서 만날 수 있는 속성. 부속성도 센다 — 젬 계열이 사는 구역에서 크리스탈이
+ * 안 뜨면, 카드를 보고 파티를 짠 사람이 그 속성을 만날 줄 모른다.
+ */
 function monsterTypes(area: ForestArea): string[] {
   if (!area.revealTypes) return HIDDEN_TYPES;
-  return [...new Set(area.monsterPool.map((id) => monsters.find((m) => m.id === id)?.type ?? "normal"))];
+  const pool = area.monsterPool.map((id) => monsters.find((m) => m.id === id));
+  return [...new Set(pool.flatMap((m) => (m ? elementIdsOf(m) : ["normal"])))];
 }
 
 /**

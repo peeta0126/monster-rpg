@@ -40,6 +40,9 @@
   --color-mist-500:   #5C9396;  /* 정보성 요소, 링크 */
   --color-moss-500:   #7A8455;  /* 자연/식물, 성공 상태 */
   --color-moss-700:   #39412A;  /* 그늘진 초목 — 숲 원경/밤하늘 */
+  --color-violet-500: #6D4E85;  /* 독 — 늪의 자줏빛 */
+  --color-rose-300:   #D9A0B0;  /* 크리스탈 — 수정이 굴절시킨 빛 */
+  --color-spark-400:  #E8CE72;  /* 전기 — 번개의 금빛 */
 
   /* 픽셀 폰트. 크기는 반드시 기준 크기의 정수배만 쓴다 (Galmuri11 = 12, Galmuri14 = 16). */
   --font-pixel: "Galmuri11", "Neo둥근모", monospace;

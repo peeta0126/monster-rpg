@@ -2,12 +2,12 @@ import type { ElementType, Move } from "../shared/game";
 import { getTypeMultiplier, type BattleMonster } from "./battleUtils";
 import { statusDetail, STATUS_META } from "./statusInfo";
 import { PixelIcon } from "../shared/ui/PixelIcon";
-import { ELEMENT_CHIP_CLASS, ELEMENT_KO, HP_DANGER_PCT } from "../shared/palette";
+import { ELEMENT_CHIP_CLASS, HP_DANGER_PCT, elementChips } from "../shared/palette";
 
 /**
  * 상대 정보 카드.
  *
- * 상성을 알려면 T 를 눌러 7×7 표를 열어야 했다. 표는 규칙을 보여주지 지금 이 싸움의
+ * 상성을 알려면 T 를 눌러 8×8 표를 열어야 했다. 표는 규칙을 보여주지 지금 이 싸움의
  * 답은 안 보여준다. 필요한 건 "이 상대를 어떻게 다루나" 두 줄이다.
  *
  * 양쪽을 다 적는다. 한쪽만 적었을 때 이런 화면이 나왔다. 불꽃으로 물을 만나면 내
@@ -25,27 +25,41 @@ export interface EnemyCardProps {
   moves: Move[];
   /** 지금 나와 있는 몬스터의 속성. 맞을 때 배율을 여기서 고른다 */
   playerType: ElementType | null;
+  /** 지금 나와 있는 몬스터의 부속성. 이중 속성이면 받는 피해가 곱으로 정해진다 */
+  playerType2?: ElementType;
 }
 
 /** 배율 표기. ×1.0 이나 ×0.50 처럼 늘어지면 12px 한 줄에서 숫자가 안 읽힌다 */
 const fmt = (n: number) => String(Number(n.toFixed(2)));
 
-/** 위력이 있는 기술 중 가장 큰 상성 배율. 상태기(위력 0)는 상성이 의미 없다 */
-function bestMultiplier(moves: readonly Move[], target: ElementType | null): number {
+/**
+ * 위력이 있는 기술 중 가장 큰 상성 배율. 상태기(위력 0)는 상성이 의미 없다.
+ *
+ * 이중 속성이면 두 속성을 다 넘긴다. 주속성만 보면 "받는 피해 ×1" 이라고 적어 놓고
+ * 실제로는 두 배를 맞는 화면이 나온다 — 이 카드가 있는 이유가 바로 그 거짓말을
+ * 없애는 것이었으니(머리말 참고) 여기서 한쪽만 보면 안 된다.
+ */
+function bestMultiplier(
+  moves: readonly Move[],
+  target: ElementType | null,
+  target2?: ElementType,
+): number {
   return moves
     .filter((m) => m.power > 0)
-    .reduce((acc, m) => Math.max(acc, getTypeMultiplier(m.type, target)), 0);
+    .reduce((acc, m) => Math.max(acc, getTypeMultiplier(m.type, target, target2)), 0);
 }
 
-export function EnemyCard({ enemy, moves, playerType }: EnemyCardProps) {
+export function EnemyCard({ enemy, moves, playerType, playerType2 }: EnemyCardProps) {
   const hpPct = enemy.maxHp > 0 ? Math.round((enemy.currentHp / enemy.maxHp) * 100) : 0;
-  const element = enemy.type ? ELEMENT_KO[enemy.type] : "무속성";
-  const chip = enemy.type
-    ? ELEMENT_CHIP_CLASS[enemy.type]
-    : "bg-shadow-700/80 text-sand-300 border-stone-600";
+  const chips = enemy.type
+    ? elementChips(enemy).map((c, i) => ({
+        label: c.label,
+        className: ELEMENT_CHIP_CLASS[(i === 0 ? enemy.type : enemy.type2) as keyof typeof ELEMENT_CHIP_CLASS],
+      }))
+    : [{ label: "무속성", className: "bg-shadow-700/80 text-sand-300 border-stone-600" }];
 
-  const outgoing = bestMultiplier(moves, enemy.type);
-  const incoming = bestMultiplier(enemy.moves, playerType);
+  const outgoing = bestMultiplier(moves, enemy.type, enemy.type2);
+  const incoming = bestMultiplier(enemy.moves, playerType, playerType2);
 
   // 때릴 때는 큰 게 좋고 맞을 때는 작은 게 좋다. 그래서 색이 반대로 간다
   const attack = outgoing === 0
@@ -66,7 +80,9 @@ export function EnemyCard({ enemy, moves, playerType }: EnemyCardProps) {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className={`border px-1.5 text-pixel-sm ${chip}`}>{element}</span>
+        {chips.map((c) => (
+          <span key={c.label} className={`border px-1.5 text-pixel-sm ${c.className}`}>{c.label}</span>
+        ))}
         <span className={`text-pixel-sm ${hpPct <= HP_DANGER_PCT ? "text-ember-500" : "text-sand-300"}`}>
           HP {hpPct}%
         </span>
