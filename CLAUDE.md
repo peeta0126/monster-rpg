@@ -221,8 +221,16 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
 - 곡은 그 화면에 들어갈 때 받는다(합쳐서 20MB). `public/assets/audio` 는
   `optimize-assets.mjs` 의 보존 목록에 있다 — 다시 인코딩하지 말 것.
 - 효과음은 **아직 파일이 없다.** 없는 상태로도 게임이 도는 규칙(경고 한 줄)을 깨지 말 것.
+- **자동재생 잠금 해제 리스너를 첫 상호작용에서 떼지 말 것.** play() 의 거절은 비동기라,
+  이른 클릭 한 번이 잠금 해제를 빈손으로 태우고 리스너까지 떼면 게임이 끝까지 조용하다.
+  크롬에서 실제로 그랬다(pitfalls.md).
+- **곡을 갈아탈 때 나는 AbortError 를 "파일 없음"으로 세지 말 것.** `warnOnce` 는 그 곡을
+  영구히 재생 대상에서 뺀다 — 넘어가다 만 전투곡이 거기 들어가 보스 곡이 안 풀렸다.
 - 고쳤으면 `npx playwright test --config design/playwright.config.ts -g "audio:"`.
   실제로 걸어 들어가고 전투를 이겨 보면서, 브라우저가 만든 오디오 요소를 들여다본다.
+  ⚠️ 그 검사들은 **자동재생 잠금을 못 본다** — 플레이라이트가 크로뮴을
+  `--autoplay-policy=no-user-gesture-required` 로 띄운다. 그 구간은 `audioAutoplay.spec.ts`
+  가 따로 본다(같은 `-g "audio:"` 에 걸린다).
 
 ## 계정과 운영 화면
 

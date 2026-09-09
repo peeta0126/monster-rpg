@@ -1,6 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
-import { FRESH_SAVE } from "./freshSave";
 import { playFloor } from "../e2e/autoBattle";
+import { CAMP_INTERACTIONS } from "../src/camp/campCollision";
+import {
+  AUDIO_KEY, STRONG_SAVE, seed, snap, audible, nameOf, trackOf, firstTouch, waitForTrack,
+} from "./audioProbe";
 
 /**
  * BGM 확인. 실제로 화면을 돌아다니며 브라우저가 만든 오디오 요소를 들여다본다.
@@ -15,109 +18,6 @@ import { playFloor } from "../e2e/autoBattle";
  * 귀로 듣는 것까지는 못 한다. 대신 사람이 귀로 잡아내는 사고(되감김·정적·이중
  * 전환·음량이 안 먹음)는 전부 여기서 수치로 잡힌다.
  */
-
-const AUTH_KEY = "monster-rpg-auth";
-const PLAYER_KEY = "monster-rpg-player";
-const AUDIO_KEY = "monster-rpg-audio";
-const GUEST = JSON.stringify({
-  state: { token: null, username: null, isGuest: true, isDev: false }, version: 0,
-});
-
-/**
- * 1층을 확실히 이기는 세이브. 시작 파티(Lv.1 플레미 한 마리)로는 1층에서도 질 수 있어서
- * 검사가 전투 결과가 아니라 운에 걸린다. 여기서 보려는 건 곡이지 난이도가 아니다.
- */
-const STRONG_SAVE = JSON.stringify({
-  state: {
-    party: [
-      { id: "mossevo", level: 30, uid: "a0" },
-      { id: "frostorb", level: 28, uid: "a1" },
-    ],
-    storage: [], dexSeen: ["mossevo"], dexCaught: ["mossevo"],
-    materials: {}, potions: { potion: 5 }, bestFloor: 0,
-    storyFlags: { met_orion: true }, questStatus: {}, seenDialogues: ["orion_intro"],
-    craftedItems: [], craftedArtifacts: [], craftedPotions: [], equippedArtifacts: {},
-    imprint: {},
-  },
-  version: 2,
-});
-
-interface Snap {
-  file: string;
-  paused: boolean;
-  volume: number;
-  time: number;
-  loop: boolean;
-  /** HAVE_CURRENT_DATA(2) 이상이면 지금 이 순간 낼 소리가 버퍼에 있다는 뜻 */
-  ready: number;
-}
-
-declare global {
-  interface Window { __AUDIO__?: HTMLAudioElement[] }
-}
-
-/**
- * 페이지 첫 스크립트보다 먼저 Audio 를 감싸고 게스트 세션·세이브를 심는다.
- *
- * ⚠️ 소리 설정(monster-rpg-audio)은 지우지 않는다. 이 스크립트는 새로고침마다
- * 다시 도는데, 여기서 지우면 "설정이 새로고침 뒤에도 남는가"를 검사가 스스로 깨뜨린다.
- * 테스트마다 브라우저 컨텍스트가 새로 뜨므로 처음에는 어차피 비어 있다.
- */
-async function seed(page: Page, { authed = true, save = FRESH_SAVE } = {}) {
-  await page.addInitScript(() => {
-    const created: HTMLAudioElement[] = [];
-    window.__AUDIO__ = created;
-    const Orig = window.Audio;
-    function Wrapped(this: unknown, src?: string) {
-      const el = new Orig(src);
-      created.push(el);
-      return el;
-    }
-    Wrapped.prototype = Orig.prototype;
-    window.Audio = Wrapped as unknown as typeof Audio;
-  });
-  await page.addInitScript(
-    ({ a, p, g, fresh, authed }) => {
-      window.localStorage.removeItem(a);
-      window.localStorage.removeItem(p);
-      if (authed) {
-        window.localStorage.setItem(a, g);
-        window.localStorage.setItem(p, fresh);
-      }
-    },
-    { a: AUTH_KEY, p: PLAYER_KEY, g: GUEST, fresh: save, authed },
-  );
-}
-
-const snap = (page: Page): Promise<Snap[]> => page.evaluate(() =>
-  (window.__AUDIO__ ?? []).map((a) => ({
-    file: a.src.split("/").pop() ?? "",
-    paused: a.paused,
-    volume: Math.round(a.volume * 1000) / 1000,
-    time: a.currentTime,
-    loop: a.loop,
-    ready: a.readyState,
-  })));
-
-/** 지금 실제로 소리를 내고 있는 것들 */
-const audible = (s: Snap[]) => s.filter((x) => !x.paused && x.volume > 0);
-
-/** 브라우저가 어느 포맷을 골랐든 이름만 본다 (ogg / m4a) */
-const nameOf = (file: string) => file.replace(/\.(ogg|m4a)$/, "");
-
-const trackOf = async (page: Page, name: string) =>
-  (await snap(page)).find((x) => nameOf(x.file) === name);
-
-/**
- * 자동재생 잠금을 푸는 첫 상호작용. 사람이 하는 것과 같은 순서다.
- *
- * 키 입력 대신 클릭인 이유: 브라우저가 "사용자 활성화"로 쳐 주는 키가 한정돼 있어
- * 게임이 안 듣는 키를 골라 눌러 봐야 잠금이 안 풀린다. 화면 맨 구석이라 누를 것이 없다.
- * 새로고침하면 활성화가 풀리므로 reload 뒤에는 매번 다시 눌러야 한다.
- */
-async function firstTouch(page: Page) {
-  await page.mouse.click(2, 2);
-}
 
 /**
  * 게임 안에서 화면을 옮긴다.
@@ -149,11 +49,6 @@ async function menuGo(page: Page, item: string) {
 /** 화면 왼쪽 위의 "← 베이스캠프" */
 async function backToCamp(page: Page) {
   await page.getByRole("button", { name: /베이스캠프/ }).first().click();
-}
-
-async function waitForTrack(page: Page, name: string) {
-  await expect.poll(async () => audible(await snap(page)).map((x) => nameOf(x.file)),
-    { timeout: 15_000, message: `${name} 이(가) 안 나온다` }).toContain(name);
 }
 
 /**
@@ -194,11 +89,15 @@ async function toggleMute(page: Page) {
   await page.getByRole("button", { name: /음소거/ }).click();
 }
 
+/** 숲 어귀의 복귀 좌표. 표는 campCollision 한 벌이다 */
+const FOREST_GATE = CAMP_INTERACTIONS.find((i) => i.id === "forest")!;
+
 test.describe("audio:", () => {
   test("로그인 화면에서 타이틀 곡이 흐른다", async ({ page }) => {
     await seed(page, { authed: false });
     await page.goto("/");
-    await expect(page.getByRole("button", { name: /게스트로 시작/ })).toBeVisible();
+    // 「바로 시작」(익명 계정)은 없어졌다. 로그인 화면인지는 로그인 버튼으로 본다
+    await expect(page.getByRole("button", { name: /로그인/ })).toBeVisible();
     await firstTouch(page);
     await waitForTrack(page, "title");
 
@@ -303,12 +202,15 @@ test.describe("audio:", () => {
       const sc = g?.scene?.getScene?.("BaseCampScene") as { player?: unknown } | null;
       return Boolean(sc?.player);
     }, undefined, { timeout: 20_000 });
+    // ⚠️ 좌표를 여기 적지 말 것. 예전엔 (1150, 1980) 이라고 적어 두고 "campCollision 의
+    // 숲 복귀 좌표" 라는 주석까지 달아 뒀는데, 그 사이 판정이 나무 앞(1500)으로 옮겨져서
+    // 이 판만 오리온 옆에 서 있었다 — 안내가 "E: Orion" 이라 곡 검사가 거기서 멈췄다.
     await page.evaluate(([px, py]) => {
       const g = (window as unknown as {
         __phaserGame: { scene: { getScene: (k: string) => { player: { setPosition: (a: number, b: number) => void } } } };
       }).__phaserGame;
       g.scene.getScene("BaseCampScene").player.setPosition(px, py);
-    }, [1150, 1980]);   // campCollision 의 숲 복귀 좌표 — 판정 반경 안이다
+    }, [FOREST_GATE.returnAt.x, FOREST_GATE.returnAt.y]);
     // 한 걸음 밀어 씬이 근접을 다시 재게 한다. 순간이동만으로는 안내가 안 뜬다
     await page.keyboard.down("ArrowRight");
     await page.waitForTimeout(150);
