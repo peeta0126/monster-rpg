@@ -447,22 +447,20 @@ export default function BattlePage() {
     if (!uid) {
       return {
         attack: 0, defense: 0, speed: 0, critRate: 0, elementPower: 0, hp: 0,
-        critDamage: 0, expBonus: 0, elementalDamage: {} as Partial<Record<ElementType, number>>,
+        critDamage: 0, elementalDamage: {} as Partial<Record<ElementType, number>>,
       };
     }
     const equipped = usePlayerStore.getState().equippedArtifacts[uid] ?? [];
     const totals = sumEquippedStatBonuses(equipped);
+    // 속성별 데미지는 craftingUtils 가 여덟 속성 표로 내준다. 예전에는 여기서
+    // `if (bonus.fireDamage) map.fire = ...` 를 손으로 적었고, 시뮬레이터가 같은 줄을
+    // 한 벌 더 갖고 있었다 — 살아 있는 속성이 둘뿐이라는 사실이 호출부에 숨어 있었다.
     const bonusTotals = sumEquippedBonusStats(equipped);
-    // 부가 능력치 fireDamage/waterDamage만 실제 존재하는 속성(fire/water)에 매핑된다.
-    // windDamage/earthDamage는 이 게임에 해당 속성 기술이 없어 의도적으로 매핑하지 않는다.
-    const elementalDamage: Partial<Record<ElementType, number>> = {};
-    if (bonusTotals.fireDamage)  elementalDamage.fire  = bonusTotals.fireDamage;
-    if (bonusTotals.waterDamage) elementalDamage.water = bonusTotals.waterDamage;
     return {
       attack: totals.attack, defense: totals.defense, speed: totals.speed,
       critRate: totals.critRate, elementPower: totals.elementPower, hp: totals.hp,
-      critDamage: bonusTotals.critDamage, expBonus: bonusTotals.expBonus,
-      elementalDamage,
+      critDamage: bonusTotals.critDamage,
+      elementalDamage: bonusTotals.elementDamage,
     };
   }, []);
 
@@ -600,10 +598,9 @@ export default function BattlePage() {
     won: BattleMonster, ne: BattleMonster, activeIdx: number,
   ) => {
     let np = won;
-    const bonus = getEquipCombatBonus(initialParty[activeIdx]?.uid);
     // 레벨차 배수는 받는 쪽마다 다르다. 여기서 한 번 곱해 버리면 뒤처진 벤치 몬스터도
     // 선봉 배수를 물려받고, 그러면 따라잡기가 안 된다.
-    const baseExp = ne.rewardExp * (1 + bonus.expBonus / 100);
+    const baseExp = ne.rewardExp;
     const leadGapMult = expLevelGapMultiplier(ne.level, np.level);
     const earnedExp = Math.floor(baseExp * leadGapMult);
     const prevLevel = np.level;
@@ -691,7 +688,7 @@ export default function BattlePage() {
     setBattleDrops(battleDrops);
     finishBattle("win");
   }, [
-    floor, initialParty, partyHp, getEquipCombatBonus, playExpGain, askWhichToForget,
+    floor, initialParty, partyHp, playExpGain, askWhichToForget,
     sendLogAndWait, addMaterial, addToDexSeen, addToDexCaught,
     updatePartyMember, updateBestFloor, finishBattle,
   ]);

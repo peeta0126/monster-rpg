@@ -9,7 +9,7 @@ import { MAX_TOWER_FLOOR } from "./floorTable";
 import { expToNext } from "../battle/battleUtils";
 import { POTIONS, MATERIALS } from "./items";
 import {
-  rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats,
+  rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats, repairBonusStats,
   getEquipmentMaxLevel, MAX_EQUIPMENT_ENHANCEMENT,
 } from "./craftingUtils";
 import {
@@ -354,14 +354,39 @@ export function normalizeState(input: object): PersistedPlayerState {
       ? raw.seenDialogues.filter((x): x is string => typeof x === "string")
       : backfillSeenDialogues(storyFlags, bestFloor),
     craftedItems:      (Array.isArray(raw.craftedItems) ? raw.craftedItems : []) as PersistedPlayerState["craftedItems"],
-    craftedArtifacts:  (Array.isArray(raw.craftedArtifacts) ? raw.craftedArtifacts : []) as PersistedPlayerState["craftedArtifacts"],
+    craftedArtifacts:  normalizeArtifactArray(raw.craftedArtifacts),
     craftedPotions:    (Array.isArray(raw.craftedPotions) ? raw.craftedPotions : []) as PersistedPlayerState["craftedPotions"],
-    equippedArtifacts: (raw.equippedArtifacts && typeof raw.equippedArtifacts === "object"
-      ? raw.equippedArtifacts : {}) as PersistedPlayerState["equippedArtifacts"],
+    equippedArtifacts: normalizeEquippedArtifacts(raw.equippedArtifacts),
     // 각인이 없던 옛 세이브는 여기서 빈 표를 받는다. 등급은 먹인 수에서 계산되니까
     // 그 이상 손댈 게 없다(비용표를 고쳐도 마이그레이션이 필요 없는 이유다)
     imprint: normalizeImprint(raw.imprint),
   };
+}
+
+/**
+ * 장비에 붙은 부가 능력치를 지금 표에 맞춘다(`repairBonusStats`).
+ *
+ * 버전 분기가 아니라 여기 두는 이유는 v1→v2 때와 같다 — 버전을 안 들고 오는 서버
+ * 세이브도 같은 처리를 받아야 한다. 개수가 맞으면 그대로 돌려주므로 로드마다 값이
+ * 흔들리지 않는다.
+ */
+function normalizeArtifactArray(raw: unknown): ArtifactInstance[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as ArtifactInstance[])
+    .filter((a) => a && typeof a === "object" && typeof a.itemId === "string")
+    .map((a) => ({
+      ...a,
+      bonusStats: repairBonusStats(a.itemId, a.level ?? 1, a.bonusStats),
+    }));
+}
+
+function normalizeEquippedArtifacts(raw: unknown): Record<string, ArtifactInstance[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, ArtifactInstance[]> = {};
+  for (const [uid, list] of Object.entries(raw as Record<string, unknown>)) {
+    out[uid] = normalizeArtifactArray(list);
+  }
+  return out;
 }
 
 /** 먹인 수는 음이 아닌 정수여야 한다. 손으로 고친 세이브가 소수·음수를 들고 오면 버린다 */

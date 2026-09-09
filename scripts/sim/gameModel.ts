@@ -37,7 +37,7 @@ import {
 import { monsters } from "../../src/monster/monsters";
 import { applyLevelGrowth } from "../../src/monster/growth";
 import { withImprint } from "../../src/monster/imprint";
-import type { Monster, Move, ElementType } from "../../src/shared/game";
+import type { Monster, Move } from "../../src/shared/game";
 import type { ArtifactInstance, ArtifactStatBonus, ItemQuality } from "../../src/shared/crafting";
 import {
   applyArtifactQualityStats, getEquipmentMaxLevel, getEquipmentLevelUpCost,
@@ -120,13 +120,10 @@ export function equipBonus(s: SimState, uid: string) {
   const eq = s.equipped[uid] ?? [];
   const totals = sumEquippedStatBonuses(eq);
   const bonus = sumEquippedBonusStats(eq);
-  const elementalDamage: Partial<Record<ElementType, number>> = {};
-  if (bonus.fireDamage) elementalDamage.fire = bonus.fireDamage;
-  if (bonus.waterDamage) elementalDamage.water = bonus.waterDamage;
   return {
     attack: totals.attack, defense: totals.defense, speed: totals.speed,
     critRate: totals.critRate, elementPower: totals.elementPower, hp: totals.hp,
-    critDamage: bonus.critDamage, expBonus: bonus.expBonus, elementalDamage,
+    critDamage: bonus.critDamage, elementalDamage: bonus.elementDamage,
   };
 }
 
@@ -354,7 +351,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
 
     if (playerWon) {
       // 경험치는 마지막에 싸운 몬스터만 받는다 (BattlePage와 동일)
-      const baseExp = ne.rewardExp * (1 + bonus.expBonus / 100);
+      const baseExp = ne.rewardExp;
       const earned = Math.floor(baseExp * expLevelGapMultiplier(ne.level, np.level));
       const prevLevel = np.level;
       let grown = gainExp(np, earned).updatedMonster;
