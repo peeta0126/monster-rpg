@@ -75,7 +75,6 @@ export default class BattleScene extends Phaser.Scene {
   // ── 위험(HP 25% 이하) 경고 ──
   // 바 테두리와 몬스터 뒤 아우라가 같은 순간에 같은 박자로 뛴다. 숫자만 빨개지면 안 본다.
   private dangerFrame = {} as Record<"enemy" | "player", Phaser.GameObjects.Graphics>;
-  private dangerAura  = {} as Record<"enemy" | "player", Phaser.GameObjects.Graphics>;
   private dangerTween = {} as Record<"enemy" | "player", Phaser.Tweens.Tween | undefined>;
   private dangerOn    = { enemy: false, player: false };
 
@@ -417,21 +416,10 @@ export default class BattleScene extends Phaser.Scene {
       frame.lineStyle(2, HEX.ember700, 1);
       frame.strokeRect(barX - 3, barY - 3, BAR_W_INNER + 6, BAR_H + 6);
 
-      const sx   = side === "enemy" ? this.enemy.x  : PLAYER_X;
-      const sy   = side === "enemy" ? this.enemy.cy : PLAYER_CY;
-      const size = side === "enemy" ? this.enemy.size : PLAYER_SIZE;
-      // 일러스트를 틴트로 물들이면 그림이 상한다. 뒤에 아우라를 깔아 몬스터째로 위험해 보이게 한다.
-      // 번짐만 깔았더니 횃불 불빛이랑 구별이 안 됐다. 테두리 원을 하나 둘러 형태를 준다.
-      const aura = this.add.graphics().setDepth(5).setVisible(false);
-      aura.fillStyle(HEX.ember700, 0.5);
-      aura.fillCircle(sx, sy, size * 0.42);
-      aura.fillStyle(HEX.ember700, 0.28);
-      aura.fillCircle(sx, sy, size * 0.62);
-      aura.lineStyle(3, HEX.ember700, 0.9);
-      aura.strokeCircle(sx, sy, size * 0.62);
-
+      // 몬스터 뒤에 붉은 원을 깔던 시절이 있었다. HP 숫자·막대·이 테두리가 이미 같은 말을
+      // 하고 있는데 원만 원화를 반쯤 덮어서, 무슨 신호인지도 헷갈렸다(상태이상으로 읽혔다).
+      // 위험 신호는 HP 가 사는 자리에만 둔다.
       this.dangerFrame[side] = frame;
-      this.dangerAura[side]  = aura;
     }
   }
 
@@ -440,7 +428,7 @@ export default class BattleScene extends Phaser.Scene {
     if (this.dangerOn[side] === on) return;
     this.dangerOn[side] = on;
 
-    const targets = [this.dangerFrame[side], this.dangerAura[side]];
+    const targets = [this.dangerFrame[side]];
     this.dangerTween[side]?.remove();
     this.dangerTween[side] = undefined;
     for (const t of targets) t.setVisible(on).setAlpha(1);

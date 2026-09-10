@@ -59,6 +59,12 @@ interface Props {
   disabled: boolean;
   canFlee: boolean;
   fleeBlockedReason?: string;
+  /**
+   * 속도 게이지가 차서 한 번 더 움직이는 중이다. 이 차례에는 기술만 낸다 —
+   * 방어는 이미 상대가 때린 뒤라 늦고, 가방·도망은 턴을 또 쓴다.
+   * 그래서 1단을 건너뛰고 기술 목록을 바로 편다(뒤로 갈 곳이 없다).
+   */
+  extraTurn?: boolean;
   /** 이 구역에 포커스가 있는가. 없으면 키 입력을 파티 구역이 가져간다 */
   focused: boolean;
   onUseMove: (move: Move) => void;
@@ -96,7 +102,7 @@ function KoBadge({ ko }: { ko: MovePreview["ko"] }) {
 }
 
 export function BattleCommandMenu({
-  moves, getPreview, potions, disabled, canFlee, fleeBlockedReason, focused,
+  moves, getPreview, potions, disabled, canFlee, fleeBlockedReason, extraTurn = false, focused,
   onUseMove, onUsePotion, onGuard, onFlee, onLeaveLeft,
 }: Props) {
   const [menu, setMenu] = useState<MenuState>({ level: "root" });
@@ -114,6 +120,18 @@ export function BattleCommandMenu({
     setCursor(0);
     setPage(0);
   }, []);
+
+  /**
+   * 추가 행동이 들어오고 나갈 때 커서를 처음으로. 1단에서 「도망」에 있던 커서가 그대로
+   * 기술 목록으로 넘어가면, 반드시 골라야 하는 자리에서 엉뚱한 칸이 선택돼 있다.
+   * effect 가 아니라 렌더 중에 맞춘다 — 한 프레임 어긋난 커서를 그리지 않으려고
+   * 이 파일이 이미 쓰고 있는 방식이다.
+   */
+  const [prevExtra, setPrevExtra] = useState(extraTurn);
+  if (prevExtra !== extraTurn) { setPrevExtra(extraTurn); setCursor(0); setPage(0); }
+
+  /** 추가 행동 중에는 단계가 기술 목록에 고정된다 */
+  const level = extraTurn ? "moves" : menu.level;
 
   // ── 셀 구성 ────────────────────────────────────────────────────────────────
   const moveCell = (m: Move): Cell => {
@@ -165,7 +183,7 @@ export function BattleCommandMenu({
   };
 
   let cells: Cell[];
-  if (menu.level === "root") {
+  if (level === "root") {
     cells = [
       {
         key: "moves", label: "기술", sub: `${moves.length}개`,
@@ -188,7 +206,7 @@ export function BattleCommandMenu({
         onSelect: onFlee,
       },
     ];
-  } else if (menu.level === "moves") {
+  } else if (level === "moves") {
     cells = moves.map(moveCell);
   } else {
     cells = potions.map((p) => ({
@@ -206,7 +224,7 @@ export function BattleCommandMenu({
     }));
   }
 
-  const atRoot = menu.level === "root";
+  const atRoot = level === "root";
   const pageCount = Math.max(1, Math.ceil(cells.length / PAGE_SIZE));
   const pageCells = atRoot ? cells : cells.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
   // 커서 클램프는 렌더 시점에 한다. effect 로 setState 하면 한 프레임 어긋난 커서가 그려진다
@@ -261,8 +279,8 @@ export function BattleCommandMenu({
         }
         case "Escape":
           e.preventDefault();
-          // 1단에서는 아무 일도 일어나지 않는다
-          if (!atRoot) goRoot();
+          // 1단에서는 아무 일도 일어나지 않는다. 추가 행동도 무를 곳이 없다
+          if (!atRoot && !extraTurn) goRoot();
           break;
         case "Tab":
           if (pageCount > 1) {
@@ -276,11 +294,12 @@ export function BattleCommandMenu({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [disabled, focused, pageCells, activeCursor, atRoot, goRoot, pageCount, onLeaveLeft]);
+  }, [disabled, focused, pageCells, activeCursor, atRoot, goRoot, pageCount, onLeaveLeft, extraTurn]);
 
   const title =
-    menu.level === "root" ? null
-    : menu.level === "bag" ? "가방 — 물약"
+    extraTurn ? "한 번 더! — 기술을 고르세요"
+    : level === "root" ? null
+    : level === "bag" ? "가방 — 물약"
     : "기술";
 
   return (
@@ -288,18 +307,19 @@ export function BattleCommandMenu({
       className={`flex min-h-0 flex-1 flex-col gap-1.5 rounded-lg p-1 transition-colors ${
         focused ? "bg-mist-500/5" : ""}`}
       data-testid="battle-command"
-      onContextMenu={(e) => { e.preventDefault(); if (!atRoot) goRoot(); }}
+      onContextMenu={(e) => { e.preventDefault(); if (!atRoot && !extraTurn) goRoot(); }}
     >
       {!atRoot && (
         <div className="flex items-center justify-between">
-          <p className="text-pixel-sm font-bold text-sand-300">{title}</p>
+          <p data-testid="cmd-title"
+            className={`text-pixel-sm font-bold ${extraTurn ? "text-ember-500" : "text-sand-300"}`}>{title}</p>
           <div className="flex items-center gap-2">
             {pageCount > 1 && (
               <span className="text-pixel-sm text-earth-400">
                 {page + 1}/{pageCount} · Tab
               </span>
             )}
-            <button
+            {!extraTurn && <button
               type="button"
               data-testid="cmd-back"
               onClick={goRoot}
@@ -307,7 +327,7 @@ export function BattleCommandMenu({
                 transition hover:text-cream-100"
             >
               ESC 뒤로
-            </button>
+            </button>}
           </div>
         </div>
       )}

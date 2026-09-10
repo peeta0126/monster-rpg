@@ -765,6 +765,7 @@ function TowerModal({
   bestFloor,
   cleared,
   partyEmpty,
+  allFainted,
   onSelect,
   onClose,
   onHeal,
@@ -773,11 +774,13 @@ function TowerModal({
   bestFloor: number;
   cleared: boolean;
   partyEmpty: boolean;
+  allFainted: boolean;
   onSelect: (floor: number) => void;
   onClose: () => void;
   onHeal: () => void;
   healed: boolean;
 }) {
+  const blocked = partyEmpty || allFainted;
   const maxSelectable = Math.min(bestFloor + 1, MAX_TOWER_FLOOR);
   const checkpoints: number[] = [1];
   for (let f = 5; f <= maxSelectable; f += 5) checkpoints.push(f);
@@ -811,6 +814,14 @@ function TowerModal({
           </p>
         )}
 
+        {/* 전멸한 채로는 못 오른다. 아래 회복 버튼이 그 자리에서 길을 연다 */}
+        {allFainted && (
+          <p data-testid="tower-all-fainted"
+            className="mb-4 rounded-xl border border-ember-500/50 bg-ember-700/12 px-3 py-2 text-pixel-sm text-ember-500">
+            파티가 전부 기절해 있다. 회복하고 오르자.
+          </p>
+        )}
+
         {/* 회복은 여기서 바로 한다. 원래는 /monsters까지 갔다가 탑 앞까지 다시 걸어와야 했다 */}
         <button
           onClick={onHeal}
@@ -823,13 +834,13 @@ function TowerModal({
         <div className="flex flex-col gap-2">
           <button
             onClick={() => onSelect(1)}
-            disabled={partyEmpty}
+            disabled={blocked}
             className="w-full rounded-xl border border-stone-600 bg-shadow-700/70 py-2.5 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600 disabled:opacity-40 disabled:hover:bg-shadow-700/70 transition"
           >
             1층부터 시작
           </button>
 
-          {!partyEmpty && bestFloor >= 1 && (
+          {!blocked && bestFloor >= 1 && (
             <>
               <div className="text-pixel-sm text-earth-400 text-center pt-1">— 이어하기 —</div>
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
@@ -958,6 +969,14 @@ export default function BaseCampPage() {
   const markDialogueSeen = usePlayerStore((s) => s.markDialogueSeen);
   const grantMonster = usePlayerStore((s) => s.grantMonster);
   const partySize = usePlayerStore((s) => s.party.length);
+  /**
+   * 파티가 전멸한 채로 탑에 다시 들어가는 걸 막는다. 패배가 HP 를 세이브에 남기게 된
+   * 뒤로는 실제로 도달하는 상태다 — 안 막으면 0 HP 짜리를 선봉으로 세운 채 1턴에 지는
+   * 전투가 열린다. 회복 버튼이 바로 위에 있으니 길은 막히지 않는다.
+   */
+  const partyAllFainted = usePlayerStore(
+    (s) => s.party.length > 0 && s.party.every((m) => m.currentHp <= 0),
+  );
   const storyFlags = usePlayerStore((s) => s.storyFlags);
   const craftedPotions = usePlayerStore((s) => s.craftedPotions);
 
@@ -1170,6 +1189,7 @@ export default function BaseCampPage() {
           bestFloor={bestFloor}
           cleared={towerCleared}
           partyEmpty={partySize === 0}
+          allFainted={partyAllFainted}
           onSelect={handleTowerSelect}
           onClose={() => { setTowerPayload(null); setHealed(false); }}
           onHeal={() => { restorePartyHp(); setHealed(true); }}

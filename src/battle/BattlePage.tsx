@@ -187,6 +187,14 @@ export default function BattlePage() {
   const [forgetPrompt, setForgetPrompt] = useState<
     { current: Move[]; incoming: Move; resolve: (idx: number | null) => void } | null
   >(null);
+  /**
+   * 속도 게이지가 찬 턴의 추가 행동. 여기서 기술을 다시 고른다.
+   *
+   * 예전에는 이번 턴에 쓴 기술을 말없이 한 번 더 던졌다. 그러면 속도의 이점이 "같은 기술
+   * 두 번"으로 고정돼서, 상대 속성이 바뀌거나 상태이상을 걸어 두고 싶어도 낼 수가 없다.
+   * 속도가 주는 건 화력이 아니라 선택 한 번이다.
+   */
+  const [extraMovePrompt, setExtraMovePrompt] = useState<((m: Move | null) => void) | null>(null);
 
   // BATTLE_READY 시점에 최신 값을 읽기 위한 참조 (마운트 effect의 클로저는 초기값에 묶여 있다)
   const playerRef = useRef(player);
@@ -260,7 +268,12 @@ export default function BattlePage() {
         (document.querySelector("[data-testid=result-primary]") as HTMLButtonElement | null)?.click();
       } else if (e.key === "Escape") {
         e.preventDefault();
-        (document.querySelector("[data-testid=result-camp], [data-testid=result-primary]") as HTMLButtonElement | null)?.click();
+        // ⚠️ querySelector 는 선택자 순서가 아니라 문서 순서로 첫 놈을 준다. 한 줄에
+        // 묶어 뒀더니 결과 화면에서 위에 있는 result-primary 가 잡혀서, 물러나려고 누른
+        // ESC 가 다음 층으로 데려갔다. 물러날 곳을 먼저 찾고, 없을 때만 주 행동으로 간다.
+        const back = document.querySelector("[data-testid=result-camp]")
+          ?? document.querySelector("[data-testid=result-primary]");
+        (back as HTMLButtonElement | null)?.click();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -357,8 +370,29 @@ export default function BattlePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const finishBattle = useCallback((outcome: "win" | "lose") => {
+  /**
+   * 이 전투에서 깎인 HP 를 세이브로 옮긴다. 도망과 패배가 같은 자리를 쓴다 —
+   * 예전엔 도망만 저장하고 패배는 아무것도 안 남겨서, 지는 쪽이 도망보다 쌌다
+   * (전멸 화면은 "회복하고 오라"고 적는데 정작 캠프에 가면 회복할 게 없었다).
+   * 방금 쓰러진 놈은 setPartyHp 가 아직 반영되기 전이라 인자로 직접 받는다.
+   */
+  const persistPartyHp = useCallback((faintedUid?: string) => {
+    for (let i = 0; i < initialParty.length; i++) {
+      const m = initialParty[i];
+      const hp = m.uid === faintedUid ? 0
+        : i === activePartyIndex ? player.currentHp
+        : (partyHp[m.uid] ?? m.currentHp);
+      updatePartyMember(toPersisted({ ...m, currentHp: Math.max(0, hp) }));
+    }
+  }, [initialParty, activePartyIndex, player, partyHp, updatePartyMember]);
+  /** finishBattle 이 매 렌더 새로 만들어지지 않게 참조로 잡는다 */
+  const persistPartyHpRef = useRef(persistPartyHp);
+  persistPartyHpRef.current = persistPartyHp;
+
+  const finishBattle = useCallback((outcome: "win" | "lose", faintedUid?: string) => {
     if (cancelledRef.current) return;
+    // 승리 쪽은 resolveVictory 가 경험치·진화까지 얹어서 따로 저장한다
+    if (outcome === "lose") persistPartyHpRef.current(faintedUid);
     gameEvents.emit(GAME_EVENT.BATTLE_RESULT, { outcome, floor });
     setBattleOutcome(outcome);
   }, [floor]);
@@ -378,6 +412,12 @@ export default function BattlePage() {
   const answerForget = useCallback((idx: number | null) => {
     setForgetPrompt((p) => { p?.resolve(idx); return null; });
   }, []);
+
+  /** 추가 행동으로 무엇을 낼지 기다린다. 커맨드 메뉴가 답을 넣어 준다 */
+  const askExtraMove = useCallback(
+    () => new Promise<Move | null>((resolve) => setExtraMovePrompt(() => resolve)),
+    [],
+  );
   /** 키보드 쪽에서 부르는 최신 참조 (선언 순서 때문에 effect 가 직접 못 잡는다) */
   const answerForgetRef = useRef(answerForget);
   answerForgetRef.current = answerForget;
@@ -397,17 +437,17 @@ export default function BattlePage() {
    * 도망. 전투를 포기하고 베이스캠프로 돌아간다.
    * 이 전투에서 깎인 HP 는 그대로 저장한다. 도망이 완전 공짜면 위험한 층을 정찰만 하고
    * 빠지는 무손실 전략이 된다. 보스층은 도망 대상이 아니다.
+   *
+   * ⚠️ 전투를 빠져나가는 문은 이거 하나다. 예전엔 상단 띠에 「나가기」가 따로 있었는데
+   * 그냥 navigate("/") 라서 이 규칙을 전부 비켜갔다 — 깎인 HP 가 사라지고, 보스층에서도
+   * 눌렸다. 보스를 반쯤 깎아 놓고 불리하면 무료로 빠져나와 만피로 다시 붙을 수 있었다.
+   * 화면에 두 번째 출구를 만들지 말 것.
    */
   const handleFlee = useCallback(() => {
     if (isProcessing || battleOutcome !== null || isBossFloor(floor)) return;
-    for (let i = 0; i < initialParty.length; i++) {
-      const m = initialParty[i];
-      const hp = i === activePartyIndex ? player.currentHp : (partyHp[m.uid] ?? m.currentHp);
-      updatePartyMember(toPersisted({ ...m, currentHp: Math.max(0, hp) }));
-    }
+    persistPartyHp();
     navigate("/");
-  }, [isProcessing, battleOutcome, floor, initialParty, activePartyIndex, player,
-      partyHp, updatePartyMember, navigate]);
+  }, [isProcessing, battleOutcome, floor, persistPartyHp, navigate]);
 
   /** 파티 구역이 그릴 값. 화면 부품이 스토어 모양을 몰라도 되게 여기서 한 번 빚는다 */
   const partyView = initialParty.map((m, idx) => {
@@ -758,10 +798,12 @@ export default function BattlePage() {
     playerGaugeRef.current = pTick.gauge.charge;
     enemyGaugeRef.current  = eTick.gauge.charge;
 
-    const playerAttack = async (): Promise<boolean> => {
-      if (action.kind === "guard") return false;   // 방어한 턴에는 공격이 없다
+    const playerAttack = async (move?: Move): Promise<boolean> => {
+      // 방어한 턴에는 공격이 없다. 추가 행동은 고른 기술을 직접 들고 온다
+      const chosen = move ?? (action.kind === "move" ? action.move : null);
+      if (!chosen) return false;
       const res = await resolveAttack(
-        np, ne, action.move, np, ne, true,
+        np, ne, chosen, np, ne, true,
         playerBonus.attack, 0, playerBonus.critRate, playerBonus.elementPower,
         playerBonus.elementalDamage, playerBonus.critDamage,
       );
@@ -822,9 +864,16 @@ export default function BattlePage() {
     }
 
     // 속도 차가 쌓인 쪽의 추가 행동. 상태이상 처리는 턴에 한 번뿐이라 여기서는 때리기만 한다.
-    if (!playerWon && !enemyWon && pTick.extra) {
+    // 방어한 턴에는 안 준다 — 막기로 한 턴이 공격 한 번을 덤으로 얻으면 방어가 공짜가 된다.
+    if (!playerWon && !enemyWon && pTick.extra && action.kind === "move" && np.moves.length > 0) {
       await sendLogAndWait(`${withJosa(np.name, "이가")} 한 번 더 움직인다!`);
-      playerWon = await playerAttack();
+      // 고르기 전에 지금까지의 결과를 화면에 올린다. 방금 받은 피해와 상대 HP 를 보고
+      // 골라야 하는데, 라운드 시작값이 그대로 떠 있으면 예측 표시가 거짓말을 한다.
+      setPlayer(np); setEnemyState(ne); syncHpToPhaser(np, ne);
+      setFocusZone("command");
+      // isProcessing 은 켜 둔 채다. 메뉴만 따로 열어 주므로 연타가 새 라운드를 못 연다
+      const extra = await askExtraMove();
+      if (extra) playerWon = await playerAttack(extra);
     } else if (!playerWon && !enemyWon && eTick.extra) {
       await sendLogAndWait(`${withJosa(ne.name, "이가")} 한 번 더 움직인다!`);
       enemyWon = await enemyAttack();
@@ -844,7 +893,7 @@ export default function BattlePage() {
       if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
       setPlayer({ ...np, currentHp: 0 }); setEnemyState(ne);
       if (hasAlivePartyMember(activePartyIndex, uid, 0)) { setMustSwitch(true); setIsProcessing(false); return; }
-      finishBattle("lose"); setIsProcessing(false); return;
+      finishBattle("lose", uid); setIsProcessing(false); return;
     }
 
     const uid = initialParty[activePartyIndex]?.uid;
@@ -855,10 +904,14 @@ export default function BattlePage() {
     isProcessing, battleOutcome, mustSwitch, player, enemyState, floor,
     activePartyIndex, initialParty, resolveAttack, nextEnemyMove, runStatusPhase,
     sendLogAndWait, finishBattle, hasAlivePartyMember, getEquipCombatBonus,
-    resolveVictory, syncGauges, syncHpToPhaser,
+    resolveVictory, syncGauges, syncHpToPhaser, askExtraMove,
   ]);
 
-  const handleMoveClick = useCallback((move: Move) => runRound({ kind: "move", move }), [runRound]);
+  const handleMoveClick = useCallback((move: Move) => {
+    // 추가 행동을 기다리는 중이면 새 라운드가 아니라 그 답이다
+    if (extraMovePrompt) { setExtraMovePrompt(null); extraMovePrompt(move); return; }
+    runRound({ kind: "move", move });
+  }, [extraMovePrompt, runRound]);
   /** 방어. 그 턴 피해 절반에 새 상태이상 차단. 대신 공격이 없다 */
   const handleGuard = useCallback(() => runRound({ kind: "guard" }), [runRound]);
 
@@ -949,7 +1002,7 @@ export default function BattlePage() {
       setPartyHp(prev => ({ ...prev, [nextOwned.uid]: 0 }));
       setPlayer({ ...np2, currentHp: 0 }); setEnemyState(turn.enemy);
       if (hasAlivePartyMember(partyIdx, nextOwned.uid, 0)) setMustSwitch(true);
-      else finishBattle("lose");
+      else finishBattle("lose", nextOwned.uid);
     } else {
       setPartyHp(prev => ({ ...prev, [nextOwned.uid]: np2.currentHp }));
       setPlayer(np2); setEnemyState(turn.enemy);
@@ -981,7 +1034,7 @@ export default function BattlePage() {
       if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
       setPlayer({ ...pre.mon, currentHp: 0 });
       if (hasAlivePartyMember(activePartyIndex, uid, 0)) setMustSwitch(true);
-      else finishBattle("lose");
+      else finishBattle("lose", uid);
       setIsProcessing(false); return;
     }
     if (pre.skip) {
@@ -992,7 +1045,7 @@ export default function BattlePage() {
         if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
         setPlayer({ ...skipped.player, currentHp: 0 }); setEnemyState(skipped.enemy);
         if (hasAlivePartyMember(activePartyIndex, uid, 0)) setMustSwitch(true);
-        else finishBattle("lose");
+        else finishBattle("lose", uid);
       } else {
         if (uid) setPartyHp(prev => ({ ...prev, [uid]: skipped.player.currentHp }));
         setPlayer(skipped.player); setEnemyState(skipped.enemy);
@@ -1044,7 +1097,7 @@ export default function BattlePage() {
       if (uid) setPartyHp(prev => ({ ...prev, [uid]: 0 }));
       setPlayer({ ...np, currentHp: 0 }); setEnemyState(turn.enemy);
       if (hasAlivePartyMember(activePartyIndex, uid, 0)) setMustSwitch(true);
-      else finishBattle("lose");
+      else finishBattle("lose", uid);
     } else {
       if (uid) setPartyHp(prev => ({ ...prev, [uid]: np.currentHp }));
       setPlayer(np); setEnemyState(turn.enemy);
@@ -1134,7 +1187,7 @@ export default function BattlePage() {
 
           <div className="flex shrink-0 items-center gap-2">
             {/* 지금 무엇을 기다리는지. 로그 대기와 내 차례는 다른 상태다 */}
-            {isProcessing && !mustSwitch && (
+            {isProcessing && !mustSwitch && !extraMovePrompt && (
               <span data-testid="log-wait" className="animate-pulse text-pixel-sm text-ember-500">▶ Q / 클릭</span>
             )}
             {/* 자동 진행. 로그 한 줄마다 Q 를 누르는 게 엔딩까지 8천 번이다 */}
@@ -1166,11 +1219,6 @@ export default function BattlePage() {
               className={`text-pixel-sm border rounded px-1.5 py-0.5 transition ${
                 showLog ? "border-stone-600 text-sand-200" : "border-shadow-700 text-earth-400 hover:text-sand-300"}`}>
               기록 L
-            </button>
-            <button onClick={() => navigate("/")}
-              data-testid="cmd-exit"
-              className="text-pixel-sm text-earth-400 hover:text-sand-300 border border-shadow-700 rounded px-1.5 py-0.5">
-              나가기
             </button>
           </div>
         </div>
@@ -1239,7 +1287,8 @@ export default function BattlePage() {
                   moves={player.moves}
                   getPreview={getMovePreview}
                   potions={potionEntries}
-                  disabled={isProcessing}
+                  disabled={isProcessing && !extraMovePrompt}
+                  extraTurn={!!extraMovePrompt}
                   focused={focusZone === "command"}
                   canFlee={!isBossFloor(floor)}
                   fleeBlockedReason="보스는 못 피한다"
@@ -1355,8 +1404,9 @@ export default function BattlePage() {
               {partyView.map((m) => (
                 <p key={m.uid} className="flex items-center justify-between text-pixel-sm">
                   <span className={m.fainted ? "text-earth-400" : "text-sand-200"}>{m.name}</span>
+                  {/* 숫자 두 개만 있으면 HP 인지 경험치인지 화면이 안 말한다 */}
                   <span className={m.fainted ? "text-ember-700" : m.currentHp / m.maxHp <= 0.3 ? "text-ember-500" : "text-sand-300"}>
-                    {m.fainted ? "기절" : `${m.currentHp}/${m.maxHp}`}
+                    {m.fainted ? "기절" : `HP ${m.currentHp}/${m.maxHp}`}
                   </span>
                 </p>
               ))}

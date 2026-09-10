@@ -236,8 +236,9 @@ test.describe("audio:", () => {
     await watch(900, "탑에 들어가는 중");
     await waitForTrack(page, "battle");
 
-    // ── 전투에서 마을로 ──
-    await page.getByRole("button", { name: "나가기" }).click();
+    // ── 전투에서 마을로 (출구는 커맨드 메뉴의 「도망」 하나뿐이다) ──
+    await expect(page.getByTestId("cmd-flee")).toBeEnabled({ timeout: 15_000 });
+    await page.getByTestId("cmd-flee").click();
     await watch(900, "전투에서 나오는 중");
     await waitForTrack(page, "basecamp");
   });
