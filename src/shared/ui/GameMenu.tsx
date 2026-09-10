@@ -18,7 +18,7 @@ import type { IconName } from "./icons";
  */
 
 /** 항목 색조. 강조는 아이콘 칩에만 쓰고 글자는 sand 계열로 둔다 (12px 대비). */
-export type GameMenuTone = "default" | "accent" | "info" | "gold";
+export type GameMenuTone = "default" | "accent" | "info" | "gold" | "nature";
 
 export interface GameMenuItem {
   label: string;
@@ -36,6 +36,8 @@ const TONE_CHIP: Record<GameMenuTone, string> = {
   accent:  "border-ember-700/60 bg-ember-700/11",
   info:    "border-mist-500/60 bg-mist-500/11",
   gold:    "border-ember-500/70 bg-ember-500/10",
+  // 숲처럼 자연을 가리키는 항목. 팔레트의 뜻을 그대로 따른다(moss = 자연/식물)
+  nature:  "border-moss-500/60 bg-moss-500/12",
 };
 
 export function GameMenu({

@@ -35,14 +35,27 @@ interface Track {
   raf: number | null;
   /** 지금 소리를 내고 있나. 다음 곡은 이게 전부 false 가 된 뒤에야 시작한다. */
   playing: boolean;
+  /**
+   * 소리 없이 한 번 틀어 봐서 "이건 실제로 난다"까지 확인됐나. 자동재생 잠금 해제가
+   * 이걸 본다 — 확인된 곡을 잠금 해제라고 다시 걸면 멀쩡한 전환을 끊어 먹는다.
+   */
+  confirmed: boolean;
+  /** 시험 재생의 답을 아직 기다리는 중인가. 기다리는 것을 건드리면 그게 곧 AbortError 다 */
+  attempting: boolean;
 }
 
 /** 지금 이 화면의 곡. 페이드아웃 중인 앞 곡은 여기 없고 live 에만 남는다. */
 let current: Track | null = null;
 /** 볼륨 설정이 바뀌면 페이드 중인 것까지 전부 따라와야 한다 */
 const live = new Set<Track>();
-/** 자동재생이 막혀 아직 못 튼 곡. 첫 상호작용에서 다시 시도한다. */
-let blocked: BgmKey | null = null;
+/**
+ * 화면이 마지막으로 요청한 곡. 자동재생 잠금이 풀렸을 때 무엇을 다시 걸지가 이것이다.
+ *
+ * "막혔다"는 사실만 따로 들고 있으면 안 된다. play() 의 거절은 비동기라, 그 사실이
+ * 기록되기 전에 사용자가 화면을 한 번 건드릴 수 있다. 그러면 잠금 해제가 빈손으로
+ * 돌아가고 거절은 그 뒤에 도착한다 — 아무도 안 보는 곳에.
+ */
+let desired: BgmKey | null = null;
 /**
  * 앞 곡이 사라지기를 기다리는 다음 곡. 하나만 둔다 — 기다리는 사이에 화면이 또
  * 바뀌면 기다리던 것은 버리고 마지막 것만 켠다.
@@ -72,6 +85,23 @@ function warnOnce(key: string) {
   console.warn(`[audio] 파일 없음: ${urlFor(key)} — 소리 없이 계속합니다`);
 }
 
+/**
+ * 파일이 없는 것과 "지금은 못 튼다"는 다르다.
+ *
+ * NotAllowedError 는 자동재생 잠금이고, AbortError 는 재생이 시작되기 전에 우리가
+ * pause() 를 부른 것이다(곡을 갈아탈 때 늘 생긴다). 둘 다 warnOnce 로 보내면 그 곡이
+ * missing 에 들어가 **영구히** 재생 대상에서 빠진다 — 잠금이 풀려도 다시 못 튼다.
+ * 실제로 그랬다: 보스 곡으로 넘어가다 만 전투곡이 missing 에 들어가서, 그 뒤로 전투
+ * 화면이 통째로 보스 곡을 달고 있었다.
+ */
+function isAutoplayBlock(err: unknown): boolean {
+  return err instanceof DOMException && err.name === "NotAllowedError";
+}
+
+function isTransientPlayError(err: unknown): boolean {
+  return isAutoplayBlock(err) || (err instanceof DOMException && err.name === "AbortError");
+}
+
 function makeAudio(key: string): HTMLAudioElement {
   const el = new Audio(urlFor(key));
   el.addEventListener("error", () => warnOnce(key), { once: true });
@@ -81,25 +111,39 @@ function makeAudio(key: string): HTMLAudioElement {
 /**
  * 브라우저 자동재생 정책. 사용자가 한 번 건드리기 전에는 소리가 안 난다.
  *
- * 그래서 일단 틀어 보고, 막히면 기억해 뒀다가 첫 클릭에 다시 시도한다. 처음부터
+ * 그래서 일단 틀어 보고, 안 났으면 사용자가 건드릴 때마다 다시 시도한다. 처음부터
  * 잠금 플래그로 막아 두면, 이미 이 사이트에서 소리를 낸 적 있어 브라우저가 허용해
  * 주는 경우(재방문)에도 클릭할 때까지 조용하다.
  */
 export function unlockAudio(): void {
-  const key = blocked;
-  blocked = null;
-  if (key) playBgm(key);
+  const key = desired;
+  if (!key) return;
+  if (anyPlaying() || pending) return;   // 이미 나거나, 곧 난다
+  // 시험 재생의 답을 기다리는 중이면 그냥 둔다. 여기서 끊으면 그 play() 가 AbortError 로
+  // 떨어지고, 그 거절이 또 잠금 해제를 부르는 쳇바퀴가 된다 — 곡은 영영 시작을 못 한다.
+  if (current?.attempting) return;
+  if (current?.key === key && current.confirmed) return;   // 앞 곡 페이드를 기다리는 중
+
+  // 막혀서 남은 흔적을 치우고 처음부터 다시 건다. 안 치우면 playBgm 의 "같은 곡이면
+  // 아무것도 안 한다" 가 걸려서, 소리가 안 나는 채로 영영 그 곡을 트는 중이 된다.
+  if (current) { const dead = current; current = null; retire(dead); }
+  playBgm(key);
 }
 
-/** 첫 상호작용에서 자동으로 잠금을 푼다. main.tsx 에서 한 번 호출. */
+/**
+ * 사용자가 화면을 건드릴 때마다 잠금 해제를 시도한다. main.tsx 에서 한 번 호출.
+ *
+ * ⚠️ 예전에는 **첫** 상호작용 한 번만 듣고 리스너를 뗐다. 그런데 자동재생 거절은
+ * 비동기라, 페이지가 뜨자마자 아무 데나 한 번 누르면 그 클릭이 잠금 해제를 빈손으로
+ * 태워 버린다 — 거절은 그 다음에 도착하고, 다시 시도할 사람은 이미 없다. 그러면
+ * 그 뒤로 무슨 짓을 해도 게임이 끝까지 조용하다. 크롬에서 실제로 그랬다.
+ *
+ * 그래서 리스너는 그냥 살려 둔다. 소리가 나고 있으면 unlockAudio 가 즉시 돌아가므로
+ * 클릭마다 붙는 비용은 없는 것이나 같다.
+ */
 export function installAudioUnlock(): void {
-  const once = () => {
-    unlockAudio();
-    window.removeEventListener("pointerdown", once);
-    window.removeEventListener("keydown", once);
-  };
-  window.addEventListener("pointerdown", once);
-  window.addEventListener("keydown", once);
+  window.addEventListener("pointerdown", unlockAudio, { passive: true });
+  window.addEventListener("keydown", unlockAudio, { passive: true });
 }
 
 export function playSfx(key: SfxKey): void {
@@ -182,14 +226,15 @@ export function playBgm(
   key: BgmKey,
   { fadeOut = FADE_OUT_MS, fadeIn = FADE_IN_MS } = {},
 ): void {
-  if (current?.key === key) return;
   if (missing.has(key)) return;
+  desired = key;
+  if (current?.key === key) return;
 
   const gen = ++generation;
   const prev = current;
   const el = makeAudio(key);
   el.loop = true;
-  const next: Track = { key, el, gain: 0, raf: null, playing: false };
+  const next: Track = { key, el, gain: 0, raf: null, playing: false, confirmed: false, attempting: true };
   current = next;
   live.add(next);
   applyVolume(next);   // 0 — 아직 안 들린다
@@ -198,7 +243,8 @@ export function playBgm(
   // 확인만 하고 바로 멈춘 뒤, 앞 곡이 사라지면 처음부터 다시 켠다. 확인 전에 앞 곡을
   // 내리면 파일이 없거나 자동재생이 막혔을 때 정적만 남는다.
   void el.play().then(() => {
-    blocked = null;
+    next.attempting = false;
+    next.confirmed = true;
     el.pause();
     el.currentTime = 0;
     if (gen !== generation) { retire(next); return; }
@@ -208,7 +254,10 @@ export function playBgm(
       next.playing = true;
       // 페이드는 기다리지 않고 지금 시작한다. play() 가 풀리기를 기다리면 그 사이가
       // 그대로 정적이 된다 — 이미 재생 가능한 걸 확인한 요소라 바로 이어진다.
-      void el.play().catch(() => { warnOnce(key); retire(next); });
+      void el.play().catch((err: unknown) => {
+        if (!isTransientPlayError(err)) warnOnce(key);
+        retire(next);
+      });
       fadeTo(next, 1, fadeIn);
     };
 
@@ -220,11 +269,15 @@ export function playBgm(
     }
     startPending();
   }).catch((err: unknown) => {
+    next.attempting = false;
     // 못 틀었으면 없던 일로 되돌린다. 앞 곡은 그대로 흐르고, 다음에 다시 부르면 재시도한다
     if (current === next) current = prev;
     retire(next);
-    if (err instanceof DOMException && err.name === "NotAllowedError") blocked = key;
-    else warnOnce(key);
+    if (!isTransientPlayError(err)) { warnOnce(key); return; }
+    if (!isAutoplayBlock(err)) return;   // 갈아타다 끊긴 것. 다음 곡이 이미 오는 중이다
+    // 자동재생 잠금이었다면, 거절이 굴러오는 사이에 이미 사용자가 화면을 건드렸을 수
+    // 있다. 그 상호작용은 풀 것이 없어 빈손으로 지나갔으니 여기서 한 번 더 두드린다.
+    if (navigator.userActivation?.hasBeenActive) queueMicrotask(unlockAudio);
   });
 }
 
@@ -236,6 +289,7 @@ export function playBgm(
 export function stopBgm({ fade = FADE_OUT_MS } = {}): void {
   generation++;   // 기다리던 다음 곡이 있으면 버린다
   pending = null;
+  desired = null; // 여기서 껐는데 다음 클릭이 되살리면 안 된다
   const cur = current;
   if (!cur) return;
   current = null;

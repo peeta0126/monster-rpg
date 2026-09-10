@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- 윤곽. 다른 메뉴 아이콘과 같은 방식으로 뒤에 한 겹 깔아 테두리를 만든다 -->
+  <rect x="12" y="2"  width="8"  height="6" fill="#1a1a1a"/>
+  <rect x="8"  y="8"  width="16" height="6" fill="#1a1a1a"/>
+  <rect x="4"  y="14" width="24" height="8" fill="#1a1a1a"/>
+  <rect x="13" y="22" width="6"  height="6" fill="#1a1a1a"/>
+  <rect x="2"  y="28" width="28" height="2" fill="#1a1a1a"/>
+
+  <!-- 잎. 왼쪽은 볕, 오른쪽은 그늘(moss-500 / moss-700) -->
+  <rect x="13" y="3"  width="3"  height="4" fill="#7A8455"/>
+  <rect x="16" y="3"  width="3"  height="4" fill="#39412A"/>
+  <rect x="9"  y="9"  width="7"  height="4" fill="#7A8455"/>
+  <rect x="16" y="9"  width="7"  height="4" fill="#39412A"/>
+  <rect x="5"  y="15" width="11" height="6" fill="#7A8455"/>
+  <rect x="16" y="15" width="11" height="6" fill="#39412A"/>
+
+  <!-- 줄기 -->
+  <rect x="14" y="22" width="2"  height="5" fill="#844B3F"/>
+  <rect x="16" y="22" width="2"  height="5" fill="#423D46"/>
+
+  <!-- 땅 -->
+  <rect x="3"  y="28" width="26" height="1" fill="#7A8455"/>
+</svg>

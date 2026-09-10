@@ -5,7 +5,7 @@ import { MONSTER_IMAGE_MAP } from "./monsterImages";
 import { getFullLearnset } from "./learnset";
 import { monsters, DEX_TOTAL, dexCount } from "./monsters";
 import {
-  withImprint, imprintStatus, imprintStars, chainKeyOf, MAX_IMPRINT_TIER,
+  withImprint, imprintStatus, imprintStars, chainKeyOf, chainMembers, imprintGain, MAX_IMPRINT_TIER,
 } from "./imprint";
 import { ImprintModal } from "./ImprintModal";
 import type { ArtifactInstance } from "../shared/crafting";
@@ -14,9 +14,10 @@ import {
   QUALITY_COLOR, QUALITY_LABEL, sumEquippedStatBonuses,
 } from "../shared/craftingUtils";
 import { PALETTE, rgba, ELEMENT_COLOR, ELEMENT_CHIP_CLASS } from "../shared/palette";
+import { ELEMENT_KO, elementIdsOf } from "../shared/game";
 import { GameBackground } from "../shared/ui/GameBackground";
 import { josa, withJosa } from "../shared/josa";
-import { StatBar, PixelButton } from "../shared/ui";
+import { StatBar, PixelButton, ConfirmDialog } from "../shared/ui";
 import { PixelIcon } from "../shared/ui/PixelIcon";
 import { ArtifactCard } from "../shared/ui/ArtifactCard";
 import { isIconName, type IconName } from "../shared/ui/icons";
@@ -27,11 +28,10 @@ export interface EquipStatBonus { attack: number; defense: number; speed: number
 const ZERO_EQUIP_BONUS: EquipStatBonus = { attack: 0, defense: 0, speed: 0 };
 
 // ─── 속성 상수 ────────────────────────────────────────────────────────────────────
-const TYPE_KO: Record<string, string> = {
-  fire:"불꽃", water:"물", grass:"풀", electric:"전기", ice:"얼음", normal:"노말",
-  poison:"독",
-  none:"무속성",
-};
+// 한글 이름은 공용 표(shared/game 의 ELEMENT_KO)를 그대로 쓴다. 여기에 사본을 두면
+// 속성을 더한 날 이 화면만 빈 칩을 그린다 — 실제로 크리스탈이 그럴 뻔했다.
+// 무속성(none)만 이 화면에서 쓰는 값이라 여기서 잇는다.
+const TYPE_KO: Record<string, string> = { ...ELEMENT_KO, none: "무속성" };
 
 // 속성 색은 shared/palette.ts 의 ELEMENT_COLOR 가 단일 출처다 (숲·전투와 동일).
 // 무속성(none)만 이 화면에서 쓰는 값이라 여기서 노말과 같게 둔다.
@@ -133,28 +133,22 @@ function ScrollFade() {
 }
 
 // ─── ReleaseButton ─────────────────────────────────────────────────────────────
-/** 두 번 눌러야 나간다. 되돌릴 수 없는 조작이라 첫 클릭은 확인으로만 쓴다. */
+/**
+ * 놓아주기. 누르면 화면 가운데 확인창이 뜬다.
+ *
+ * 예전엔 이 버튼이 그 자리에서 「정말?」로 바뀌었다. 손이 이미 그 자리에 있으니 연타
+ * 한 번이 곧 실행이었고, 2.5초가 지나면 혼자 풀려서 언제 눌러야 나가는지 사람이 셀 수
+ * 없었다. 되돌릴 수 없는 조작은 버튼 자리에서 묻지 않는다(CLAUDE.md).
+ */
 function ReleaseButton({ disabled, onRelease }: { disabled: boolean; onRelease: () => void }) {
-  const [pending, setPending] = useState(false);
-
-  const handleClick = () => {
-    if (!pending) {
-      setPending(true);
-      setTimeout(() => setPending(false), 2500);
-    } else {
-      setPending(false);
-      onRelease();
-    }
-  };
-
   return (
     <PixelButton
-      variant={pending ? "primary" : "danger"}
+      variant="danger"
       disabled={disabled}
       data-testid="action-release"
-      onClick={handleClick}
+      onClick={onRelease}
     >
-      {pending ? "정말?" : "놓아주기"}
+      놓아주기
     </PixelButton>
   );
 }
@@ -354,13 +348,18 @@ function MonsterStatusPanel({
   }
 
   const acc = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
-  const stats: [string, number, number][] = [
-    ["HP", monster.maxHp, 0],
-    ["공격", monster.attack, equipBonus.attack],
-    ["방어", monster.defense, equipBonus.defense],
-    ["속도", monster.speed, equipBonus.speed],
+  const typeIds = elementIdsOf(monster);
+  // 각인이 얹은 몫은 이미 monster 안에 녹아 있다. 얼마가 각인 몫인지는 여기서만 읽힌다
+  const gain = imprintGain(monster);
+  /** [이름, 기본값, 장비 몫, 각인 몫] */
+  const stats: [string, number, number, number][] = [
+    ["HP",   monster.maxHp,   0,                  gain.maxHp],
+    ["공격", monster.attack,  equipBonus.attack,  gain.attack],
+    ["방어", monster.defense, equipBonus.defense, gain.defense],
+    ["속도", monster.speed,   equipBonus.speed,   gain.speed],
   ];
   const status    = imprintStatus(chainKeyOf(monster), imprint);
+  const chainNames = chainMembers(status.key).map((m) => m.name);
   const nextLearn = getFullLearnset(monster.id).find((e) => e.level > monster.level);
   const evoTo     = monster.evolvesTo ? monsters.find((m) => m.id === monster.evolvesTo) : undefined;
   const fainted   = monster.currentHp === 0;
@@ -387,9 +386,12 @@ function MonsterStatusPanel({
             <p className="truncate text-title-sm font-black text-cream-100">{monster.nickname ?? monster.name}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
               <span className="text-pixel-sm font-bold text-sand-300">Lv.{monster.level}</span>
-              <span className={`rounded-full border px-1.5 text-pixel-sm font-bold ${acc.label}`}>
-                {TYPE_KO[monster.type ?? "none"] ?? ""}
-              </span>
+              {typeIds.map((t) => (
+                <span key={t}
+                  className={`rounded-full border px-1.5 text-pixel-sm font-bold ${TYPE_ACCENT[t].label}`}>
+                  {TYPE_KO[t]}
+                </span>
+              ))}
               {/* 파티인지 보관함인지가 곧 뭘 할 수 있는지다. 아래 버튼의 근거를 여기서 밝힌다 */}
               <span className="rounded-full border px-1.5 text-pixel-sm font-bold"
                 style={{
@@ -442,16 +444,22 @@ function MonsterStatusPanel({
         <div>
           <SectionLabel>종합 능력치</SectionLabel>
           <div className="grid grid-cols-2 gap-2">
-            {stats.map(([label, base, bonus]) => (
+            {stats.map(([label, base, bonus, imprinted]) => (
               <div key={label} data-testid={`stat-${label}`}
                 className="flex flex-col items-center rounded-lg py-2" style={boxStyle}>
                 <span className="text-pixel-sm font-bold text-earth-400">{label}</span>
                 <span data-testid={`stat-${label}-value`} className="mt-0.5 text-pixel-sm font-black text-sand-200">
                   {label === "HP" ? `${monster.currentHp}/${monster.maxHp}` : base + bonus}
                 </span>
+                {/* 어디서 온 몫인지 색으로 가른다. 장비는 초록, 각인은 주황(각인 상자와 같은 색) */}
                 {bonus > 0 && (
                   <span data-testid={`stat-${label}-bonus`} className="text-pixel-sm font-bold text-moss-500">
-                    +{bonus}
+                    장비 +{bonus}
+                  </span>
+                )}
+                {imprinted > 0 && (
+                  <span data-testid={`stat-${label}-imprint`} className="text-pixel-sm font-bold text-ember-500">
+                    각인 +{imprinted}
                   </span>
                 )}
               </div>
@@ -503,10 +511,18 @@ function MonsterStatusPanel({
                 {status.tier} / {MAX_IMPRINT_TIER}
               </span>
             </div>
+            {/* 계열 이름(「모시 계열」)을 적으면, 「모치」를 보고 있는 사람은 그게 자기
+                얘긴지 모른다. 지금 보는 몬스터의 이름으로 적고, 계열이라는 사실은
+                아래 한 줄로 따로 말한다. */}
             <p className="mt-1.5 text-pixel-sm text-sand-300">
-              {status.label} 전원 능력치{" "}
+              {withJosa(monster.name, "은는")} 능력치{" "}
               <span className="font-bold text-sand-200">+{status.tier * 5}%</span>
             </p>
+            {chainNames.length > 1 && (
+              <p className="mt-1 text-pixel-sm text-earth-400">
+                진화 전후({chainNames.join(" · ")})가 각인을 함께 쓴다.
+              </p>
+            )}
             <p className="mt-1 text-pixel-sm text-earth-400">
               {status.maxed
                 ? "더 올릴 등급이 없다."
@@ -606,6 +622,7 @@ function MonsterCard({
 }) {
   const isFainted = monster.currentHp === 0;
   const acc       = TYPE_ACCENT[monster.type ?? "none"] ?? TYPE_ACCENT.normal;
+  const typeIds   = elementIdsOf(monster);
   const imgSize   = size === "lg" ? "w-20 h-20" : size === "md" ? "w-14 h-14" : "w-11 h-11";
   const row       = layout === "row";
 
@@ -655,10 +672,12 @@ function MonsterCard({
           </p>
           <div className={`mt-0.5 flex flex-wrap items-center gap-1 ${row ? "" : "justify-center"}`}>
             <span className="text-pixel-sm font-bold text-sand-300">Lv.{monster.level}</span>
-            <span className={`rounded-full border px-1 text-pixel-sm font-bold ${acc.label}`}
-              style={{ paddingTop: 0, paddingBottom: 0 }}>
-              {TYPE_KO[monster.type ?? "none"] ?? ""}
-            </span>
+            {typeIds.map((t) => (
+              <span key={t} className={`rounded-full border px-1 text-pixel-sm font-bold ${TYPE_ACCENT[t].label}`}
+                style={{ paddingTop: 0, paddingBottom: 0 }}>
+                {TYPE_KO[t]}
+              </span>
+            ))}
             {/* 기절은 카드 전체를 덮는 오버레이였다. 그 밑의 HP 숫자가 안 읽혔다.
                 칩으로 내려 세우고, 흑백이 된 그림과 빈 HP 바가 같은 말을 거든다. */}
             {isFainted && (
@@ -794,9 +813,14 @@ export default function MonstersPage() {
   // 화면 가운데 320px 이 통째로 놀고, 이제 조작이 전부 여기 있어서 "무엇부터 눌러야
   // 하는지"까지 같이 사라진다.
   const [detailUid, setDetailUid] = useState<string | null>(null);
+  /** 놓아주기 확인을 기다리는 몬스터. 화면 가운데 확인창이 이 값을 보고 뜬다 */
+  const [releaseUid, setReleaseUid] = useState<string | null>(null);
   const shownUid = detailUid ?? party[0]?.uid ?? null;
   const detailMonster = shownUid
     ? ([...party, ...storage].find((m) => m.uid === shownUid) ?? null)
+    : null;
+  const releaseTarget = releaseUid
+    ? ([...party, ...storage].find((m) => m.uid === releaseUid) ?? null)
     : null;
   const detailPartyIndex = detailMonster ? party.findIndex((m) => m.uid === detailMonster.uid) : -1;
   const detailInParty    = detailPartyIndex >= 0;
@@ -806,7 +830,9 @@ export default function MonstersPage() {
       if (e.key !== "Escape") return;
       if (imprintKey) { setImprintKey(null); return; }
       if (equipModalUid) { setEquipModalUid(null); return; }
-      navigate("/", { state: { openMenu: true } });
+      // 나갈 때 메뉴를 다시 열지 않는다. 화면을 닫았는데 그 자리에 메뉴가 떠 있으면
+      // 마을로 나온 게 아니라 반쯤 나온 셈이 된다(숲·공방은 원래 안 열었다).
+      navigate("/");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -894,11 +920,12 @@ export default function MonstersPage() {
     return { attack: totals.attack, defense: totals.defense, speed: totals.speed };
   };
 
-  const storageTypes = [...new Set(storage.map((m) => m.type))]
-    .filter((t): t is NonNullable<typeof t> => t !== null);
+  // 부속성까지 센다. 칩을 둘 달아 놓고 한쪽으로는 못 거르면 그 칩이 장식이 된다
+  const storageTypes = [...new Set(storage.flatMap((m) => [m.type, m.type2]))]
+    .filter((t): t is NonNullable<typeof t> => !!t);
 
   const filteredStorage = [...storage]
-    .filter((m) => typeFilter === "all" || m.type === typeFilter)
+    .filter((m) => typeFilter === "all" || m.type === typeFilter || m.type2 === typeFilter)
     .sort((a, b) => {
       if (sortBy === "level") return b.level - a.level;
       if (sortBy === "hp")    return (b.currentHp / b.maxHp) - (a.currentHp / a.maxHp);
@@ -974,7 +1001,7 @@ export default function MonstersPage() {
                   style={{ background: rgba("moss500", 0.36), animation: "bubblePop .6s ease" }} />
               )}
               <span className="relative">
-                {restoreAnim ? "회복 완료!" : faintedCount > 0 ? `HP 전회복 (${faintedCount}마리 기절)` : "파티 HP 전회복"}
+                {restoreAnim ? "회복 완료!" : faintedCount > 0 ? `HP 전회복 (${faintedCount}마리 기절)` : "HP 전회복"}
               </span>
             </PixelButton>
           </div>
@@ -1041,7 +1068,7 @@ export default function MonstersPage() {
           onTogglePartySlot={handleTogglePartySlot}
           onOpenEquip={() => detailMonster && setEquipModalUid(detailMonster.uid)}
           onOpenImprint={setImprintKey}
-          onRelease={() => detailMonster && handleRelease(detailMonster.uid)}
+          onRelease={() => detailMonster && setReleaseUid(detailMonster.uid)}
         />
 
         {/* 보관함 */}
@@ -1118,6 +1145,16 @@ export default function MonstersPage() {
       </div>
 
       {/* ── 각인 모달 ── */}
+      {releaseTarget && (
+        <ConfirmDialog
+          message={`${withJosa(releaseTarget.nickname ?? releaseTarget.name, "을를")} 놓아주시겠습니까?`}
+          detail={`Lv.${releaseTarget.level} · ${elementIdsOf(releaseTarget).map((t) => ELEMENT_KO[t]).join(" / ") || "무속성"} — 놓아준 몬스터는 돌아오지 않습니다`}
+          confirmLabel="놓아주기"
+          onConfirm={() => { handleRelease(releaseTarget.uid); setReleaseUid(null); }}
+          onCancel={() => setReleaseUid(null)}
+        />
+      )}
+
       {imprintKey && <ImprintModal chainKey={imprintKey} onClose={() => setImprintKey(null)} />}
 
       {/* ── 장비 모달 ── */}

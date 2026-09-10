@@ -6,7 +6,12 @@ import type {
   ArtifactInstance,
   ItemQuality,
 } from "./crafting";
+import { elementDamageKey } from "./crafting";
+import { ELEMENT_KO, type ElementType } from "./game";
 import { PALETTE, rgba, type PaletteName } from "./palette";
+
+/** 여덟 속성. 표를 도는 순서도 여기 한 벌이다 */
+const ELEMENTS = Object.keys(ELEMENT_KO) as ElementType[];
 
 export type RpsResult = "win" | "draw" | "lose";
 
@@ -133,24 +138,53 @@ export function sumEquippedStatBonuses(
 }
 
 /**
+ * 같은 속성이 여럿 붙었을 때 한 속성이 받을 수 있는 최대치(%).
+ *
+ * **더한다.** 불꽃 +12% 가 둘이면 24% 이고, 곱하지 않는다(1.12² = 25.4%). 이유는
+ * 계산이 아니라 읽기다 — 카드마다 "+12%" 가 적혀 있으니 사람은 그걸 더해서 읽는다.
+ * 곱으로 처리하면 화면의 숫자를 더한 값과 실제가 어긋나고, 그 차이(1.4%p)는 어차피
+ * 아무도 눈으로 못 잡는다. 더하기 쪽이 맞고, 설명할 수 있다.
+ *
+ * 상한을 두는 이유는 데미지 식이 나눗셈이라서다. 속성 데미지는 자속 보정
+ * (elementPower)·상성 2배와 **연달아 곱해지므로**, 한 속성에 몰아주면 그 속성 기술
+ * 하나가 판을 정한다. 지금 표에서 한 속성이 실제로 얻을 수 있는 최대는 24%(장비 두
+ * 곳에서 하나씩)라 이 값은 안 걸린다 — 걸리지 않는 게 정상이고, 나중에 표를 넓혔을 때
+ * 조용히 넘어가지 말라고 둔 난간이다.
+ */
+export const ELEMENT_DAMAGE_CAP = 30;
+
+export interface EquippedBonusTotals {
+  /** 기술 속성별 데미지 증가(%). 여덟 속성이 전부 들어 있고 없는 것은 0 이다 */
+  elementDamage: Record<ElementType, number>;
+  critDamage: number;
+}
+
+/**
  * 장착한 아티팩트 전체의 부가 능력치(레벨 10마다 랜덤 해제) 합계.
  * maxHpFlat 은 sumEquippedStatBonuses 의 hp 에 이미 들어가 있어서 여기서는 뺀다.
  * 레벨·강화 배율은 안 먹인다. 부가 능력치는 해제된 값 그대로 고정이다.
+ *
+ * 속성 데미지를 여기서 **표 한 벌로 내보내는** 이유가 있다. 예전에는 전투 화면과
+ * 시뮬레이터가 각자 `if (bonus.fireDamage) map.fire = ...` 를 손으로 적었고, 그래서
+ * 살아 있는 속성이 둘(불꽃·물)뿐이라는 사실이 호출부 두 곳에 숨어 있었다.
  */
-export function sumEquippedBonusStats(
-  equipped: ArtifactInstance[],
-): Record<Exclude<ArtifactBonusStatType, "maxHpFlat">, number> {
-  const totals = {
-    fireDamage: 0, waterDamage: 0, windDamage: 0, earthDamage: 0,
-    critDamage: 0, expBonus: 0,
-  };
+export function sumEquippedBonusStats(equipped: ArtifactInstance[]): EquippedBonusTotals {
+  const elementDamage = Object.fromEntries(ELEMENTS.map((e) => [e, 0])) as Record<ElementType, number>;
+  let critDamage = 0;
+
   for (const a of equipped) {
     for (const b of a.bonusStats ?? []) {
       if (b.type === "maxHpFlat") continue;
-      totals[b.type] += b.value;
+      if (b.type === "critDamage") { critDamage += b.value; continue; }
+      const element = ELEMENTS.find((e) => elementDamageKey(e) === b.type);
+      if (element) elementDamage[element] += b.value;
+      // 표에 없는 이름(옛 세이브의 windDamage 같은 것)은 조용히 흘린다.
+      // 마이그레이션이 살아 있는 것으로 갈아 주지만, 그 사이의 로드도 안 죽어야 한다.
     }
   }
-  return totals;
+
+  for (const e of ELEMENTS) elementDamage[e] = Math.min(ELEMENT_DAMAGE_CAP, elementDamage[e]);
+  return { elementDamage, critDamage };
 }
 
 /**
@@ -224,45 +258,67 @@ export interface ArtifactBonusStatDef {
   label: string;
 }
 
+/** 속성 데미지 한 줄의 값(%). 굴림마다 다르게 하지 않는다 — 같은 속성이 장비에 따라
+ *  다른 값으로 붙으면 "무엇을 모아야 하나"를 읽을 수 없다 */
+const ELEMENT_DAMAGE_VALUE = 12;
+
+/** 속성 데미지 후보 한 줄 만들기. 이름은 ELEMENT_KO 한 벌에서 온다 */
+function elementDamage(type: ElementType, value = ELEMENT_DAMAGE_VALUE): ArtifactBonusStatDef {
+  return {
+    type: elementDamageKey(type),
+    value,
+    label: `${ELEMENT_KO[type]} 데미지 +${value}%`,
+  };
+}
+
 /**
- * 아티팩트 itemId별 부가 능력치 후보 풀
- * 레벨 10 달성마다 미해제 항목 중 1개를 랜덤 획득
+ * 아티팩트 itemId별 부가 능력치 후보 풀.
+ * 레벨 10 달성마다 미해제 항목 중 1개를 랜덤 획득한다(`rollBonusStats`).
+ *
+ * ── 표를 다시 짠 이유 ──────────────────────────────────────────────────────
+ * 옛 표에는 죽은 굴림이 세 종류 있었다.
+ *   · `windDamage` · `earthDamage` — 이 게임에 없는 속성. 카드에는 값이 적히는데
+ *     어떤 기술도 그 타입이 아니라 데미지가 1 도 안 올랐다.
+ *   · 같은 `type` 을 두 줄 적어 둔 것 — 해제는 **타입 단위로 중복을 걸러서**
+ *     (`rollBonusStats`) 뒤에 적은 줄이 영영 안 나온다. 수호의 팔찌와 정령의 부적이
+ *     그래서 실질 후보가 넷뿐이었고, 만렙 정예(해제 다섯 번)의 마지막 한 번이 빈손이었다.
+ *   · `expBonus` — 레벨차 컷오프(`expLevelGapMultiplier`)가 들어간 뒤로는 곱해도
+ *     컷오프를 못 넘는다. 지금은 타입에서 아예 뺐다.
+ * 그 셋을 걷어내면 여덟 속성 중 실제로 데미지가 붙는 건 불꽃·물 둘뿐이었다.
+ *
+ * ── 지금 규칙 ─────────────────────────────────────────────────────────────
+ * 장비마다 성격이 있다. 목걸이는 치고 들어가는 속성, 팔찌는 버티는 속성, 부적은
+ * **여덟 속성 전부**다(기본 능력치가 속성 능력 + 속도인 물건이라 여기가 제자리다).
+ * 후보를 해제 횟수보다 하나 이상 많게 둬서, 같은 장비 두 개가 같은 값으로 안 자란다.
  */
 export const ARTIFACT_BONUS_POOL: Record<string, ArtifactBonusStatDef[]> = {
+  // 힘의 목걸이 — 공격·치명타. 먼저 때리는 쪽 속성을 모아 둔다
   power_necklace: [
-    { type: "fireDamage",   value: 5,  label: "화염 데미지 +5%" },
-    { type: "waterDamage",  value: 4,  label: "수류 데미지 +4%" },
-    { type: "windDamage",   value: 4,  label: "풍속 데미지 +4%" },
-    { type: "critDamage",   value: 8,  label: "치명타 데미지 +8%" },
-    { type: "maxHpFlat",    value: 30, label: "최대 HP +30" },
+    elementDamage("fire"),
+    elementDamage("electric"),
+    elementDamage("poison"),
+    elementDamage("normal"),
+    { type: "critDamage", value: 12, label: "치명타 데미지 +12%" },
+    { type: "maxHpFlat",  value: 50, label: "최대 HP +50" },
   ],
+  // 수호의 팔찌 — HP·방어. 버티는 쪽 속성
   guard_bracelet: [
-    { type: "maxHpFlat",    value: 50, label: "최대 HP +50" },
-    { type: "waterDamage",  value: 5,  label: "수류 데미지 +5%" },
-    { type: "earthDamage",  value: 5,  label: "대지 데미지 +5%" },
-    // 원래 경험치 +5% 자리. 레벨차 컷오프(battleUtils.expLevelGapMultiplier)가 들어가면서
-    // 경험치는 "층을 올라가면 붙는 것"이 됐고, 곱해 봐야 컷오프를 못 넘어서 죽은 굴림이 됐다.
-    { type: "maxHpFlat",    value: 40, label: "최대 HP +40" },
-    { type: "critDamage",   value: 6,  label: "치명타 데미지 +6%" },
+    { type: "maxHpFlat",  value: 80, label: "최대 HP +80" },
+    elementDamage("water"),
+    elementDamage("grass"),
+    elementDamage("ice"),
+    elementDamage("crystal"),
+    { type: "critDamage", value: 10, label: "치명타 데미지 +10%" },
   ],
-  spirit_amulet: [
-    { type: "maxHpFlat",    value: 60, label: "최대 HP +60" },
-    { type: "windDamage",   value: 6,  label: "풍속 데미지 +6%" },
-    { type: "critDamage",   value: 10, label: "치명타 데미지 +10%" },
-    { type: "critDamage",   value: 6,  label: "치명타 데미지 +6%" },
-    { type: "fireDamage",   value: 5,  label: "화염 데미지 +5%" },
-  ],
+  // 정령의 부적 — 속성 그 자체. 여덟 속성이 다 후보고, 만렙 정예가 그중 다섯을 갖는다
+  spirit_amulet: ELEMENTS.map((e) => elementDamage(e)),
 };
 
 export const ARTIFACT_BONUS_STAT_LABEL: Record<ArtifactBonusStatType, string> = {
-  fireDamage:  "화염 데미지",
-  waterDamage: "수류 데미지",
-  windDamage:  "풍속 데미지",
-  earthDamage: "대지 데미지",
-  critDamage:  "치명타 데미지",
-  maxHpFlat:   "최대 HP",
-  expBonus:    "경험치 획득",
-};
+  ...Object.fromEntries(ELEMENTS.map((e) => [elementDamageKey(e), `${ELEMENT_KO[e]} 데미지`])),
+  critDamage: "치명타 데미지",
+  maxHpFlat:  "최대 HP",
+} as Record<ArtifactBonusStatType, string>;
 
 /**
  * 레벨 업 뒤에 부가 능력치를 해제할지, 해제한다면 뭘 줄지.
@@ -289,6 +345,48 @@ export function rollBonusStats(
   }
 
   return result;
+}
+
+/**
+ * 세이브에 든 부가 능력치를 지금 표에 맞춘다. 로드마다 지난다(playerStore.normalizeState).
+ *
+ * 하는 일이 셋이다.
+ *   1) 표에 없는 이름을 버린다 — 옛 세이브의 `windDamage` · `earthDamage` · `expBonus`.
+ *      전부 아무 일도 안 하면서 카드에는 값이 적혀 있던 줄이다.
+ *   2) 남은 줄의 값·이름을 표에서 다시 읽는다. 안 그러면 같은 "불꽃 데미지" 가 옛
+ *      세이브에서는 5%, 새 장비에서는 12% 로 붙는다 — 화면만 보고는 알 수 없다.
+ *   3) 레벨이 주는 만큼(10마다 하나) 모자라면 채운다. 버린 자리를 살아 있는 것으로
+ *      갈아 주는 것이고, 덤으로 옛 중복 버그(같은 type 두 줄을 적어 둬서 만렙 정예의
+ *      마지막 해제가 빈손이던 것)도 여기서 메워진다.
+ *
+ * 굴림이 들어가지만 한 번만 돈다 — 개수가 맞으면 그대로 돌려주므로 로드마다 안 바뀐다.
+ */
+export function repairBonusStats(
+  itemId: string,
+  level: number,
+  existing: ArtifactBonusStat[] | undefined,
+): ArtifactBonusStat[] {
+  const pool = ARTIFACT_BONUS_POOL[itemId] ?? [];
+  if (pool.length === 0) return [];
+
+  const held = new Set<ArtifactBonusStatType>();
+  const kept: ArtifactBonusStat[] = [];
+  for (const b of existing ?? []) {
+    const def = pool.find((p) => p.type === b.type);
+    if (!def || held.has(def.type)) continue;
+    held.add(def.type);
+    kept.push({ type: def.type, value: def.value, label: def.label });
+  }
+
+  const want = Math.min(Math.floor(level / 10), pool.length);
+  while (kept.length < want) {
+    const available = pool.filter((p) => !held.has(p.type));
+    if (available.length === 0) break;
+    const pick = available[Math.floor(Math.random() * available.length)];
+    held.add(pick.type);
+    kept.push({ type: pick.type, value: pick.value, label: pick.label });
+  }
+  return kept;
 }
 
 export function applyArtifactQualityStats(

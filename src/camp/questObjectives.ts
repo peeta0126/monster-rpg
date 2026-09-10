@@ -50,9 +50,17 @@ export interface QuestProgress {
   label: string;
 }
 
-/** 그 속성으로 잡아 둔 종이 있는가 */
+/**
+ * 그 속성으로 잡아 둔 종이 있는가.
+ *
+ * 부속성도 센다. 화면이 「독」 칩을 달아 준 몬스터를 잡아 왔는데 퀘스트가 안 끝나면
+ * 그건 버그로 읽힌다 — 포자무스(풀/독)·버블돈(물/독)이 그 자리다.
+ */
 function caughtOfType(dexCaught: string[], elementType: ElementType): boolean {
-  return dexCaught.some((id) => monsters.find((m) => m.id === id)?.type === elementType);
+  return dexCaught.some((id) => {
+    const m = monsters.find((x) => x.id === id);
+    return m?.type === elementType || m?.type2 === elementType;
+  });
 }
 
 export function evaluateObjective(o: QuestObjective, s: QuestSnapshot): QuestProgress {
@@ -111,9 +119,22 @@ export function objectiveWhere(o: QuestObjective): string {
     case "material":      return "숲";
     case "floor":         return "탑";
     case "catchType":     return "숲";
-    case "equipped":      return "집";
-    case "artifactLevel": return "집";
-    case "potion":        return "집";
+    case "equipped":      return "집 안 공방";
+    case "artifactLevel": return "집 안 공방";
+    case "potion":        return "집 안 공방";
+  }
+}
+
+/**
+ * 걷지 않고 가는 길. 메뉴에 항목이 있는 곳만 돌려준다(목표 띠와 같은 규칙).
+ * 공방은 걸어야만 닿으므로 null 이다.
+ */
+export function objectiveVia(o: QuestObjective): string | null {
+  switch (o.kind) {
+    case "material":
+    case "catchType":     return "메뉴 → 숲";
+    case "floor":         return "메뉴 → 무한의 탑";
+    default:              return null;
   }
 }
 

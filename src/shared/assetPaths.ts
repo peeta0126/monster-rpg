@@ -37,7 +37,7 @@ export const FOREST_BG_DEEP    = "/assets/forest/forest_deep.webp";
 export const FOREST_BG_ANCIENT = "/assets/forest/forest_ancient.webp";
 
 /**
- * 무한의 탑 전투 배경 (960x540, 35장 = 구간 5 × 속성 7).
+ * 무한의 탑 전투 배경 (960x540, 35장 = 구간 5 × 방 7).
  *
  * 벽·바닥·안개·비네트·먼지·켜진 창·바닥에 떨어지는 빛까지 다 구워진 최종본이다.
  * 위에 조명이나 그라디언트를 덧대지 마라. 비네트가 두 겹 되면 그냥 탁해진다.
@@ -45,12 +45,22 @@ export const FOREST_BG_ANCIENT = "/assets/forest/forest_ancient.webp";
  *
  * 이름을 안 나열하는 건 이름 자체가 규칙이라서다. 적어 두면 규칙이 두 벌 된다.
  *
+ * ⚠️ **방은 일곱이고 속성은 여덟이다.** 수정 방 그림이 없다. 젬 계열 셋이 순수
+ * 크리스탈이라 이 이름은 실제로 들어온다 — 37층(젬토)과 40층 이후의 랜덤 젬로드다.
+ * 그래서 아래 표로 얼음 방에 세운다. 얼음인 이유는 그 방이 이 계열의 원화와 제일
+ * 가깝기 때문이고, 여기서 임의로 다른 방을 고르면 같은 몬스터가 층마다 다른 방에
+ * 선다. 수정 방을 그리면 이 표에서 crystal 줄만 지우면 된다.
+ *
  * z50(탑 정상)만 normal 한 장뿐이다. 그 층 적은 오름 하나고 type 이 null 이라 늘
- * normal 로 떨어지는데, 층을 라우트 state 로 넘기는 구조라 이론상 다른 속성 적이
- * 50층에 설 수는 있다. 그때 없는 파일을 불러 방이 통째로 비는 것보단 고정이 낫다.
+ * normal 로 떨어지는데, 마찬가지 이유로 고정해 둔다.
  */
+const TOWER_ROOM_FALLBACK: Partial<Record<ElementType, ElementType>> = {
+  crystal: "ice",
+};
+
 export function towerBattleBg(zone: TowerZone, element: ElementType): string {
-  const el = zone === "z50" ? "normal" : element;
+  const room = TOWER_ROOM_FALLBACK[element] ?? element;
+  const el = zone === "z50" ? "normal" : room;
   return `/assets/tower/${zone}_${el}.webp`;
 }
 

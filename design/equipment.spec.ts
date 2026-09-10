@@ -134,7 +134,7 @@ test("capture: equip-anvil", async ({ page }) => {
   await openWorkshop(page);
   const anvil = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
   expect(await walkTo(page, anvil, 0.8 * anvil.radius), "모루까지 못 갔다").toBe(true);
-  await page.keyboard.press("Space");
+  await page.keyboard.press("x");
   await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
 
   for (const tab of ANVIL_TABS) {
@@ -155,7 +155,7 @@ test("capture: equip-craft-result", async ({ page }) => {
   await openWorkshop(page);
   const bench = CRAFTING_STATIONS.find((s) => s.id === "artifact-workbench")!;
   expect(await walkTo(page, bench, 0.8 * bench.radius), "아티팩트 제작대까지 못 갔다").toBe(true);
-  await page.keyboard.press("Space");
+  await page.keyboard.press("x");
   await expect(page.getByRole("heading", { name: "아티팩트 제작대" })).toBeVisible();
 
   await page.getByRole("button", { name: "테스트 재료" }).click();

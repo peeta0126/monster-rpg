@@ -47,16 +47,46 @@ export function createBattleMonsterFromOwned(monster: Monster & { currentHp: num
 // ─── 속성 상성 ──────────────────────────────────────────────────────────────────
 
 /**
+ * 이중 속성의 배율 한계. 곱한 값을 이 범위로 자른다.
+ *
+ * 이 게임의 데미지는 `공격 × 위력 / 방어` 나눗셈이라, 2배는 "두 배 아프다"가 아니라
+ * **필요한 턴 수가 반으로 준다**는 뜻이다. 4배(2×2)면 그 층은 고를 것이 있는 판이
+ * 아니라 사고가 된다 — 포자무스(풀/독)가 얼음한테, 크리샤(얼음/크리스탈)가 어떤
+ * 조합한테 그렇게 될 수 있었다. 0.25 도 마찬가지로 반대쪽 사고다(때려도 안 죽는다).
+ *
+ * 관문·보스 배수(floorTable)가 전부 "최악 2배"를 전제로 맞춰진 값이기도 하다.
+ * 여길 풀면 그 표를 통째로 다시 재야 한다.
+ */
+const DUAL_TYPE_CLAMP = { min: 0.5, max: 2 } as const;
+
+/**
  * 공격 속성과 방어 속성의 상성 배율 반환
  * typeChart에 정의된 값이 없으면 1배(보통)를 반환한다
  * 방어자 타입이 null(오름 전용 무속성)이면 약점도 저항도 없이 항상 1배
+ *
+ * 방어자가 이중 속성이면 두 배율을 곱한 뒤 DUAL_TYPE_CLAMP 로 자른다. 곱이라
+ * "2배 × 0.5배 = 1배" 같은 상쇄가 그대로 살아 있다 — 이중 속성의 값은 대부분
+ * 거기서 나온다(버블돈이 불을 0.5배로 받는 것처럼).
  */
 export function getTypeMultiplier(
   moveType: Move["type"],
-  targetType: Monster["type"]
+  targetType: Monster["type"],
+  targetType2?: Monster["type2"],
 ): number {
   if (targetType === null) return 1;
-  return typeChart[moveType]?.[targetType] ?? 1;
+  const primary = typeChart[moveType]?.[targetType] ?? 1;
+  if (!targetType2 || targetType2 === targetType) return primary;
+  const secondary = typeChart[moveType]?.[targetType2] ?? 1;
+  const combined = primary * secondary;
+  return Math.min(DUAL_TYPE_CLAMP.max, Math.max(DUAL_TYPE_CLAMP.min, combined));
+}
+
+/** 이 기술이 이 몬스터의 자속인가. 부속성도 자속이다 */
+export function isSameElement(
+  moveType: Move["type"],
+  m: Pick<Monster, "type" | "type2">,
+): boolean {
+  return moveType === m.type || moveType === m.type2;
 }
 
 // ─── 데미지 계산 ────────────────────────────────────────────────────────────────
@@ -120,14 +150,14 @@ export function computeDamage(
   if (move.power === 0) return 0;
 
   const { elementPowerBonus = 0, elementalDamageBonus = {}, isCrit = false, critDamageBonus = 0 } = mods;
-  const multiplier = getTypeMultiplier(move.type, defender.type);
+  const multiplier = getTypeMultiplier(move.type, defender.type, defender.type2);
 
   // 명세 공식 적용 (공격 버프 반영)
   const effectiveAttack = attacker.attack * (attacker.attackBuffMult ?? 1.0);
   let baseDamage = (effectiveAttack * move.power) / defender.defense;
 
   // 속성 능력(자속 보정): 사용 기술이 자신의 속성과 같을 때만 적용
-  if (elementPowerBonus > 0 && move.type === attacker.type) {
+  if (elementPowerBonus > 0 && isSameElement(move.type, attacker)) {
     baseDamage *= 1 + elementPowerBonus / 100;
   }
 
@@ -170,7 +200,7 @@ export function calculateDamage(
   elementalDamageBonus: Partial<Record<ElementType, number>> = {},
   critDamageBonus = 0,
 ): { damage: number; isHit: boolean; multiplier: number; isCrit: boolean } {
-  const multiplier = getTypeMultiplier(move.type, defender.type);
+  const multiplier = getTypeMultiplier(move.type, defender.type, defender.type2);
 
   // 명중률 체크 (0~100 난수)
   const hitRoll = Math.random() * 100;
@@ -348,7 +378,7 @@ const STATUS_NAME: Record<NonNullable<StatusEffect>, string> = {
  */
 function moveScore(move: Move, defender: BattleMonster, bestAttackScore: number): number {
   if (move.power === 0) return bestAttackScore * 0.8 * (move.accuracy / 100);
-  return move.power * getTypeMultiplier(move.type, defender.type) * (move.accuracy / 100);
+  return move.power * getTypeMultiplier(move.type, defender.type, defender.type2) * (move.accuracy / 100);
 }
 
 /**
@@ -391,7 +421,7 @@ export function getAIAction(
   /**
    * 같은 기술을 두 턴 연속으로 쓰지 않는다 (기술이 셋 이상일 때만).
    *
-   * 이게 없으면 기대 데미지가 제일 큰 기술 하나를 계속 던진다. 특히 오름은 7속성
+   * 이게 없으면 기대 데미지가 제일 큰 기술 하나를 계속 던진다. 특히 오름은 8속성
    * 최상급 기술을 다 들고 있어서, 모든 속성에 약점이 생긴 지금은 어떤 파티를 데려가도
    * 2배 기술이 하나씩 있다. 그걸 매 턴 던지면 최종보스가 아니라 정답이 하나뿐인
    * 문제가 된다(시뮬: 50층 승률 79% → 44%).

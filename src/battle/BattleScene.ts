@@ -4,7 +4,7 @@ import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandle
 import { getBattleInitData } from "./battleInitStore";
 import { markSceneReady } from "../shared/phaser/sceneReady";
 import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
-import { PALETTE, HEX, hpToken, isHpDanger, elementChip } from "../shared/palette";
+import { PALETTE, HEX, hpToken, isHpDanger, elementChips, type PaletteName } from "../shared/palette";
 import { STATUS_META, statusBadge } from "./statusInfo";
 import { towerBattleBg } from "../shared/assetPaths";
 import { getTowerZone } from "../shared/floorTable";
@@ -75,7 +75,6 @@ export default class BattleScene extends Phaser.Scene {
   // ── 위험(HP 25% 이하) 경고 ──
   // 바 테두리와 몬스터 뒤 아우라가 같은 순간에 같은 박자로 뛴다. 숫자만 빨개지면 안 본다.
   private dangerFrame = {} as Record<"enemy" | "player", Phaser.GameObjects.Graphics>;
-  private dangerAura  = {} as Record<"enemy" | "player", Phaser.GameObjects.Graphics>;
   private dangerTween = {} as Record<"enemy" | "player", Phaser.Tweens.Tween | undefined>;
   private dangerOn    = { enemy: false, player: false };
 
@@ -381,9 +380,20 @@ export default class BattleScene extends Phaser.Scene {
    * 이름 뒤에 이어 붙이면 언젠가 겹친다.
    * 생김새는 React 쪽 ELEMENT_CHIP_CLASS 와 같게 맞춘다(속성색 28% 바탕 + 테두리).
    */
-  private buildTypeChip(rightX: number, topY: number, type: ElementType | null) {
-    const { label, color: token, ink } = elementChip(type);
+  private buildTypeChip(rightX: number, topY: number, type: ElementType | null, type2?: ElementType) {
+    // 이중 속성이면 칩이 둘이다. 오른쪽 끝에서 왼쪽으로 쌓으므로 뒤에서부터 그린다 —
+    // 그래야 주속성이 왼쪽(먼저 읽는 자리)에 온다.
+    let cursor = rightX;
+    for (const chip of elementChips({ type, type2 }).reverse()) {
+      cursor = this.drawTypeChip(cursor, topY, chip) - 3;
+    }
+  }
 
+  /** 칩 한 개. 왼쪽 끝 x 를 돌려준다(다음 칩이 그 왼쪽에 붙는다) */
+  private drawTypeChip(
+    rightX: number, topY: number,
+    { label, color: token, ink }: { label: string; color: PaletteName; ink: PaletteName },
+  ): number {
     const text = this.add.text(rightX - 5, topY + 2, label, {
       fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE[ink],
     }).setOrigin(1, 0).setDepth(10);
@@ -395,6 +405,7 @@ export default class BattleScene extends Phaser.Scene {
     box.fillRect(rightX - w, topY, w, h);
     box.lineStyle(1, HEX[token], 1);
     box.strokeRect(rightX - w, topY, w, h);
+    return rightX - w;
   }
 
   private buildDangerCues() {
@@ -405,21 +416,10 @@ export default class BattleScene extends Phaser.Scene {
       frame.lineStyle(2, HEX.ember700, 1);
       frame.strokeRect(barX - 3, barY - 3, BAR_W_INNER + 6, BAR_H + 6);
 
-      const sx   = side === "enemy" ? this.enemy.x  : PLAYER_X;
-      const sy   = side === "enemy" ? this.enemy.cy : PLAYER_CY;
-      const size = side === "enemy" ? this.enemy.size : PLAYER_SIZE;
-      // 일러스트를 틴트로 물들이면 그림이 상한다. 뒤에 아우라를 깔아 몬스터째로 위험해 보이게 한다.
-      // 번짐만 깔았더니 횃불 불빛이랑 구별이 안 됐다. 테두리 원을 하나 둘러 형태를 준다.
-      const aura = this.add.graphics().setDepth(5).setVisible(false);
-      aura.fillStyle(HEX.ember700, 0.5);
-      aura.fillCircle(sx, sy, size * 0.42);
-      aura.fillStyle(HEX.ember700, 0.28);
-      aura.fillCircle(sx, sy, size * 0.62);
-      aura.lineStyle(3, HEX.ember700, 0.9);
-      aura.strokeCircle(sx, sy, size * 0.62);
-
+      // 몬스터 뒤에 붉은 원을 깔던 시절이 있었다. HP 숫자·막대·이 테두리가 이미 같은 말을
+      // 하고 있는데 원만 원화를 반쯤 덮어서, 무슨 신호인지도 헷갈렸다(상태이상으로 읽혔다).
+      // 위험 신호는 HP 가 사는 자리에만 둔다.
       this.dangerFrame[side] = frame;
-      this.dangerAura[side]  = aura;
     }
   }
 
@@ -428,7 +428,7 @@ export default class BattleScene extends Phaser.Scene {
     if (this.dangerOn[side] === on) return;
     this.dangerOn[side] = on;
 
-    const targets = [this.dangerFrame[side], this.dangerAura[side]];
+    const targets = [this.dangerFrame[side]];
     this.dangerTween[side]?.remove();
     this.dangerTween[side] = undefined;
     for (const t of targets) t.setVisible(on).setAlpha(1);
@@ -462,7 +462,8 @@ export default class BattleScene extends Phaser.Scene {
         fontSize: "12px", fontFamily: PIXEL_FONT, resolution: textResolution(), color: PALETTE.sand200,
       }).setDepth(9);
 
-      this.buildTypeChip(px + pw - 8, py + 5, getBattleInitData()?.enemyType ?? null);
+      const init = getBattleInitData();
+      this.buildTypeChip(px + pw - 8, py + 5, init?.enemyType ?? null, init?.enemyType2);
 
       // HP 바 레이아웃
       const barX = px + 10;

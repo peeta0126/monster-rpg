@@ -67,6 +67,7 @@ export async function advanceLogs(page: Page, timeoutMs = 60_000): Promise<void>
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (await resolveForgetPrompt(page)) continue;
+    if (await resolveExtraTurn(page)) continue;
     if (await isVisible(winOverlay(page))) return;
     if (await isVisible(loseOverlay(page))) return;
     if (await isVisible(mustSwitchNotice(page))) return;
@@ -124,6 +125,42 @@ function pickMove(options: MoveOption[]): MoveOption | null {
   const pool = usable.length > 0 ? usable : options;
   if (pool.length === 0) return null;
   return pool.reduce((best, o) => (o.damage > best.damage ? o : best));
+}
+
+/** 지금 화면에 펼쳐져 있는 기술 목록을 읽는다(1단을 여닫지 않는다) */
+async function readOpenMoves(page: Page): Promise<MoveOption[]> {
+  const buttons = moveButtons(page);
+  const count = await buttons.count();
+  const options: MoveOption[] = [];
+  for (let i = 0; i < count; i++) {
+    const testId = await buttons.nth(i).getAttribute("data-testid");
+    if (!testId) continue;
+    const text = (await buttons.nth(i).innerText()).replace(/\s+/g, " ");
+    options.push({
+      testId,
+      damage: Number(text.match(/예상 (\d+)/)?.[1] ?? 0),
+      ko: text.includes("쓰러뜨린다"),
+    });
+  }
+  return options;
+}
+
+/**
+ * 속도 게이지가 차서 한 번 더 움직이는 차례. 커맨드가 기술 목록에 고정된 채 사람을
+ * 기다리므로, 답하지 않으면 로그 진행이 여기서 굳는다 — 1단의 "기술"이 없어서
+ * canAct 가 영영 false 다.
+ */
+export async function resolveExtraTurn(page: Page): Promise<boolean> {
+  const title = page.getByTestId("cmd-title");
+  if ((await title.count()) === 0) return false;
+  if (!(await title.first().innerText()).includes("한 번 더")) return false;
+
+  const options = await readOpenMoves(page);
+  const choice = pickMove(options);
+  if (!choice) return false;
+  await page.getByTestId(choice.testId).first().click();
+  await page.waitForTimeout(120);
+  return true;
 }
 
 /**

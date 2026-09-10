@@ -81,7 +81,7 @@ export function previewMove(
     critDamage: crit,
     critChance,
     accuracy: move.accuracy,
-    multiplier: getTypeMultiplier(move.type, defender.type),
+    multiplier: getTypeMultiplier(move.type, defender.type, defender.type2),
     isStatus,
     ko,
   };

@@ -145,7 +145,7 @@ test("capture: workshop-rps", async ({ page }) => {
   await openWorkshop(page);
   const alchemy = CRAFTING_STATIONS.find((s) => s.id === "alchemy-workbench")!;
   await walkTo(page, alchemy, 0.6 * alchemy.radius);
-  await page.keyboard.press("Space");
+  await page.keyboard.press("x");
   await expect(page.getByRole("heading", { name: "연금술 제작대" })).toBeVisible();
 
   await page.getByRole("button", { name: "테스트 재료" }).click();
@@ -607,6 +607,34 @@ test.describe("좁은 화면", () => {
  * 안 받으면 UI 가 가운데 조금만 차지하고 나머지가 통째로 빈다.
  * 좁은 쪽 캡처와 짝으로 본다. 한 장만 보면 어느 쪽으로 틀어졌는지 알 수 없다.
  */
+/**
+ * 가방에서 버리기. 여기서 볼 것은 둘이다.
+ *
+ *  - 개수 줄이 **누른 칸 바로 아래** 한 줄을 통째로 차지하는가. 격자 한 칸에 들어가면
+ *    슬라이더가 120px 밖에 못 써서 점을 끌 자리가 없다.
+ *  - 장비 쪽 확인창이 화면 가운데에 서는가. 버튼 자리에서 글자만 바뀌던 예전 방식은
+ *    누르던 손이 그대로 두 번째 누름이 됐다.
+ */
+test("capture: bag-discard-amount", async ({ page }) => {
+  await seedFullSave(page);
+  await page.goto("/farm");
+  // 가운데 칸을 누른다. 첫 칸은 왼쪽 끝이라 열이 맞는지 안 맞는지 구별이 안 된다
+  await page.getByTestId("discard-trigger").nth(2).click();
+  await expect(page.getByRole("slider")).toBeVisible();
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "bag-discard-amount.png"), fullPage: false });
+});
+
+test("capture: bag-discard-confirm", async ({ page }) => {
+  await seedFullSave(page);
+  await page.goto("/farm");
+  await page.getByRole("button", { name: "아티팩트" }).first().click();
+  await page.getByRole("button", { name: "버리기" }).first().click();
+  await expect(page.getByTestId("confirm-dialog")).toBeVisible();
+  await waitForVisualSettle(page);
+  await page.screenshot({ path: path.join(OUT_DIR, "bag-discard-confirm.png"), fullPage: false });
+});
+
 test.describe("넓은 화면", () => {
   test.use({ viewport: { width: 1920, height: 1080 } });
 

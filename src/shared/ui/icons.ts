@@ -32,6 +32,7 @@ import muteSvg             from "../../assets/ui/mute.svg";
 import doorSvg             from "../../assets/ui/door.svg";
 import trophySvg           from "../../assets/ui/trophy.svg";
 import compassSvg          from "../../assets/ui/compass.svg";
+import forestSvg           from "../../assets/ui/forest.svg";
 import anvilSvg            from "../../assets/ui/anvil.svg";
 import alchemySvg          from "../../assets/ui/alchemy.svg";
 import artifactSvg         from "../../assets/ui/artifact.svg";
@@ -83,7 +84,7 @@ export const ICONS = {
   // 메뉴·화면
   tower: towerSvg, quest: questSvg, monsters: monstersSvg, bag: bagSvg,
   dex: dexSvg, sound: soundSvg, mute: muteSvg, door: doorSvg, trophy: trophySvg,
-  compass: compassSvg, storage: storageSvg, party: partySvg, lock: lockSvg,
+  compass: compassSvg, forest: forestSvg, storage: storageSvg, party: partySvg, lock: lockSvg,
   screen: screenSvg,
 
   // 공방

@@ -21,9 +21,10 @@ import type { QuestStatus } from "../shared/playerStore";
 import { getFullLearnset } from "../monster/learnset";
 import { CAM_ZOOM } from "./BaseCampScene";
 import { CAMP_MAP_W, CAMP_MAP_H } from "./campCollision";
-import { ALL_QUESTS, activeQuestFor } from "./campDialogues";
+import { ALL_QUESTS, activeQuestFor, questUnlockLabel } from "./campDialogues";
 import type { QuestDef } from "./campDialogues";
-import { evaluateObjective, objectiveWhere } from "./questObjectives";
+import { evaluateObjective, objectiveWhere, objectiveVia } from "./questObjectives";
+import { setCampInputLocked } from "./campInputLock";
 import type { QuestSnapshot } from "./questObjectives";
 import { monsterReward, grantedMonsterLevel, rewardDisplay } from "./questRewards";
 import type { QuestReward, RewardDisplay } from "./questRewards";
@@ -34,31 +35,39 @@ import { PixelIcon } from "../shared/ui/PixelIcon";
 import { MAX_TOWER_FLOOR } from "../shared/floorTable";
 import { useAuthStore } from "../auth/authStore";
 import { QUALITY_COLOR, QUALITY_LABEL } from "../shared/craftingUtils";
-import { PALETTE } from "../shared/palette";
+import { PALETTE, ELEMENT_CHIP_CLASS, ELEMENT_KO } from "../shared/palette";
+import { ELEMENT_ORDER } from "../battle/typeChart";
+import { elementIdsOf, type ElementType } from "../shared/game";
 
 // ── 속성 한글/색상 ──────────────────────────────────────────────────────────────
+//
+// ⚠️ 표를 여기서 만들지 마라. 이 화면은 한동안 자기 사본을 셋(TYPE_KO·TYPE_COLOR·
+// MOVE_TYPE_COLOR) 들고 있었는데, 색상환 자리가 모자라 손으로 접다 보니 불꽃과
+// 전기가 **완전히 같은 클래스 문자열**이었고 물·얼음·독도 셋이 같았다. 화면은
+// 속성이 일곱인데 색은 넷이었던 셈이다. 공용 표(shared/palette)는 여덟을 전부
+// 다르게 두고 있었으니, 사본이 있다는 사실 자체가 그 버그였다.
+//
+// 무속성(none)만 이 화면에서 쓰는 값이라 여기서 잇는다 — elementChip(null) 이
+// 이미 "?" 로 답하지만, 도감은 이름을 적는 자리라 "무속성" 이라고 쓴다.
 
-const TYPE_KO: Record<string, string> = {
-  fire: "불꽃", water: "물", grass: "풀",
-  electric: "전기", ice: "얼음", normal: "노말", poison: "독",
-  none: "무속성",
-};
+const NONE_CHIP = "bg-shadow-700/70 text-sand-300 border-stone-600";
 
-const TYPE_COLOR: Record<string, string> = {
-  fire:     "bg-ember-700/25 text-ember-500 border-ember-700",
-  water:    "bg-mist-500/25 text-mist-300 border-mist-500",
-  grass:    "bg-moss-500/25 text-moss-500 border-moss-500",
-  electric: "bg-ember-700/25 text-ember-500 border-ember-700",
-  ice:      "bg-mist-500/25 text-mist-300 border-mist-500",
-  normal:   "bg-shadow-700/70 text-sand-200 border-stone-600",
-  poison:   "bg-mist-500/25 text-mist-300 border-mist-500",
-  none:     "bg-gradient-to-r from-mist-500/70 to-mist-500/70 text-mist-300 border-mist-500",
-};
-
-const TYPE_GROUP_LABEL: Record<string, string> = {
-  fire: "불꽃", water: "물", grass: "풀",
-  electric: "전기", ice: "얼음", normal: "노말", poison: "독",
-};
+/** 도감 카드·헤더의 속성 칩. 이중 속성이면 둘이 나온다 */
+function TypeChips({ m }: { m: { type: ElementType | null; type2?: ElementType } }) {
+  if (!m.type) {
+    return <span className={`inline-block rounded border px-2 py-0.5 text-pixel-sm ${NONE_CHIP}`}>무속성</span>;
+  }
+  const ids = elementIdsOf(m);
+  return (
+    <span className="inline-flex gap-1">
+      {ids.map((t) => (
+        <span key={t} className={`inline-block rounded border px-2 py-0.5 text-pixel-sm ${ELEMENT_CHIP_CLASS[t]}`}>
+          {ELEMENT_KO[t]}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 const STATUS_KO: Record<string, string> = {
   burn: "화상", paralysis: "마비", freeze: "빙결", poison: "독",
@@ -72,16 +81,6 @@ const QUEST_STATUS_BADGE: Record<QuestStatus, { label: string; className: string
   not_accepted: { label: "미수락", className: "border-stone-600 text-sand-300" },
   in_progress:  { label: "진행중", className: "border-ember-700 text-ember-500" },
   completed:    { label: "완료",   className: "border-moss-500 text-moss-500" },
-};
-
-const MOVE_TYPE_COLOR: Record<string, string> = {
-  fire:     "bg-ember-700/25 text-ember-500 border-ember-700",
-  water:    "bg-mist-500/25 text-mist-300 border-mist-500",
-  grass:    "bg-moss-500/25 text-moss-500 border-moss-500",
-  electric: "bg-ember-700/25 text-ember-500 border-ember-700",
-  ice:      "bg-mist-500/25 text-mist-300 border-mist-500",
-  normal:   "bg-shadow-700/60 text-sand-200 border-stone-600",
-  poison:   "bg-mist-500/25 text-mist-300 border-mist-500",
 };
 
 // ── 진화 체인 헬퍼 ───────────────────────────────────────────────────────────────
@@ -124,9 +123,7 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
         <div className="flex-1">
           <h3 className="text-title-sm font-bold text-cream-100">{seen ? m.name : "???"}</h3>
           {seen && (
-            <span className={`inline-block rounded border px-2 py-0.5 text-pixel-sm mt-0.5 ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
-              {TYPE_KO[m.type ?? "none"]}
-            </span>
+            <span className="mt-0.5 inline-block"><TypeChips m={m} /></span>
           )}
         </div>
         {caught && <span className="text-pixel-sm font-bold text-moss-500 border border-moss-500 rounded px-2 py-0.5">포획</span>}
@@ -230,8 +227,8 @@ function DexDetail({ monsterId, seen, caught, onBack, onGoTo }: {
                       <td className="px-4 py-2 font-bold text-ember-500">{entry.level}</td>
                       <td className="px-4 py-2 text-cream-100 font-medium">{entry.move.name}</td>
                       <td className="px-4 py-2">
-                        <span className={`rounded border px-1.5 py-0.5 text-pixel-sm font-semibold ${MOVE_TYPE_COLOR[entry.move.type] ?? MOVE_TYPE_COLOR.normal}`}>
-                          {TYPE_KO[entry.move.type] ?? entry.move.type}
+                        <span className={`rounded border px-1.5 py-0.5 text-pixel-sm font-semibold ${ELEMENT_CHIP_CLASS[entry.move.type]}`}>
+                          {ELEMENT_KO[entry.move.type]}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-right text-sand-200 font-mono">
@@ -273,14 +270,43 @@ function DexModal({ onClose }: { onClose: () => void }) {
   const [filter, setFilter]     = useState<string>("all");
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  const typeGroups = ["fire", "water", "grass", "electric", "ice", "normal", "poison"];
+  /**
+   * 세부 뷰에서 ESC 는 목록으로 물러난다.
+   *
+   * 예전엔 도감이 통째로 닫혔다 — 상세를 보다 물러나려던 손이 마을까지 나가서, 보던
+   * 자리를 다시 찾아 들어와야 했다. 잡는 단계(capture)에서 멈춰야 뒤에 있는 화면의
+   * ESC 가 같이 안 걸린다(확인창이 쓰는 것과 같은 방법이다).
+   */
+  useEffect(() => {
+    if (!detailId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      setDetailId(null);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [detailId]);
+
+  // 속성을 더하면 여기도 저절로 늘어난다. 손으로 적어 두면 새 속성이 필터에서만 빠진다.
+  // 크리스탈은 주속성으로 가진 종이 없지만 부속성으로 거르면 젬 계열 넷이 나오므로 남긴다.
+  const typeGroups = ELEMENT_ORDER;
 
   // 오름(최종 보스)은 포획 불가능한 존재라 도감 완성률에 포함시키지 않는다
   const visibleMonsters = monsters.filter((m) => m.id !== "ormr");
 
-  const filteredMonsters = filter === "all"
-    ? visibleMonsters
-    : visibleMonsters.filter((m) => m.type === filter);
+  /**
+   * 속성 탭은 **조우한 것만** 거른다. 안 만나 본 몬스터의 속성은 플레이어가 모르는
+   * 값이라, 실루엣을 「불꽃」 탭에 세우면 화면이 답을 흘리는 셈이고 「불꽃」 탭에서
+   * 빼면 그 탭이 거짓말이 된다. 못 만난 것은 「미발견」 이라는 자기 칸에 모은다 —
+   * 그게 플레이어가 아는 유일한 분류다.
+   */
+  const filteredMonsters =
+    filter === "all"     ? visibleMonsters
+    : filter === "unseen" ? visibleMonsters.filter((m) => !dexSeen.includes(m.id))
+    // 부속성으로도 걸린다. 「독」 칩을 단 포자무스가 독 탭에 없으면 칩이 거짓말이 된다
+    : visibleMonsters.filter((m) => dexSeen.includes(m.id) && (m.type === filter || m.type2 === filter));
+  const unseenCount = visibleMonsters.filter((m) => !dexSeen.includes(m.id)).length;
 
   return (
     <div
@@ -337,9 +363,19 @@ function DexModal({ onClose }: { onClose: () => void }) {
                   className={`rounded-lg px-3 py-1 text-pixel-sm font-semibold whitespace-nowrap transition
                     ${filter === t ? "bg-stone-600 text-cream-100" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
                 >
-                  {TYPE_GROUP_LABEL[t]}
+                  {ELEMENT_KO[t]}
                 </button>
               ))}
+              {unseenCount > 0 && (
+                <button
+                  data-testid="dex-filter-unseen"
+                  onClick={() => setFilter("unseen")}
+                  className={`rounded-lg px-3 py-1 text-pixel-sm font-semibold whitespace-nowrap transition
+                    ${filter === "unseen" ? "bg-stone-600 text-cream-100" : "bg-shadow-700 text-sand-300 hover:text-sand-200"}`}
+                >
+                  미발견 {unseenCount}
+                </button>
+              )}
             </div>
 
             {/* 몬스터 그리드. 아래를 흐리게 덮어 "더 있다"를 표시한다.
@@ -393,9 +429,7 @@ function DexModal({ onClose }: { onClose: () => void }) {
                         {seen ? (
                           <>
                             <p className="font-bold text-cream-100 text-pixel-sm">{m.name}</p>
-                            <span className={`mt-0.5 inline-block rounded border px-2 py-0.5 text-pixel-sm ${TYPE_COLOR[m.type ?? "none"] ?? TYPE_COLOR.normal}`}>
-                              {TYPE_KO[m.type ?? "none"] ?? m.type}
-                            </span>
+                            <span className="mt-0.5 inline-block"><TypeChips m={m} /></span>
                           </>
                         ) : (
                           <>
@@ -552,6 +586,17 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
     .map((npcId) => activeQuestFor(npcId, storyFlags, bestFloor, questStatus))
     .filter((q): q is QuestDef => !!q && status(q) === "not_accepted");
 
+  /**
+   * 아직 못 받는 것. 이름과 해금 조건까지만 보여준다.
+   *
+   * 예전엔 목록에 아예 없어서 "완료 5 / 8" 의 남은 셋이 어디 있는지 알 수 없었다.
+   * 내용(목표·보상)은 안 적는다 — 무슨 부탁인지는 만나서 듣는 게 맞다.
+   */
+  const waitingIds = new Set(waiting.map((q) => q.id));
+  const locked = ALL_QUESTS.filter(
+    (q) => status(q) === "not_accepted" && !waitingIds.has(q.id),
+  );
+
   // 맨 위 한 장. 지금 뭘 해야 하는지 적는다. 진행 중인 것 중 첫째가 기본이고,
   // 없으면 받으러 갈 사람을 가리킨다
   const headline = (() => {
@@ -562,7 +607,12 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
         fromQuestId: doing.id,
         title: doing.title,
         line: p.label,
-        where: p.done ? `${QUEST_NPC_KO[doing.npcId]}에게 돌아가기` : objectiveWhere(doing.objective),
+        // 목표가 어디든 끝에는 사람에게 돌아가야 완료다. 그 사람 이름을 늘 적는다 —
+        // 예전엔 다 모았을 때만 나와서, 모으는 동안은 누구 부탁인지 이 판이 말을 안 했다.
+        where: p.done
+          ? `${QUEST_NPC_KO[doing.npcId]}에게 돌아가 완료하기`
+          : `${objectiveWhere(doing.objective)} → 그 다음 ${QUEST_NPC_KO[doing.npcId]}에게`,
+        via: p.done ? null : objectiveVia(doing.objective),
         rewards: doing.rewards,
         progress: p,
       };
@@ -573,6 +623,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
         title: "할 말이 있어 보인다",
         line: `${QUEST_NPC_KO[waiting[0].npcId]}에게 말을 걸어 보세요`,
         where: waiting[0].npcId === "baros" ? "탑 입구" : "마을 안쪽",
+        via: null,
         rewards: null,
         progress: null,
       };
@@ -594,9 +645,11 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
           <div>
             <h2 className="text-pixel-md font-bold text-cream-100">퀘스트</h2>
             <p className="text-pixel-sm text-sand-300 mt-0.5">
+              완료 {completed.length} / {ALL_QUESTS.length}
+              &nbsp;·&nbsp;
               진행중 {inProgress.length}
               &nbsp;·&nbsp;
-              완료 {completed.length} / {ALL_QUESTS.length}
+              남음 {ALL_QUESTS.length - completed.length - inProgress.length}
             </p>
           </div>
           <button
@@ -630,7 +683,14 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
                     style={{ width: `${Math.min(100, Math.round(((headline.progress.have ?? 0) / headline.progress.need) * 100))}%` }} />
                 </div>
               )}
-              <p className="mt-1.5 text-pixel-sm text-earth-400">→ {headline.where}</p>
+              <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-pixel-sm text-earth-400">
+                <span>→ {headline.where}</span>
+                {headline.via && (
+                  <span className="rounded border border-mist-500/60 px-1.5 font-bold text-mist-300">
+                    {headline.via}
+                  </span>
+                )}
+              </p>
               {headline.rewards && (
                 <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                   <span className="text-pixel-sm text-earth-400">보상</span>
@@ -671,6 +731,30 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
             </div>
           ))}
 
+          {/* 앞으로. 이름과 해금 조건만. 무슨 부탁인지는 만나서 듣는다 */}
+          {locked.length > 0 && (
+            <div className="pt-1" data-testid="quest-locked">
+              <p className="mb-1.5 text-pixel-sm font-bold text-earth-400">앞으로 {locked.length}개</p>
+              <div className="flex flex-col gap-1.5">
+                {locked.map((q) => (
+                  <div key={q.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-shadow-700
+                      bg-shadow-800/40 px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <PixelIcon name="lock" size={16} className="shrink-0 opacity-60" />
+                      <span className="truncate text-pixel-sm text-sand-300">{q.title}</span>
+                      <span className="shrink-0 rounded border border-stone-600 bg-shadow-700 px-1.5
+                        text-pixel-sm text-earth-400">
+                        {QUEST_NPC_KO[q.npcId]}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-pixel-sm text-earth-400">{questUnlockLabel(q)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 완료. 접어 둔다. 여덟 개가 다 펼쳐져 있으면 진행 중인 하나를 못 찾는다 */}
           {completed.length > 0 && (
             <div className="pt-1">
@@ -678,7 +762,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
                 onClick={() => setShowDone((v) => !v)}
                 className="w-full rounded-lg border border-shadow-700 bg-shadow-800/60 px-3 py-2 text-pixel-sm text-sand-300 hover:text-sand-200"
               >
-                완료한 부탁 {completed.length}개 {showDone ? "접기" : "펼치기"}
+                지난 부탁 {completed.length}개 다시 읽기 {showDone ? "▲" : "▼"}
               </button>
               {showDone && (
                 <div className="mt-2 space-y-2">
@@ -708,7 +792,7 @@ function QuestCard({ quest, status, snapshot }: {
 
   return (
     <div className={`rounded-xl border p-4 ${
-      done ? "border-shadow-700 bg-shadow-800/40 opacity-60" : "border-stone-600 bg-shadow-800"
+      done ? "border-shadow-700 bg-shadow-800/40" : "border-stone-600 bg-shadow-800"
     }`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -722,8 +806,30 @@ function QuestCard({ quest, status, snapshot }: {
         </span>
       </div>
 
+      {/* 완료한 것은 그때 무슨 얘기였는지를 되읽는 자리로 쓴다. 목표·진행도는 이미
+          끝난 값이라 적어도 읽을 이유가 없고, 남는 건 이야기뿐이다. */}
+      {done && (
+        <div className="mt-3 rounded-lg border-l-2 border-earth-500/60 bg-shadow-900/50 px-3 py-2">
+          <p className="mb-1 text-pixel-sm text-earth-400">
+            {QUEST_NPC_KO[quest.npcId]} · {progress.label}
+          </p>
+          {quest.completeLines.map((line, i) => (
+            <p key={i} className="text-pixel-sm leading-relaxed text-sand-300">{line}</p>
+          ))}
+        </div>
+      )}
+
       {!done && (
         <div className="mt-3">
+          {/* 어디로 가야 하는지. 카드마다 적는다 — 목록만 보고 움직이는 사람이 있다 */}
+          <p className="mb-1.5 flex flex-wrap items-center gap-1.5 text-pixel-sm text-earth-400">
+            <span>→ {objectiveWhere(quest.objective)} → 그 다음 {QUEST_NPC_KO[quest.npcId]}에게</span>
+            {objectiveVia(quest.objective) && (
+              <span className="rounded border border-mist-500/60 px-1.5 font-bold text-mist-300">
+                {objectiveVia(quest.objective)}
+              </span>
+            )}
+          </p>
           <div className="flex items-center justify-between text-pixel-sm text-sand-300 mb-1">
             <span className="flex items-center gap-1.5">
               {objMat && <PixelIcon name={objMat.icon} size={16} />}
@@ -768,6 +874,7 @@ function TowerModal({
   bestFloor,
   cleared,
   partyEmpty,
+  allFainted,
   onSelect,
   onClose,
   onHeal,
@@ -776,11 +883,13 @@ function TowerModal({
   bestFloor: number;
   cleared: boolean;
   partyEmpty: boolean;
+  allFainted: boolean;
   onSelect: (floor: number) => void;
   onClose: () => void;
   onHeal: () => void;
   healed: boolean;
 }) {
+  const blocked = partyEmpty || allFainted;
   const maxSelectable = Math.min(bestFloor + 1, MAX_TOWER_FLOOR);
   const checkpoints: number[] = [1];
   for (let f = 5; f <= maxSelectable; f += 5) checkpoints.push(f);
@@ -814,6 +923,14 @@ function TowerModal({
           </p>
         )}
 
+        {/* 전멸한 채로는 못 오른다. 아래 회복 버튼이 그 자리에서 길을 연다 */}
+        {allFainted && (
+          <p data-testid="tower-all-fainted"
+            className="mb-4 rounded-xl border border-ember-500/50 bg-ember-700/12 px-3 py-2 text-pixel-sm text-ember-500">
+            파티가 전부 기절해 있다. 회복하고 오르자.
+          </p>
+        )}
+
         {/* 회복은 여기서 바로 한다. 원래는 /monsters까지 갔다가 탑 앞까지 다시 걸어와야 했다 */}
         <button
           onClick={onHeal}
@@ -826,13 +943,13 @@ function TowerModal({
         <div className="flex flex-col gap-2">
           <button
             onClick={() => onSelect(1)}
-            disabled={partyEmpty}
+            disabled={blocked}
             className="w-full rounded-xl border border-stone-600 bg-shadow-700/70 py-2.5 text-pixel-sm font-semibold text-sand-200 hover:bg-stone-600 disabled:opacity-40 disabled:hover:bg-shadow-700/70 transition"
           >
             1층부터 시작
           </button>
 
-          {!partyEmpty && bestFloor >= 1 && (
+          {!blocked && bestFloor >= 1 && (
             <>
               <div className="text-pixel-sm text-earth-400 text-center pt-1">— 이어하기 —</div>
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
@@ -874,6 +991,7 @@ function CampMenu({
   onOpenDex,
   onGoToMonsters,
   onGoToFarm,
+  onGoToForest,
   onOpenTower,
   towerCleared,
   onReplayEnding,
@@ -885,6 +1003,7 @@ function CampMenu({
   onOpenDex: () => void;
   onGoToMonsters: () => void;
   onGoToFarm: () => void;
+  onGoToForest: () => void;
   onOpenTower: () => void;
   towerCleared: boolean;
   onReplayEnding: () => void;
@@ -904,6 +1023,9 @@ function CampMenu({
   const items: GameMenuItem[] = [
     // 탑 재도전 때마다 캐릭터를 탑까지 걸어가게 하지 않기 위해 메뉴에서도 층 선택을 연다
     { label: "무한의 탑", icon: "tower", tone: "info",   onClick: onOpenTower },
+    // 탑과 같은 이유로 숲도 메뉴에 둔다. 숲만 걸어가야 하면 "어디는 메뉴, 어디는 발"
+    // 이라는 규칙 없는 구분이 남고, 목표 띠가 가리키는 길과도 어긋난다.
+    { label: "숲",        icon: "forest", tone: "nature", onClick: onGoToForest },
     { label: "퀘스트",    icon: "quest", tone: "accent", onClick: onOpenQuestLog },
     { label: "내 몬스터", icon: "monsters", tone: "info",   onClick: onGoToMonsters },
     { label: "가방",      icon: "bag", tone: "accent", onClick: onGoToFarm },
@@ -961,6 +1083,14 @@ export default function BaseCampPage() {
   const markDialogueSeen = usePlayerStore((s) => s.markDialogueSeen);
   const grantMonster = usePlayerStore((s) => s.grantMonster);
   const partySize = usePlayerStore((s) => s.party.length);
+  /**
+   * 파티가 전멸한 채로 탑에 다시 들어가는 걸 막는다. 패배가 HP 를 세이브에 남기게 된
+   * 뒤로는 실제로 도달하는 상태다 — 안 막으면 0 HP 짜리를 선봉으로 세운 채 1턴에 지는
+   * 전투가 열린다. 회복 버튼이 바로 위에 있으니 길은 막히지 않는다.
+   */
+  const partyAllFainted = usePlayerStore(
+    (s) => s.party.length > 0 && s.party.every((m) => m.currentHp <= 0),
+  );
   const storyFlags = usePlayerStore((s) => s.storyFlags);
   const craftedPotions = usePlayerStore((s) => s.craftedPotions);
 
@@ -1079,9 +1209,22 @@ export default function BaseCampPage() {
     closeNpcDialogue();
   }, [npcDialogue, dialogueLineIndex, closeNpcDialogue]);
 
+  /**
+   * 화면 위에 무언가 떠 있으면 캔버스의 X 를 잠근다.
+   * 떠난 뒤에도 잠긴 채로 남으면 다시 들어왔을 때 아무 키도 안 먹으므로 반드시 푼다.
+   */
+  const overlayOpen = !!npcDialogue || menuOpen || dexOpen || questLogOpen
+    || !!towerPayload || !!rewardScreen;
+  useEffect(() => {
+    setCampInputLocked(overlayOpen);
+    return () => setCampInputLocked(false);
+  }, [overlayOpen]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === " " && npcDialogue) { e.preventDefault(); advanceNpcDialogue(); return; }
+      // 대사 넘기기도 X 다. Space 로 두면 걷다가 튀어나온 대사를 손이 먼저 넘긴다 —
+      // 이 게임에서 이야기가 나오는 자리가 여기뿐이라 제일 아까운 자리다.
+      if (e.code === "KeyX" && npcDialogue) { e.preventDefault(); advanceNpcDialogue(); return; }
       if (e.key === "Tab") {
         if (npcDialogue || towerPayload || dexOpen || questLogOpen) return;
         e.preventDefault();
@@ -1093,7 +1236,9 @@ export default function BaseCampPage() {
         if (npcDialogue) { closeNpcDialogue(); return; }
         if (dexOpen) { setDexOpen(false); setMenuOpen(true); return; }
         if (questLogOpen) { setQuestLogOpen(false); setMenuOpen(true); return; }
-        if (towerPayload) { setTowerPayload(null); return; }
+        // 도감·퀘스트와 같게 메뉴를 다시 연다. 셋 다 메뉴에서 연 창이라, 잘못 눌러
+        // 물러났을 때 메뉴가 사라져 있으면 메뉴를 다시 여는 일부터 해야 한다.
+        if (towerPayload) { setTowerPayload(null); setMenuOpen(true); return; }
         if (menuOpen) { setMenuOpen(false); return; }
       }
     };
@@ -1129,7 +1274,7 @@ export default function BaseCampPage() {
           <ControlHint
             items={[
               { keys: "WASD / 방향키", action: "이동" },
-              { keys: "E", action: "상호작용" },
+              { keys: "X", action: "상호작용" },
               { keys: "TAB", action: "메뉴" },
             ]}
           />
@@ -1146,6 +1291,7 @@ export default function BaseCampPage() {
           onOpenDex={() => { setMenuOpen(false); setDexOpen(true); }}
           onGoToMonsters={() => navigate("/monsters")}
           onGoToFarm={() => navigate("/farm", { state: { from: "basecamp" } })}
+          onGoToForest={() => navigate("/forest")}
           towerCleared={towerCleared}
           onReplayEnding={() => { setMenuOpen(false); navigate("/ending"); }}
           onOpenTower={() => {
@@ -1173,6 +1319,7 @@ export default function BaseCampPage() {
           bestFloor={bestFloor}
           cleared={towerCleared}
           partyEmpty={partySize === 0}
+          allFainted={partyAllFainted}
           onSelect={handleTowerSelect}
           onClose={() => { setTowerPayload(null); setHealed(false); }}
           onHeal={() => { restorePartyHp(); setHealed(true); }}
@@ -1214,8 +1361,8 @@ export default function BaseCampPage() {
               </div>
               <p className="text-earth-400 text-pixel-sm self-end">
                 {dialogueLineIndex < npcDialogue.lines.length - 1
-                  ? "클릭 / Space: 다음  ·  ESC: 닫기"
-                  : "클릭 / Space: 닫기  ·  ESC: 닫기"}
+                  ? "클릭 / X: 다음  ·  ESC: 닫기"
+                  : "클릭 / X: 닫기  ·  ESC: 닫기"}
               </p>
             </div>
           </div>

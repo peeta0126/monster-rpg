@@ -37,7 +37,7 @@ import {
 import { monsters } from "../../src/monster/monsters";
 import { applyLevelGrowth } from "../../src/monster/growth";
 import { withImprint } from "../../src/monster/imprint";
-import type { Monster, Move, ElementType } from "../../src/shared/game";
+import type { Monster, Move } from "../../src/shared/game";
 import type { ArtifactInstance, ArtifactStatBonus, ItemQuality } from "../../src/shared/crafting";
 import {
   applyArtifactQualityStats, getEquipmentMaxLevel, getEquipmentLevelUpCost,
@@ -120,13 +120,10 @@ export function equipBonus(s: SimState, uid: string) {
   const eq = s.equipped[uid] ?? [];
   const totals = sumEquippedStatBonuses(eq);
   const bonus = sumEquippedBonusStats(eq);
-  const elementalDamage: Partial<Record<ElementType, number>> = {};
-  if (bonus.fireDamage) elementalDamage.fire = bonus.fireDamage;
-  if (bonus.waterDamage) elementalDamage.water = bonus.waterDamage;
   return {
     attack: totals.attack, defense: totals.defense, speed: totals.speed,
     critRate: totals.critRate, elementPower: totals.elementPower, hp: totals.hp,
-    critDamage: bonus.critDamage, expBonus: bonus.expBonus, elementalDamage,
+    critDamage: bonus.critDamage, elementalDamage: bonus.elementDamage,
   };
 }
 
@@ -161,7 +158,7 @@ function pickBestMove(attacker: BattleMonster, defender: BattleMonster): Move {
   let bestScore = -1;
   for (const mv of attacker.moves) {
     if (mv.power === 0) continue;
-    const score = mv.power * (mv.accuracy / 100) * getTypeMultiplier(mv.type, defender.type);
+    const score = mv.power * (mv.accuracy / 100) * getTypeMultiplier(mv.type, defender.type, defender.type2);
     if (score > bestScore) { bestScore = score; best = mv; }
   }
   return best;
@@ -354,7 +351,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
 
     if (playerWon) {
       // 경험치는 마지막에 싸운 몬스터만 받는다 (BattlePage와 동일)
-      const baseExp = ne.rewardExp * (1 + bonus.expBonus / 100);
+      const baseExp = ne.rewardExp;
       const earned = Math.floor(baseExp * expLevelGapMultiplier(ne.level, np.level));
       const prevLevel = np.level;
       let grown = gainExp(np, earned).updatedMonster;
@@ -374,6 +371,7 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
       owned.id = grown.id;
       owned.name = grown.name;
       owned.type = grown.type;
+      owned.type2 = grown.type2;   // 부속성도 같이. 안 옮기면 시뮬만 진화체를 단일 속성으로 잰다
       owned.moves = grown.moves;
       owned.rewardExp = grown.rewardExp;
       owned.evolvesTo = grown.evolvesTo;
@@ -398,7 +396,8 @@ export async function fightFloor(s: SimState, floor: number, maxTurns = 400): Pr
         mate.level = g.level; mate.exp = g.exp; mate.expToNextLevel = g.expToNextLevel;
         mate.maxHp = mateStats.maxHp; mate.attack = mateStats.attack;
         mate.defense = mateStats.defense; mate.speed = mateStats.speed;
-        mate.id = g.id; mate.name = g.name; mate.type = g.type; mate.moves = g.moves;
+        mate.id = g.id; mate.name = g.name; mate.moves = g.moves;
+        mate.type = g.type; mate.type2 = g.type2;
         mate.rewardExp = g.rewardExp; mate.evolvesTo = g.evolvesTo; mate.evolvesAtLevel = g.evolvesAtLevel;
         mate.currentHp = Math.min(mate.maxHp, Math.max(1, mate.currentHp));
       }

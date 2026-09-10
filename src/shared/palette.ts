@@ -9,7 +9,7 @@
  * ⚠️ index.css 의 @theme 블록이랑 값이 늘 같아야 한다. 색을 바꿀 때는
  *    ART_DIRECTION 1-2 표 → index.css → 이 파일 순서로 셋 다 고쳐라.
  */
-import { ELEMENT_KO } from "./game";
+import { ELEMENT_KO, elementIdsOf, type ElementType } from "./game";
 
 /** CSS/Phaser 텍스트 스타일용 문자열 형태 */
 export const PALETTE = {
@@ -29,6 +29,9 @@ export const PALETTE = {
   mist500:   "#5C9396",
   moss500:   "#7A8455",
   moss700:   "#39412A",
+  violet500: "#6D4E85",
+  rose300:   "#D9A0B0",
+  spark400:  "#E8CE72",
 } as const;
 
 export type PaletteName = keyof typeof PALETTE;
@@ -39,27 +42,34 @@ export const HEX = Object.fromEntries(
 ) as Record<PaletteName, number>;
 
 /**
- * 속성 7종 → 팔레트 토큰.
+ * 속성 8종 → 팔레트 토큰.
  *
  * 원래 속성마다 Tailwind 기본 램프(red/blue/green/yellow/cyan/zinc/purple)를 하나씩
  * 쓰고 있었다. 마스터 팔레트는 색상환을 다 안 덮어서 "빨강→ember, 파랑→mist" 식으로
  * 기계적으로 접으면 불/전기가 같은 색, 물/얼음이 같은 색이 돼서 구분이 사라진다.
  *
- * 그래서 색상만이 아니라 명도까지 써서 일곱을 전부 다르게 놨다. 숲·전투·몬스터
- * 화면이 전부 이 표를 보니까 화면마다 따로 정하지 마라.
+ * 한동안 그 부족한 자리를 **명도**로 메웠다 — 불 ember-600 / 전기 ember-500,
+ * 독은 보라가 없어서 흙빛 earth-500. 12px 칩 하나에서는 그 차이가 안 보인다.
+ * 실제로 "불꽃이랑 전기가 같은 색, 독이랑 얼음이 같은 색"이라는 말을 들었다.
+ * 그래서 색상환 자리 셋을 팔레트에 추가하고(ART_DIRECTION 1-2) 여덟을 **색상**으로
+ * 갈랐다. 지금 남은 명도 짝은 물/얼음(mist-500 · mist-300) 하나뿐이고, 그건
+ * "같은 물질의 언 것과 안 언 것"이라 오히려 같은 계열인 편이 읽힌다.
+ *
+ * 숲·전투·몬스터 화면이 전부 이 표를 보니까 화면마다 따로 정하지 마라.
  */
 export const ELEMENT_COLOR = {
   fire:     "ember600",  // 짙은 화염
-  electric: "ember500",  // 밝은 화염. fire 보다 한 단계 밝게 해서 구분
+  electric: "spark400",  // 번개의 금빛. 예전엔 ember-500 이라 불꽃과 한 단계 차이였다
   water:    "mist500",   // 짙은 청록
   ice:      "mist300",   // 밝은 청록. water 보다 밝게
   grass:    "moss500",
-  poison:   "earth500",  // 팔레트에 보라가 없다. 탁한 흙빛으로 대체 (ART_DIRECTION 1-2 표에 보라 추가 시 교체)
+  poison:   "violet500", // 늪의 자줏빛. 예전엔 팔레트에 보라가 없어 earth-500 이었다
+  crystal:  "rose300",   // 수정이 굴절시킨 빛. 여덟 중 유일한 분홍 자리다
   normal:   "sand300",
 } as const satisfies Record<string, PaletteName>;
 
 /**
- * 속성 7종의 한글 이름.
+ * 속성 8종의 한글 이름.
  *
  * 표 자체는 game.ts 에 있다. 여기에도 똑같은 게 한 벌 더 있었는데, 두 벌이면 한쪽만
  * 고쳐도 티가 안 난다. 이름 바꾸는 날 화면 절반만 따라온다는 뜻이다. 부르는 쪽이
@@ -78,17 +88,18 @@ export { ELEMENT_KO };
  * Phaser 가 Tailwind 클래스를 못 읽어서(맨 위 머리말 참고) 씬은 이 표를 쓴다.
  */
 export const ELEMENT_CHIP_INK: Record<keyof typeof ELEMENT_COLOR, PaletteName> = {
-  fire: "sand200", electric: "ember500", water: "sand200", ice: "mist300",
-  grass: "sand200", poison: "sand200", normal: "sand300",
+  fire: "sand200", electric: "spark400", water: "sand200", ice: "mist300",
+  grass: "sand200", poison: "sand200", crystal: "rose300", normal: "sand300",
 };
 
 export const ELEMENT_CHIP_CLASS: Record<keyof typeof ELEMENT_COLOR, string> = {
-  fire:     "bg-ember-600/25 text-sand-200 border-ember-600",
-  electric: "bg-ember-500/20 text-ember-500 border-ember-500",
-  water:    "bg-mist-500/25  text-sand-200 border-mist-500",
-  ice:      "bg-mist-300/20  text-mist-300 border-mist-300",
-  grass:    "bg-moss-500/25  text-sand-200 border-moss-500",
-  poison:   "bg-earth-500/30 text-sand-200 border-earth-500",
+  fire:     "bg-ember-600/25  text-sand-200 border-ember-600",
+  electric: "bg-spark-400/20  text-spark-400 border-spark-400",
+  water:    "bg-mist-500/25   text-sand-200 border-mist-500",
+  ice:      "bg-mist-300/20   text-mist-300 border-mist-300",
+  grass:    "bg-moss-500/25   text-sand-200 border-moss-500",
+  poison:   "bg-violet-500/35 text-sand-200 border-violet-500",
+  crystal:  "bg-rose-300/20   text-rose-300 border-rose-300",
   normal:   "bg-shadow-700/80 text-sand-300 border-stone-600",
 };
 
@@ -139,4 +150,23 @@ export function rgba(name: PaletteName, alpha: number): string {
 export function withAlpha(name: PaletteName, alpha: number): string {
   const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255);
   return PALETTE[name] + a.toString(16).padStart(2, "0");
+}
+
+/**
+ * 이중 속성까지 포함한 칩 목록. 주속성이 먼저고, 부속성이 있으면 뒤에 하나 더 붙는다.
+ *
+ * 화면마다 `m.type2 && ...` 를 손으로 쓰면 어느 화면은 부속성을 빠뜨린다 — 실제로
+ * 「내 몬스터」만 한 칸, 전투는 두 칸이 되면 같은 몬스터가 화면마다 다른 속성으로 보인다.
+ * 순서도 여기서 정한다(주속성이 먼저다. Monster.type2 주석 참고).
+ */
+export function elementChips(m: { type: ElementType | null; type2?: ElementType }): Array<{
+  label: string; color: PaletteName; ink: PaletteName;
+}> {
+  const ids = elementIdsOf(m);
+  return ids.length === 0 ? [elementChip(null)] : ids.map((t) => elementChip(t));
+}
+
+/** 속성 칩 한 줄을 글자로. 로그·툴팁처럼 칩을 못 그리는 자리에서 쓴다 ("얼음 · 크리스탈") */
+export function elementLabel(m: { type: ElementType | null; type2?: ElementType }): string {
+  return elementChips(m).map((c) => c.label).join(" · ");
 }

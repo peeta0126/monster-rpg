@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 
-/** "SPACE 제작대 사용하기" 같은 조작 안내 배지. 베이스캠프·공방·숲에서 같은 모양을 쓴다. */
+/** "X 제작대 사용하기" 같은 조작 안내 배지. 베이스캠프·공방·숲에서 같은 모양을 쓴다.
+ *  상호작용 키는 게임 전체가 X 하나다 — 기본값을 바꾸려면 그 이유부터 적을 것. */
 export function InteractionPrompt({
-  keyLabel = "SPACE",
+  keyLabel = "X",
   children,
 }: {
   keyLabel?: string;

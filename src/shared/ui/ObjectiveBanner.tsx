@@ -21,6 +21,13 @@ export function ObjectiveBanner({ objective }: { objective: Objective | null }) 
         {objective.where && (
           <span className="break-keep text-pixel-sm text-earth-400">— {objective.where}</span>
         )}
+        {/* 걷지 않고 가는 길이 있으면 그쪽을 알려준다. 화면이 가리키는 길이 제일 먼
+            길이면 안내가 아니라 함정이다 */}
+        {objective.via && (
+          <span className="break-keep rounded border border-mist-500/60 px-1.5 text-pixel-sm font-bold text-mist-300">
+            {objective.via}
+          </span>
+        )}
       </div>
     </div>
   );

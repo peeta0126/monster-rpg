@@ -96,14 +96,14 @@ test.describe("workshop:", () => {
       expect(reached, `${station.id} 까지 못 갔다`).toBe(true);
 
       await expect(page.getByText(`${station.label} 사용하기`)).toBeVisible();
-      await page.keyboard.press("Space");
+      await page.keyboard.press("x");
 
       const title = station.type === "anvil" ? "장비 모루"
         : station.type === "artifact" ? "아티팩트 제작대" : "연금술 제작대";
       await expect(page.getByRole("heading", { name: title })).toBeVisible();
 
       // 모달이 열린 동안에는 SPACE 상호작용이 먹지 않아야 한다
-      await page.keyboard.press("Space");
+      await page.keyboard.press("x");
       await expect(page.getByRole("heading", { name: title })).toBeVisible();
       await expect(page.getByText(`${station.label} 사용하기`)).toBeHidden();
 
@@ -116,7 +116,7 @@ test.describe("workshop:", () => {
     await openWorkshop(page);
     // 스폰이 이미 출입구 판정 안이다
     await expect(page.getByText(EXIT_ZONE.label)).toBeVisible();
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page).toHaveURL(/\/$/);
   });
 
@@ -145,7 +145,7 @@ test.describe("workshop:", () => {
     await openWorkshop(page);
     const anvil = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
     await walkTo(page, anvil, APPROACH * anvil.radius);
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
 
     const before = await readPos(page);
@@ -180,7 +180,7 @@ test.describe("workshop:", () => {
     // 유령 입력이 남아 플레이어가 저 혼자 미끄러진다.
     await page.keyboard.down("ArrowUp");
     await page.waitForTimeout(120);
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
 
     // 기준 좌표는 모달이 뜬 뒤에 찍는다. 누르고 있는 동안 찍으면 그 사이에도
@@ -219,7 +219,7 @@ test.describe("workshop:", () => {
     await openWorkshop(page);
     const alchemy = CRAFTING_STATIONS.find((s) => s.id === "alchemy-workbench")!;
     await walkTo(page, alchemy, APPROACH * alchemy.radius);
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page.getByRole("heading", { name: "연금술 제작대" })).toBeVisible();
 
     await page.getByRole("button", { name: "테스트 재료" }).click();
@@ -240,7 +240,7 @@ test.describe("workshop:", () => {
     await openWorkshop(page);
     const bench = CRAFTING_STATIONS.find((s) => s.id === "artifact-workbench")!;
     await walkTo(page, bench, APPROACH * bench.radius);
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page.getByRole("heading", { name: "아티팩트 제작대" })).toBeVisible();
 
     await page.getByRole("button", { name: "테스트 재료" }).click();
@@ -263,7 +263,7 @@ test.describe("workshop:", () => {
     await openWorkshop(page);
     const anvil = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
     await walkTo(page, anvil, APPROACH * anvil.radius);
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
     await expect(page.getByText(/레벨업|강화|분해|합성/).first()).toBeVisible();
   });

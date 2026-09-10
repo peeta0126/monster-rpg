@@ -17,7 +17,7 @@ import type { ElementType } from "../src/shared/game";
 
 // ─── 속성 칩 ───────────────────────────────────────────────────────────────────
 
-test("속성 7종에 이름·바탕색·글자색이 다 있다", () => {
+test("속성 여덟에 이름·바탕색·글자색이 다 있다", () => {
   for (const type of Object.keys(ELEMENT_COLOR) as ElementType[]) {
     const chip = elementChip(type);
     assert.ok(chip.label.length > 0, `${type}: 이름이 없다`);

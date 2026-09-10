@@ -18,10 +18,13 @@ const SPECIAL_DROP_FLOOR: Record<string, number> = { ormr_essence: 50 };
 
 const restore = installSeededRandom(42);
 
-function bestMove(m: { moves: { power: number; accuracy: number; type: string; name: string }[] }, defType: unknown) {
+function bestMove(
+  m: { moves: { power: number; accuracy: number; type: string; name: string }[] },
+  def: { type: unknown; type2?: unknown },
+) {
   return m.moves.reduce((a, b) => {
-    const sa = a.power * (a.accuracy / 100) * getTypeMultiplier(a.type as never, defType as never);
-    const sb = b.power * (b.accuracy / 100) * getTypeMultiplier(b.type as never, defType as never);
+    const sa = a.power * (a.accuracy / 100) * getTypeMultiplier(a.type as never, def.type as never, def.type2 as never);
+    const sb = b.power * (b.accuracy / 100) * getTypeMultiplier(b.type as never, def.type as never, def.type2 as never);
     return sb > sa ? b : a;
   });
 }
@@ -60,10 +63,10 @@ for (const floor of [10, 20, 30, 40, 50]) {
     let need = -1;
     for (let lv = 1; lv <= 200; lv++) {
       const me = scaleToLevel(base, lv);
-      const mv = bestMove(me, boss.type);
-      const myDmg = Math.max(1, Math.floor((me.attack * mv.power / boss.defense) * getTypeMultiplier(mv.type as ElementType, boss.type)) * (mv.accuracy / 100));
-      const bossMv = bestMove(boss, me.type);
-      const bossDmg = Math.max(1, Math.floor((boss.attack * bossMv.power / me.defense) * getTypeMultiplier(bossMv.type as ElementType, me.type)) * (bossMv.accuracy / 100));
+      const mv = bestMove(me, boss);
+      const myDmg = Math.max(1, Math.floor((me.attack * mv.power / boss.defense) * getTypeMultiplier(mv.type as ElementType, boss.type, boss.type2)) * (mv.accuracy / 100));
+      const bossMv = bestMove(boss, me);
+      const bossDmg = Math.max(1, Math.floor((boss.attack * bossMv.power / me.defense) * getTypeMultiplier(bossMv.type as ElementType, me.type, me.type2)) * (bossMv.accuracy / 100));
       const turnsToKill = boss.maxHp / myDmg;
       const turnsToDie = me.maxHp / bossDmg;
       // 파티 3마리 = 대략 3배 버팀
@@ -72,7 +75,7 @@ for (const floor of [10, 20, 30, 40, 50]) {
     if (need > 0 && need < bestNeed) {
       bestNeed = need;
       const me = scaleToLevel(base, need);
-      const mv = bestMove(me, boss.type);
+      const mv = bestMove(me, boss);
       bestLine = `${base.name}(${mv.name} 위력${mv.power}) Lv.${need} — 공격 ${me.attack} / HP ${me.maxHp}`;
     }
   }

@@ -14,14 +14,15 @@ function VolumeRow({
         <span className="text-pixel-sm text-sand-300">{label}</span>
         <span className="font-mono text-pixel-sm text-sand-200">{Math.round(value * 100)}</span>
       </span>
-      {/* min-w-0: 없으면 range 의 기본 폭(≈130px)이 최소치가 돼 좁은 띠에서 줄이 삐져나간다 */}
+      {/* 생김새는 index.css 의 .pixel-range 한 벌이 정한다 (가방의 개수 슬라이더와 같은 것).
+          거기에 width:100%·min-width:0 이 들어 있다 — 없으면 range 의 기본 폭(≈130px)이
+          최소치가 돼서 좁은 띠에서 줄이 삐져나간다. */}
       <input
         type="range" min={0} max={100} step={5}
         value={Math.round(value * 100)}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
-        className="mt-1 h-1.5 w-full min-w-0 cursor-pointer appearance-none rounded-full
-          bg-shadow-700 accent-ember-500 disabled:opacity-40"
+        className="pixel-range mt-1"
       />
     </label>
   );

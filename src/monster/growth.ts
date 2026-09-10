@@ -139,7 +139,12 @@ export async function applyLevelGrowth<T extends Monster & { currentHp: number }
           ...result,
           id: next.id,
           name: next.name,
+          // ⚠️ 부속성도 **반드시** 같이 옮긴다. `type` 만 옮기던 시절에는 진화체가
+          // 부속성을 못 물려받았다 — 버블돈(물/독)으로 진화해도 독이 안 붙어서, 화면은
+          // 칩을 둘 그리는데 전투는 하나로만 계산했다. `undefined` 를 그대로 쓰는 것도
+          // 의도다(부속성이 없어지는 진화가 생기면 그때 지워져야 한다).
           type: next.type,
+          type2: next.type2,
           maxHp: newMaxHp,
           attack: next.attack + n * 3,
           defense: next.defense + n * 2,

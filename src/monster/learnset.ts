@@ -12,31 +12,31 @@
  *   플레미  불 + 노말      : 초원을 달리는 야생마 → 몸통 계열
  *   버노    불 + 전기      : 화산 황소, 정전기 쌓인 뿔 → thunderPunch 대체 boltStrike
  *   아쿠비  물 + 얼음/독   : 냉수 도롱뇽 → 얼음 접목 + 피부 점액, 미진화 특수 딜러
- *   아쿠사  물 + 얼음/노말 : 진화체, 물리·특수 겸용 만능 딜러
- *   버블릿  물 + 독        : 물 벌레, 독침
+ *   아쿠사  물 + 수정/얼음/노말 : 진화체, 물리·특수 겸용 만능 딜러
+ *   버블릿  물 + 독        : 물 벌레, 독침. 독은 아직 교차다(버블돈에서 자속이 된다)
  *   리피    풀 + 얼음/독   : 잎등짝 곰, 서리 맺힌 잎 + 포자
  *   모시    전기 + 노말    : 야생 늑대. 전기는 상성표상 약점 0개라 진화 라인의 탱커
  *   모치    전기 + 노말    : 진화체, 화력형으로 전환되는 과도기
  *   모왕    전기 + 노말    : 전기의 왕, 순수 화력형 최종체
- *   크리샤  얼음 + 물      : 수정에 맺힌 물
- *   프리로  얼음 + 물/노말 : 둔중한 방벽형(약점이 불 하나뿐이라 방어 특화)
+ *   크리샤  얼음/크리스탈  : 이마의 수정. 자속이 둘이라 교차는 물 하나만 둔다
+ *   프리로  얼음 + 수정/물 : 둔중한 방벽형. 수정 원반은 주워 짊어진 것이라 교차다
  *   노비    노말 + 만능    : 정체성이 옅은 대신 여러 타입을 얕게 (대boss 서브).
  *                            상태이상기 없음 + 노말 약점 0개라 범용 탱커로 보상
  *   버녹스  불 + 전기      : 버노의 진화체. 정전기 뿔을 그대로 물려받는다
  *   화롱    불 + 노말      : 화로를 짊어진 둔한 몸. 육탄으로 버틴다
- *   아쿠곤  물 + 얼음/노말 : 아쿠사의 진화체. 두 갈래 종착점을 한 몸에 모은다
- *   버블록  물 + 독        : 버블릿의 바위 갑주 단계. 독을 그대로 이어간다
- *   버블돈  물 + 독/노말   : 요새형 최종체. 무게로 누른다
- *   젬토    얼음 + 물/노말 : 수정 띠 새끼 거북. 방벽 라인의 시작
- *   젬가드  얼음 + 노말    : 등껍질이 수정 가시로 솟는다
- *   젬로드  얼음 + 노말    : 요새형 최종체. 게임에서 제일 단단하다
- *   빙록    얼음 + 풀/노말 : 수정 뿔이 나뭇가지를 닮았다. 얼음 유일의 속도형
- *   독무스  독 + 풀        : 꼬리의 버섯에서 포자를 뿌린다. 지속 피해형
+ *   아쿠곤  물 + 수정/얼음/노말 : 아쿠사의 진화체. 두 갈래 종착점을 한 몸에 모은다
+ *   버블록  물 + 독        : 버블릿의 바위 갑주 단계. 아직 순수 물이고 독은 교차다
+ *   버블돈  물/독 + 노말   : 요새형 최종체. 여기서 독이 자속이 된다
+ *   젬토    크리스탈       : 수정 띠 새끼 거북. 방벽 라인의 시작. 교차는 얼음/물/노말
+ *   젬가드  크리스탈       : 등껍질이 수정 가시로 솟는다. 교차는 얼음/노말
+ *   젬로드  크리스탈       : 요새형 최종체. 게임에서 제일 단단하다. 교차는 얼음/노말
+ *   빙록    얼음 + 수정/풀 : 수정 뿔이 나뭇가지를 닮았다. 얼음 유일의 속도형
+ *   포자무스 풀/독         : 꼬리의 버섯에서 포자를 뿌린다. 자속이 둘이라 교차가 없다
  *   붕곰    노말 + 독/불   : 붕대와 부적. 정면으로 치고받는 노말
  *
  * 진화 계통 전용 기술 (⭐이번 재설계의 핵심):
  *   아쿠비 전용(아쿠사는 못 배움) : frostBreath, acidSpray
- *   아쿠사 전용(진화 후에만)      : bodySlam, crystalLance, tidalCrash
+ *   아쿠사 전용(진화 후에만)      : bodySlam, crystalLance(교차: 수정), tidalCrash
  *   아쿠곤 전용(최종체만)         : hydroPump 재습득. 아쿠비 쪽 특수 종착점과
  *                                   아쿠사 쪽 물리 종착점(tidalCrash)을 둘 다 갖는
  *                                   유일한 단계다 — 3단계까지 키운 값이 여기 있다
@@ -73,7 +73,9 @@ import {
   // grass
   vineWhip, leafGust, sporeCloud, leafBlade, iceLeaf, seedBomb, rootSpear, solarBeam,
   // ice
-  frostBreath, iceShard, frostMist, icePunch, iceBeam, crystalLance, crystalBurst, blizzard, sheerCold,
+  frostBreath, iceShard, frostMist, icePunch, iceBeam, blizzard, sheerCold,
+  // crystal
+  crystalChip, lightRefract, gemStrike, prismFlare, crystalLance, crystalBurst, prismStorm,
   // poison
   poisonSting, acidSpray, toxic, poisonFog, poisonJab, venomFang, venomStorm,
 } from "./moves";
@@ -222,25 +224,36 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 50, move: hydroPump },        // ★버블릿 전용. 진화하면 잃는다
   ],
 
-  // ═══ 버블록 (바위 갑주 벌레·1차 진화): 독 + 물. 방어형 ════════════════════
-  // 버블릿의 독 계열을 레벨까지 그대로 물려받는다(16 에 진화해도 표가 어긋나지
-  // 않게 맞춰 둔 것). 다른 것은 둘뿐 — 30 의 압박(바위 갑주 육탄)이 들어오고,
-  // 버블릿의 종착점이던 hydroPump 가 빠진다. 특수 최종기를 원하면 진화를 미뤄야 한다.
+  // ═══ 버블록 (바위 갑주 벌레·1차 진화): 물 + 독/노말. 방어형 ═══════════════
+  // ⚠️ 이 단계는 **순수 물**이다. 독은 아직 교차고, 버블돈에서 자속이 된다
+  //    (monsters.ts 버블록 주석 참고). 표도 그렇게 갈랐다 — 예전에는 독이 여섯,
+  //    물이 셋이라 "물 몬스터 몸에 독 학습표"였다.
+  //
+  // 버블릿의 독 계열을 레벨까지 그대로 물려받는 규칙은 지킨다(22 에 진화해도 표가
+  // 어긋나지 않게 맞춰 둔 것). 다만 중간의 독 둘을 물로 돌렸다 — 수파문(19)·
+  // 소용돌이(36). 맹독폭풍은 버블돈이 자속으로 갖는 종착점이라 여기서 빼야
+  // 진화할 이유가 남는다(물 최상급 해일격·하이드로펌프는 아쿠 계열과 버블릿의
+  // 전용기라 이 단계로 내려오지 않는다 — 그래서 종착점을 맹독니로 둔다).
+  //
+  // 30 의 압박(바위 갑주 육탄)은 그대로고, 버블릿의 종착점이던 hydroPump 는 빠진다.
+  // 특수 최종기를 원하면 진화를 미뤄야 한다는 이 라인의 선택지는 안 바뀐다.
   bublock: [
     { level:  1, move: tackle },
     { level:  1, move: waterGun },
-    { level:  5, move: poisonSting },      // 교차: 독
+    { level:  5, move: poisonSting },      // 교차: 독(갉아 먹은 광물)
     { level:  9, move: bubbleCannon },
-    { level: 14, move: toxic },            // 확정 독
-    { level: 19, move: poisonFog },        // 교차: 독
+    { level: 14, move: toxic },            // 확정 독. 교차지만 이 라인의 상징이라 남긴다
+    { level: 19, move: waterPulse },       // 물 T2
     { level: 24, move: poisonJab },        // 교차: 독
     { level: 30, move: bodySlam },         // 교차: 노말(바위 갑주)
-    { level: 36, move: venomFang },        // 교차: 독
+    { level: 36, move: aquaWhirl },        // 물 T3
     { level: 43, move: surf },
-    { level: 50, move: venomStorm },       // 교차: 독
+    { level: 50, move: venomFang },        // 교차: 독. 버블돈에서 자속이 된다
   ],
 
-  // ═══ 버블돈 (거대 갑충·최종): 독 + 물/노말. 요새형 ════════════════════════
+  // ═══ 버블돈 (거대 갑충·최종): 물/독 + 노말. 요새형 ════════════════════════
+  // 이 라인에서 독이 **자속이 되는 단계**다. 버블릿·버블록이 교차로 들고 다니던
+  // 독침·독가시·독찌르기가 여기서 제 위력을 낸다.
   // 방어 88 로 버티면서 독을 걸어 두고 시간을 이기는 종이다. 그래서 확정 독을
   // 17 로 조금 늦추는 대신, 무게로 누르는 노말 계열을 두 개(강타·기가임팩트) 준다.
   bubldon: [
@@ -326,22 +339,30 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 58, move: gigaImpact },       // ★모왕 전용. 교차: 노말
   ],
 
-  // ═══ 크리샤 (얼음 수정 여우): 얼음 + 물(수정 물방울). 특수 딜러 ═══════════
+  // ═══ 크리샤 (얼음 수정 여우): 얼음/크리스탈. 자속 둘의 특수 딜러 ═══════════
+  // 자속이 둘이라 교차는 물 하나만 남긴다. 예전에 질풍(노말)이 Lv5 에 있었는데,
+  // 이 종의 정체가 이마의 수정이라 그 자리는 크리스탈 기본기가 갖는 게 맞다.
+  // 절대영도(얼음 최상급)도 프리즘폭풍으로 바꿨다 — 최상급을 둘 다 얼음으로 주면
+  // 자속 둘이라는 말이 무색해지고, 얼음 최상급은 프리로·빙록이 이미 종착점으로 쓴다.
   crystafox: [
     { level:  1, move: tackle },
     { level:  1, move: frostBreath },
-    { level:  5, move: quickAttack },      // 교차: 노말
+    { level:  5, move: lightRefract },     // 자속: 크리스탈(이마의 수정이 빛을 모은다)
     { level: 10, move: icePunch },
     { level: 14, move: frostMist },        // 확정 빙결
     { level: 19, move: iceBeam },
-    { level: 25, move: crystalBurst },
+    { level: 25, move: prismFlare },       // 자속: 크리스탈 T2
     { level: 31, move: waterPulse },       // 교차: 물(수정에 맺힌 물)
-    { level: 37, move: crystalLance },
+    { level: 37, move: crystalBurst },     // 자속: 크리스탈 T3(특수). 물리 쪽 수정창은
+                                           //  젬 계열이 갖는다 — 이쪽은 특수 딜러다
     { level: 43, move: blizzard },
-    { level: 50, move: sheerCold },
+    { level: 50, move: prismStorm },       // 크리스탈 최상급
   ],
 
-  // ═══ 프리로 (얼음 원반): 얼음 + 물/노말. 방벽형 ══════════════════════════
+  // ═══ 프리로 (얼음 원반): 얼음 + 수정/물/노말. 방벽형 ═══════════════════════
+  // 수정파열·수정창은 이제 크리스탈이지만 이 종은 순수 얼음이다. 원반은 제 몸이
+  // 아니라 주워 짊어진 것이라(도감) 자속이 아닌 게 맞다 — 대신 얼음 최상급
+  // 절대영도까지 끝까지 탄다. 젬 계열과 갈리는 자리가 여기다.
   frostorb: [
     { level:  1, move: tackle },
     { level:  1, move: frostBreath },
@@ -356,54 +377,62 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 49, move: sheerCold },
   ],
 
-  // ═══ 젬토 (수정 거북·기초): 얼음 + 물/노말. 방벽 라인의 시작 ══════════════
+  // ═══ 젬토 (수정 거북·기초): 크리스탈 + 얼음/물/노말. 방벽 라인의 시작 ═══════
   // 3단계 라인이라 표를 넓게 편다(최종기 blizzard 가 50). 프리로는 같은 방벽형인데
   // 49 에 절대영도까지 가므로, 젬토를 키우는 값은 지금 세지는 것이 아니라
   // 젬로드까지 갔을 때의 방어 96 에 있다.
+  // 서리 기술은 남겨 둔다 — 차가운 샘가에 사는 종이라 정상 능력이다. 다만 자속이
+  // 아니라 교차라, 이 라인의 딜은 수정 쪽에서 나온다.
   gemto: [
     { level:  1, move: tackle },
     { level:  1, move: frostBreath },
-    { level:  6, move: iceShard },
+    { level:  6, move: crystalChip },      // 자속: 크리스탈(등껍질에서 떨어진 수정 띠)
     { level: 11, move: waterPulse },       // 교차: 물
     { level: 16, move: frostMist },        // 확정 빙결
     { level: 22, move: icePunch },
     { level: 28, move: iceBeam },
     { level: 35, move: bodySlam },         // 교차: 노말
-    { level: 42, move: crystalBurst },
+    { level: 42, move: crystalBurst },     // 자속: 크리스탈
     { level: 50, move: blizzard },
   ],
 
-  // ═══ 젬가드 (수정 거북·1차 진화): 얼음 + 노말. 방벽 심화 ══════════════════
-  // 18 에 진화하는 라인이라 젬토보다 표가 한 칸씩 빠르다. 물(waterPulse)이 빠지고
-  // 대신 수정 계열이 둘 들어온다 — 등껍질이 굳으면서 물기를 잃는다는 설정.
+  // ═══ 젬가드 (수정 거북·1차 진화): 크리스탈 + 얼음/노말. 방벽 심화 ═══════════
+  // 젬토보다 표가 한 칸씩 빠르다. 물(waterPulse)이 빠지고 대신 크리스탈이 셋으로
+  // 늘어난다 — 등껍질이 굳으면서 물기를 잃고 가시가 솟는다는 설정 그대로다.
+  // 결정격(Lv27)이 이 종의 상징이다. 25층 관문이 전기(모치)인데 크리스탈이 전기를
+  // 2배로 때리므로, 관문 앞에서 손에 쥐고 있어야 하는 기술이 그것이다.
   gemguard: [
     { level:  1, move: tackle },
     { level:  1, move: frostBreath },
-    { level:  5, move: iceShard },
+    { level:  5, move: crystalChip },      // 자속: 크리스탈
     { level: 10, move: icePunch },
     { level: 15, move: frostMist },        // 확정 빙결
     { level: 21, move: iceBeam },
-    { level: 27, move: bodySlam },         // 교차: 노말
-    { level: 33, move: crystalLance },
-    { level: 40, move: crystalBurst },
+    { level: 27, move: gemStrike },        // 자속: 크리스탈 T2. 전기 관문의 답
+    { level: 33, move: crystalLance },     // 자속: 크리스탈
+    { level: 40, move: crystalBurst },     // 자속: 크리스탈
     { level: 47, move: blizzard },
   ],
 
-  // ═══ 젬로드 (수정 요새 거북·최종): 얼음 + 노말. 게임 최고 방어 ════════════
+  // ═══ 젬로드 (수정 요새 거북·최종): 크리스탈 + 얼음/노말. 게임 최고 방어 ═════
   // 모왕·아쿠곤과 같이 tackle 없이 시작한다. 확정 빙결(frostMist)이 없는 유일한
   // 젬 계열인 것도 의도 — 방어 96 에 확정 행동 봉쇄까지 붙으면 상대가 손을 못 쓴다.
-  // 벽은 벽까지만 하고, 끝내는 것은 설풍·절대영도가 맡는다.
+  // 벽은 벽까지만 하고, 끝내는 것은 설풍과 프리즘폭풍이 맡는다.
+  //
+  // 절대영도(얼음 최상급)는 프리로가 갖는다. 얼음은 이 종에게 교차라 최상급까지
+  // 줄 자리가 아니고, 줬다면 이 라인이 "느린 대신 뭐든 다 한다"가 된다.
+  // 최상급은 자속인 프리즘폭풍 하나로 끝낸다.
   gemlord: [
     { level:  1, move: frostBreath },
-    { level:  1, move: iceShard },
-    { level:  6, move: icePunch },
+    { level:  1, move: crystalChip },      // 자속: 크리스탈
+    { level:  6, move: gemStrike },        // 자속: 크리스탈 T2
     { level: 12, move: iceBeam },
-    { level: 18, move: crystalLance },
+    { level: 18, move: crystalLance },     // 자속: 크리스탈
     { level: 25, move: heavyBlow },        // 교차: 노말
-    { level: 32, move: crystalBurst },
+    { level: 32, move: crystalBurst },     // 자속: 크리스탈
     { level: 40, move: blizzard },
     { level: 48, move: gigaImpact },       // 교차: 노말
-    { level: 56, move: sheerCold },
+    { level: 56, move: prismStorm },       // ★젬로드 전용. 크리스탈 최상급
   ],
 
   // ═══ 빙록 (수정 뿔 사슴): 얼음 + 풀/노말. 얼음 유일의 속도형 ══════════════
@@ -418,7 +447,7 @@ export const LEARNSET: Record<string, LearnEntry[]> = {
     { level: 20, move: iceBeam },
     // 25·44 는 탑 27·44층이 이 종을 세우는 자리다. 층의 고정 구성은 그 종이 그 레벨까지
     // 배우는 기술만 들 수 있어서(floorTable 규칙 ②), 표가 층보다 늦으면 그 층만 물러진다.
-    { level: 25, move: crystalBurst },
+    { level: 25, move: crystalBurst },      // 교차: 크리스탈(수정 뿔). 예전엔 얼음이었다
     { level: 31, move: twister },          // 교차: 노말
     { level: 38, move: iceLeaf },          // 교차: 풀
     { level: 44, move: blizzard },

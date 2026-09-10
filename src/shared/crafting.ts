@@ -1,3 +1,5 @@
+import type { ElementType } from "./game";
+
 export type CraftingDifficulty = "easy" | "normal" | "hard";
 export type CraftingStationType = "artifact" | "potion";
 export type ItemQuality = "normal" | "rare" | "elite";
@@ -17,14 +19,27 @@ export interface ArtifactStatBonus {
 }
 
 // ─── 부가 능력치 (레벨 10마다 랜덤 해제) ──────────────────────────────────────────
+
+/**
+ * 속성별 데미지 증가(%). 이름을 손으로 적지 않고 `ElementType` 에서 만든다 —
+ * 속성을 하나 더하면 이 표도 같이 늘어나고, 없는 속성은 애초에 적을 수 없다.
+ *
+ * ⚠️ 예전에는 `windDamage`(풍속) · `earthDamage`(대지) 가 있었다. **이 게임에 없는
+ * 속성이다.** 어떤 기술도 그 타입을 못 가지니 굴림이 나와도 아무 일이 안 일어나는데,
+ * 카드에는 "풍속 데미지 +4%" 라고 적혀 있었다. 여덟 속성 중 실제로 데미지가 붙는 것이
+ * 불꽃·물 둘뿐이었던 이유가 이것이다.
+ */
+export type ElementDamageBonusType = `${ElementType}Damage`;
+
 export type ArtifactBonusStatType =
-  | "fireDamage"    // 화염 데미지 증가 (%)
-  | "waterDamage"   // 수류 데미지 증가 (%)
-  | "windDamage"    // 풍속 데미지 증가 (%)
-  | "earthDamage"   // 대지 데미지 증가 (%)
+  | ElementDamageBonusType
   | "critDamage"    // 치명타 데미지 증가 (%)
-  | "maxHpFlat"     // 최대 HP 추가 (flat)
-  | "expBonus";     // 경험치 획득 증가 (%)
+  | "maxHpFlat";    // 최대 HP 추가 (flat)
+
+/** 속성 → 부가 능력치 키. 문자열을 손으로 잇는 곳을 한 군데로 모은다 */
+export function elementDamageKey(type: ElementType): ElementDamageBonusType {
+  return `${type}Damage`;
+}
 
 export interface ArtifactBonusStat {
   type:  ArtifactBonusStatType;

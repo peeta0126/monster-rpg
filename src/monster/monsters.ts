@@ -6,7 +6,8 @@ import {
   quickAttack, headbutt,
   flamethrower, surf, firePunch,
   aquaWhirl, aquaTail, bubbleCannon, tidalCrash,
-  crystalBurst, frostBreath, iceShard, icePunch, crystalLance,
+  frostBreath,
+  crystalChip, lightRefract, gemStrike, crystalBurst, crystalLance, prismStorm,
   overheat, hydroPump, solarBeam, blizzard, venomStorm, gigaImpact,
   poisonSting, poisonJab, acidSpray, poisonFog, venomFang,
 } from "./moves";
@@ -162,24 +163,28 @@ export const monsters: Monster[] = [
   {
     id: "bublock",
     name: "버블록",
-    // ⚠️ 이 라인은 진화하면서 속성이 물 → 독으로 바뀐다. 게임에서 유일하다.
+    // ⚠️ 이 라인은 **최종체에서만** 속성이 늘어난다. 버블릿·버블록은 순수 물이고,
+    // 버블돈에서 물/독이 된다. 게임에서 속성이 늘어나는 유일한 라인이다.
     //
-    // 원화가 그렇다. 버블릿은 거품 벌레지만 버블록·버블돈은 모래에 파묻힌 바위
-    // 갑주 벌레고, 학습표도 1단계부터 독이 절반이다(독가시·독안개·독찌르기·맹독니).
-    // 도감 설명도 "땅속 광물을 갉아 먹어 독성이 독해졌다" 로 그 변화를 적고 있었다.
+    // 한동안 여기(2단계)서 물 → 독으로 **갈아치웠다.** 그건 두 가지가 틀렸다.
+    // 하나는 설정이다 — 독이 독해지는 건 갑주가 다 자란 뒤의 이야기인데 중간
+    // 단계에서 물을 통째로 잃으면 버블릿과 버블돈이 다른 계열처럼 보인다.
+    // 하나는 규칙이다 — 이중 속성이 생긴 지금, "바뀐다" 가 아니라 "붙는다" 로
+    // 적을 수 있다. 갈아치우기는 이제 이 게임에 없다.
     //
-    // 숫자로도 여기가 맞다. 물로 두면 25층 전기 관문(볼트크래시)에서 2배로 맞는데,
-    // 이 라인이 파티에 잘 들어오는 값이라 40판 중 실패가 전부 그 층에 몰렸다.
-    // 독은 얼음에만 2배로 맞으므로 관문 앞에서 혼자 무너지지 않는다.
-    type: "poison",
+    // 숫자로는 이 되돌림이 25층 전기 관문(볼트크래시)을 다시 아프게 만든다
+    // (전기 → 물 2배). 그래서 관문 배수를 다시 재야 했다 — gateCheck 참고.
+    // 대신 독으로 도망치던 자리가 없어져서, 이 라인은 물로서 그 층을 넘어야 한다.
+    type: "water",
     // 껍질에 바위 판이 돋은 모습 그대로 방어로 간다. 총합 332 는 같은 2단계 중
     // 제일 낮은데, 대신 확정 독(독가시)을 Lv14 에 이미 들고 온다. 이 라인의 값은
-    // 능력치가 아니라 상대를 계속 깎는 쪽에 있다.
+    // 능력치가 아니라 상대를 계속 깎는 쪽에 있다 — 독은 아직 자속이 아니지만
+    // 교차로 계속 들고 다닌다(그게 버블돈에서 자속이 되는 예고다).
     maxHp: 195,
     attack: 55,
     defense: 52,
     speed: 30,
-    moves: [tackle, poisonSting, bubbleCannon, poisonJab],
+    moves: [tackle, waterGun, bubbleCannon, poisonJab],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 82,
     evolutionStage: 2,
@@ -191,7 +196,8 @@ export const monsters: Monster[] = [
   {
     id: "bubldon",
     name: "버블돈",
-    type: "poison",   // 버블록에서 이어진다. 위 주석 참고
+    type: "water",     // 계열의 뿌리. 버블릿부터 여기까지 안 바뀐다
+    type2: "poison",   // 갑주가 다 자라면서 붙는다. 위 버블록 주석 참고
     // 세 최종체 중 유일한 요새형. 방어 88 은 게임 전체에서 제일 높고(오름 70 보다도
     // 위다) 속도 55 는 제일 낮다. 총합은 셋 다 477 로 같아서, 차이는 전부 배분에 있다.
     maxHp: 250,
@@ -277,16 +283,24 @@ export const monsters: Monster[] = [
     evolvesFrom: "mossevo",
   },
 
-  // ─── 얼음 (새 2종) ───────────────────────────────────────────────────────────
+  // ─── 얼음 · 크리스탈 ────────────────────────────────────────────────────────
+  // 크리샤만 얼음/크리스탈이다. 젬 계열 셋은 순수 크리스탈이다 — 이 라인은 등껍질의
+  // 수정이 전부라 얼음을 겸하면 정체가 반으로 갈린다. 차가운 샘가에 사는 설정이라
+  // 서리 기술은 그대로 두되 교차로 둔다. 오름이 최상급 기술 하나로 크리스탈을 갖는다.
+  // 탑에 수정 방 그림이 없어 이 셋은 얼음 방에 선다(assetPaths 의 TOWER_ROOM_FALLBACK).
   {
     id: "crystafox",
     name: "크리샤",
     type: "ice",
+    // 이마의 다이아몬드 수정이 이 종의 이름이자 정체다(crysta-fox). 원화도 도감도
+    // 처음부터 수정을 앞세우고 있었는데 속성표에는 그 자리가 없었다.
+    // 얼음으로 묶고 크리스탈로 때리는 손이 이 계열 넷의 공통 정체성이다.
+    type2: "crystal",
     maxHp: 110,
     attack: 32,
     defense: 28,
     speed: 26,
-    moves: [tackle, iceBeam],
+    moves: [tackle, iceBeam, lightRefract],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 46,
   },
@@ -307,15 +321,18 @@ export const monsters: Monster[] = [
   {
     id: "gemto",
     name: "젬토",
-    type: "ice",
+    // 등껍질의 수정 띠가 이 라인의 전부다. 젬가드에서 가시로 솟고 젬로드에서 요새가
+    // 되는 것이 전부 같은 수정이라, 3단계 내내 순수 크리스탈로 간다. 얼음을 겸하면
+    // 불에 2배로 맞으면서 정작 자속은 반씩 나뉜다 — 방벽 라인이 그럴 자리가 없다.
+    type: "crystal",
     // 수정 띠를 두른 새끼 거북. 3단계까지 가는 라인이라 시작은 낮게 잡는다(총합 193 —
     // 버블릿 183 다음으로 낮다). 프리로(206)와 같은 방벽형이지만 저쪽은 완성형이고
-    // 이쪽은 자라는 중이라, 같은 얼음이어도 지금 쓸 것과 키울 것으로 갈린다.
+    // 이쪽은 자라는 중이라, 지금 쓸 것과 키울 것으로 갈린다.
     maxHp: 112,
     attack: 26,
     defense: 33,
     speed: 22,
-    moves: [tackle, frostBreath, iceShard],
+    moves: [tackle, crystalChip, frostBreath],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 44,
     evolutionStage: 1,
@@ -329,14 +346,15 @@ export const monsters: Monster[] = [
   {
     id: "gemguard",
     name: "젬가드",
-    type: "ice",
+    // 수정 띠가 등껍질을 뚫고 가시로 솟은 단계. 크리스탈은 젬토에서 그대로 온다.
+    type: "crystal",
     // 등껍질이 수정 가시로 솟은 단계. 방어 64 는 2단계 넷 중 가장 높다(아쿠사 45,
     // 모치 44, 버블록 52). 총합 335 는 나머지와 같으므로 그만큼 속도를 버렸다.
     maxHp: 195,
     attack: 54,
     defense: 64,
     speed: 22,
-    moves: [tackle, frostBreath, icePunch, iceBeam],
+    moves: [tackle, crystalChip, gemStrike, iceBeam],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 86,
     evolutionStage: 2,
@@ -348,15 +366,16 @@ export const monsters: Monster[] = [
   {
     id: "gemlord",
     name: "젬로드",
-    type: "ice",
-    // 네 번째 최종체. 방어 96·속도 33 으로 버블돈보다 한 걸음 더 요새 쪽이고,
-    // 얼음은 약점이 불 하나뿐이라 불 파티가 아니면 뚫는 데 시간이 걸린다.
-    // 대신 속도가 제일 낮아 선공을 거의 못 잡는다 — 벽은 벽까지만 한다.
+    // 온몸이 수정 요새다. 크리스탈의 종착점.
+    type: "crystal",
+    // 네 번째 최종체. 방어 96·속도 33 으로 버블돈보다 한 걸음 더 요새 쪽이다.
+    // 약점은 독 하나뿐이라(typeChart) 산을 안 들고 온 파티는 이 벽을 시간으로만
+    // 넘는다. 대신 속도가 제일 낮아 선공을 거의 못 잡는다 — 벽은 벽까지만 한다.
     maxHp: 270,
     attack: 78,
     defense: 96,
     speed: 33,
-    moves: [frostBreath, iceBeam, crystalLance, blizzard],
+    moves: [gemStrike, crystalLance, crystalBurst, blizzard],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 145,
     evolutionStage: 3,
@@ -367,8 +386,8 @@ export const monsters: Monster[] = [
     id: "bingrok",
     name: "빙록",
     type: "ice",
-    // 얼음 셋이 전부 느렸다(크리샤 26·프리로 12·젬토 14). 수정 뿔 사슴은 이 속성에서
-    // 유일하게 먼저 움직이는 쪽으로 둔다 — 속도 34 는 공격과 같은 값이다(총합 200).
+    // 얼음이 전부 느렸다(크리샤 26·프리로 12). 수정 뿔 사슴은 이 속성에서 유일하게
+    // 먼저 움직이는 쪽으로 둔다 — 속도 34 는 공격과 같은 값이다(총합 200).
     maxHp: 108,
     attack: 34,
     defense: 24,
@@ -410,21 +429,27 @@ export const monsters: Monster[] = [
   {
     id: "sporemus",
     name: "포자무스",
-    // ⚠️ 풀이다. 독이 아니다.
+    // ⚠️ 주속성은 풀이다. 독은 부속성이고, 순서를 바꾸면 안 된다.
     //
     // 이 게임의 풀은 리피 한 종뿐이었고 그게 전체에서 제일 약했다(power 105).
     // 그런데 상성표에서 풀은 전기와 물을 둘 다 2배로 때리는 유일한 속성이고,
     // 25층 관문이 전기(모치)·45층 관문이 물(아쿠사)이다. 답이 한 종밖에 없는데
-    // 그 한 종이 파티에 못 드는 상태였다.
+    // 그 한 종이 파티에 못 드는 상태였다. 그래서 이 종을 풀로 세웠다.
     //
-    // 여기에 신규 11종을 넣으면서 풀만 하나도 안 늘리자 그 구멍이 그대로 벌어졌다 —
-    // 40판에서 25층 패배율이 90%(기준선) → 97% 로, 45층이 62% → 93% 로 올랐다.
-    // 버섯·포자는 이 장르에서 원래 풀이고 학습표도 이미 잎바람·포자구름·씨앗폭탄을
-    // 들고 있었다. 속성만 제자리로 돌린다.
+    // 한동안 "풀이다. 독이 아니다" 라고만 적혀 있었는데, 그건 속성을 하나만 가질 수
+    // 있던 시절의 문장이다. 꼬리에 버섯을 얹고 포자를 뿌리는 종이라 독은 원래
+    // 이 종의 절반이었고(학습표가 독을 넷 들고 있다) 이제 그걸 그대로 적을 수 있다.
+    //
+    // ⚠️ 풀/독은 이중 속성 중 유일하게 **약점이 겹친다** — 얼음이 풀에도 독에도
+    // 2배다. 곱하면 4배인데 그걸 그대로 두면 얼음 층에서 이 종이 사라진다.
+    // battleUtils.DUAL_TYPE_CLAMP 가 2배로 자르는 것이 그 자리다.
+    // 대신 독을 얻으면서 독을 0.5배로 받게 됐다(예전엔 1배) — 관문에서 서 있어야
+    // 하는 종이라 그쪽이 이 종에 더 값이 있다.
     //
     // 풀은 약점이 셋(불·얼음·독)이라 제일 무른 속성이다. 그래서 총합 206 을 리피(188)
     // 보다 높게 주고 방어에 실었다 — 맞고도 한 번은 서 있어야 관문에서 쓸 수 있다.
     type: "grass",
+    type2: "poison",
     maxHp: 124,
     attack: 28,
     defense: 30,
@@ -474,8 +499,10 @@ export const monsters: Monster[] = [
     attack: 100,
     defense: 70,
     speed: 90,
-    // 7개 타입 대표 최상급 기술을 전부 보유. 실제 전투에서는 이 중 4개만 무작위로 사용(floorTable 참고)
-    moves: [overheat, hydroPump, thunderStrike, solarBeam, blizzard, venomStorm, gigaImpact],
+    // 8개 타입 대표 최상급 기술을 전부 보유. 실제 전투에서는 이 중 4개만 무작위로 사용(floorTable 참고).
+    // 크리스탈이 늘면서 여덟이 됐다 — 오름은 "모든 속성을 한 벌씩 갖는 것"이 정체성이라
+    // 속성을 더할 때마다 여기가 같이 늘어야 한다. 안 늘리면 오름만 새 속성을 모르는 존재가 된다.
+    moves: [overheat, hydroPump, thunderStrike, solarBeam, blizzard, venomStorm, prismStorm, gigaImpact],
     level: 1, exp: 0, expToNextLevel: 100,
     rewardExp: 300,
   },

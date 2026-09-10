@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ARTIFACT_RECIPES,
@@ -12,44 +12,24 @@ import type { RpsResult } from "../shared/craftingUtils";
 import type { ItemQuality } from "../shared/crafting";
 import { QUALITY_COLOR, QUALITY_LABEL, QUALITY_GLOW, rollArtifactQualityFromArrowResult, maxCraftable } from "../shared/craftingUtils";
 import { RockPaperScissorsMiniGame } from "./RockPaperScissorsMiniGame";
-import { ArrowKeyCraftingMiniGame, TOTAL_KEYS, GREAT_MAX_WRONG, GOOD_MAX_WRONG } from "./ArrowKeyCraftingMiniGame";
+import { ArrowKeyCraftingMiniGame, GREAT_MAX_WRONG, GOOD_MAX_WRONG } from "./ArrowKeyCraftingMiniGame";
 import type { ArrowMiniGameResult } from "./ArrowKeyCraftingMiniGame";
-import { PALETTE } from "../shared/palette";
 import { PixelIcon } from "../shared/ui/PixelIcon";
+import { PixelButton, ModalShell, SectionHead } from "../shared/ui";
 import { ArtifactCard } from "../shared/ui/ArtifactCard";
 import { isIconName, type IconName } from "../shared/ui/icons";
 
-// ─── 중세 공방 팔레트 ──────────────────────────────────────────────────────────
-const C = {
-  bg:           PALETTE.shadow900,      // 모달 전체 배경
-  panel:        PALETTE.shadow900,      // 레시피 목록 영역
-  aside:        PALETTE.shadow900,      // 상세 패널 영역
-  card:         PALETTE.stone600,      // 레시피 카드 기본
-  cardSelected: PALETTE.earth500,      // 레시피 카드 선택됨
-  border:       "rgba(132, 75, 63, 1)",
-  borderGold:   "rgba(233, 148, 65, .857)",
-  textPrimary:  PALETTE.cream100,
-  textMuted:    PALETTE.sand300,
-  // 카드 판(stone600) 위에 얹히니까 earth500 이면 3:1 아래로 떨어진다. 선택 안 된
-  // 레시피 설명이 통째로 안 읽혔다. 작은 글자는 sand 계열로 둔다.
-  textFaint:    PALETTE.sand300,
-  gold:         PALETTE.ember500,
-  goldDim:      PALETTE.earth500,
-  btnBg:        "rgba(132, 75, 63, .515)",
-  btnBorder:    "rgba(233, 148, 65, .605)",
-  btnHover:     "rgba(132, 75, 63, .982)",
-  btnDisabledBg:     "rgba(13, 18, 35, .7)",
-  btnDisabledBorder: "rgba(132, 75, 63, .141)",
-  btnDisabledText:   PALETTE.earth500,
-  diffEasy:   PALETTE.moss500,
-  diffNormal: PALETTE.ember500,
-  diffHard:   PALETTE.ember700,
-};
-
-const DIFFICULTY_COLOR_MW: Record<string, string> = {
-  easy:   C.diffEasy,
-  normal: C.diffNormal,
-  hard:   C.diffHard,
+/**
+ * 난이도 색. 팔레트의 뜻을 그대로 따른다 — moss=순함, ember=보통, ember-700=험함.
+ *
+ * 예전엔 이 파일이 색 스무 개짜리 자기 팔레트(`C`)를 들고 있었다. 같은 게임의 다른
+ * 창들은 Tailwind 토큰만 쓰는데 공방만 인라인 style 로 칠해져서, 모서리·테두리·글자
+ * 색이 전부 미묘하게 달랐다. 색은 토큰에서만 오고, 창틀은 `ModalShell` 이 정한다.
+ */
+const DIFFICULTY_CLASS: Record<string, string> = {
+  easy:   "border-moss-500/70 bg-moss-500/12 text-sand-200",
+  normal: "border-ember-500/70 bg-ember-500/12 text-ember-500",
+  hard:   "border-ember-700/80 bg-ember-700/15 text-ember-500",
 };
 
 const STATION_ICON: Record<CraftingStationType, IconName> = {
@@ -69,21 +49,12 @@ const STATION_ICON: Record<CraftingStationType, IconName> = {
 function CostBox({ cost, have }: { cost: { itemId: string; name: string; amount: number }; have: number }) {
   const ok = have >= cost.amount;
   return (
-    <span
-      className="flex items-center gap-1.5 rounded-lg border px-2 py-1 text-pixel-sm"
-      style={{
-        borderColor: ok ? "rgba(122, 132, 85, .793)" : "rgba(233, 148, 65, .5)",
-        background:  ok ? "rgba(122, 132, 85, .1)"   : "rgba(168, 61, 31, .12)",
-      }}
-    >
+    <span className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-pixel-sm
+      ${ok ? "border-moss-500/70 bg-moss-500/12" : "border-ember-700/70 bg-ember-700/12"}`}>
       {isIconName(cost.itemId) && <PixelIcon name={cost.itemId} size={16} />}
       <span className="flex flex-col leading-tight">
-        <span className="font-bold" style={{ color: PALETTE.cream100 }}>
-          {cost.name} {cost.amount}
-        </span>
-        <span style={{ color: ok ? PALETTE.moss500 : PALETTE.ember500 }}>
-          보유 {have}
-        </span>
+        <span className="font-bold text-cream-100">{cost.name} {cost.amount}</span>
+        <span className={ok ? "text-sand-300" : "text-ember-500"}>보유 {have}</span>
       </span>
     </span>
   );
@@ -197,102 +168,33 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
   const affordableCount = recipes.filter((r) => canAfford(r, materials)).length;
 
   return (
-    <div
-      className="fixed inset-0 z-[900] flex items-center justify-center px-4"
-      style={{ background: "rgba(13, 18, 35, .82)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
+    <ModalShell
+      icon={STATION_ICON[stationType]}
+      title={STATION_LABEL[stationType]}
+      subtitle={stationType === "artifact"
+        ? "탐험에서 얻은 재료로 몬스터에게 장착할 아티팩트를 만든다"
+        : "약초와 정수로 전투에서 쓸 물약을 만든다"}
+      onClose={onClose}
+      testId="crafting-modal"
+      actions={import.meta.env.DEV
+        ? <PixelButton variant="nature" onClick={grantWorkshopTestMaterials}>테스트 재료</PixelButton>
+        : undefined}
     >
-      <div
-        className="flex max-h-[92vh] w-full max-w-board flex-col overflow-hidden rounded-xl shadow-2xl"
-        style={{
-          background: C.bg,
-          border: `1px solid ${C.borderGold}`,
-          boxShadow: `0 0 60px rgba(132, 75, 63, .585), 0 8px 40px rgba(13, 18, 35, .85)`,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* ── 헤더 ─────────────────────────────────────────────────────────────── */}
-        <header
-          className="flex shrink-0 items-center gap-4 px-5 py-4"
-          style={{ borderBottom: `1px solid ${C.border}` }}
-        >
-          <PixelIcon name={STATION_ICON[stationType]} size={32} />
-          <div className="flex-1">
-            <h2
-              className="text-pixel-md font-black tracking-wide"
-              style={{ color: C.textPrimary }}
-            >
-              {STATION_LABEL[stationType]}
-            </h2>
-            <p className="mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
-              {stationType === "artifact"
-                ? "탐험에서 얻은 재료로 몬스터에게 장착할 수 있는 아티팩트를 제작합니다."
-                : "약초와 정수 재료를 사용해 전투에 사용할 수 있는 물약을 제작합니다."}
-            </p>
-          </div>
-
-          {/* 테스트 재료 지급. 개발 환경에서만 나온다 */}
-          {import.meta.env.DEV && (
-            <button
-              type="button"
-              onClick={grantWorkshopTestMaterials}
-              className="rounded-lg px-3 py-2 text-pixel-sm font-bold transition hover:brightness-125"
-              style={{
-                background: "rgba(122, 132, 85, .069)",
-                border: "1px solid rgba(122, 132, 85, .455)",
-                color: PALETTE.moss500,
-              }}
-            >
-              테스트 재료
-            </button>
-          )}
-
-          {/* 닫기 */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-3 py-2 text-pixel-sm font-bold transition hover:brightness-125"
-            style={{
-              background: "rgba(13, 18, 35, .6)",
-              border: `1px solid ${C.border}`,
-              color: C.textMuted,
-            }}
-          >
-            닫기
-          </button>
-        </header>
-
-        {/* ── 본문 ─────────────────────────────────────────────────────────────── */}
-        <div
-          className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[1fr_340px]"
-        >
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[1fr_var(--container-aside)]">
           {/* 레시피 목록 */}
-          <section
-            className="min-h-0 overflow-y-auto p-5"
-            style={{ background: C.panel }}
-          >
-            <div className="mb-4 flex items-end justify-between">
-              <div>
-                <p
-                  className="text-pixel-sm font-bold uppercase tracking-widest"
-                  style={{ color: C.goldDim }}
-                >
-                  Recipes
-                </p>
-                <h3 className="text-title-sm font-black" style={{ color: C.textPrimary }}>
-                  제작 가능한 레시피
-                </h3>
-              </div>
-              <span className="text-pixel-sm" style={{ color: C.textFaint }}>
+          <section className="min-h-0 overflow-y-auto p-panel">
+            <SectionHead
+              en="Recipes" ko="제작 가능한 레시피"
+              right={<span className="text-pixel-sm text-sand-300">
                 제작 가능 {affordableCount}/{recipes.length}
-              </span>
-            </div>
+              </span>}
+            />
 
             <div className="grid gap-3">
               {recipes.map((recipe) => {
                 const affordable = canAfford(recipe, materials);
                 const selected   = selectedRecipe?.id === recipe.id;
-                const diffColor  = DIFFICULTY_COLOR_MW[recipe.difficulty] ?? C.gold;
+                const diffClass  = DIFFICULTY_CLASS[recipe.difficulty] ?? DIFFICULTY_CLASS.normal;
 
                 return (
                   <button
@@ -303,49 +205,39 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
                       setActiveRecipe(null);
                       setCraftResult(null);
                     }}
-                    className="rounded-lg p-4 text-left transition hover:brightness-110"
-                    style={{
-                      background: selected ? C.cardSelected : C.card,
-                      border: `1px solid ${selected ? C.borderGold : C.border}`,
-                      boxShadow: selected ? `0 0 18px rgba(132, 75, 63, .702)` : "none",
-                    }}
+                    /* 선택은 테두리로만 말한다. 예전엔 카드를 earth-500 로 통째로
+                       칠했는데, 그 위의 재료 상자·설명이 갈색 위 갈색이 되어 고른
+                       카드만 안 읽혔다. 고른 것이 제일 안 보이는 건 앞뒤가 안 맞는다.
+                       도감·보관함·모루가 전부 테두리로 표시한다. */
+                    className={`rounded-xl border-2 p-panel text-left transition
+                      ${selected
+                        ? "border-ember-500 bg-ember-500/10"
+                        : "border-earth-500/60 bg-shadow-700/70 hover:border-earth-400"}`}
                   >
                     <div className="flex items-start gap-3">
-                      {/* 아이콘 */}
-                      <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-pixel-md"
-                        style={{ background: "rgba(132, 75, 63, .282)", border: `1px solid ${C.border}` }}
-                      >
-                        {stationType === "artifact" ? "◆" : "✚"}
+                      {/* 만들어질 것의 그림. 예전엔 ◆ / ✚ 라는 도형 문자였다 */}
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg
+                        border border-earth-500/60 bg-shadow-900/60">
+                        <PixelIcon
+                          name={isIconName(recipe.resultItemId) ? recipe.resultItemId : STATION_ICON[stationType]}
+                          size={32}
+                        />
                       </div>
 
                       {/* 내용 */}
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="font-black" style={{ color: C.textPrimary }}>
-                            {recipe.name}
-                          </h4>
-                          {/* 난이도 뱃지 */}
-                          <span
-                            className="rounded-full border px-2 py-0.5 text-pixel-sm font-black"
-                            style={{
-                              borderColor: `${diffColor}66`,
-                              color: diffColor,
-                              background: `${diffColor}14`,
-                            }}
-                          >
+                          <h4 className="text-pixel-sm font-black text-cream-100">{recipe.name}</h4>
+                          <span className={`rounded-lg border px-1.5 text-pixel-sm font-bold ${diffClass}`}>
                             {DIFFICULTY_LABEL[recipe.difficulty]}
                           </span>
                           {affordable && (
-                            <span className="text-pixel-sm font-bold" style={{ color: PALETTE.moss500 }}>
-                              ✓ 제작 가능
-                            </span>
+                            <span className="rounded-lg border border-moss-500/70 bg-moss-500/12
+                              px-1.5 text-pixel-sm font-bold text-sand-200">재료 충분</span>
                           )}
                         </div>
 
-                        <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>
-                          {recipe.description}
-                        </p>
+                        <p className="mt-1 text-pixel-sm text-sand-300">{recipe.description}</p>
 
                         {/* 재료 목록 */}
                         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -362,13 +254,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
           </section>
 
           {/* 상세 패널 */}
-          <aside
-            className="min-h-0 overflow-y-auto p-5 md:border-l"
-            style={{
-              background: C.aside,
-              borderColor: C.border,
-            }}
-          >
+          <aside className="min-h-0 overflow-y-auto border-shadow-700 p-panel md:border-l">
             {activeRecipe ? (
               activeRecipe.stationType === "artifact" ? (
                 <ArrowKeyCraftingMiniGame
@@ -403,8 +289,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
             ) : null}
           </aside>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -414,28 +299,38 @@ function BatchResultPanel({
   result, count, onContinue,
 }: { result: CraftedItem; count: number; onContinue: () => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
-        일괄 제작 완료
-      </p>
-      <p className="text-title-md font-black" style={{ color: C.textPrimary }}>×{count}</p>
-      <p className="text-title-sm font-black" style={{ color: C.textPrimary }}>{result.name}</p>
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">일괄 제작 완료</p>
+      <p className="text-title-md font-black text-cream-100">×{count}</p>
+      <p className="text-title-sm font-black text-cream-100">{result.name}</p>
       <p className="text-pixel-sm font-bold" style={{ color: QUALITY_COLOR[result.quality] }}>
         {QUALITY_LABEL[result.quality]}
       </p>
-      <p className="text-pixel-sm" style={{ color: C.textFaint }}>
-        미니게임 한 번의 판정을 {count}개에 그대로 적용했습니다
+      <p className="text-pixel-sm text-sand-300">
+        미니게임 한 번의 판정을 {count}개에 그대로 적용했다
       </p>
-      <button
-        type="button"
-        onClick={onContinue}
-        className="mt-2 rounded-lg px-6 py-2 text-pixel-sm font-black transition"
-        style={{ background: C.btnBg, border: `1px solid ${C.btnBorder}`, color: C.textPrimary }}
-      >
-        계속
-      </button>
+      <PixelButton variant="primary" className="mt-1 px-6" onClick={onContinue}>계속</PixelButton>
     </div>
   );
+}
+
+/**
+ * 품질 확률 표. 화면이 그리는 값과 실제 굴림이 갈라지지 않게 한 곳에 적는다.
+ * (굴림 자체는 craftingUtils 가 한다 — 여기는 사람이 읽는 표다)
+ */
+function qualityOdds(station: CraftingStationType): { label: string; tone: string; odds: number[] }[] {
+  return station === "artifact"
+    ? [
+        { label: `0개`,                            tone: "text-sand-200",  odds: [40, 50, 10] },
+        { label: `1~${GREAT_MAX_WRONG}개`,          tone: "text-sand-200",  odds: [20, 55, 25] },
+        { label: `${GREAT_MAX_WRONG + 1}~${GOOD_MAX_WRONG}개`, tone: "text-sand-300", odds: [5, 40, 55] },
+        { label: `${GOOD_MAX_WRONG + 1}개 이상`,     tone: "text-ember-500", odds: [0, 15, 85] },
+      ]
+    : [
+        { label: "승리",   tone: "text-sand-200",  odds: [20, 55, 25] },
+        { label: "무승부", tone: "text-sand-300",  odds: [5, 35, 60] },
+        { label: "패배",   tone: "text-ember-500", odds: [0, 15, 85] },
+      ];
 }
 
 /** 1 / 5 / 최대 중에서 고른다. 재료가 모자라면 그만큼만 고를 수 있다. */
@@ -447,23 +342,20 @@ function QuantityPicker({
 
   return (
     <div className="mt-4">
-      <p className="mb-1.5 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+      <p className="mb-1.5 text-pixel-sm font-bold uppercase tracking-widest text-sand-300">
         수량 (최대 {max})
       </p>
       <div className="flex gap-1.5">
         {options.map((n) => (
-          <button
+          <PixelButton
             key={n}
-            type="button"
+            variant={value === n ? "primary" : "ghost"}
             onClick={() => onChange(n)}
             data-testid={`craft-qty-${n === max && n !== 1 && n !== 5 ? "max" : n}`}
-            className="flex-1 rounded-lg py-2 text-pixel-sm font-black transition"
-            style={value === n
-              ? { background: C.btnBg, border: `1px solid ${C.btnBorder}`, color: C.textPrimary }
-              : { background: C.btnDisabledBg, border: `1px solid ${C.border}`, color: C.textMuted }}
+            className="flex-1"
           >
             {n === max && n !== 1 && n !== 5 ? `최대 ${n}` : `${n}개`}
-          </button>
+          </PixelButton>
         ))}
       </div>
     </div>
@@ -487,86 +379,45 @@ function RecipeDetailPanel({
 
   return (
     <>
-      <p
-        className="text-pixel-sm font-bold uppercase tracking-widest"
-        style={{ color: C.goldDim }}
-      >
-        Selected
-      </p>
-      <h3
-        className="mt-1 text-title-sm font-black"
-        style={{ color: C.textPrimary }}
-      >
-        {recipe.name}
-      </h3>
-      <p className="mt-2 text-pixel-sm" style={{ color: C.textFaint }}>
-        {recipe.description}
-      </p>
+      <SectionHead en="Selected" ko={recipe.name} />
+      <p className="text-pixel-sm text-sand-300">{recipe.description}</p>
 
       {/* 결과 */}
-      <div
-        className="mt-4 rounded-lg p-3"
-        style={{ background: "rgba(66, 61, 70, .072)", border: `1px solid ${C.border}` }}
-      >
-        <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
-          제작 결과
-        </p>
-        <p className="mt-1 text-pixel-sm font-black" style={{ color: C.gold }}>
+      <div className="mt-4 rounded-xl border border-earth-500/50 bg-shadow-700/60 p-3">
+        <p className="text-pixel-sm text-sand-300">제작 결과</p>
+        <p className="mt-1 flex items-center gap-1.5 text-pixel-sm font-black text-cream-100">
+          {isIconName(recipe.resultItemId) && <PixelIcon name={recipe.resultItemId} size={16} />}
           {recipe.resultItemName}
         </p>
-        <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>
+        <p className="mt-1 text-pixel-sm text-sand-300">
           {recipe.stationType === "artifact"
-            ? "방향키 QTE 시험으로 품질이 결정됩니다."
-            : "가위바위보 시험으로 품질이 결정됩니다."}
+            ? "방향키 시험 결과로 품질이 정해진다"
+            : "가위바위보 결과로 품질이 정해진다"}
         </p>
       </div>
 
-      {/* 품질 확률 */}
-      <div
-        className="mt-3 rounded-lg p-3 text-pixel-sm"
-        style={{ background: "rgba(13, 18, 35, .7)", border: `1px solid ${C.border}` }}
-      >
-        <p className="mb-1.5 font-bold" style={{ color: C.textMuted }}>
-          ✦ 품질 확률 ✦
-        </p>
-        {recipe.stationType === "artifact" ? (
-          <div className="space-y-1" style={{ color: C.textFaint }}>
-            <p className="mb-1" style={{ color: C.textFaint }}>
-              틀려도 시험은 끝까지 진행되며, 전체 {TOTAL_KEYS}키 중 틀린 개수로 등급이 결정됩니다.
-            </p>
-            <p>
-              <span style={{ color: PALETTE.ember500 }}>완벽 (틀린 키 0개)</span>
-              {" "}— Elite 40% / Rare 50% / Normal 10%
-            </p>
-            <p>
-              <span style={{ color: PALETTE.moss500 }}>훌륭 (틀린 키 1~{GREAT_MAX_WRONG}개)</span>
-              {" "}— Elite 20% / Rare 55% / Normal 25%
-            </p>
-            <p>
-              <span style={{ color: PALETTE.ember500 }}>무난 (틀린 키 {GREAT_MAX_WRONG + 1}~{GOOD_MAX_WRONG}개)</span>
-              {" "}— Elite 5% / Rare 40% / Normal 55%
-            </p>
-            <p>
-              <span style={{ color: PALETTE.ember500 }}>아쉬움 (틀린 키 {GOOD_MAX_WRONG + 1}개 이상)</span>
-              {" "}— Rare 15% / Normal 85%
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-1" style={{ color: C.textFaint }}>
-            <p>
-              <span style={{ color: PALETTE.moss500 }}>승리</span>
-              {" "}— Elite 20% / Rare 55% / Normal 25%
-            </p>
-            <p>
-              <span style={{ color: PALETTE.ember500 }}>무승부</span>
-              {" "}— Elite 5% / Rare 35% / Normal 60%
-            </p>
-            <p>
-              <span style={{ color: PALETTE.ember500 }}>패배</span>
-              {" "}— Rare 15% / Normal 85%
-            </p>
-          </div>
-        )}
+      {/* 품질 확률.
+          예전엔 "완벽 (틀린 키 0개) — Elite 40% / Rare 50% / Normal 10%" 같은 줄이
+          다섯 개 쌓인 문단이었다. 읽는 사람이 하는 일은 등급끼리 숫자를 비교하는 건데,
+          문장으로 늘어놓으면 그 비교를 눈이 못 한다. 열을 맞춘 표로 세운다. */}
+      <div className="mt-3 rounded-xl border border-earth-500/50 bg-shadow-900/70 p-3">
+        <p className="mb-2 text-pixel-sm font-bold text-sand-200">품질 확률</p>
+        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 gap-y-1 text-pixel-sm">
+          <span className="text-earth-400">{recipe.stationType === "artifact" ? "틀린 키" : "결과"}</span>
+          <span className="justify-self-end text-earth-400">정예</span>
+          <span className="justify-self-end text-earth-400">희귀</span>
+          <span className="justify-self-end text-earth-400">일반</span>
+          {qualityOdds(recipe.stationType).map((row) => (
+            <Fragment key={row.label}>
+              <span className={row.tone}>{row.label}</span>
+              {row.odds.map((v, i) => (
+                <span key={i} className="justify-self-end font-mono text-sand-200">
+                  {v > 0 ? `${v}%` : "—"}
+                </span>
+              ))}
+            </Fragment>
+          ))}
+        </div>
       </div>
 
       <QuantityPicker
@@ -575,30 +426,14 @@ function RecipeDetailPanel({
         onChange={onQuantityChange}
       />
 
-      {/* 제작 시작 버튼 */}
-      <button
-        type="button"
+      <PixelButton
+        variant="primary"
         onClick={onStart}
         disabled={!affordable}
-        className="mt-5 w-full rounded-lg py-3 text-pixel-sm font-black transition"
-        style={
-          affordable
-            ? {
-                background: C.btnBg,
-                border: `1px solid ${C.btnBorder}`,
-                color: C.textPrimary,
-                boxShadow: "0 0 16px rgba(132, 75, 63, .468)",
-              }
-            : {
-                background: C.btnDisabledBg,
-                border: `1px solid ${C.btnDisabledBorder}`,
-                color: C.btnDisabledText,
-                cursor: "not-allowed",
-              }
-        }
+        className="mt-5 w-full py-3"
       >
         {affordable ? (quantity > 1 ? `${quantity}개 제작` : "제작 시작") : "재료 부족"}
-      </button>
+      </PixelButton>
     </>
   );
 }
@@ -619,12 +454,7 @@ function CraftResultPanel({
 
   return (
     <div className="flex flex-col items-center gap-5 py-6 text-center">
-      <p
-        className="text-pixel-sm font-bold uppercase tracking-widest"
-        style={{ color: C.goldDim }}
-      >
-        ✦ Crafted! ✦
-      </p>
+      <p className="text-pixel-sm font-bold uppercase tracking-widest text-sand-300">Crafted</p>
 
       {/* 아티팩트는 가방·모루·장착 화면과 같은 칸으로 보여준다. 갓 만든 것이라 Lv.1 +0 이지만
           숫자를 뽑는 길이 같아야, 배율을 고치는 날 이 화면만 옛말을 하지 않는다. */}
@@ -642,41 +472,20 @@ function CraftResultPanel({
           }}
         />
       ) : (
-        <div
-          className="w-full rounded-xl p-6"
-          style={{
-            background: `${color}0e`,
-            border: `1px solid ${color}55`,
-            boxShadow: `0 0 40px ${glow}`,
-          }}
+        <div className="flex w-full flex-col items-center gap-3 rounded-xl p-6"
+          style={{ background: `${color}0e`, border: `1px solid ${color}55`, boxShadow: `0 0 40px ${glow}` }}
         >
-          <p className="text-pixel-md font-black" style={{ color: C.textPrimary }}>
-            {result.name}
-          </p>
-          <p className="mt-3 text-title-sm font-black" style={{ color }}>
-            {label}
-          </p>
+          {isIconName(result.recipeId) && <PixelIcon name={result.recipeId} size={64} />}
+          <p className="text-title-sm font-black text-cream-100">{result.name}</p>
+          <p className="text-pixel-sm font-black" style={{ color }}>{label}</p>
         </div>
       )}
 
-      <p className="text-pixel-sm" style={{ color: C.textFaint }}>
-        {isArtifact
-          ? "아티팩트가 가방에 추가되었습니다!"
-          : "물약이 가방에 추가되었습니다!"}
+      <p className="text-pixel-sm text-sand-300">
+        {isArtifact ? "아티팩트가 가방에 들어갔다" : "물약이 가방에 들어갔다"}
       </p>
 
-      <button
-        type="button"
-        onClick={onContinue}
-        className="w-full rounded-lg py-2.5 text-pixel-sm font-bold transition hover:brightness-110"
-        style={{
-          background: "rgba(66, 61, 70, .066)",
-          border: `1px solid ${C.border}`,
-          color: C.textMuted,
-        }}
-      >
-        계속 제작하기
-      </button>
+      <PixelButton className="w-full py-2.5" onClick={onContinue}>계속 제작하기</PixelButton>
     </div>
   );
 }

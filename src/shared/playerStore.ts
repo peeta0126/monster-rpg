@@ -1,14 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Monster } from "./game";
+import type { Monster, Move } from "./game";
 import type { CraftingRecipe, CraftedItem, ArtifactInstance, CraftedPotionStack, ItemQuality } from "./crafting";
 import { monsters, NOT_IN_DEX } from "../monster/monsters";
 import { movesAtLevel } from "../monster/growth";
+import { MOVE_BY_ID } from "../monster/moves";
 import { MAX_TOWER_FLOOR } from "./floorTable";
 import { expToNext } from "../battle/battleUtils";
 import { POTIONS, MATERIALS } from "./items";
 import {
-  rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats,
+  rollItemQuality, applyArtifactQualityStats, ARTIFACT_SLOT_MAP, rollBonusStats, repairBonusStats,
   getEquipmentMaxLevel, MAX_EQUIPMENT_ENHANCEMENT,
 } from "./craftingUtils";
 import {
@@ -195,6 +196,28 @@ function normalizeStringArray(raw: unknown, fallback: string[]): string[] {
  * 같은 공식이다. 저장된 수치는 안 믿고, 최신 monsters.ts 의 base 위에 이 증분을
  * (level-1)번 다시 쌓는다. 레벨은 그대로 두되 수치는 늘 최신 밸런스를 따른다.
  */
+/**
+ * 세이브에 든 기술을 지금 표에서 다시 꺼낸다. id 만 믿고 나머지(속성·위력·명중·
+ * 상태이상)는 전부 MOVE_BY_ID 가 정한다 — 표가 한 벌이어야 화면과 전투가 같은 값을 쓴다.
+ * 수정창·수정파열을 얼음에서 크리스탈로 옮겼을 때, 이게 없으면 이미 그 기술을 들고
+ * 있던 개체만 영영 얼음으로 때린다.
+ *
+ * ⚠️ 표에 없는 id 는 **버리지 않고 저장된 값 그대로 둔다.** 없는 종을 만났을 때 이
+ * 파일이 하는 것과 같은 규칙이다(위 normalizeOwnedMonster 주석) — 사람 세이브에서
+ * 뭔가를 지우는 것보다 모르는 채로 들고 있는 편이 낫다. 디자인 캡처 스펙들이 연출을
+ * 고정하려고 가짜 기술을 심는 것도 이 길로 통과한다.
+ *
+ * 건질 게 하나도 없으면 null 을 돌려 부르는 쪽이 학습표로 채우게 한다. 빈 배열을
+ * 돌려주면 기술이 없는 몬스터가 그대로 전투에 나간다.
+ */
+function refreshMoves(raw: unknown): OwnedMonster["moves"] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const fresh = raw
+    .filter((m): m is Move => !!m && typeof m === "object" && typeof (m as Move).id === "string")
+    .map((m) => MOVE_BY_ID[m.id] ?? m);
+  return fresh.length > 0 ? fresh : null;
+}
+
 export function recomputeStatsForLevel(base: Monster, level: number) {
   const n = Math.max(0, level - 1);
   return {
@@ -230,6 +253,9 @@ function normalizeOwnedMonster(raw: unknown): OwnedMonster | null {
       id: r.id,
       name: typeof r.name === "string" ? r.name : r.id,
       type: (r.type ?? null) as OwnedMonster["type"],
+      // 없는 종이라 기준 삼을 표가 없다. 부속성도 저장된 값 그대로 둔다 —
+      // 여기서 떨어뜨리면 그 개체만 조용히 단일 속성이 된다
+      type2: r.type2 as OwnedMonster["type2"],
       maxHp: typeof r.maxHp === "number" ? r.maxHp : 1,
       attack: typeof r.attack === "number" ? r.attack : 0,
       defense: typeof r.defense === "number" ? r.defense : 0,
@@ -258,13 +284,23 @@ function normalizeOwnedMonster(raw: unknown): OwnedMonster | null {
     ...base,
     ...r,
     uid: typeof r.uid === "string" ? r.uid : makeUid(),
-    // 저장된 기술이 있으면 그대로 둔다. 없을 때 종족 대표 기술(base.moves)로 채우면
-    // 학습표의 레벨 제한이 통째로 무시된다 — 그 목록은 최종기까지 들어 있어서, 예컨대
-    // Lv40 모왕이 전기 일색이 되고 전기 보스인 40층에서 모든 공격이 ×0.5 가 된다.
-    // 키워 온 개체는 학습표를 따라 노말 계열 기술도 함께 들고 있다.
-    moves: (Array.isArray(r.moves) && r.moves.length > 0
-      ? r.moves
-      : movesAtLevel(base.id, level, base.moves)) as OwnedMonster["moves"],
+    // ⚠️ 속성은 **저장값을 안 믿는다.** 세이브에는 그 몬스터를 잡던 날의 속성이 굳어
+    // 있어서, 표를 고쳐도 이미 가진 개체만 옛 속성으로 남는다. 실제로 버블록이 독에서
+    // 물로 돌아가고 젬 계열에 크리스탈이 붙었을 때, 새로 잡은 개체와 예전 개체가
+    // 같은 종인데 상성이 다르게 굴렀다. 능력치를 다시 계산하는 것과 같은 이유다.
+    // `type2` 는 명시적으로 덮어써야 한다 — 옛 세이브에는 그 칸이 아예 없어서
+    // 스프레드만으로는 안 지워지고, 부속성이 빠진 종이 생기면 반대로 남는다.
+    type: base.type,
+    type2: base.type2,
+    // 저장된 기술도 id 로만 믿고 지금 표(MOVE_BY_ID)에서 다시 꺼낸다. 예전엔 저장된
+    // 객체를 통째로 썼는데, 그러면 기술의 속성·위력·명중을 고친 날 이미 그 기술을
+    // 들고 있던 개체만 옛 값을 계속 쓴다 — 수정창·수정파열을 얼음에서 크리스탈로
+    // 옮겼을 때 그랬다. 표에 없는 id(삭제된 기술)는 조용히 버린다.
+    //
+    // 저장된 기술이 아예 없을 때만 종족 대표 기술 대신 학습표로 채운다. 대표 목록은
+    // 최종기까지 들어 있어서, 예컨대 Lv40 모왕이 전기 일색이 되고 전기 보스인
+    // 40층에서 모든 공격이 ×0.5 가 된다.
+    moves: refreshMoves(r.moves) ?? movesAtLevel(base.id, level, base.moves),
     level,
     ...recomputed,
     // 요구 경험치도 레벨에서 다시 계산한다. 잡은 몬스터는 scaleToLevel 이 만든 값을 그대로
@@ -318,14 +354,39 @@ export function normalizeState(input: object): PersistedPlayerState {
       ? raw.seenDialogues.filter((x): x is string => typeof x === "string")
       : backfillSeenDialogues(storyFlags, bestFloor),
     craftedItems:      (Array.isArray(raw.craftedItems) ? raw.craftedItems : []) as PersistedPlayerState["craftedItems"],
-    craftedArtifacts:  (Array.isArray(raw.craftedArtifacts) ? raw.craftedArtifacts : []) as PersistedPlayerState["craftedArtifacts"],
+    craftedArtifacts:  normalizeArtifactArray(raw.craftedArtifacts),
     craftedPotions:    (Array.isArray(raw.craftedPotions) ? raw.craftedPotions : []) as PersistedPlayerState["craftedPotions"],
-    equippedArtifacts: (raw.equippedArtifacts && typeof raw.equippedArtifacts === "object"
-      ? raw.equippedArtifacts : {}) as PersistedPlayerState["equippedArtifacts"],
+    equippedArtifacts: normalizeEquippedArtifacts(raw.equippedArtifacts),
     // 각인이 없던 옛 세이브는 여기서 빈 표를 받는다. 등급은 먹인 수에서 계산되니까
     // 그 이상 손댈 게 없다(비용표를 고쳐도 마이그레이션이 필요 없는 이유다)
     imprint: normalizeImprint(raw.imprint),
   };
+}
+
+/**
+ * 장비에 붙은 부가 능력치를 지금 표에 맞춘다(`repairBonusStats`).
+ *
+ * 버전 분기가 아니라 여기 두는 이유는 v1→v2 때와 같다 — 버전을 안 들고 오는 서버
+ * 세이브도 같은 처리를 받아야 한다. 개수가 맞으면 그대로 돌려주므로 로드마다 값이
+ * 흔들리지 않는다.
+ */
+function normalizeArtifactArray(raw: unknown): ArtifactInstance[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as ArtifactInstance[])
+    .filter((a) => a && typeof a === "object" && typeof a.itemId === "string")
+    .map((a) => ({
+      ...a,
+      bonusStats: repairBonusStats(a.itemId, a.level ?? 1, a.bonusStats),
+    }));
+}
+
+function normalizeEquippedArtifacts(raw: unknown): Record<string, ArtifactInstance[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, ArtifactInstance[]> = {};
+  for (const [uid, list] of Object.entries(raw as Record<string, unknown>)) {
+    out[uid] = normalizeArtifactArray(list);
+  }
+  return out;
 }
 
 /** 먹인 수는 음이 아닌 정수여야 한다. 손으로 고친 세이브가 소수·음수를 들고 오면 버린다 */
@@ -695,7 +756,11 @@ export const usePlayerStore = create<PlayerState>()(
 
       restorePartyHp: () =>
         set((s) => ({
-          party: s.party.map((m) => ({ ...m, currentHp: m.maxHp })),
+          // 보관함까지 같이 채운다. 예전엔 파티만 채워서, 다친 몬스터를 보관함에
+          // 내리면 파티로 다시 올리기 전까지 영영 그 HP 로 남았다 — 회복하러 가는
+          // 길이 "보관함 → 파티 → 회복 → 다시 보관함" 이 되는데 그건 길이 아니다.
+          party:   s.party.map((m) => ({ ...m, currentHp: m.maxHp })),
+          storage: s.storage.map((m) => ({ ...m, currentHp: m.maxHp })),
         })),
 
       addMaterial: (id, count = 1) =>
