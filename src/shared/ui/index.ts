@@ -10,6 +10,7 @@ export { SceneTransition } from "./SceneTransition";
 export { ObjectiveBanner } from "./ObjectiveBanner";
 export { AudioSettings } from "./AudioSettings";
 export { ConfirmDialog } from "./ConfirmDialog";
+export { ModalShell, SectionHead } from "./ModalShell";
 export { GameMenu, type GameMenuItem } from "./GameMenu";
 export { PixelIcon, type IconSize } from "./PixelIcon";
 export { ArtifactCard, type ArtifactCardItem, type ArtifactCardSize } from "./ArtifactCard";

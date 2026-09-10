@@ -19,34 +19,9 @@ import {
   ARTIFACT_BONUS_POOL,
 } from "../shared/craftingUtils";
 import { PixelIcon } from "../shared/ui/PixelIcon";
+import { PixelButton, ModalShell, SectionHead, EmptyState } from "../shared/ui";
 import { ArtifactCard } from "../shared/ui/ArtifactCard";
 import type { IconName } from "../shared/ui/icons";
-
-// ─── 팔레트 (제작 공방 공통) ──────────────────────────────────────────────────
-
-const C = {
-  bg:           PALETTE.shadow900,
-  panel:        PALETTE.shadow900,
-  aside:        PALETTE.shadow900,
-  card:         PALETTE.stone600,
-  cardSel:      PALETTE.earth500,
-  border:       "rgba(132, 75, 63, 1)",
-  borderGold:   "rgba(233, 148, 65, .857)",
-  textPrimary:  PALETTE.cream100,
-  textMuted:    PALETTE.sand300,
-  // 카드 판(stone600) 위에서 earth500 은 3:1 아래다. 작은 글자는 sand 계열로
-  textFaint:    PALETTE.sand300,
-  gold:         PALETTE.ember500,
-  goldDim:      PALETTE.earth500,
-  btnBg:        "rgba(132, 75, 63, .515)",
-  btnBorder:    "rgba(233, 148, 65, .605)",
-  disabledBg:   "rgba(13, 18, 35, .7)",
-  disabledBorder:"rgba(132, 75, 63, .141)",
-  disabledText: PALETTE.earth500,
-  green:        PALETTE.moss500,
-  red:          PALETTE.ember500,
-  yellow:       PALETTE.ember500,
-};
 
 // ─── 탭 정의 ──────────────────────────────────────────────────────────────────
 
@@ -122,45 +97,38 @@ function LevelUpPanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
-          ✦ 장비 레벨업 ✦
-        </p>
+        <SectionHead en="Level up" ko="장비 레벨업" />
         {/* 실제 값에서 그대로 적는다(getLevelMultiplier · ARTIFACT_BONUS_POOL).
             "레벨업 = 부가 능력치, 강화 = 자체 능력치" 로만 알면 반만 맞다 —
             레벨업도 능력치를 올린다. 둘의 차이는 부가 능력치 칸이 열리느냐다. */}
-        <p className="mb-2 mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
+        <p className="mb-2 -mt-2 text-pixel-sm text-sand-300">
           한 레벨마다 능력치 +3% · 10레벨마다 부가 능력치가 하나씩 열린다
         </p>
-        <ArtifactCard size="full" artifact={artifact} />
+        {/* 여기만 능력치 없는 카드다. 바로 아래 「능력치」·「부가 능력치」 상자가
+            같은 값을 이미 적고 있어서, 카드까지 펼치면 한 화면에 세 번 나온다.
+            강화·분해·합성에는 그 상자가 없으니 거기서는 카드가 능력치를 들고 있다. */}
+        <ArtifactCard artifact={artifact} />
       </div>
 
       {/* 레벨 바 */}
       <div
-        className="rounded-lg p-3"
-        style={{ background: C.card, border: `1px solid ${C.border}` }}
+        className="p-3 rounded-xl border border-earth-500/50 bg-shadow-700/60"
       >
         <div className="flex justify-between items-end mb-1.5">
-          <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>현재 레벨</p>
-          <p className="text-pixel-sm font-black font-mono" style={{ color: isMax ? C.gold : C.textPrimary }}>
+          <p className="text-pixel-sm font-bold text-sand-300">현재 레벨</p>
+          <p className={`text-pixel-sm font-black font-mono ${isMax ? "text-ember-500" : "text-cream-100"}`}>
             {lv} / {maxLv}
           </p>
         </div>
-        <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(243, 229, 185, .089)" }}>
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${(lv / maxLv) * 100}%`,
-              background: isMax
-                ? `linear-gradient(90deg,${C.gold},${PALETTE.ember500})`
-                : `linear-gradient(90deg,${color}88,${color})`,
-            }}
-          />
+        <div className="h-2 overflow-hidden rounded-full bg-shadow-900">
+          <div className="h-full rounded-full"
+            style={{ width: `${(lv / maxLv) * 100}%`, background: isMax ? PALETTE.ember500 : color }} />
         </div>
         {isMax
-          ? <p className="mt-1.5 text-center text-pixel-sm font-black" style={{ color: C.gold }}>✦ 최대 레벨 달성 ✦</p>
+          ? <p className="mt-1.5 text-center text-pixel-sm font-black text-ember-500">최대 레벨 달성</p>
           : willUnlockNext
-            ? <p className="mt-1.5 text-center text-pixel-sm font-bold" style={{ color: PALETTE.mist300 }}>✦ 다음 레벨업 시 부가 능력치 해제! ✦</p>
-            : <p className="mt-1.5 text-center text-pixel-sm" style={{ color: C.textFaint }}>
+            ? <p className="mt-1.5 text-center text-pixel-sm font-bold text-mist-300">다음 레벨업에 부가 능력치가 열린다</p>
+            : <p className="mt-1.5 text-center text-pixel-sm text-sand-300">
                 부가 능력치 해제까지 {levelsToUnlock}레벨 남음
               </p>
         }
@@ -168,11 +136,10 @@ function LevelUpPanel({
 
       {/* 능력치 (현재 → 다음 레벨 미리보기) */}
       <div
-        className="rounded-lg p-3 space-y-1.5"
-        style={{ background: C.card, border: `1px solid ${C.border}` }}
+        className="p-3 space-y-1.5 rounded-xl border border-earth-500/50 bg-shadow-700/60"
       >
-        <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>
-          능력치 <span style={{ color: C.textFaint, fontWeight: 400 }}>(Lv.{lv} +{enh} 기준)</span>
+        <p className="text-pixel-sm font-bold mb-2 text-sand-300">
+          능력치 <span className="font-normal text-sand-300">(Lv.{lv} +{enh} 기준)</span>
         </p>
         {/* 다른 화면은 전부 "+52" 로 적는다. 여기만 "52" 였는데, 장비가 주는 값이 아니라
             장비의 능력치 그 자체인 것처럼 읽혔다. 단위(%)도 같이 붙인다. */}
@@ -181,14 +148,14 @@ function LevelUpPanel({
           const unit = s.stat === "critRate" ? "%" : "";
           return (
             <div key={s.stat} className="flex items-center justify-between text-pixel-sm">
-              <span style={{ color: C.textMuted }}>{ARTIFACT_STAT_LABEL[s.stat]}</span>
+              <span className="text-sand-300">{ARTIFACT_STAT_LABEL[s.stat]}</span>
               <div className="flex items-center gap-1.5 font-mono font-bold">
-                <span style={{ color: C.textPrimary }}>+{s.value}{unit}</span>
+                <span className="text-cream-100">+{s.value}{unit}</span>
                 {!isMax && diff > 0 && (
                   <>
-                    <span style={{ color: C.textFaint }}>→</span>
-                    <span style={{ color: C.green }}>+{nextStats[i].value}{unit}</span>
-                    <span className="text-pixel-sm font-normal" style={{ color: C.green }}>(+{diff})</span>
+                    <span className="text-sand-300">→</span>
+                    <span className="text-sand-200">+{nextStats[i].value}{unit}</span>
+                    <span className="text-pixel-sm font-normal text-mist-300">(+{diff})</span>
                   </>
                 )}
               </div>
@@ -199,15 +166,14 @@ function LevelUpPanel({
 
       {/* 부가 능력치 */}
       <div
-        className="rounded-lg p-3"
-        style={{ background: C.card, border: `1px solid ${C.border}` }}
+        className="p-3 rounded-xl border border-earth-500/50 bg-shadow-700/60"
       >
-        <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>
+        <p className="text-pixel-sm font-bold mb-2 text-sand-300">
           부가 능력치{" "}
-          <span style={{ color: C.textFaint, fontWeight: 400 }}>({bonusStats.length}/{maxUnlocks})</span>
+          <span className="font-normal text-sand-300">({bonusStats.length}/{maxUnlocks})</span>
         </p>
         {bonusStats.length === 0 ? (
-          <p className="text-pixel-sm text-center py-1" style={{ color: C.textFaint }}>
+          <p className="text-pixel-sm text-center py-1 text-sand-300">
             Lv.10 달성 시 첫 번째 부가 능력치 해제
           </p>
         ) : (
@@ -215,16 +181,12 @@ function LevelUpPanel({
             {bonusStats.map((b, i) => (
               <div
                 key={i}
-                className="flex items-center gap-1.5 rounded px-2 py-1 text-pixel-sm font-bold"
-                style={{
-                  background: "rgba(92, 147, 150, .133)",
-                  border:     "1px solid rgba(92, 147, 150, .4)",
-                  color:      PALETTE.mist300,
-                }}
+                className="flex items-center gap-1.5 rounded-lg border border-mist-500/50
+                  bg-mist-500/12 px-2 py-1 text-pixel-sm font-bold text-mist-300"
               >
-                <span>✦</span>
+                <PixelIcon name="levelup" size={16} />
                 <span>{b.label}</span>
-                <span className="ml-auto text-pixel-sm font-normal" style={{ color: "rgba(92, 147, 150, .8)" }}>
+                <span className="ml-auto text-pixel-sm font-normal text-sand-300">
                   Lv.{(i + 1) * 10} 해제
                 </span>
               </div>
@@ -235,16 +197,12 @@ function LevelUpPanel({
               return (
                 <div
                   key={`locked-${i}`}
-                  className="flex items-center gap-1.5 rounded px-2 py-1 text-pixel-sm"
-                  style={{
-                    background: "rgba(243, 229, 185, .038)",
-                    border:     "1px solid rgba(243, 229, 185, .089)",
-                    color:      C.textFaint,
-                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-stone-600
+                    bg-shadow-900/50 px-2 py-1 text-pixel-sm text-sand-300"
                 >
                   <span>?</span>
                   <span>미해제</span>
-                  <span className="ml-auto text-pixel-sm" style={{ color: C.textFaint }}>
+                  <span className="ml-auto text-pixel-sm text-sand-300">
                     Lv.{unlockLv} 달성 필요
                   </span>
                 </div>
@@ -257,38 +215,30 @@ function LevelUpPanel({
       {/* 강화석 비용 */}
       {!isMax && (
         <div
-          className="rounded-lg p-3 space-y-1.5"
-          style={{ background: C.card, border: `1px solid ${C.border}` }}
+          className="p-3 space-y-1.5 rounded-xl border border-earth-500/50 bg-shadow-700/60"
         >
           <div className="flex justify-between">
-            <span className="text-pixel-sm" style={{ color: C.textFaint }}>필요 강화석</span>
-            <span className="text-pixel-sm font-black" style={{ color: stones >= cost ? C.green : C.red }}>
+            <span className="text-pixel-sm text-sand-300">필요 강화석</span>
+            <span className={`text-pixel-sm font-black ${stones >= cost ? "text-sand-200" : "text-ember-500"}`}>
               <PixelIcon name="enhancement_stone" size={16} className="inline-block align-middle" /> {cost}개
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-pixel-sm" style={{ color: C.textFaint }}>보유 강화석</span>
-            <span className="text-pixel-sm font-black font-mono" style={{ color: C.textPrimary }}>
+            <span className="text-pixel-sm text-sand-300">보유 강화석</span>
+            <span className="text-pixel-sm font-black font-mono text-cream-100">
               {stones}개
             </span>
           </div>
         </div>
       )}
 
-      <button
-        type="button"
+      {/* 부가 능력치가 열리는 레벨업은 mist(정보) 로, 보통 레벨업은 ember(주 행동)로.
+          색이 팔레트의 뜻을 그대로 따르므로 여기서 새 색을 만들지 않는다 */}
+      <PixelButton
+        variant={willUnlockNext ? "info" : "primary"}
         onClick={onLevelUp}
         disabled={!canDo}
-        className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
-        style={
-          canDo
-            ? { background: willUnlockNext ? "rgba(92, 147, 150, .194)" : C.btnBg,
-                border:     `1px solid ${willUnlockNext ? "rgba(92, 147, 150, .543)" : C.btnBorder}`,
-                color:      C.textPrimary,
-                boxShadow:  willUnlockNext ? "0 0 16px rgba(92, 147, 150, .233)" : "0 0 16px rgba(132, 75, 63, .468)" }
-            : { background: C.disabledBg, border: `1px solid ${C.disabledBorder}`, color: C.disabledText,
-                cursor: "not-allowed" }
-        }
+        className="w-full py-3"
       >
         {/* 반짝이 이모지 자리였다. 픽셀 폰트에 없어서 그 글자만 다른 서체로 떨어진다.
             이름도 다른 탭에 맞춘다. 강화하기·분해하기·합성하기 옆에서 "레벨업"만 명사였다. */}
@@ -298,7 +248,7 @@ function LevelUpPanel({
             {willUnlockNext ? "레벨업하기 (부가 능력치 해제!)" : "레벨업하기"}
           </span>
         ) : "강화석 부족"}
-      </button>
+      </PixelButton>
     </div>
   );
 }
@@ -331,12 +281,10 @@ function EnhancePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
-          ✦ 장비 강화 ✦
-        </p>
+        <SectionHead en="Enhance" ko="장비 강화" />
         {/* 레벨업이 부가 능력치 칸을 여는 축이라면, 강화는 장비가 원래 가진 능력치를
             끌어올리는 축이다. 탭 이름만으로는 둘이 안 갈려서 한 줄로 적어 둔다. */}
-        <p className="mb-2 mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
+        <p className="mb-2 -mt-2 text-pixel-sm text-sand-300">
           한 단계마다 능력치 +10% — 같은 등급 장비 하나를 재료로 태운다. 부가 능력치는 안 열린다
         </p>
         {/* 능력치를 같이 그린다. 이름이 같은 장비가 둘일 때, 무엇을 강화하고 무엇을
@@ -346,10 +294,9 @@ function EnhancePanel({
 
       {/* 강화 수치 표시 */}
       <div
-        className="rounded-lg p-3"
-        style={{ background: C.card, border: `1px solid ${C.border}` }}
+        className="p-3 rounded-xl border border-earth-500/50 bg-shadow-700/60"
       >
-        <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>강화 수치</p>
+        <p className="text-pixel-sm font-bold mb-2 text-sand-300">강화 수치</p>
         <div className="flex justify-center gap-1.5">
           {Array.from({ length: MAX_EQUIPMENT_ENHANCEMENT }, (_, i) => {
             const filled = i < enh;
@@ -357,36 +304,33 @@ function EnhancePanel({
             return (
               <div
                 key={i}
-                className="flex h-8 w-8 items-center justify-center rounded font-black text-pixel-sm"
-                style={{
-                  background: filled ? "rgba(233, 148, 65, .252)" : next ? "rgba(233, 148, 65, .101)" : "rgba(243, 229, 185, .064)",
-                  border: `1px solid ${filled ? C.borderGold : next ? "rgba(233, 148, 65, .302)" : "rgba(243, 229, 185, .102)"}`,
-                  color: filled ? C.gold : next ? C.goldDim : C.textFaint,
-                }}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg border text-pixel-sm font-black
+                  ${filled ? "border-ember-500 bg-ember-500/25 text-ember-500"
+                    : next  ? "border-ember-500/40 bg-ember-500/10 text-sand-300"
+                            : "border-stone-600 bg-shadow-900/50 text-earth-400"}`}
               >
                 {filled ? "★" : next ? "◇" : "◆"}
               </div>
             );
           })}
         </div>
-        <p className="mt-2 text-center text-pixel-sm font-black" style={{ color: isMax ? C.gold : C.textPrimary }}>
-          {isMax ? "최대 강화 달성 ✦" : `+${enh} → +${enh + 1}`}
+        <p className={`mt-2 text-center text-pixel-sm font-black ${isMax ? "text-ember-500" : "text-cream-100"}`}>
+          {isMax ? "최대 강화 달성" : `+${enh} → +${enh + 1}`}
         </p>
       </div>
 
       {/* 재료 선택 */}
       {!isMax && (
         <div>
-          <p className="mb-2 text-pixel-sm font-bold" style={{ color: C.textMuted }}>
-            재료 선택 <span style={{ color: C.textFaint }}>— 같은 등급 장비 사용</span>
+          <p className="mb-2 text-pixel-sm font-bold text-sand-300">
+            재료 선택 <span className="text-sand-300">— 같은 등급 장비 사용</span>
           </p>
           {candidates.length === 0 ? (
-            <p className="rounded-lg p-3 text-center text-pixel-sm" style={{ color: C.textFaint,
-              background: C.card, border: `1px solid ${C.border}` }}>
+            <p className="rounded-xl border border-earth-500/50 bg-shadow-700/60 p-3 text-center text-pixel-sm text-sand-300">
               재료로 쓸 {QUALITY_LABEL[target.quality]} 등급 장비가 없습니다
             </p>
           ) : (
-            <div data-testid="anvil-material-list" className="max-h-52 overflow-y-auto space-y-1.5">
+            <div data-testid="anvil-material-list" className="space-y-1.5">
               {candidates.map((a) => (
                 <ArtifactCard
                   key={a.instanceId}
@@ -402,36 +346,18 @@ function EnhancePanel({
       )}
 
       {material && !isMax && (
-        <div
-          className="rounded-lg p-2 text-pixel-sm text-center"
-          style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
-            color: C.red }}
-        >
-          ⚠ 재료 장비는 강화 후 사라집니다
-        </div>
+        <div className="rounded-xl border border-ember-700/60 bg-ember-700/12 p-2.5 text-center text-pixel-sm text-ember-500">재료 장비는 강화 뒤 사라진다</div>
       )}
 
-      <button
-        type="button"
-        onClick={onEnhance}
-        disabled={!canDo}
-        className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
-        style={
-          canDo
-            ? { background: C.btnBg, border: `1px solid ${C.btnBorder}`, color: C.textPrimary,
-                boxShadow: "0 0 16px rgba(132, 75, 63, .468)" }
-            : { background: C.disabledBg, border: `1px solid ${C.disabledBorder}`, color: C.disabledText,
-                cursor: "not-allowed" }
-        }
-      >
+      <PixelButton variant="primary" onClick={onEnhance} disabled={!canDo} className="w-full py-3">
         {isMax
           ? "최대 강화"
           : canDo ? `강화하기 (성공률 ${Math.round(getEnhancementSuccessRate(enh) * 100)}%)`
-          : "재료를 선택하세요"}
-      </button>
+          : "재료를 고르세요"}
+      </PixelButton>
       {!isMax && (
-        <p className="text-center text-pixel-sm" style={{ color: C.textFaint }}>
-          실패해도 강화 수치는 내려가지 않습니다. 재료만 사라집니다.
+        <p className="text-center text-pixel-sm text-sand-300">
+          실패해도 강화 수치는 안 내려간다. 재료만 사라진다.
         </p>
       )}
     </div>
@@ -455,23 +381,20 @@ function DisassemblePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="mb-2 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
-          ✦ 장비 분해 ✦
-        </p>
+        <SectionHead en="Disassemble" ko="장비 분해" />
         <ArtifactCard artifact={artifact} size="full" />
       </div>
 
       {/* 획득 강화석 */}
       <div
-        className="rounded-xl p-4 text-center"
-        style={{ background: C.card, border: `1px solid ${C.border}` }}
+        className="rounded-xl p-4 text-center rounded-xl border border-earth-500/50 bg-shadow-700/60"
       >
-        <p className="text-pixel-sm font-bold mb-2" style={{ color: C.textFaint }}>분해 시 획득</p>
-        <p className="flex items-center justify-center gap-1.5 text-title-md font-black" style={{ color: C.gold }}>
+        <p className="text-pixel-sm font-bold mb-2 text-sand-300">분해 시 획득</p>
+        <p className="flex items-center justify-center gap-1.5 text-title-md font-black text-ember-500">
             <PixelIcon name="enhancement_stone" size={32} />×{stones}
           </p>
-        <p className="mt-1 text-pixel-sm" style={{ color: C.textFaint }}>강화석</p>
-        <div className="mt-3 space-y-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
+        <p className="mt-1 text-pixel-sm text-sand-300">강화석</p>
+        <div className="mt-3 space-y-0.5 text-pixel-sm text-sand-300">
           {/* 값을 여기 다시 적으면 규칙을 고친 날 화면만 옛말을 한다. 실제로 3/8/18 로
               굳어 있어서, 아래 항목을 더해도 위에 적힌 합계와 안 맞았다 */}
           <p>기본 ({QUALITY_LABEL[artifact.quality]}): +{getDisassembleStones(artifact.quality, 1, 0) - Math.floor(1 / 5)}</p>
@@ -480,44 +403,18 @@ function DisassemblePanel({
         </div>
       </div>
 
-      <div
-        className="rounded-lg p-2.5 text-pixel-sm text-center"
-        style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
-          color: C.red }}
-      >
-        ⚠ 분해하면 이 장비는 영구히 사라집니다
-      </div>
+      <div className="rounded-xl border border-ember-700/60 bg-ember-700/12 p-2.5 text-center text-pixel-sm text-ember-500">분해하면 이 장비는 영영 사라진다</div>
 
       {!confirm ? (
-        <button
-          type="button"
-          onClick={() => setConfirm(true)}
-          className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
-          style={{ background: "rgba(168, 61, 31, .3)", border: "1px solid rgba(168, 61, 31, .801)",
-            color: C.red }}
-        >
+        <PixelButton variant="danger" onClick={() => setConfirm(true)} className="w-full py-3">
           분해하기
-        </button>
+        </PixelButton>
       ) : (
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setConfirm(false)}
-            className="flex-1 rounded-lg py-3 text-pixel-sm font-bold transition hover:brightness-125"
-            style={{ background: C.disabledBg, border: `1px solid ${C.disabledBorder}`,
-              color: C.textMuted }}
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={onDisassemble}
-            className="flex-1 rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
-            style={{ background: "rgba(168, 61, 31, .601)", border: "1px solid rgba(168, 61, 31, 1)",
-              color: PALETTE.ember500 }}
-          >
+          <PixelButton onClick={() => setConfirm(false)} className="flex-1 py-3">취소</PixelButton>
+          <PixelButton variant="danger" onClick={onDisassemble} className="flex-1 py-3">
             확인 · 분해
-          </button>
+          </PixelButton>
         </div>
       )}
     </div>
@@ -540,7 +437,6 @@ function SynthesizePanel({
   onSynthesize:      () => void;
 }) {
   const nextQual  = getNextQuality(primary.quality);
-  const nextColor = nextQual ? QUALITY_COLOR[nextQual] : C.textFaint;
   const maxLv     = getEquipmentMaxLevel(primary.quality);
   const pvLv      = artifactLevel(primary);
   const pvEnh     = artifactEnh(primary);
@@ -568,49 +464,45 @@ function SynthesizePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
-          ✦ 장비 합성 ✦
-        </p>
-        <p className="mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
+        <SectionHead en="Synthesize" ko="장비 합성" />
+        <p className="-mt-2 text-pixel-sm text-sand-300">
           첫 번째가 최대 레벨·최대 강화면, 같은 등급 하나를 재료로 등급이 오른다
         </p>
       </div>
 
       {/* 무엇을 합성하는지. 아래 「합성 결과」와 나란히 놓여야 "나아지는가"를 잰다 */}
       <div>
-        <p className="mb-2 text-pixel-sm font-bold" style={{ color: C.textFaint }}>첫 번째 장비</p>
+        <p className="mb-2 text-pixel-sm font-bold text-sand-300">첫 번째 장비</p>
         <ArtifactCard size="full" artifact={primary} />
       </div>
 
       {/* 조건 체크리스트 */}
       <div
-        className="rounded-lg p-3 space-y-1"
-        style={{ background: C.card, border: `1px solid ${C.border}` }}
+        className="p-3 space-y-1 rounded-xl border border-earth-500/50 bg-shadow-700/60"
       >
-        <p className="text-pixel-sm font-bold mb-1.5" style={{ color: C.textFaint }}>합성 조건</p>
+        <p className="text-pixel-sm font-bold mb-1.5 text-sand-300">합성 조건</p>
         {conds.map((c, i) => (
           <div key={i} className="flex items-center gap-1.5 text-pixel-sm">
-            <span style={{ color: c.ok ? C.green : C.red }}>{c.ok ? "✓" : "✗"}</span>
-            <span style={{ color: c.ok ? C.textMuted : C.textFaint }}>{c.label}</span>
+            <span className={`${c.ok ? "text-sand-200" : "text-ember-500"}`}>{c.ok ? "✓" : "✗"}</span>
+            <span className={`${c.ok ? "text-sand-200" : "text-sand-300"}`}>{c.label}</span>
           </div>
         ))}
       </div>
 
       {/* 두 번째 장비 선택 */}
       <div>
-        <p className="mb-2 text-pixel-sm font-bold" style={{ color: C.textMuted }}>
+        <p className="mb-2 text-pixel-sm font-bold text-sand-300">
           두 번째 장비 선택
-          <span className="ml-1.5 font-normal" style={{ color: C.textFaint }}>
+          <span className="ml-1.5 font-normal text-sand-300">
             — 같은 등급 ({QUALITY_LABEL[primary.quality]})
           </span>
         </p>
         {candidates.length === 0 ? (
-          <p className="rounded-lg p-3 text-center text-pixel-sm" style={{ color: C.textFaint,
-            background: C.card, border: `1px solid ${C.border}` }}>
+          <p className="rounded-xl border border-earth-500/50 bg-shadow-700/60 p-3 text-center text-pixel-sm text-sand-300">
             합성에 쓸 {QUALITY_LABEL[primary.quality]} 등급 장비가 없습니다
           </p>
         ) : (
-          <div data-testid="anvil-secondary-list" className="max-h-52 overflow-y-auto space-y-1.5">
+          <div data-testid="anvil-secondary-list" className="space-y-1.5">
             {candidates.map((a) => {
               const lv = artifactLevel(a); const eh = artifactEnh(a);
               const ok = lv >= maxLv && eh >= MAX_EQUIPMENT_ENHANCEMENT;
@@ -633,7 +525,7 @@ function SynthesizePanel({
           능력치까지 보여야 "지금 것보다 나은가"를 눈으로 잴 수 있다. */}
       {nextQual && (
         <div>
-          <p className="mb-2 text-pixel-sm font-bold" style={{ color: C.textFaint }}>합성 결과</p>
+          <p className="mb-2 text-pixel-sm font-bold text-sand-300">합성 결과</p>
           <ArtifactCard
             size="full"
             artifact={{
@@ -650,30 +542,12 @@ function SynthesizePanel({
       )}
 
       {canSynth && (
-        <div
-          className="rounded-lg p-2.5 text-pixel-sm text-center"
-          style={{ background: "rgba(233, 148, 65, .085)", border: "1px solid rgba(233, 148, 65, .254)",
-            color: C.red }}
-        >
-          ⚠ 두 장비 모두 사라지고 새 등급 장비가 생성됩니다
-        </div>
+        <div className="rounded-xl border border-ember-700/60 bg-ember-700/12 p-2.5 text-center text-pixel-sm text-ember-500">두 장비 모두 사라지고 새 등급 장비 하나가 생긴다</div>
       )}
 
-      <button
-        type="button"
-        onClick={onSynthesize}
-        disabled={!canSynth}
-        className="w-full rounded-lg py-3 text-pixel-sm font-black transition hover:brightness-125"
-        style={
-          canSynth
-            ? { background: `${nextColor}22`, border: `1px solid ${nextColor}77`,
-                color: C.textPrimary, boxShadow: `0 0 16px ${nextColor}22` }
-            : { background: C.disabledBg, border: `1px solid ${C.disabledBorder}`,
-                color: C.disabledText, cursor: "not-allowed" }
-        }
-      >
-        ✦  합성하기
-      </button>
+      <PixelButton variant="primary" onClick={onSynthesize} disabled={!canSynth} className="w-full py-3">
+        합성하기
+      </PixelButton>
     </div>
   );
 }
@@ -682,15 +556,8 @@ function SynthesizePanel({
 
 function Toast({ msg }: { msg: string }) {
   return (
-    <div
-      className="pointer-events-none fixed bottom-8 left-1/2 z-[1000] -translate-x-1/2 rounded-xl px-5 py-2.5 text-pixel-sm font-black shadow-2xl"
-      style={{
-        background: "rgba(13, 18, 35, .97)",
-        border:     "1px solid rgba(233, 148, 65, .706)",
-        color:      C.textPrimary,
-        boxShadow:  "0 0 24px rgba(132, 75, 63, .819)",
-      }}
-    >
+    <div className="pointer-events-none fixed bottom-8 left-1/2 z-[1000] -translate-x-1/2 rounded-xl
+      border border-ember-500/70 bg-shadow-900 px-5 py-2.5 text-pixel-sm font-black text-cream-100 shadow-2xl">
       {msg}
     </div>
   );
@@ -840,56 +707,22 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
 
   // ── 렌더 ───────────────────────────────────────────────────────────────────
   return (
-    <div
-      className="fixed inset-0 z-[900] flex items-center justify-center px-4"
-      style={{ background: "rgba(13, 18, 35, .82)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
+    <ModalShell
+      icon="anvil"
+      title="장비 모루"
+      subtitle="만든 아티팩트를 레벨업·강화·분해·합성한다"
+      onClose={onClose}
+      testId="anvil-modal"
+      actions={
+        <span className="flex shrink-0 items-center gap-1.5 rounded-lg border border-earth-500/60
+          bg-shadow-700/70 px-3 py-1.5 text-pixel-sm font-bold text-sand-300">
+          <PixelIcon name="enhancement_stone" size={16} />
+          강화석 <span className="font-mono text-ember-500">{enhancementStones}</span>
+        </span>
+      }
     >
-      <div
-        className="flex max-h-[92vh] w-full max-w-board flex-col overflow-hidden rounded-xl shadow-2xl"
-        style={{
-          background:  C.bg,
-          border:      `1px solid ${C.borderGold}`,
-          boxShadow:   "0 0 60px rgba(132, 75, 63, .585), 0 8px 40px rgba(13, 18, 35, .85)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* ── 헤더 ────────────────────────────────────────────────────────── */}
-        <header
-          className="flex shrink-0 items-center gap-4 px-5 py-4"
-          style={{ borderBottom: `1px solid ${C.border}` }}
-        >
-          <PixelIcon name="anvil" size={32} />
-          <div className="flex-1">
-            <h2 className="text-pixel-md font-black tracking-wide" style={{ color: C.textPrimary }}>
-              장비 모루
-            </h2>
-            <p className="mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
-              제작한 아티팩트를 레벨업·강화·분해·합성할 수 있습니다.
-            </p>
-          </div>
-          {/* 보유 강화석 */}
-          <div
-            className="rounded-lg px-3 py-1.5 text-pixel-sm font-bold"
-            style={{ background: C.card, border: `1px solid ${C.border}`, color: C.textMuted }}
-          >
-            <PixelIcon name="enhancement_stone" size={16} className="inline-block align-middle" /> 강화석 <span style={{ color: C.gold, fontVariantNumeric: "tabular-nums" }}>{enhancementStones}</span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-3 py-2 text-pixel-sm font-bold transition hover:brightness-125"
-            style={{ background: "rgba(13, 18, 35, .6)", border: `1px solid ${C.border}`, color: C.textMuted }}
-          >
-            닫기
-          </button>
-        </header>
-
-        {/* ── 탭 바 ───────────────────────────────────────────────────────── */}
-        <div
-          className="flex shrink-0 gap-1 px-5 py-2"
-          style={{ borderBottom: `1px solid ${C.border}`, background: C.panel }}
-        >
+        {/* ── 탭 바. 가방의 탭과 같은 규칙이다 — 밑줄로 고른 것을 말하고, 판을 칠하지 않는다 ── */}
+        <div className="flex shrink-0 gap-1 border-b border-shadow-700 px-panel">
           {TABS.map((t) => {
             const active = tab === t.id;
             return (
@@ -897,13 +730,10 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
                 key={t.id}
                 type="button"
                 onClick={() => changeTab(t.id)}
-                className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-pixel-sm font-bold transition hover:brightness-110"
-                style={{
-                  background: active ? C.btnBg : "transparent",
-                  border:     `1px solid ${active ? C.btnBorder : "transparent"}`,
-                  color:      active ? C.textPrimary : C.textFaint,
-                  boxShadow:  active ? "0 0 10px rgba(132, 75, 63, .351)" : "none",
-                }}
+                className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-pixel-sm font-bold transition
+                  ${active
+                    ? "border-ember-500 bg-ember-500/8 text-ember-500"
+                    : "border-transparent text-sand-300 hover:text-sand-200"}`}
               >
                 <PixelIcon name={t.icon} size={16} />
                 <span>{t.label}</span>
@@ -912,27 +742,18 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
           })}
         </div>
 
-        {/* ── 본문 ────────────────────────────────────────────────────────── */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[1fr_320px]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[1fr_var(--container-aside)]">
 
           {/* 왼쪽: 장비 목록 */}
-          <section
-            className="min-h-0 overflow-y-auto p-5"
-            style={{ background: C.panel }}
-          >
-            <p className="mb-3 text-pixel-sm font-bold uppercase tracking-widest"
-              style={{ color: C.goldDim }}>
-              보유 아티팩트
-              <span className="ml-2 font-mono normal-case" style={{ color: C.textFaint }}>
-                {craftedArtifacts.length}개
-              </span>
-            </p>
+          <section className="min-h-0 overflow-y-auto p-panel">
+            <SectionHead
+              en="Artifacts" ko="보유 아티팩트"
+              right={<span className="font-mono text-pixel-sm text-sand-300">{craftedArtifacts.length}개</span>}
+            />
 
             {craftedArtifacts.length === 0 ? (
-              <p className="py-8 text-center text-pixel-sm" style={{ color: C.textFaint }}>
-                아티팩트가 없습니다.<br />
-                <span className="text-pixel-sm">제작 공방에서 먼저 제작해 보세요.</span>
-              </p>
+              <EmptyState title="아티팩트가 없습니다"
+                description="제작 공방의 아티팩트 제작대에서 먼저 만들어 보세요." />
             ) : (
               // 한 줄에 하나씩 세우면 판이 넓어질수록 카드 오른쪽이 통째로 빈다.
               // 칸 폭이 열 수를 정하게 두면 넓은 화면에서 목록이 짧아진다.
@@ -954,16 +775,11 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
           </section>
 
           {/* 오른쪽: 액션 패널 */}
-          <aside
-            className="min-h-0 overflow-y-auto p-5 md:border-l"
-            style={{ background: C.aside, borderColor: C.border }}
-          >
+          <aside className="min-h-0 overflow-y-auto border-shadow-700 p-panel md:border-l">
             {!primary ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-12">
-                <PixelIcon name="anvil" size={64} className="opacity-20" />
-                <p className="text-pixel-sm font-bold" style={{ color: C.textFaint }}>
-                  왼쪽 목록에서 장비를 선택하세요
-                </p>
+              <div className="flex h-full flex-col items-center justify-center gap-3 py-12 text-center">
+                <PixelIcon name="anvil" size={64} className="opacity-40" />
+                <p className="text-pixel-sm text-sand-300">왼쪽 목록에서 장비를 고르세요</p>
               </div>
             ) : tab === "levelup" ? (
               <LevelUpPanel
@@ -995,9 +811,8 @@ export function AnvilModal({ open, onClose }: AnvilModalProps) {
             )}
           </aside>
         </div>
-      </div>
 
       {toast && <Toast msg={toast} />}
-    </div>
+    </ModalShell>
   );
 }

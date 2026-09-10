@@ -1025,7 +1025,7 @@ function CampMenu({
     { label: "무한의 탑", icon: "tower", tone: "info",   onClick: onOpenTower },
     // 탑과 같은 이유로 숲도 메뉴에 둔다. 숲만 걸어가야 하면 "어디는 메뉴, 어디는 발"
     // 이라는 규칙 없는 구분이 남고, 목표 띠가 가리키는 길과도 어긋난다.
-    { label: "숲",        icon: "compass", tone: "info",   onClick: onGoToForest },
+    { label: "숲",        icon: "forest", tone: "nature", onClick: onGoToForest },
     { label: "퀘스트",    icon: "quest", tone: "accent", onClick: onOpenQuestLog },
     { label: "내 몬스터", icon: "monsters", tone: "info",   onClick: onGoToMonsters },
     { label: "가방",      icon: "bag", tone: "accent", onClick: onGoToFarm },

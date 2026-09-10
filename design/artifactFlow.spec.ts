@@ -95,7 +95,7 @@ test.describe("artifact:", () => {
 
     // 왼쪽 목록에서 강화 대상을 고르면 오른쪽 패널이 뜬다
     await page.getByText("힘의 목걸이").first().click();
-    await expect(page.getByText("✦ 장비 강화 ✦")).toBeVisible();
+    await expect(page.getByText("장비 강화", { exact: true })).toBeVisible();
     await expect(page.getByText(/재료 선택/)).toBeVisible();
     // 재료는 오른쪽 패널의 목록에서 고른다. 이름만으로 찾으면 왼쪽 '보유 아티팩트'
     // 목록이 먼저 잡혀 강화 대상만 바뀌고 재료는 안 골라진다.
