@@ -221,7 +221,7 @@ test.describe("audio:", () => {
       }).__phaserGame;
       return g.scene.getScene("BaseCampScene").children.getByName("interactHint")?.text ?? "";
     }), { timeout: 10_000, message: "숲 입구 안내가 안 떴다" }).toContain("숲");
-    await page.keyboard.press("E");   // 베이스캠프의 상호작용 키는 E 다 (공방은 Space)
+    await page.keyboard.press("x");   // 상호작용 키는 게임 전체가 X 하나다
     await watch(900, "숲으로 걸어 들어가는 중");
     await waitForTrack(page, "forest");
 

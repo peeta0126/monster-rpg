@@ -77,7 +77,8 @@ test("장착 화면의 능력치가 몬스터 요약의 실제 합계와 같다"
   const summary: Record<string, number> = {};
   for (const [label, key] of [["공격", "공격력"], ["방어", "방어력"], ["속도", "속도"]] as const) {
     const el = page.getByTestId(`stat-${label}-bonus`).first();
-    summary[key] = Number((await el.innerText()).replace("+", ""));
+    // 줄은 「장비 +52」다(각인 몫은 그 아래 자기 줄로 따로 적힌다). 숫자만 뽑는다
+    summary[key] = Number((await el.innerText()).replace(/[^\d.]/g, ""));
   }
 
   // 장착 화면이 말하는 값

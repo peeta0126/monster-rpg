@@ -13,7 +13,7 @@ import { PixelIcon } from "../shared/ui/PixelIcon";
 import { ArtifactCard } from "../shared/ui/ArtifactCard";
 import { isIconName, type IconName } from "../shared/ui/icons";
 import { useBgm, BGM } from "../shared/audio";
-import { SlotGrid, SlotGridRow, EmptySlot } from "../shared/ui/SlotGrid";
+import { SlotGrid, SlotGridRow } from "../shared/ui/SlotGrid";
 import { GameBackground } from "../shared/ui/GameBackground";
 import { EmptyState, PixelButton, ConfirmDialog } from "../shared/ui";
 
@@ -185,10 +185,14 @@ function MaterialsSection({
         </p>
       </div>
 
-      {/* 안 가진 재료는 칸을 안 만든다. **먼저 걸러 두는** 이유는 순번이 필요해서다 —
+      {/* 빈 칸은 그리지 않는다. 재료 3종에 점선 칸 열둘이 따라붙으면 화면 대부분이
+          "없는 것"으로 채워지고, 정작 가진 것이 왼쪽 구석으로 밀린다. 하나도 없을
+          때는 아래 EmptyState 가 이미 그 말을 한다.
+
+          안 가진 재료는 칸을 안 만든다. **먼저 걸러 두는** 이유는 순번이 필요해서다 —
           개수 상자가 자기 칸과 같은 열에 서려면 "보이는 칸들 중 몇 번째"를 알아야 하고,
           MATERIALS 의 색인은 빈 것까지 세므로 그 자리가 아니다 */}
-      <SlotGrid minItemWidth={MATERIAL_SLOT} minSlots={15}>
+      <SlotGrid minItemWidth={MATERIAL_SLOT}>
         {MATERIALS.filter((mat) => (materials[mat.id] ?? 0) > 0).map((mat, i) => {
             const cnt    = materials[mat.id] ?? 0;
             const open = openId === mat.id;
@@ -258,7 +262,7 @@ function PotionsSection({
         </p>
       </div>
 
-      <SlotGrid minItemWidth={POTION_SLOT} minSlots={4} emptySlot={() => <EmptySlot className="min-h-20" />}>
+      <SlotGrid minItemWidth={POTION_SLOT}>
         {craftedPotions.map((stack, i) => {
           const color = QUALITY_COLOR[stack.quality];
           const open  = openId === stack.stackId;
@@ -337,7 +341,7 @@ function ArtifactsSection({
       {/* 칸을 280 → 340 으로 넓혔다. 다 키운 장비는 능력치 줄이 일곱까지 늘어나는데, 좁은
           칸에서는 한 단으로 쌓여 카드 높이가 두 배 넘게 벌어진다(줄이 둘뿐인 카드 옆에서
           그만큼이 빈다). 넓히면 능력치가 두 단으로 접혀 높이 차가 줄어든다. */}
-      <SlotGrid minItemWidth={340} minSlots={3} emptySlot={() => <EmptySlot className="min-h-24" />}>
+      <SlotGrid minItemWidth={340}>
         {craftedArtifacts.map((item, i) => (
           <ArtifactCard
             key={item.instanceId}
@@ -391,7 +395,8 @@ export default function FarmPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      navigate(backPath, backPath === "/" ? { state: { openMenu: true } } : undefined);
+      // 나갈 때 메뉴를 다시 열지 않는다. 화면을 닫았는데 메뉴가 떠 있으면 반쯤 나온 셈이다
+      navigate(backPath);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

@@ -119,9 +119,22 @@ export function objectiveWhere(o: QuestObjective): string {
     case "material":      return "숲";
     case "floor":         return "탑";
     case "catchType":     return "숲";
-    case "equipped":      return "집";
-    case "artifactLevel": return "집";
-    case "potion":        return "집";
+    case "equipped":      return "집 안 공방";
+    case "artifactLevel": return "집 안 공방";
+    case "potion":        return "집 안 공방";
+  }
+}
+
+/**
+ * 걷지 않고 가는 길. 메뉴에 항목이 있는 곳만 돌려준다(목표 띠와 같은 규칙).
+ * 공방은 걸어야만 닿으므로 null 이다.
+ */
+export function objectiveVia(o: QuestObjective): string | null {
+  switch (o.kind) {
+    case "material":
+    case "catchType":     return "메뉴 → 숲";
+    case "floor":         return "메뉴 → 무한의 탑";
+    default:              return null;
   }
 }
 

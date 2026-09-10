@@ -66,7 +66,7 @@ async function talkTo(page: Page, npc: keyof typeof NPC_AT) {
     g.scene.getScene("BaseCampScene").player.setPosition(px, py + 60);
   }, [x, y] as const);
   await page.waitForTimeout(150);
-  await page.keyboard.press("e");
+  await page.keyboard.press("x");   // 상호작용 키는 게임 전체가 X 하나다
   await page.waitForTimeout(250);
 }
 
@@ -84,7 +84,7 @@ async function readThrough(page: Page, maxLines = 20): Promise<string[]> {
     const dialogue = page.locator("img[alt='Orion'], img[alt='Baros']").first();
     if (!(await dialogue.isVisible().catch(() => false))) break;
     lines.push((await page.locator("p.text-cream-100").last().innerText()).trim());
-    await page.keyboard.press(" ");
+    await page.keyboard.press("x");   // 대사 넘기기도 X
     await page.waitForTimeout(120);
   }
   return lines;
@@ -106,7 +106,7 @@ test("엔딩까지 본 세이브 — 이야기 한 번 뒤로는 잡담이 나�
     // 퀘스트는 전부 끝낸 상태로 둔다. 여기서 보려는 건 그 다음이다
     questStatus: Object.fromEntries([
       "baros_first_hunt", "orion_mothers_medicine", "baros_gear_up",
-      "orion_where_i_stopped", "baros_type_matchup", "orion_once_more",
+      "orion_where_i_stopped", "orion_same_leaf", "baros_type_matchup", "orion_once_more",
       "baros_change_gear", "orion_mothers_cure",
     ].map((id) => [id, "completed"])),
   }));
@@ -150,7 +150,7 @@ test("안 본 이야기가 잡담에 묻히지 않는다", async ({ page }) => {
     },
     questStatus: Object.fromEntries([
       "baros_first_hunt", "orion_mothers_medicine", "baros_gear_up",
-      "orion_where_i_stopped", "baros_type_matchup", "orion_once_more",
+      "orion_where_i_stopped", "orion_same_leaf", "baros_type_matchup", "orion_once_more",
       "baros_change_gear", "orion_mothers_cure",
     ].map((id) => [id, "completed"])),
     // 엔딩 후 대사만 안 읽은 상태. 옛 세이브 마이그레이션이 만드는 바로 그 자리다

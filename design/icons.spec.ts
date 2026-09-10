@@ -127,7 +127,7 @@ test.describe("공방", () => {
     const bench = CRAFTING_STATIONS.find((s) => s.id === "artifact-workbench")!;
     expect(await walkTo(page, bench, APPROACH * bench.radius)).toBe(true);
     await expect(page.getByText(`${bench.label} 사용하기`)).toBeVisible();
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page.getByRole("heading", { name: "아티팩트 제작대" })).toBeVisible();
     await settle(page);
     await expectRasterIcons(page, 3);
@@ -142,7 +142,7 @@ test.describe("공방", () => {
     const anvil = CRAFTING_STATIONS.find((s) => s.id === "anvil")!;
     expect(await walkTo(page, anvil, APPROACH * anvil.radius)).toBe(true);
     await expect(page.getByText(`${anvil.label} 사용하기`)).toBeVisible();
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
     await settle(page);
     // 모루 탭(강화·분해…)은 그림 파일이 없어 SVG 로 나간다. 아티팩트와 강화석은 그림이다.

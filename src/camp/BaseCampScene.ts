@@ -4,6 +4,7 @@ import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandle
 import { markSceneReady } from "../shared/phaser/sceneReady";
 import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
+import { isCampInputLocked } from "./campInputLock";
 import { PALETTE, withAlpha } from "../shared/palette";
 import { BASECAMP_BACKGROUND_IMAGE } from "../shared/assetPaths";
 import {
@@ -159,10 +160,17 @@ export default class BaseCampScene extends Phaser.Scene {
       D: Phaser.Input.Keyboard.Key;
     };
 
-    // ── E 키 ────────────────────────────────────────────────────────────────────
+    // ── X 키 ────────────────────────────────────────────────────────────────────
+    // 상호작용 키는 게임 전체가 X 하나다(공방도 같다). 예전엔 캠프가 E, 공방이 Space
+    // 였는데 — E 는 방향키로 쓰일 자리를 남겨 둬야 하고, Space 는 너무 쉽게 눌려서
+    // 읽으라고 띄운 글을 손이 먼저 넘겨 버린다.
+    //
     // 판정은 findTarget 하나로만 한다. 원래는 여기랑 근접 안내가 각자 조건을 갖고
-    // 있어서, "E: 숲 입장"이 떠 있는데 E 가 안 먹는 구간이 30px 씩 있었다.
-    keyboard.on("keydown-E", safeHandler(this, () => {
+    // 있어서, "숲 입장"이 떠 있는데 키가 안 먹는 구간이 30px 씩 있었다.
+    keyboard.on("keydown-X", safeHandler(this, () => {
+      // 대사창·메뉴·모달이 떠 있으면 이 키는 그쪽 것이다. 안 막으면 대사를 넘기려고
+      // 누른 X 가 같은 프레임에 그 대사를 처음부터 다시 연다.
+      if (isCampInputLocked()) return;
       const target = this.findTarget();
       if (!target) return;
       if (target.kind === "npc") { this.showNpcDialogue(target.npc); return; }
@@ -459,7 +467,7 @@ export default class BaseCampScene extends Phaser.Scene {
         .setName("interactHint")
         .setDepth(9999);
     }
-    const text = `E: ${label}`;
+    const text = `X: ${label}`;
     if (this.hint.text !== text) this.hint.setText(text);
     this.hint.setPosition(this.player.x, this.player.y - 60);
   }

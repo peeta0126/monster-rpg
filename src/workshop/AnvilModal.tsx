@@ -122,10 +122,16 @@ function LevelUpPanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="mb-2 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 레벨업 ✦
         </p>
-        <ArtifactCard artifact={artifact} />
+        {/* 실제 값에서 그대로 적는다(getLevelMultiplier · ARTIFACT_BONUS_POOL).
+            "레벨업 = 부가 능력치, 강화 = 자체 능력치" 로만 알면 반만 맞다 —
+            레벨업도 능력치를 올린다. 둘의 차이는 부가 능력치 칸이 열리느냐다. */}
+        <p className="mb-2 mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
+          한 레벨마다 능력치 +3% · 10레벨마다 부가 능력치가 하나씩 열린다
+        </p>
+        <ArtifactCard size="full" artifact={artifact} />
       </div>
 
       {/* 레벨 바 */}
@@ -325,10 +331,17 @@ function EnhancePanel({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <p className="mb-2 text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
+        <p className="text-pixel-sm font-bold uppercase tracking-widest" style={{ color: C.goldDim }}>
           ✦ 장비 강화 ✦
         </p>
-        <ArtifactCard artifact={target} />
+        {/* 레벨업이 부가 능력치 칸을 여는 축이라면, 강화는 장비가 원래 가진 능력치를
+            끌어올리는 축이다. 탭 이름만으로는 둘이 안 갈려서 한 줄로 적어 둔다. */}
+        <p className="mb-2 mt-0.5 text-pixel-sm" style={{ color: C.textFaint }}>
+          한 단계마다 능력치 +10% — 같은 등급 장비 하나를 재료로 태운다. 부가 능력치는 안 열린다
+        </p>
+        {/* 능력치를 같이 그린다. 이름이 같은 장비가 둘일 때, 무엇을 강화하고 무엇을
+            재료로 태우는지 이름표만으로는 못 가린다 */}
+        <ArtifactCard size="full" artifact={target} />
       </div>
 
       {/* 강화 수치 표시 */}
@@ -373,10 +386,11 @@ function EnhancePanel({
               재료로 쓸 {QUALITY_LABEL[target.quality]} 등급 장비가 없습니다
             </p>
           ) : (
-            <div className="max-h-32 overflow-y-auto space-y-1.5">
+            <div data-testid="anvil-material-list" className="max-h-52 overflow-y-auto space-y-1.5">
               {candidates.map((a) => (
                 <ArtifactCard
                   key={a.instanceId}
+                  size="full"
                   artifact={a}
                   selected={a.instanceId === materialId}
                   onClick={() => onSelectMaterial(a.instanceId)}
@@ -562,6 +576,12 @@ function SynthesizePanel({
         </p>
       </div>
 
+      {/* 무엇을 합성하는지. 아래 「합성 결과」와 나란히 놓여야 "나아지는가"를 잰다 */}
+      <div>
+        <p className="mb-2 text-pixel-sm font-bold" style={{ color: C.textFaint }}>첫 번째 장비</p>
+        <ArtifactCard size="full" artifact={primary} />
+      </div>
+
       {/* 조건 체크리스트 */}
       <div
         className="rounded-lg p-3 space-y-1"
@@ -590,13 +610,14 @@ function SynthesizePanel({
             합성에 쓸 {QUALITY_LABEL[primary.quality]} 등급 장비가 없습니다
           </p>
         ) : (
-          <div className="max-h-36 overflow-y-auto space-y-1.5">
+          <div data-testid="anvil-secondary-list" className="max-h-52 overflow-y-auto space-y-1.5">
             {candidates.map((a) => {
               const lv = artifactLevel(a); const eh = artifactEnh(a);
               const ok = lv >= maxLv && eh >= MAX_EQUIPMENT_ENHANCEMENT;
               return (
                 <ArtifactCard
                   key={a.instanceId}
+                  size="full"
                   artifact={a}
                   selected={a.instanceId === secondaryId}
                   onClick={() => onSelectSecondary(a.instanceId)}

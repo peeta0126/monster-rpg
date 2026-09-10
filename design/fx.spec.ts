@@ -155,6 +155,7 @@ test("fx: 경험치 연출", async ({ page }) => {
   await page.screenshot({ path: path.join(OUT, "_exp-levelup.png") });
 
   // Space 한 번으로 전부 건너뛴다. 반복 플레이를 막지 않는지 확인
+  // (연출 건너뛰기는 상호작용 키와 무관하다 — expPlayback.SKIP_CODES 는 Space·Escape 다)
   await page.keyboard.press("Space");
   await expect(exp).toHaveCount(0, { timeout: 10_000 });
 });

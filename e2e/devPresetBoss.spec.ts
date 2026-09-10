@@ -109,7 +109,7 @@ async function walkToTowerAndOpenModal(page: Page) {
   for (let attempt = 0; attempt < 8; attempt++) {
     await holdKey(page, "ArrowLeft", attempt === 0 ? 2600 : 400);
     await holdKey(page, "ArrowUp", attempt === 0 ? 600 : 250);
-    await page.keyboard.press("e");
+    await page.keyboard.press("x");
     await page.waitForTimeout(400);
     if (await towerModal.isVisible().catch(() => false)) return;
   }

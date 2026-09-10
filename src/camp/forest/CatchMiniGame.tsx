@@ -10,7 +10,6 @@ import {
   type RpsResult,
 } from "./catchRules";
 import { rollHand, tellText, tellTypeOf, typeText, type TellReveal } from "./catchTells";
-import { BADGE_TONE, type NestBadge } from "./nest";
 import { withJosa } from "../../shared/josa";
 
 /**
@@ -43,7 +42,7 @@ const REVEAL_MS = 900;
 type Stage = "select" | "reveal" | "result";
 
 export function CatchMiniGame({
-  monster, alert, seed, attempts, pending, reveal, badge, onReveal, onResult, onDone, onResolving,
+  monster, alert, seed, attempts, pending, reveal, onReveal, onResult, onDone, onResolving,
 }: {
   monster: Monster;
   alert: number;
@@ -69,8 +68,6 @@ export function CatchMiniGame({
    * 처음 보는 몬스터를 못 읽는 게 정상이다. 여기서 마음대로 열지 마라.
    */
   reveal: TellReveal;
-  /** 각인 진행도. 3번째 시도를 지를 이유가 되므로 카드에 같이 적는다 */
-  badge?: NestBadge | null;
   /** 상대의 수가 공개되는 순간 부른다. 결과를 보기 전에 시도를 먼저 태운다 */
   onReveal: () => void;
   /** 굴림이 끝난 순간 부른다. 플레이어가 화면을 넘기기 전에 결과를 런에 적어 둔다 */
@@ -147,7 +144,19 @@ export function CatchMiniGame({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-pixel-sm font-bold text-cream-100">{monster.name}</p>
-              {badge && <Badge badge={badge}/>}
+              {/* 레벨. 숲은 파티 최고 레벨을 천장으로 쓰는데 그 값도 상대 레벨도 화면에
+                  없어서, 시도 세 번을 몇 레벨짜리에 쓰는지 모른 채 골랐다.
+                  여기 있던 각인 진행도는 둥지(고르는 자리)로 물렸다 — 이 화면에는
+                  이미 잡을지 말지를 정할 값이 넘친다. */}
+              <span className="rounded-full px-2 py-0.5 text-pixel-sm font-bold"
+                data-testid="forest-rps-level"
+                style={{
+                  background: rgba("shadow900", 0.7),
+                  border: `1px solid ${rgba("stone600", 0.9)}`,
+                  color: PALETTE.sand200,
+                }}>
+                Lv.{monster.level}
+              </span>
             </div>
             <p className="text-pixel-sm text-sand-300" data-testid="forest-rps-cost">
               남은 시도 {triesLeft}회
@@ -280,22 +289,6 @@ function TellLine({ reveal, type }: { reveal: TellReveal; type: ElementType }) {
         {hand ? tellText(type) : "속성만 읽힌다 — 버릇은 속성이 안다"}
       </span>
     </div>
-  );
-}
-
-/** 각인 진행도. 둥지 카드와 같은 배지를 쓴다. 3번째 시도를 지를 이유가 여기 있다 */
-function Badge({ badge }: { badge: NestBadge }) {
-  const tone = BADGE_TONE[badge.tone];
-  return (
-    <span className="rounded-full px-2 py-0.5 text-pixel-sm font-bold"
-      data-testid="forest-rps-badge"
-      style={{
-        background: rgba(tone.border, 0.22),
-        border: `1px solid ${rgba(tone.border, 0.9)}`,
-        color: tone.text,
-      }}>
-      {badge.text}
-    </span>
   );
 }
 

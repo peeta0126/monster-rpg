@@ -192,6 +192,51 @@ export const ORION_WHERE_I_STOPPED_QUEST: QuestDef = {
 };
 
 /**
+ * 12층 · 오리온. **각인을 가르치는 퀘스트.**
+ *
+ * 각인은 이 게임에서 유일하게 "같은 몬스터를 또 잡는 게 이득"인 축인데, 그걸 설명하는
+ * 자리가 아무 데도 없었다. 상태창에 상자 하나가 있을 뿐이라, 중복을 먹인다는 발상 자체를
+ * 스스로 떠올려야 했다.
+ *
+ * 그래서 앞 퀘스트가 준 리피를 **한 마리 더** 준다. 손에 같은 몬스터가 둘 있는 상태를
+ * 만들어 놓고 대사가 "먹여라"까지 말한다. 설명서를 읽는 게 아니라 손에 쥔 걸로 배운다.
+ *
+ * 목표를 약초로 잡은 건 이 퀘스트가 가르치는 자리라서다. 재료 벽을 세우면 배우기 전에
+ * 막힌다. 약초는 얕은 숲 한 번이면 찬다.
+ *
+ * ⚠ 새 계수기를 안 만든다(CLAUDE.md). 목표는 이미 저장되는 재료 수를 그대로 읽는다.
+ */
+export const ORION_SAME_LEAF_QUEST: QuestDef = {
+  id: "orion_same_leaf",
+  title: "같은 잎사귀",
+  npcId: "orion",
+  requires: { questDone: "orion_where_i_stopped", minFloor: 12 },
+  objective: { kind: "material", itemId: "herb", amount: 8 },
+  rewards: [
+    // 앞 퀘스트와 같은 종. 이 퀘스트의 전부가 "같은 놈이 둘"이라는 상태다
+    { kind: "monster", monsterId: "leafy", levelBelowParty: 2, minLevel: 8 },
+  ],
+  acceptLines: [
+    "리피는 잘 지내느냐. …그래.",
+    "텃밭에 한 마리가 더 있다. 같은 배에서 나온 놈이야.",
+    "약초를 여덟만 뜯어다 다오. 겨울 나려면 그만큼은 있어야 한다.",
+  ],
+  progressLines: ["약초 여덟이다. 얕은 숲이면 한 번에 찬다."],
+  completeLines: [
+    "고맙다. 자, 데려가라. 앞엣놈이랑 똑같이 생겼지.",
+    "…둘을 다 데리고 다닐 것 없다. 하나를 다른 하나한테 먹여라.",
+    "「내 몬스터」에서 보관함에 내려둔 놈을 골라 「각인」이다.",
+    "같은 놈이 같은 놈을 먹으면 그 피가 진해진다. 능력치가 통째로 오른다.",
+    "그리고 이건 종이 아니라 **계열**로 센다. 진화를 시켜도 그 각인은 안 사라져.",
+    "모시가 모치가 되고 모왕이 되어도, 셋이 한 그릇을 나눠 쓴다는 뜻이다.",
+  ],
+  noRoomLines: [
+    "데려갈 자리가 없구나.",
+    "자리를 비우고 다시 오너라. 텃밭에서 안 도망간다.",
+  ],
+};
+
+/**
  * 20층 · 바로스. 상성을 갖추게 한다.
  *
  * 보상이 부적인 건 재료가 병목이라서다(빛의 수정 둘·정수 둘·마법 가루 둘). 20층 관문
@@ -325,6 +370,8 @@ export const ALL_QUESTS: QuestDef[] = [
   ORION_MOTHERS_MEDICINE_QUEST,
   BAROS_GEAR_UP_QUEST,
   ORION_WHERE_I_STOPPED_QUEST,
+  // 「내가 멈춘 자리」 바로 뒤. 그 퀘스트가 준 리피가 손에 있어야 성립한다
+  ORION_SAME_LEAF_QUEST,
   BAROS_TYPE_MATCHUP_QUEST,
   ORION_ONCE_MORE_QUEST,
   BAROS_CHANGE_GEAR_QUEST,
@@ -631,6 +678,38 @@ export function questUnlocked(
   if (minFloor !== undefined && bestFloor < minFloor) return false;
   if (questDone && (questStatus[questDone] ?? "not_accepted") !== "completed") return false;
   return true;
+}
+
+/**
+ * 해금 조건을 사람이 읽는 한 줄로.
+ *
+ * 퀘스트 목록이 "완료 5 / 8" 이라고만 적으면 남은 셋이 어디 있는지 알 수 없다. 아직
+ * 못 받는 것도 이름과 조건까지는 보여야, 앞으로 뭘 하면 열리는지가 보인다. 조건은
+ * `requires` 한 벌에서 그대로 만든다 — 여기서 다시 적으면 표와 화면이 갈라진다.
+ */
+export function questUnlockLabel(quest: QuestDef): string {
+  const { flag, minFloor, questDone } = quest.requires;
+  const parts: string[] = [];
+
+  const floorNeed = Math.max(
+    minFloor ?? 0,
+    flag === "floor_5" ? 5 : flag === "floor_10" ? 10 : flag === "floor_20" ? 20
+      : flag === "floor_40" ? 40 : flag === "floor_50" ? 50 : 0,
+  );
+  if (floorNeed > 0) parts.push(`탑 ${floorNeed}층`);
+
+  if (questDone) {
+    const prev = ALL_QUESTS.find((q) => q.id === questDone);
+    parts.push(prev ? `「${prev.title}」 완료` : "앞 부탁 완료");
+  }
+  if (flag === "tower_cleared") parts.push("탑 정복");
+  if (flag === "met_orion")     parts.push("오리온과 만남");
+  if (flag === "met_baros")     parts.push("바로스와 만남");
+  if (flag === "first_capture") parts.push("첫 포획");
+  if (flag === "quest_baros_done") parts.push("바로스의 첫 부탁 완료");
+  if (flag === "quest_orion_done") parts.push("오리온의 첫 부탁 완료");
+
+  return parts.length > 0 ? parts.join(" · ") : "바로 받을 수 있다";
 }
 
 /**

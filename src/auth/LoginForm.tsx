@@ -78,7 +78,7 @@ export default function LoginForm() {
           <span className="h-px flex-1 bg-gradient-to-r from-transparent to-ember-700/70" />
           <span style={{ ...pixelFont, fontSize: 12 }}>
             <PixelIcon name="compass" size={16} className="mr-1.5 inline-block align-middle" />
-            여행자 등록
+            여행자 로그인
           </span>
           <span className="h-px flex-1 bg-gradient-to-l from-transparent to-ember-700/70" />
         </div>

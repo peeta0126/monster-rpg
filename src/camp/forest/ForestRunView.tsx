@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { rgba } from "../../shared/palette";
+import { getMaterial } from "../../shared/items";
+import { PixelIcon } from "../../shared/ui/PixelIcon";
 import { scaleToLevel } from "../../shared/floorTable";
 import { monsters } from "../../monster/monsters";
 import type { Monster } from "../../shared/game";
@@ -202,6 +204,8 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
 
   /** 상대의 수를 공개하는 동안은 굴림이 끝날 때까지 나갈 수 없다 */
   const [resolving, setResolving] = useState(false);
+  /** 채집망 목록이 펼쳐져 있는가. 걸음이 넘어가면 알아서 접힌다 */
+  const [bagOpen, setBagOpen] = useState(false);
   const goHome = () => { if (!resolving) onSettle("voluntary", run.bag, run.caught, run.alertPeak); };
 
   // 정찰은 "다음 걸음"이 아니라 지금 눈앞의 사건을 말한다. 아직 안 들어갔으니 예고다
@@ -219,13 +223,48 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
             깊이 {run.depth}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <AlertGauge value={run.alert}/>
-          {/* 채집망은 STEP 3 에서 상한이 붙는다. 지금은 자리와 개수만 */}
-          <div className="rounded-lg px-2.5 py-1 text-center"
-            style={{ border: `1px solid ${rgba("stone600", 0.9)}`, background: rgba("shadow900", 0.75) }}>
-            <p className="text-pixel-sm text-earth-400">채집망</p>
-            <p className="font-mono text-pixel-sm font-bold text-sand-200">{bagTotal(run.bag)}</p>
+          {/* 채집망. 숫자만 있으면 "무엇이 몇 개인지"를 정산 화면까지 가야 안다.
+              메뉴처럼 아래로 펼친다 — 돌아갈지 말지를 이 목록 보고 정한다 */}
+          <div className="relative">
+            <button type="button"
+              data-testid="forest-bag-toggle"
+              onClick={() => setBagOpen((v) => !v)}
+              className="rounded-lg px-2.5 py-1 text-center transition hover:brightness-125"
+              style={{ border: `1px solid ${rgba("stone600", 0.9)}`, background: rgba("shadow900", 0.75) }}>
+              <p className="text-pixel-sm text-earth-400">채집망 {bagOpen ? "▲" : "▼"}</p>
+              <p className="font-mono text-pixel-sm font-bold text-sand-200">{bagTotal(run.bag)}</p>
+            </button>
+            {bagOpen && (
+              <div data-testid="forest-bag-list"
+                className="absolute right-0 z-30 mt-1 w-52 rounded-lg px-3 py-2 backdrop-blur"
+                style={{ border: `1px solid ${rgba("stone600", 0.9)}`, background: rgba("shadow900", 0.94) }}>
+                {run.bag.length === 0 ? (
+                  <p className="text-pixel-sm text-earth-400">아직 아무것도 없다</p>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    {run.bag.map((b) => {
+                      const mat = getMaterial(b.id);
+                      return (
+                        <div key={b.id} className="flex items-center gap-1.5">
+                          {mat && <PixelIcon name={mat.icon} size={16} />}
+                          <span className="min-w-0 flex-1 truncate text-pixel-sm text-sand-300">
+                            {mat?.name ?? b.id}
+                          </span>
+                          <span className="font-mono text-pixel-sm font-bold text-sand-200">×{b.count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {run.caught > 0 && (
+                  <p className="mt-1.5 border-t border-stone-600/60 pt-1.5 text-pixel-sm text-moss-500">
+                    잡은 몬스터 {run.caught}마리 — 이미 확정
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -245,6 +284,9 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
         {phase === "event" && !run.fork && (
           <StepEventPanel
             kind={kind}
+            // 선택지가 하나뿐인 사건(흔적)은 "왜 이걸 누르나"의 답이 수확이 아니라
+            // 치르는 값 쪽에 있다. 카드에서 바로 읽히게 한다
+            alertCost={scout.alertText}
             actionLabel={
               kind === "hideout" ? "몸을 숨긴다"
               : hasCatch(kind)   ? "조우한다"
@@ -277,8 +319,6 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
               revealTypes: area.revealTypes,
               scout: alertBand(alertForJudge).scout,
             })}
-            badge={nestBadge(draft.monster, ownedChains,
-              tierOf(draft.monster, imprint), MAX_IMPRINT_TIER)}
             onReveal={() => patchStep({ attempts: step.attempts + 1, pending: null })}
             onResult={(r) => patchStep({ pending: r })}
             onDone={(r) => onCatchDone(r, draft.monster!)}
@@ -314,47 +354,48 @@ export function ForestRunView({ area, run, setRun, onSettle }: {
           오른쪽 여백은 자동 저장 배지 자리다(화면 우하단 고정, SaveIndicator). */}
       <div className="pb-5 pl-6 pr-44 pt-3"
         style={{ background: `linear-gradient(to top, ${rgba("shadow900", 0.92)}, transparent)` }}>
-        <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <p className="text-pixel-sm text-sand-300" data-testid="forest-scout">
-            <span className="text-earth-400">정찰 · </span>
-            {run.fork
-              ? "두 갈래가 보인다 — 어느 쪽이든 지나면 되돌아올 수 없다"
-              : `${scout.title}${scout.detail !== "???" ? ` — ${scout.detail}` : ""}`}
-          </p>
-          <AlertBandSummary value={run.alert}/>
-        </div>
+        {/* 읽는 것과 누르는 것을 갈라 놓는다.
+            예전엔 「돌아간다」 버튼과 「이번 걸음 소란 +5」 안내가 같은 테두리·같은
+            배경이라 나란히 서 있어서, 넷 중 무엇이 눌리는 건지 눈으로 못 갈랐다.
+            읽을 것은 테두리 없는 판 하나에 모으고, 누를 것은 그 아래 하나만 둔다. */}
+        <div className="mb-2.5 flex flex-col gap-1 rounded-xl px-3 py-2"
+          style={{ background: rgba("shadow900", 0.72) }}>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <p className="text-pixel-sm text-sand-300" data-testid="forest-scout">
+              <span className="text-earth-400">정찰 · </span>
+              {run.fork
+                ? "두 갈래가 보인다 — 어느 쪽이든 지나면 되돌아올 수 없다"
+                : `${scout.title}${scout.detail !== "???" ? ` — ${scout.detail}` : ""}`}
+            </p>
+            <AlertBandSummary value={run.alert}/>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={goHome} disabled={resolving}
-            data-testid="forest-go-home"
-            className="rounded-xl px-5 py-2.5 text-left text-pixel-sm font-bold transition active:scale-95 disabled:opacity-40 disabled:active:scale-100"
-            style={{ background: rgba("shadow900", 0.85), border: `1px solid ${rgba("stone600", 0.9)}`, color: "var(--color-sand-200)" }}>
-            돌아간다
-            <span className="ml-2 text-pixel-sm text-earth-400">
-              {resolving ? "결과를 보고 나서" : "수확 100% 회수"}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-pixel-sm">
+            {/* 나아가는 값 */}
+            <span data-testid="forest-step-cost" className="text-sand-300">
+              <span className="text-earth-400">나아가면 · </span>
+              {run.fork ? "고른 쪽의 소란이 붙는다"
+                : def.tier === "warden" ? "여기서 원정이 끝난다"
+                : scout.alertText}
             </span>
-          </button>
-
-          {/* 뱅킹 결정에 정보가 있어야 한다. 지금 확정될 것을 늘 적어 둔다 */}
-          <p className="text-pixel-sm text-sand-300" data-testid="forest-banked">
-            지금 돌아가면 <span className="font-bold text-cream-100">{banked}</span> 확정으로 가져간다
-          </p>
-
-          {/* 이 걸음의 값. 예전에는 ml-auto 로 오른쪽 끝에 붙어 있어서 자동 저장 배지
-              (화면 우하단 고정) 밑으로 들어가 가장 중요한 숫자가 가려졌다.
-              돌아갈 이유(위)와 나아갈 값(아래)을 나란히 두는 편이 읽기도 낫다. */}
-          <p data-testid="forest-step-cost"
-            className="rounded-lg px-2.5 py-1 text-pixel-sm font-bold"
-            style={{
-              background: rgba("shadow900", 0.85),
-              border: `1px solid ${rgba("stone600", 0.9)}`,
-              color: "var(--color-sand-200)",
-            }}>
-            {run.fork ? "고른 쪽의 소란이 붙는다"
-              : def.tier === "warden" ? "여기서 원정이 끝난다"
-              : `이번 걸음 ${scout.alertText}`}
-          </p>
+            {/* 돌아가는 값. 뱅킹 결정에 정보가 있어야 한다 */}
+            <span data-testid="forest-banked" className="text-sand-300">
+              <span className="text-earth-400">돌아가면 · </span>
+              <span className="font-bold text-cream-100">{banked}</span> 확정으로 가져간다
+            </span>
+          </div>
         </div>
+
+        {/* 이 띠에서 누를 수 있는 것은 이것 하나다. 채워진 버튼이라 위의 글과 안 섞인다 */}
+        <button type="button" onClick={goHome} disabled={resolving}
+          data-testid="forest-go-home"
+          className="rounded-xl px-5 py-2.5 text-left text-pixel-sm font-bold transition active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+          style={{ background: rgba("ember700", 0.34), border: `1px solid ${rgba("ember500", 0.85)}`, color: "var(--color-ember-500)" }}>
+          ← 돌아간다
+          <span className="ml-2 text-pixel-sm text-sand-300">
+            {resolving ? "결과를 보고 나서" : "수확 100% 회수"}
+          </span>
+        </button>
       </div>
     </div>
   );

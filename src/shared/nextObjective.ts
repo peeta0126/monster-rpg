@@ -14,6 +14,14 @@ export interface Objective {
   text: string;
   /** 어디로 가야 하는지 (베이스캠프 안의 지형지물 이름) */
   where?: string;
+  /**
+   * 걷지 않고 가는 길. 메뉴에 그 항목이 있으면 여기에 적는다.
+   *
+   * 예전엔 "탑 앞의 바로스에게" 처럼 걸어가라고만 적었는데, 정작 메뉴에 「무한의 탑」이
+   * 이미 있어서 화면이 가리키는 길이 제일 먼 길이었다. 걸어야만 닿는 곳(NPC·공방)에는
+   * 안 붙는다 — 붙일 게 없는 것과 굳이 걷게 하는 것은 다르다.
+   */
+  via?: string;
 }
 
 interface ObjectiveInput {
@@ -56,14 +64,16 @@ export function getNextObjective(
 ): Objective | null {
   if (!storyFlags.met_orion)     return { text: "이장 오리온에게 말을 걸어 보세요", where: "마을 안쪽" };
   if (!storyFlags.met_baros)     return { text: "탑 앞의 바로스에게 말을 걸어 보세요", where: "탑 입구" };
-  if (!storyFlags.first_capture) return { text: "숲에서 몬스터를 포획해 보세요", where: "숲" };
-  if (bestFloor === 0)           return { text: "무한의 탑 1층에 도전해 보세요", where: "탑" };
-  if (potionCount === 0)         return { text: "공방에서 물약을 만들어 보세요", where: "집" };
+  if (!storyFlags.first_capture) return { text: "숲에서 몬스터를 포획해 보세요", where: "숲", via: "메뉴 → 숲" };
+  if (bestFloor === 0)           return { text: "무한의 탑 1층에 도전해 보세요", where: "탑", via: "메뉴 → 무한의 탑" };
+  if (potionCount === 0)         return { text: "공방에서 물약을 만들어 보세요", where: "집 안 공방" };
   // 부탁보다 앞에 세운다. 관문 하나가 회복 물약 대여섯 개를 먹는데, 빈손으로 올라가면
   // 그 층이 어려워서가 아니라 가방이 비어서 막힌다.
   const warning = restockWarning(bestFloor, healPotionCount ?? potionCount);
-  if (warning) return { text: `${warning}. 공방에서 회복 물약을 채워 가세요`, where: "집" };
+  if (warning) return { text: `${warning}. 공방에서 회복 물약을 채워 가세요`, where: "집 안 공방" };
   if (activeQuest)               return activeQuest;
-  if (!storyFlags.tower_cleared) return { text: `무한의 탑 ${bestFloor + 1}층에 도전해 보세요`, where: "탑" };
+  if (!storyFlags.tower_cleared) {
+    return { text: `무한의 탑 ${bestFloor + 1}층에 도전해 보세요`, where: "탑", via: "메뉴 → 무한의 탑" };
+  }
   return null;   // 엔딩까지 봤고 남은 부탁도 없으면 더 시킬 것이 없다
 }

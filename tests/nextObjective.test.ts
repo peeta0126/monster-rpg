@@ -76,7 +76,7 @@ test("관문 직전에 회복 물약이 없으면 공방부터 가리킨다", ()
   // 다음이 15층(관문)인데 회복이 1개뿐 — 부탁보다 이게 앞선다
   const warn = getNextObjective({ ...base, bestFloor: 14, healPotionCount: 1 });
   assert.match(warn!.text, /15층은 관문입니다/);
-  assert.equal(warn!.where, "집");
+  assert.equal(warn!.where, "집 안 공방");
 
   // 채워 갔으면 원래 순서대로 부탁이 앞선다
   const ok = getNextObjective({ ...base, bestFloor: 14, healPotionCount: 5 });

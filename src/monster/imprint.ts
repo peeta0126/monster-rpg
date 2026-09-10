@@ -156,6 +156,25 @@ export function withImprint<T extends Monster>(m: T, imprint: Record<string, num
 }
 
 /**
+ * 각인이 얹은 몫만. 화면이 "얼마나 올랐나"를 적을 수 있게 한다.
+ *
+ * withImprint 가 붙여 둔 자국(원본 능력치)에서 뺀다. 자국이 없으면 각인을 안 거친
+ * 몬스터라 전부 0 이다. 화면이 배수를 다시 계산하면 반올림이 어긋나서, 적힌 +N 을
+ * 더한 값과 옆에 적힌 총합이 1 씩 안 맞는다.
+ */
+export function imprintGain<T extends Monster>(m: T): {
+  maxHp: number; attack: number; defense: number; speed: number;
+} {
+  const base = baseOf(m);
+  return {
+    maxHp:   m.maxHp   - base.maxHp,
+    attack:  m.attack  - base.attack,
+    defense: m.defense - base.defense,
+    speed:   m.speed   - base.speed,
+  };
+}
+
+/**
  * 계열별 각인 현황 한 줄. UI 와 배지가 같은 값을 보게 하려고 여기서 만든다.
  */
 export interface ImprintStatus {

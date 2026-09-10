@@ -756,7 +756,11 @@ export const usePlayerStore = create<PlayerState>()(
 
       restorePartyHp: () =>
         set((s) => ({
-          party: s.party.map((m) => ({ ...m, currentHp: m.maxHp })),
+          // 보관함까지 같이 채운다. 예전엔 파티만 채워서, 다친 몬스터를 보관함에
+          // 내리면 파티로 다시 올리기 전까지 영영 그 HP 로 남았다 — 회복하러 가는
+          // 길이 "보관함 → 파티 → 회복 → 다시 보관함" 이 되는데 그건 길이 아니다.
+          party:   s.party.map((m) => ({ ...m, currentHp: m.maxHp })),
+          storage: s.storage.map((m) => ({ ...m, currentHp: m.maxHp })),
         })),
 
       addMaterial: (id, count = 1) =>

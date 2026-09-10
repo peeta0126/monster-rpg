@@ -32,7 +32,7 @@ const APPROACH = 0.8;
 async function craftBatch(page: Page) {
   expect(await walkTo(page, BENCH, APPROACH * BENCH.radius), "아티팩트 제작대까지 못 갔다").toBe(true);
   await expect(page.getByText("아티팩트 제작대 사용하기")).toBeVisible();
-  await page.keyboard.press("Space");
+  await page.keyboard.press("x");
   await expect(page.getByRole("heading", { name: "아티팩트 제작대" })).toBeVisible();
 
   await page.getByRole("button", { name: "테스트 재료" }).click();
@@ -64,8 +64,9 @@ async function openStatus(page: Page) {
 const statValue = async (page: Page, label: string) =>
   Number((await page.getByTestId(`stat-${label}-value`).first().innerText()).trim());
 
+/** 줄은 「장비 +12」다(각인 몫은 stat-*-imprint 로 따로 적힌다). 숫자만 뽑는다 */
 const statBonus = async (page: Page, label: string) =>
-  Number((await page.getByTestId(`stat-${label}-bonus`).first().innerText()).replace("+", ""));
+  Number((await page.getByTestId(`stat-${label}-bonus`).first().innerText()).replace(/[^\d.]/g, ""));
 
 /**
  * 장비 모달을 열고 가방의 index 번째 아티팩트를 장착한다.
@@ -88,7 +89,7 @@ test.describe("artifact:", () => {
 
     // ── 2. 모루에서 첫 번째를 두 번째를 재료로 강화한다 (+0 → +1, 성공률 100%) ──
     expect(await walkTo(page, ANVIL, APPROACH * ANVIL.radius), "모루까지 못 갔다").toBe(true);
-    await page.keyboard.press("Space");
+    await page.keyboard.press("x");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
     await page.getByRole("button", { name: /강화/ }).first().click();
 
@@ -98,7 +99,8 @@ test.describe("artifact:", () => {
     await expect(page.getByText(/재료 선택/)).toBeVisible();
     // 재료는 오른쪽 패널의 목록에서 고른다. 이름만으로 찾으면 왼쪽 '보유 아티팩트'
     // 목록이 먼저 잡혀 강화 대상만 바뀌고 재료는 안 골라진다.
-    await page.locator("div.max-h-32.overflow-y-auto").getByText("힘의 목걸이").first().click();
+    // 클래스 이름으로 잡지 않는다 — 목록 높이를 한 번 바꿨더니 그대로 깨졌다
+    await page.getByTestId("anvil-material-list").getByText("힘의 목걸이").first().click();
     await expect(page.getByRole("button", { name: /강화하기/ }), "재료가 안 골라졌다")
       .toBeVisible();
     await page.getByRole("button", { name: /강화하기/ }).click();

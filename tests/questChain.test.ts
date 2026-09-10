@@ -73,10 +73,15 @@ test("갓 시작한 사람에게는 첫 퀘스트 하나만 열린다", () => {
   assert.deepEqual(open.map((q) => q.id), ["baros_first_hunt"]);
 });
 
-test("몬스터를 주는 퀘스트는 하나뿐이다", () => {
+test("몬스터를 주는 퀘스트는 둘뿐이고, 둘 다 같은 종이다", () => {
   const withMonster = ALL_QUESTS.filter((q) => monsterReward(q.rewards));
-  assert.equal(withMonster.length, 1, "몬스터 보상이 여럿이면 탑이 시시해진다");
-  assert.equal(withMonster[0].id, "orion_where_i_stopped");
+  // 새 종을 나눠 주기 시작하면 탑이 시시해진다. 둘째는 새 식구가 아니라 각인 밥이다 —
+  // 「같은 잎사귀」가 리피를 한 마리 더 줘서 "같은 놈을 먹인다"를 손으로 배우게 한다.
+  assert.equal(withMonster.length, 2, "몬스터 보상이 셋이면 탑이 시시해진다");
+  assert.deepEqual(withMonster.map((q) => q.id), ["orion_where_i_stopped", "orion_same_leaf"]);
+
+  const ids = new Set(withMonster.map((q) => monsterReward(q.rewards)!.monsterId));
+  assert.equal(ids.size, 1, "둘째가 다른 종이면 그건 각인 밥이 아니라 새 식구다");
 });
 
 test("몬스터를 주는 퀘스트에는 자리 없을 때의 대사가 있다", () => {

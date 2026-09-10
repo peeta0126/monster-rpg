@@ -5,7 +5,7 @@ import { useAuthStore } from "./authStore";
 const pixelFont = { fontFamily: "var(--font-pixel)" };
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 const USERNAME_HINT = "영문/숫자/밑줄 3~20자";
-const PASSWORD_HINT = "4자 이상";
+const PASSWORD_HINT = "4자 이상 · 아래 칸에 한 번 더 똑같이";
 
 export default function RegisterModal({ onClose }: { onClose: () => void }) {
   const setAuthed = useAuthStore((s) => s.setAuthed);

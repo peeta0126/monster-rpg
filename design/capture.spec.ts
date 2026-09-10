@@ -145,7 +145,7 @@ test("capture: workshop-rps", async ({ page }) => {
   await openWorkshop(page);
   const alchemy = CRAFTING_STATIONS.find((s) => s.id === "alchemy-workbench")!;
   await walkTo(page, alchemy, 0.6 * alchemy.radius);
-  await page.keyboard.press("Space");
+  await page.keyboard.press("x");
   await expect(page.getByRole("heading", { name: "연금술 제작대" })).toBeVisible();
 
   await page.getByRole("button", { name: "테스트 재료" }).click();

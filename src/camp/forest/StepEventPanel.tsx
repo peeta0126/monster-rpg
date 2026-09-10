@@ -43,7 +43,7 @@ function PanelHead({ kind, subtitle }: { kind: ForestStepKind; subtitle?: string
 }
 
 export function StepEventPanel({
-  kind, monster, catchRate, catchPenalty, gained, alertAfter, actionLabel, onAction,
+  kind, monster, catchRate, catchPenalty, gained, alertAfter, alertCost, actionLabel, onAction,
 }: {
   kind: ForestStepKind;
   /** 조우·둥지·강적·주인이 내놓는 상대 */
@@ -56,6 +56,9 @@ export function StepEventPanel({
   gained?: RunBagEntry[];
   /** 은신처가 되돌려 준 뒤의 소란 */
   alertAfter?: number;
+  /** 이 걸음이 올리는 소란. 카드에 같이 적는다 — 선택지가 하나뿐인 사건일수록,
+   *  "왜 이걸 누르나"의 답이 수확이 아니라 치르는 값 쪽에 있다 */
+  alertCost?: string;
   actionLabel: string;
   onAction: () => void;
 }) {
@@ -111,6 +114,12 @@ export function StepEventPanel({
 
           {gained && gained.length === 0 && (
             <p className="mt-2 text-pixel-sm text-earth-400">쓸 만한 건 남아 있지 않다.</p>
+          )}
+
+          {alertCost && (
+            <p className="mt-2 text-pixel-sm text-earth-400" data-testid="forest-panel-cost">
+              지나가는 값 — {alertCost}
+            </p>
           )}
         </div>
 
