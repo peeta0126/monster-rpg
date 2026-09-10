@@ -58,9 +58,9 @@ test("getPlayerFrame: 8방향 전부 아틀라스에 있는 프레임으로 떨�
   }
 });
 
-test("getPlayerFrame: 서쪽 셋만 반전으로 만든다", () => {
+test("getPlayerFrame: 동쪽 셋만 반전으로 만든다", () => {
   const flipped = DIRS_8.filter((d) => getPlayerFrame(d, 0).flipX);
-  assert.deepEqual([...flipped], ["NW", "W", "SW"]);
+  assert.deepEqual([...flipped], ["SE", "E", "NE"]);
   // 반전해서 쓰는 방향은 아틀라스에 자기 줄이 없다
   for (const dir of flipped) assert.equal(PLAYER_ATLAS_ROW_DIRS.includes(dir), false);
 });
@@ -72,12 +72,12 @@ test("getPlayerFrame: 걷기 프레임은 네 장을 순환한다", () => {
   ]);
 });
 
-test("getPlayerFrame: 왼쪽 대각선은 오른쪽 프레임을 뒤집어 쓴다", () => {
-  const sw = getPlayerFrame("SW", 2);
-  assert.deepEqual(sw, { source: "walk_SE_01", flipX: true });
-  assert.deepEqual(getPlayerFrame("W", 0), { source: "idle_E", flipX: true });
-  // 오른쪽 대각선은 시트에 자기 줄이 있으니 뒤집지 않는다
-  assert.deepEqual(getPlayerFrame("SE", 2), { source: "walk_SE_01", flipX: false });
+test("getPlayerFrame: 오른쪽 대각선은 왼쪽 프레임을 뒤집어 쓴다", () => {
+  const se = getPlayerFrame("SE", 2);
+  assert.deepEqual(se, { source: "walk_SW_01", flipX: true });
+  assert.deepEqual(getPlayerFrame("E", 0), { source: "idle_W", flipX: true });
+  // 왼쪽 대각선은 시트에 자기 줄이 있으니 뒤집지 않는다
+  assert.deepEqual(getPlayerFrame("SW", 2), { source: "walk_SW_01", flipX: false });
 });
 
 test("atlasFrameCell: 이름에서 격자 칸이 나온다", () => {
@@ -85,7 +85,7 @@ test("atlasFrameCell: 이름에서 격자 칸이 나온다", () => {
   assert.deepEqual(atlasFrameCell("walk_S_00"), { col: 1, row: 0 });
   assert.deepEqual(atlasFrameCell("walk_N_03"), { col: PLAYER_WALK_FRAMES, row: 4 });
   assert.throws(() => atlasFrameCell("player-down.png"), /아틀라스 프레임 이름이 아니다/);
-  assert.throws(() => atlasFrameCell("idle_SW"), /아틀라스에 없는 방향/);
+  assert.throws(() => atlasFrameCell("idle_SE"), /아틀라스에 없는 방향/);
 });
 
 test("resolveDir: 반전 규칙이 getPlayerFrame 과 같다", () => {

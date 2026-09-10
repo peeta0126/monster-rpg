@@ -111,7 +111,7 @@
    "duration": 110
   },
   {
-   "filename": "idle_SE",
+   "filename": "idle_SW",
    "frame": {
     "x": 0,
     "y": 64,
@@ -133,7 +133,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_SE_00",
+   "filename": "walk_SW_00",
    "frame": {
     "x": 64,
     "y": 64,
@@ -155,7 +155,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_SE_01",
+   "filename": "walk_SW_01",
    "frame": {
     "x": 128,
     "y": 64,
@@ -177,7 +177,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_SE_02",
+   "filename": "walk_SW_02",
    "frame": {
     "x": 192,
     "y": 64,
@@ -199,7 +199,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_SE_03",
+   "filename": "walk_SW_03",
    "frame": {
     "x": 256,
     "y": 64,
@@ -221,7 +221,7 @@
    "duration": 110
   },
   {
-   "filename": "idle_E",
+   "filename": "idle_W",
    "frame": {
     "x": 0,
     "y": 128,
@@ -243,7 +243,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_E_00",
+   "filename": "walk_W_00",
    "frame": {
     "x": 64,
     "y": 128,
@@ -265,7 +265,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_E_01",
+   "filename": "walk_W_01",
    "frame": {
     "x": 128,
     "y": 128,
@@ -287,7 +287,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_E_02",
+   "filename": "walk_W_02",
    "frame": {
     "x": 192,
     "y": 128,
@@ -309,7 +309,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_E_03",
+   "filename": "walk_W_03",
    "frame": {
     "x": 256,
     "y": 128,
@@ -331,7 +331,7 @@
    "duration": 110
   },
   {
-   "filename": "idle_NE",
+   "filename": "idle_NW",
    "frame": {
     "x": 0,
     "y": 192,
@@ -353,7 +353,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_NE_00",
+   "filename": "walk_NW_00",
    "frame": {
     "x": 64,
     "y": 192,
@@ -375,7 +375,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_NE_01",
+   "filename": "walk_NW_01",
    "frame": {
     "x": 128,
     "y": 192,
@@ -397,7 +397,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_NE_02",
+   "filename": "walk_NW_02",
    "frame": {
     "x": 192,
     "y": 192,
@@ -419,7 +419,7 @@
    "duration": 110
   },
   {
-   "filename": "walk_NE_03",
+   "filename": "walk_NW_03",
    "frame": {
     "x": 256,
     "y": 192,

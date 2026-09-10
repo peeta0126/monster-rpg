@@ -4,8 +4,8 @@
  * BaseCampScene(Phaser)과 WorkshopPage(React)가 각자 프레임을 고르면 반드시
  * 한쪽이 어긋난다. 방향·반전·프레임 번호를 여기서만 정한다.
  *
- * 에셋은 8방향 아틀라스 한 장이다. 실제로 그려진 방향은 다섯 줄(S·SE·E·NE·N)이고
- * 서쪽 셋은 좌우 반전으로 만든다. 규격은 docs/ASSET_HANDOFF.md 참고.
+ * 에셋은 8방향 아틀라스 한 장이다. 실제로 그려진 방향은 다섯 줄(S·SW·W·NW·N)이고
+ * 동쪽 셋은 좌우 반전으로 만든다. 규격은 docs/ASSET_HANDOFF.md 참고.
  */
 
 export type Dir8 = "S" | "SE" | "E" | "NE" | "N" | "NW" | "W" | "SW";
@@ -31,9 +31,9 @@ export function dirFromVector(dx: number, dy: number): Dir8 {
 
 /**
  * 좌우 반전으로 대체 가능한 방향.
- * SW/W/NW 는 SE/E/NE 를 뒤집어 쓴다. 에셋 작업량이 40% 줄어든다.
+ * SE/E/NE 는 SW/W/NW 를 뒤집어 쓴다.
  */
-const MIRROR: Partial<Record<Dir8, Dir8>> = { SW: "SE", W: "E", NW: "NE" };
+const MIRROR: Partial<Record<Dir8, Dir8>> = { SE: "SW", E: "W", NE: "NW" };
 
 /**
  * 그릴 때 실제로 쓸 방향과 반전 여부.
@@ -73,7 +73,7 @@ export const PLAYER_FOOT_ANCHOR = (PLAYER_FRAME_SIZE - PLAYER_FOOT_INSET) / PLAY
 export const PLAYER_WALK_FRAMES = 4;
 
 /** 아틀라스 격자. 줄 순서가 곧 방향 순서다(반전으로 만드는 3방향은 없다). */
-export const PLAYER_ATLAS_ROW_DIRS: readonly Dir8[] = ["S", "SE", "E", "NE", "N"];
+export const PLAYER_ATLAS_ROW_DIRS: readonly Dir8[] = ["S", "SW", "W", "NW", "N"];
 export const PLAYER_ATLAS_COLS = 1 + PLAYER_WALK_FRAMES;
 export const PLAYER_ATLAS_ROWS = PLAYER_ATLAS_ROW_DIRS.length;
 
