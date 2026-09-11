@@ -43,4 +43,10 @@ cat <<'EOF'
   npm --prefix server start
 
 화면은 저장소 뿌리에서 따로 띄웁니다 (`npm run dev`). /api 는 vite 가 여기로 넘깁니다.
+둘을 한 번에: `npm run dev:all`
+
+이 서버는 이 기기의 것입니다. 계정도 세이브도 다른 사람 것과 섞이지 않습니다.
+누가 어디까지 했는지는 두 곳에서 봅니다:
+  npm --prefix server run report     터미널에서 한 줄로 (서버가 꺼져 있어도 됩니다)
+  /admin                             브라우저에서. 위에 찍힌 관리자 키를 넣습니다
 EOF

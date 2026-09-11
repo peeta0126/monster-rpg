@@ -538,6 +538,12 @@ interface PlayerState {
   discardArtifact: (instanceId: string) => void;
   releaseMonster: (uid: string) => boolean;
 
+  /**
+   * 시작 상태로 되돌린다. 다른 계정이 이 브라우저로 들어올 때 앞 사람의 진행을 지우는 용도다 —
+   * 남겨 두면 새 계정이 그 진행을 물려받고, 서버가 빈 계정이라 그대로 올라가 굳는다.
+   */
+  resetToInitial: () => void;
+
   /** 개발자 모드 진입 시: 모든 몬스터 도감 해금 + 전 종족 보유 + 50층 도전 가능 상태로 세팅 */
   loadDevPreset: () => void;
 
@@ -1083,6 +1089,8 @@ export const usePlayerStore = create<PlayerState>()(
           return { materials: newMats };
         });
       },
+
+      resetToInitial: () => set(createInitialState()),
 
       loadDevPreset: () => {
         // 오름(최종 보스)은 포획 불가능한 존재라 개발자 모드에서도 보유/도감 대상에서 제외한다.

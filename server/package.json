@@ -10,7 +10,8 @@
     "typecheck": "tsc -b --noEmit",
     "postinstall": "prisma generate",
     "test": "node --import tsx --test tests/*.test.ts",
-    "report": "node --import tsx scripts/report.ts"
+    "report": "node --import tsx scripts/report.ts",
+    "migrate": "prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",
