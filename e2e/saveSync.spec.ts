@@ -156,4 +156,52 @@ test.describe("서버 세이브 동기화", () => {
     const after = JSON.parse((await getSave(token)).data!) as Record<string, unknown>;
     expect(after.bestFloor, "뒤처진 기기가 서버를 덮어썼습니다").toBe(33);
   });
+
+  test("다른 계정으로 갈아타면 앞 사람의 진행이 안 보인다", async ({ page }) => {
+    // 한 브라우저를 둘이 쓰는 자리 — 같이 개발하는 PC 와 남에게 보여주는 자리가 그렇다.
+    // 로그아웃이 토큰만 지우고 세이브는 두고 갔어서, 다음 사람이 앞 사람의 파티를
+    // 그대로 보고 있었다. 게다가 새 계정은 서버가 비어 있으니 그게 첫 세이브로 올라가 굳는다.
+    const first = uniqueName();
+    const firstToken = await register(first);
+    await putSave(firstToken, sampleSave(27));
+
+    await loginThroughUi(page, first);
+    await expect.poll(() => readBestFloor(page), { timeout: 25_000 }).toBe(27);
+
+    // 앞 사람이 걷다 만 원정까지 남겨 둔다. 이건 서버 세이브에 안 들어가서
+    // 계정이 바뀔 때 따로 지우지 않으면 그대로 남는다.
+    await page.evaluate(() => localStorage.setItem("monster-rpg-forest-run", JSON.stringify({ kind: "run" })));
+
+    await page.evaluate((k) => {
+      const raw = JSON.parse(localStorage.getItem(k)!);
+      raw.state.token = null;
+      raw.state.username = null;
+      localStorage.setItem(k, JSON.stringify(raw));
+    }, AUTH_KEY);
+
+    // 두 번째 사람이 새 계정으로 들어온다
+    const second = uniqueName();
+    const secondToken = await register(second);
+    await loginThroughUi(page, second);
+
+    await expect.poll(() => readBestFloor(page),
+      { timeout: 25_000, message: "새 계정이 앞 사람의 진행을 물려받았습니다" }).toBe(0);
+
+    const party = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).state.party, PLAYER_KEY);
+    expect(party, "새 계정의 파티는 비어 있어야 합니다").toEqual([]);
+
+    const run = await page.evaluate(() => localStorage.getItem("monster-rpg-forest-run"));
+    expect(run, "앞 사람이 걷다 만 원정이 남았습니다").toBeNull();
+
+    // 서버에도 앞 사람의 진행이 올라가면 안 된다 — 올라가면 되돌릴 수 없다
+    await makeProgressInGame(page);
+    await expect.poll(async () => (await getSave(secondToken)).revision, { timeout: 30_000 })
+      .toBeGreaterThan(0);
+    const uploaded = JSON.parse((await getSave(secondToken)).data!) as Record<string, unknown>;
+    expect(uploaded.bestFloor, "앞 사람의 진행이 새 계정의 세이브로 올라갔습니다").toBe(0);
+
+    // 앞 사람 것은 그대로 남아 있다
+    const firstSave = JSON.parse((await getSave(firstToken)).data!) as Record<string, unknown>;
+    expect(firstSave.bestFloor, "앞 사람의 서버 세이브가 밀렸습니다").toBe(27);
+  });
 });

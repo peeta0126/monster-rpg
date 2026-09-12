@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { adoptSaveOwner, claimSaveFor } from "./saveOwner";
 
 interface AuthState {
   token: string | null;
@@ -30,8 +31,12 @@ export const useAuthStore = create<AuthState>()(
       isDev: false,
       hasHydrated: false,
 
-      setAuthed: (token, username, opts) =>
-        set({ token, username, isGuest: false, isDev: opts?.isDev ?? false }),
+      setAuthed: (token, username, opts) => {
+        // 화면을 그리기 전에 주인을 가린다. 앞 사람 것이면 여기서 지워야 새 계정이
+        // 그 진행을 물려받지 않는다 — 서버가 빈 계정이라 물려받으면 그대로 올라가 굳는다.
+        claimSaveFor(username);
+        set({ token, username, isGuest: false, isDev: opts?.isDev ?? false });
+      },
       enterDevPresetMode: () => set({ token: null, username: "admin", isGuest: true, isDev: true }),
       logout: () => set({ token: null, username: null, isGuest: false, isDev: false }),
       setHydrated: () => set({ hasHydrated: true }),
@@ -44,7 +49,12 @@ export const useAuthStore = create<AuthState>()(
         isGuest: s.isGuest,
         isDev: s.isDev,
       }),
-      onRehydrateStorage: () => (state) => state?.setHydrated(),
+      onRehydrateStorage: () => (state) => {
+        // 주인을 적기 시작하기 전부터 있던 브라우저를 받아 준다. 이미 로그인해 있는
+        // 사람의 세이브는 그 사람 것이므로 지우지 않고 이름만 붙인다.
+        adoptSaveOwner(state?.username ?? null);
+        state?.setHydrated();
+      },
     },
   ),
 );

@@ -16,7 +16,8 @@ export function createApp() {
   const app = express();
 
   // 터널·리버스 프록시 뒤에서는 X-Forwarded-For 를 믿어야 요청 제한이 IP 별로 동작한다.
-  if (env.trustProxy) app.set("trust proxy", 1);
+  // 겹 수를 그대로 넘긴다. 1 로 박아두면 프록시가 둘일 때 전원이 한 IP 로 묶인다.
+  if (env.trustProxy > 0) app.set("trust proxy", env.trustProxy);
 
   app.use(cors({ origin: env.corsOrigins }));
   // 기본값 100kb 는 도감·보관함이 커진 세이브에 모자란다(넘치면 413 으로 조용히 동기화가 끊긴다).
