@@ -8,8 +8,9 @@ import { isCampInputLocked } from "./campInputLock";
 import { PALETTE, withAlpha } from "../shared/palette";
 import { BASECAMP_BACKGROUND_IMAGE } from "../shared/assetPaths";
 import {
-  dirFromVector, resolveDir, atlasFrameName, PLAYER_WALK_FRAMES,
-  PLAYER_ATLAS_ROW_DIRS, PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON,
+  dirFromVector, monsterDirection, PLAYER_MONSTER_WALK_FRAMES,
+  PLAYER_SHEET_KEYS, PLAYER_SHEET_PATHS,
+  PLAYER_FRAME_WIDTH, PLAYER_FRAME_HEIGHT, PLAYER_NORTHEAST_FRAME_WIDTH, PLAYER_NORTHEAST_FRAME_HEIGHT,
   type Dir8,
 } from "../shared/playerSprite";
 import { usePlayerStore } from "../shared/playerStore";
@@ -97,7 +98,13 @@ export default class BaseCampScene extends Phaser.Scene {
     // JSON Array 형식(Aseprite 내보내기)이라 load.atlas 로 읽는다. load.aseprite 는
     // meta.frameTags 를 요구하는데 이 파일엔 태그가 없다. 애니메이션은 아래
     // registerPlayerAnimations 가 프레임 이름 규칙에서 직접 만든다.
-    this.load.atlas(PLAYER_ATLAS_KEY, PLAYER_ATLAS_PNG, PLAYER_ATLAS_JSON);
+    (Object.keys(PLAYER_SHEET_KEYS) as Array<keyof typeof PLAYER_SHEET_KEYS>).forEach((direction) => {
+      const isNortheast = direction === "northeast";
+      this.load.spritesheet(PLAYER_SHEET_KEYS[direction], PLAYER_SHEET_PATHS[direction], {
+        frameWidth: isNortheast ? PLAYER_NORTHEAST_FRAME_WIDTH : PLAYER_FRAME_WIDTH,
+        frameHeight: isNortheast ? PLAYER_NORTHEAST_FRAME_HEIGHT : PLAYER_FRAME_HEIGHT,
+      });
+    });
     this.load.image("basecamp-bg", BASECAMP_BACKGROUND_IMAGE);
     this.load.image("basecamp-bg-1", "/assets/basecamp/basecamp-bg-1.webp");
     BASECAMP_NPCS.forEach((npc) => {
@@ -135,7 +142,7 @@ export default class BaseCampScene extends Phaser.Scene {
     // 벽 안에서 시작하면 그대로 갇힌다. 정적 바디는 이미 겹쳐 있는 걸 안 밀어낸다.
     // 형상 고치는 중에 실제로 걸렸다. 들어올 자리는 테스트가 지키지만 여기서도 한 번 본다.
     const initPos = safeSpawn(getCampPosition());
-    this.player = this.physics.add.sprite(initPos.x, initPos.y, PLAYER_ATLAS_KEY, atlasFrameName("S", 0));
+    this.player = this.physics.add.sprite(initPos.x, initPos.y, PLAYER_SHEET_KEYS.south, 0);
     this.player.setCollideWorldBounds(true);
     this.player.setScale(PLAYER_SCALE);
     this.player.setDepth(footYFromSpriteY(initPos.y));
@@ -257,16 +264,12 @@ export default class BaseCampScene extends Phaser.Scene {
    * 애니메이션을 따로 안 만든다. resolveDir 이 어느 쪽을 뒤집을지 정한다.
    */
   private registerPlayerAnimations() {
-    if (!this.textures.exists(PLAYER_ATLAS_KEY)) return;
-
-    for (const dir of PLAYER_ATLAS_ROW_DIRS) {
-      const key = `walk_${dir}`;
+    for (const direction of Object.keys(PLAYER_SHEET_KEYS) as Array<keyof typeof PLAYER_SHEET_KEYS>) {
+      const key = `player-walk-${direction}`;
       if (this.anims.exists(key)) continue;
       this.anims.create({
         key,
-        frames: this.anims.generateFrameNames(PLAYER_ATLAS_KEY, {
-          prefix: `walk_${dir}_`, start: 0, end: PLAYER_WALK_FRAMES - 1, zeroPad: 2,
-        }),
+        frames: this.anims.generateFrameNumbers(PLAYER_SHEET_KEYS[direction], { start: 1, end: PLAYER_MONSTER_WALK_FRAMES }),
         frameRate: 8,
         repeat: -1,
       });
@@ -412,15 +415,18 @@ export default class BaseCampScene extends Phaser.Scene {
     // 방향은 실제 이동 벡터에서 뽑는다. 대각선 입력도 8방향 중 하나로 떨어지고,
     // 서쪽 셋은 resolveDir 이 동쪽 프레임을 뒤집어 쓰라고 알려 준다.
     if (isMoving) this.facing = dirFromVector(body.velocity.x, body.velocity.y);
-    const { dir, flipX } = resolveDir(this.facing);
+    const { direction, flipX } = monsterDirection(this.facing);
     this.player.setFlipX(flipX);
     if (isMoving) {
       // play 의 두 번째 인자(ignoreIfPlaying)로 같은 애니메이션 재시작을 막는다.
       // 매 프레임 처음부터 다시 틀면 첫 장에서 멈춘 것처럼 보인다.
-      this.player.anims.play(`walk_${dir}`, true);
+      if (this.player.texture.key !== PLAYER_SHEET_KEYS[direction]) {
+        this.player.setTexture(PLAYER_SHEET_KEYS[direction], 0);
+      }
+      this.player.anims.play(`player-walk-${direction}`, true);
     } else {
       this.player.anims.stop();
-      this.player.setFrame(atlasFrameName(dir, 0));
+      this.player.setTexture(PLAYER_SHEET_KEYS[direction], 0);
     }
 
     // ── depth: 발끝 y = depth → 건물·NPC 뒤/앞 자동 처리 ──────────────────────

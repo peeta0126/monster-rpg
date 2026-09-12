@@ -12,8 +12,8 @@ import { ControlHint } from "../shared/ui/ControlHint";
 import { containRect } from "../shared/ui/stageRect";
 import { useBgm, BGM } from "../shared/audio";
 import {
-  getPlayerFrame, atlasFrameCell, PLAYER_ATLAS_PNG,
-  PLAYER_ATLAS_COLS, PLAYER_ATLAS_ROWS, PLAYER_WALK_FRAMES, PLAYER_FOOT_ANCHOR,
+  getMonsterFrame, dirFromVector, PLAYER_SHEET_PATHS, PLAYER_SHEET_FRAMES,
+  PLAYER_MONSTER_WALK_FRAMES, PLAYER_FOOT_ANCHOR, PLAYER_SPRITE_SCALE,
   type Dir8,
 } from "../shared/playerSprite";
 import {
@@ -33,7 +33,7 @@ import { PixelIcon } from "../shared/ui/PixelIcon";
 
 // --- 타입 -------------------------------------------------------------
 
-type Direction = "up" | "down" | "left" | "right";
+type Direction = Dir8;
 
 /** stage 기준 % 좌표 (0~100). workshopLayout 의 Point 와 같다. */
 type PlayerPos = Point;
@@ -56,9 +56,6 @@ const SPEED = 0.4;
  * 방향키는 네 방향뿐이라 대각은 여기서 안 나온다. 에셋은 8방향을 다 갖고 있으므로
  * (`playerSprite.ts`), 대각을 쓰려면 두 키 동시 입력을 읽는 쪽을 고치면 된다.
  */
-function directionToDir8(dir: Direction): Dir8 {
-  return dir === "up" ? "N" : dir === "down" ? "S" : dir === "left" ? "W" : "E";
-}
 
 // ─── WorkshopPage ─────────────────────────────────────────────────────────────
 
@@ -75,7 +72,7 @@ export default function WorkshopPage() {
 
   // ── 플레이어 상태 ─────────────────────────────────────────────────────────────
   const [pos, setPos]           = useState<PlayerPos>(INITIAL_POS);
-  const [direction, setDirection] = useState<Direction>("down");
+  const [direction, setDirection] = useState<Direction>("S");
   const [walkFrame, setWalkFrame] = useState(0);
 
   const keysRef      = useRef(new Set<string>());
@@ -122,8 +119,7 @@ export default function WorkshopPage() {
 
   // 잠긴 동안에는 서 있는 자세로 그린다. walkFrame 상태를 effect 로 되돌리지 않고
   // 그릴 때 정하는 이유는, 모달을 닫는 순간 한 프레임 걷는 자세가 스치는 걸 막기 위해서다.
-  const playerFrame = getPlayerFrame(directionToDir8(direction), inputLocked ? 0 : walkFrame);
-  const playerCell = atlasFrameCell(playerFrame.source);
+  const playerFrame = getMonsterFrame(direction, inputLocked ? 0 : walkFrame);
 
   // ── 뷰포트 크기 (카메라 계산용) ──────────────────────────────────────────────
   const [viewport, setViewport] = useState(() => ({
@@ -249,14 +245,11 @@ export default function WorkshopPage() {
           posRef.current = { x: rx, y: ry };
           return { x: rx, y: ry };
         });
-        if      (dx < 0) setDirection("left");
-        else if (dx > 0) setDirection("right");
-        else if (dy < 0) setDirection("up");
-        else             setDirection("down");
+        setDirection(dirFromVector(dx, dy));
 
         walkTimerRef.current += dt;
         if (walkTimerRef.current >= 130) {
-          setWalkFrame((f) => (f % PLAYER_WALK_FRAMES) + 1);
+          setWalkFrame((f) => (f % PLAYER_MONSTER_WALK_FRAMES) + 1);
           walkTimerRef.current = 0;
         }
       } else {
@@ -373,12 +366,13 @@ export default function WorkshopPage() {
               data-frame={playerFrame.source}
               className="pixel-img"
               style={{
-                transform: playerFrame.flipX ? "scaleX(-1)" : undefined,
-                width:  playerDisplay,
+                transform: `${playerFrame.flipX ? "scaleX(-1) " : ""}scale(${PLAYER_SPRITE_SCALE})`,
+                transformOrigin: "center bottom",
+                width:  playerDisplay / 2,
                 height: playerDisplay,
-                backgroundImage: `url(${PLAYER_ATLAS_PNG})`,
-                backgroundSize: `${playerDisplay * PLAYER_ATLAS_COLS}px ${playerDisplay * PLAYER_ATLAS_ROWS}px`,
-                backgroundPosition: `${-playerCell.col * playerDisplay}px ${-playerCell.row * playerDisplay}px`,
+                backgroundImage: `url(${PLAYER_SHEET_PATHS[playerFrame.source]})`,
+                backgroundSize: `${playerDisplay * PLAYER_SHEET_FRAMES / 2}px ${playerDisplay}px`,
+                backgroundPosition: `${-(playerFrame.frame ?? 0) * playerDisplay / 2}px 0`,
                 backgroundRepeat: "no-repeat",
                 filter: "drop-shadow(0 5px 10px rgba(13, 18, 35, .9))",
                 display: "block",

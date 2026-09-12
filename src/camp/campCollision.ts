@@ -1,4 +1,4 @@
-import { PLAYER_FRAME_SIZE, PLAYER_FOOT_INSET } from "../shared/playerSprite";
+import { PLAYER_FRAME_HEIGHT, PLAYER_FOOT_INSET, PLAYER_RENDER_SCALE, PLAYER_SPRITE_SCALE } from "../shared/playerSprite";
 
 /**
  * 베이스캠프 충돌.
@@ -38,7 +38,7 @@ export interface CampBox {
 export const PLAYER_BODY = { w: 60, h: 30 };
 
 /** 스프라이트 한 칸의 절반. 씬이 쓰는 원점(중심)에서 위아래로 이만큼이다. */
-const HALF_FRAME = PLAYER_FRAME_SIZE / 2;
+const HALF_FRAME = PLAYER_FRAME_HEIGHT / 2;
 
 /**
  * 씬이 스프라이트에 먹이는 배율. 여기 두는 이유는 바디 오프셋 계산이 이 값에 걸려서다.
@@ -46,12 +46,13 @@ const HALF_FRAME = PLAYER_FRAME_SIZE / 2;
  * 정수배여야 픽셀이 안 뭉개진다. 2.5 같은 값을 쓰면 도트가 뭉개진다. 한 칸 64px 을
  * 3배로 그리면 그림 속 인물(55~60px)이 화면에서 165~180px 이다.
  */
-export const PLAYER_SCALE = 3;
+/** Render scale: 724px source height remains the former 192px world height. */
+export const PLAYER_SCALE = PLAYER_RENDER_SCALE * PLAYER_SPRITE_SCALE;
 
 /** 한 칸 원본 기준 바디 오프셋. 씬의 `body.setOffset` 이 그대로 쓴다. */
 export const PLAYER_BODY_OFFSET = {
-  x: (PLAYER_FRAME_SIZE - PLAYER_BODY.w / PLAYER_SCALE) / 2,
-  y: PLAYER_FRAME_SIZE - PLAYER_BODY.h / PLAYER_SCALE - PLAYER_FOOT_INSET,
+  x: (362 - PLAYER_BODY.w / PLAYER_SCALE) / 2,
+  y: PLAYER_FRAME_HEIGHT - PLAYER_BODY.h / PLAYER_SCALE - PLAYER_FOOT_INSET / PLAYER_SCALE,
 };
 
 /**
@@ -72,7 +73,7 @@ export function bodyYFromSpriteY(spriteY: number): number {
  * 발이 NPC 뒤에 있는데도 앞으로 그려진다.
  */
 export function footYFromSpriteY(spriteY: number): number {
-  return spriteY + (HALF_FRAME - PLAYER_FOOT_INSET) * PLAYER_SCALE;
+  return spriteY + (HALF_FRAME - PLAYER_FOOT_INSET / PLAYER_SCALE) * PLAYER_SCALE;
 }
 
 /** 걸을 수 있는 땅의 테두리 한 줄. `t` 는 선 두께(px). */
