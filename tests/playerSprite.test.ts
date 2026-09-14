@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import path from "node:path";
+import sharp from "sharp";
 import {
-  dirFromVector, getPlayerFrame, atlasFrameCell, resolveDir,
-  DIRS_8, PLAYER_ATLAS_ROW_DIRS, PLAYER_WALK_FRAMES, PLAYER_FRAME_SIZE,
+  dirFromVector, monsterDirection, getMonsterFrame, DIRS_8,
+  PLAYER_SHEET_PATHS, PLAYER_SHEET_FRAMES, PLAYER_MONSTER_WALK_FRAMES,
+  PLAYER_FRAME_WIDTH, PLAYER_FRAME_HEIGHT,
+  PLAYER_NORTHEAST_FRAME_WIDTH, PLAYER_NORTHEAST_FRAME_HEIGHT,
 } from "../src/shared/playerSprite.ts";
 
 test("dirFromVector: 축 방향 4개", () => {
@@ -49,73 +51,62 @@ test("dirFromVector: 8방향 전부 자기 자신으로 되돌아온다", () => 
   });
 });
 
-test("getPlayerFrame: 8방향 전부 아틀라스에 있는 프레임으로 떨어진다", () => {
+test("monsterDirection: 왼쪽 셋만 반전으로 만든다", () => {
+  const flipped = DIRS_8.filter((d) => monsterDirection(d).flipX);
+  assert.deepEqual([...flipped], ["NW", "W", "SW"]);
+});
+
+test("getMonsterFrame: 정지는 0번, 걷기는 다섯 장을 순환한다", () => {
+  assert.deepEqual(getMonsterFrame("S", 0), { source: "south", frame: 0, flipX: false });
+  const frames = [1, 2, 3, 4, 5, 6, 7].map((n) => getMonsterFrame("S", n).frame);
+  assert.deepEqual(frames, [1, 2, 3, 4, 5, 1, 2]);
+});
+
+test("getMonsterFrame: 왼쪽은 오른쪽 시트를 뒤집어 쓴다", () => {
+  assert.deepEqual(getMonsterFrame("W", 2), { source: "east", frame: 2, flipX: true });
+  assert.deepEqual(getMonsterFrame("E", 2), { source: "east", frame: 2, flipX: false });
+});
+
+test("뒤집어 쓰는 방향은 자기 시트가 없다", () => {
+  const sheets = new Set(Object.keys(PLAYER_SHEET_PATHS));
   for (const dir of DIRS_8) {
-    const f = getPlayerFrame(dir, 0);
-    const cell = atlasFrameCell(f.source);
-    assert.equal(cell.col, 0, `${dir} 정지는 첫 칸`);
-    assert.ok(cell.row >= 0 && cell.row < PLAYER_ATLAS_ROW_DIRS.length, `${dir} 줄 번호`);
-  }
-});
-
-test("getPlayerFrame: 동쪽 셋만 반전으로 만든다", () => {
-  const flipped = DIRS_8.filter((d) => getPlayerFrame(d, 0).flipX);
-  assert.deepEqual([...flipped], ["SE", "E", "NE"]);
-  // 반전해서 쓰는 방향은 아틀라스에 자기 줄이 없다
-  for (const dir of flipped) assert.equal(PLAYER_ATLAS_ROW_DIRS.includes(dir), false);
-});
-
-test("getPlayerFrame: 걷기 프레임은 네 장을 순환한다", () => {
-  const frames = [1, 2, 3, 4, 5, 6].map((n) => getPlayerFrame("S", n).source);
-  assert.deepEqual(frames, [
-    "walk_S_00", "walk_S_01", "walk_S_02", "walk_S_03", "walk_S_00", "walk_S_01",
-  ]);
-});
-
-test("getPlayerFrame: 오른쪽 대각선은 왼쪽 프레임을 뒤집어 쓴다", () => {
-  const se = getPlayerFrame("SE", 2);
-  assert.deepEqual(se, { source: "walk_SW_01", flipX: true });
-  assert.deepEqual(getPlayerFrame("E", 0), { source: "idle_W", flipX: true });
-  // 왼쪽 대각선은 시트에 자기 줄이 있으니 뒤집지 않는다
-  assert.deepEqual(getPlayerFrame("SW", 2), { source: "walk_SW_01", flipX: false });
-});
-
-test("atlasFrameCell: 이름에서 격자 칸이 나온다", () => {
-  assert.deepEqual(atlasFrameCell("idle_S"), { col: 0, row: 0 });
-  assert.deepEqual(atlasFrameCell("walk_S_00"), { col: 1, row: 0 });
-  assert.deepEqual(atlasFrameCell("walk_N_03"), { col: PLAYER_WALK_FRAMES, row: 4 });
-  assert.throws(() => atlasFrameCell("player-down.png"), /아틀라스 프레임 이름이 아니다/);
-  assert.throws(() => atlasFrameCell("idle_SE"), /아틀라스에 없는 방향/);
-});
-
-test("resolveDir: 반전 규칙이 getPlayerFrame 과 같다", () => {
-  for (const dir of DIRS_8) {
-    assert.equal(resolveDir(dir).flipX, getPlayerFrame(dir, 0).flipX, dir);
+    const { direction, flipX } = monsterDirection(dir);
+    assert.ok(sheets.has(direction), `${dir} -> ${direction} 시트 없음`);
+    // 뒤집는다는 건 그 방향의 원화가 없다는 뜻이다. 뒤집힌 결과는 반대쪽 시트여야 한다.
+    if (flipX) assert.notEqual(direction.toUpperCase(), dir);
   }
 });
 
 /**
- * 코드가 부르는 이름이 아틀라스에 실제로 있는지 본다.
+ * 시트 폭이 칸 폭의 정수배인지 실제 파일에서 잰다.
  *
- * 이름이 하나만 어긋나도 Phaser 는 조용히 빈 프레임을 그린다. 화면에서는
- * 캐릭터가 사라진 것처럼 보이는데 오류는 안 난다.
+ * Phaser 는 남는 픽셀을 조용히 버린다. 남쪽 시트가 2170px 이라 362 로 나누면 다섯
+ * 칸밖에 안 나왔고, 걷기 애니메이션이 마지막 프레임을 잃은 채 돌고 있었다. 콘솔에
+ * 경고 한 줄이 뜰 뿐이라 화면만 봐서는 "남쪽만 걸음이 어색하다"로 보인다.
+ *
+ * 칸 폭이 정수가 아닌 것도 같이 막는다. 경계가 픽셀 사이에 떨어지면 옆 칸 한 줄이
+ * 딸려 나온다(북동이 2048/6 = 341.33 이었다).
  */
-test("아틀라스에 코드가 부르는 프레임이 전부 있다", () => {
-  const atlas = JSON.parse(
-    fs.readFileSync(path.resolve(import.meta.dirname, "../public/assets/player/player.json"), "utf8"),
-  ) as { frames: Array<{ filename: string; frame: { w: number; h: number } }> };
-  const names = new Set(atlas.frames.map((f) => f.filename));
+test("시트 여섯 칸이 폭에 정확히 들어간다", async () => {
+  for (const [direction, url] of Object.entries(PLAYER_SHEET_PATHS)) {
+    const isNortheast = direction === "northeast";
+    const cellW = isNortheast ? PLAYER_NORTHEAST_FRAME_WIDTH : PLAYER_FRAME_WIDTH;
+    const cellH = isNortheast ? PLAYER_NORTHEAST_FRAME_HEIGHT : PLAYER_FRAME_HEIGHT;
+    assert.equal(Number.isInteger(cellW), true, `${direction} 칸 폭이 정수가 아니다`);
 
-  for (const dir of DIRS_8) {
-    for (let frame = 0; frame <= PLAYER_WALK_FRAMES; frame++) {
-      const { source } = getPlayerFrame(dir, frame);
-      assert.ok(names.has(source), `${source} 없음`);
-    }
+    const file = path.resolve(import.meta.dirname, "../public", url.slice(1));
+    const { width, height } = await sharp(file).metadata();
+    assert.equal(width, cellW * PLAYER_SHEET_FRAMES, `${direction} 시트 폭`);
+    assert.equal(height, cellH, `${direction} 시트 높이`);
   }
-  for (const f of atlas.frames) {
-    assert.equal(f.frame.w, PLAYER_FRAME_SIZE, `${f.filename} 폭`);
-    assert.equal(f.frame.h, PLAYER_FRAME_SIZE, `${f.filename} 높이`);
-  }
+});
+
+/** 걷기가 부르는 마지막 칸이 시트 안에 있어야 한다. */
+test("걷기가 쓰는 칸 번호가 시트 안에 있다", () => {
+  assert.ok(
+    PLAYER_MONSTER_WALK_FRAMES < PLAYER_SHEET_FRAMES,
+    `걷기가 ${PLAYER_MONSTER_WALK_FRAMES}번 칸을 부르는데 시트에는 ${PLAYER_SHEET_FRAMES}칸뿐이다`,
+  );
 });
 
 // ── 문서(ART_DIRECTION 3-3)와 구현이 어긋나지 않게 잡아두는 테스트 ──────────────

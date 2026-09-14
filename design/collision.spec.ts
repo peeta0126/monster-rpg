@@ -17,15 +17,14 @@ import {
  * 씬이 그리는 것과 같은 크기의 정면 정지 스프라이트 한 칸.
  *
  * 씬은 시트의 0번 프레임을 origin 한가운데로 놓고 PLAYER_SCALE 배로 그린다. 여기가
- * 어긋나면 "발이 화단에 파묻히는가"를 잘못 본다. 파일 이름이 한글이라 url() 에
- * 그대로 넣으면 안 되고 encodeURI 를 거친다.
+ * 어긋나면 "발이 화단에 파묻히는가"를 잘못 본다.
  */
 const PLAYER_W = PLAYER_FRAME_WIDTH * PLAYER_SCALE;
 const PLAYER_H = PLAYER_FRAME_HEIGHT * PLAYER_SCALE;
 const playerHtml = (left: number, top: number) => `
   <div style="position:absolute;left:${left}px;top:${top}px;
     width:${PLAYER_W}px;height:${PLAYER_H}px;
-    background-image:url('${encodeURI(PLAYER_SHEET_PATHS.south)}');background-repeat:no-repeat;
+    background-image:url('${PLAYER_SHEET_PATHS.south}');background-repeat:no-repeat;
     background-size:${PLAYER_W * PLAYER_SHEET_FRAMES}px ${PLAYER_H}px;
     background-position:0 0"></div>`;
 

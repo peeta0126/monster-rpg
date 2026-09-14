@@ -1,4 +1,7 @@
-import { PLAYER_FRAME_HEIGHT, PLAYER_FOOT_INSET, PLAYER_RENDER_SCALE, PLAYER_SPRITE_SCALE } from "../shared/playerSprite";
+import {
+  PLAYER_FRAME_WIDTH, PLAYER_FRAME_HEIGHT, PLAYER_FOOT_INSET,
+  PLAYER_RENDER_SCALE, PLAYER_SPRITE_SCALE,
+} from "../shared/playerSprite";
 
 /**
  * 베이스캠프 충돌.
@@ -43,17 +46,29 @@ const HALF_FRAME = PLAYER_FRAME_HEIGHT / 2;
 /**
  * 씬이 스프라이트에 먹이는 배율. 여기 두는 이유는 바디 오프셋 계산이 이 값에 걸려서다.
  *
- * 정수배여야 픽셀이 안 뭉개진다. 2.5 같은 값을 쓰면 도트가 뭉개진다. 한 칸 64px 을
- * 3배로 그리면 그림 속 인물(55~60px)이 화면에서 165~180px 이다.
+ * 1 보다 작다. 원화가 한 칸 724px 이고 화면에서는 192px 이라 줄여 그린다. 예전 64px
+ * 아틀라스 때는 3배로 키웠고 "정수배여야 도트가 안 뭉개진다"가 규칙이었는데, 지금은
+ * 줄이는 쪽이라 그 규칙이 반대로 걸린다 — 정수로 맞추려 들면 크기가 튄다.
  */
-/** Render scale: 724px source height remains the former 192px world height. */
 export const PLAYER_SCALE = PLAYER_RENDER_SCALE * PLAYER_SPRITE_SCALE;
 
-/** 한 칸 원본 기준 바디 오프셋. 씬의 `body.setOffset` 이 그대로 쓴다. */
-export const PLAYER_BODY_OFFSET = {
-  x: (362 - PLAYER_BODY.w / PLAYER_SCALE) / 2,
-  y: PLAYER_FRAME_HEIGHT - PLAYER_BODY.h / PLAYER_SCALE - PLAYER_FOOT_INSET / PLAYER_SCALE,
-};
+/**
+ * 칸 크기에 맞춘 바디 오프셋. 씬의 `body.setOffset` 이 그대로 쓴다.
+ *
+ * **칸마다 다시 계산해야 한다.** 오프셋은 칸의 왼쪽 위에서 잰 값인데, 원점이 한가운데라
+ * 칸 크기가 달라지면 같은 오프셋이 인물 기준으로 다른 자리에 떨어진다. 북동 시트만
+ * 342×682 라(나머지는 362×724) 한 벌로 박아 두면 북동·북서를 볼 때 바디가 오른쪽 아래로
+ * 3×7px 밀린다 — 그 두 방향으로만 벽에 파고들고, 여덟 방향 중 둘이라 눈에 잘 안 띈다.
+ */
+export function playerBodyOffset(frameW: number, frameH: number) {
+  return {
+    x: (frameW - PLAYER_BODY.w / PLAYER_SCALE) / 2,
+    y: frameH - PLAYER_BODY.h / PLAYER_SCALE - PLAYER_FOOT_INSET / PLAYER_SCALE,
+  };
+}
+
+/** 기본 칸(362×724) 기준. 스폰·복귀 좌표 계산이 이걸 쓴다. */
+export const PLAYER_BODY_OFFSET = playerBodyOffset(PLAYER_FRAME_WIDTH, PLAYER_FRAME_HEIGHT);
 
 /**
  * 스프라이트 중심 y → 발밑 바디 중심 y.

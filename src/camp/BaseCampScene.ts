@@ -20,7 +20,7 @@ import type { SmallTalkNpcId } from "./campSmallTalk";
 import type { DialogueEntry } from "./campDialogues";
 import {
   CAMP_COLLISION_BOXES, CAMP_WALL_SEGMENTS, CAMP_MAP_W, CAMP_MAP_H,
-  CAMP_INTERACTIONS, PLAYER_BODY, PLAYER_BODY_OFFSET, PLAYER_SCALE, NPC_BODY,
+  CAMP_INTERACTIONS, PLAYER_BODY, playerBodyOffset, PLAYER_SCALE, NPC_BODY,
   footYFromSpriteY, safeSpawn,
   type CampInteraction,
 } from "./campCollision";
@@ -40,7 +40,9 @@ const NPC_INTERACT_DISTANCE = 160; // 디스플레이 절반(160)에 맞춰 조�
 type BaseCampNpc = {
   id: SmallTalkNpcId;
   name: string;
-  spriteTexture: string;  // 월드에 표시되는 픽셀아트 스프라이트 텍스처 키
+  spriteTexture: string;  // 월드에 표시되는 스프라이트 텍스처 키
+  spritePath: string;     // 그 스프라이트의 파일. 확장자가 NPC 마다 다르다 —
+                          // Baros 는 64px 도트 PNG, Orion 은 줄여 구운 webp 다.
   portraitPath: string;   // 대화창에 표시되는 초상화 이미지 경로
   x: number;
   y: number;
@@ -55,6 +57,7 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
     id: "baros",
     name: "Baros",
     spriteTexture: "Baros",
+    spritePath: "/assets/player/Baros.png",
     portraitPath: "/assets/player/Baros_portrait.webp",
     x: 430,
     y: 1200,
@@ -64,6 +67,7 @@ const BASECAMP_NPCS: BaseCampNpc[] = [
     id: "orion",
     name: "Orion",
     spriteTexture: "Orion",
+    spritePath: "/assets/player/Orion.webp",
     portraitPath: "/assets/player/Orion_portrait.webp",
     x: 1090,
     y: 1950,
@@ -108,7 +112,7 @@ export default class BaseCampScene extends Phaser.Scene {
     this.load.image("basecamp-bg", BASECAMP_BACKGROUND_IMAGE);
     this.load.image("basecamp-bg-1", "/assets/basecamp/basecamp-bg-1.webp");
     BASECAMP_NPCS.forEach((npc) => {
-      this.load.image(npc.spriteTexture, `/assets/player/${npc.spriteTexture}.png`);
+      this.load.image(npc.spriteTexture, npc.spritePath);
     });
   }
 
@@ -147,12 +151,9 @@ export default class BaseCampScene extends Phaser.Scene {
     this.player.setScale(PLAYER_SCALE);
     this.player.setDepth(footYFromSpriteY(initPos.y));
 
-    // 바디는 발밑에 둔다. 원래 스프라이트 한가운데(offset 27,27)에 있어서,
-    // 벽 앞에 서면 발이 화단·좌판 안으로 80px 씩 파고들어 있었다.
-    // texture 좌표 → 월드 = ×PLAYER_SCALE. 아틀라스 한 칸의 아래쪽에 맞춘다.
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    body.setSize(PLAYER_BODY.w / PLAYER_SCALE, PLAYER_BODY.h / PLAYER_SCALE);
-    body.setOffset(PLAYER_BODY_OFFSET.x, PLAYER_BODY_OFFSET.y);
+    // 바디는 발밑에 둔다. 원래 스프라이트 한가운데에 있어서, 벽 앞에 서면 발이
+    // 화단·좌판 안으로 파고들어 있었다. texture 좌표 → 월드 = ×PLAYER_SCALE.
+    this.syncBodyToFrame();
 
     // ── 카메라 ──────────────────────────────────────────────────────────────────
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -260,9 +261,21 @@ export default class BaseCampScene extends Phaser.Scene {
   /**
    * 걷기 애니메이션 등록.
    *
-   * 아틀라스에 든 방향은 다섯이다(S·SE·E·NE·N). 나머지 셋은 좌우 반전이라
-   * 애니메이션을 따로 안 만든다. resolveDir 이 어느 쪽을 뒤집을지 정한다.
+   * 시트에 든 방향은 다섯이다(S·SE·E·NE·N). 나머지 셋은 좌우 반전이라
+   * 애니메이션을 따로 안 만든다. monsterDirection 이 어느 쪽을 뒤집을지 정한다.
    */
+  /**
+   * 발밑 바디를 지금 칸에 맞춘다. 텍스처를 바꾼 뒤에는 반드시 같이 부른다 —
+   * 북동 시트만 칸이 작아서(342×682) 안 부르면 그 방향에서만 바디가 발을 벗어난다.
+   */
+  private syncBodyToFrame() {
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const { width, height } = this.player.frame;
+    body.setSize(PLAYER_BODY.w / PLAYER_SCALE, PLAYER_BODY.h / PLAYER_SCALE);
+    const offset = playerBodyOffset(width, height);
+    body.setOffset(offset.x, offset.y);
+  }
+
   private registerPlayerAnimations() {
     for (const direction of Object.keys(PLAYER_SHEET_KEYS) as Array<keyof typeof PLAYER_SHEET_KEYS>) {
       const key = `player-walk-${direction}`;
@@ -413,7 +426,7 @@ export default class BaseCampScene extends Phaser.Scene {
     body.velocity.normalize().scale(speed);
 
     // 방향은 실제 이동 벡터에서 뽑는다. 대각선 입력도 8방향 중 하나로 떨어지고,
-    // 서쪽 셋은 resolveDir 이 동쪽 프레임을 뒤집어 쓰라고 알려 준다.
+    // 서쪽 셋은 monsterDirection 이 동쪽 프레임을 뒤집어 쓰라고 알려 준다.
     if (isMoving) this.facing = dirFromVector(body.velocity.x, body.velocity.y);
     const { direction, flipX } = monsterDirection(this.facing);
     this.player.setFlipX(flipX);
@@ -422,11 +435,15 @@ export default class BaseCampScene extends Phaser.Scene {
       // 매 프레임 처음부터 다시 틀면 첫 장에서 멈춘 것처럼 보인다.
       if (this.player.texture.key !== PLAYER_SHEET_KEYS[direction]) {
         this.player.setTexture(PLAYER_SHEET_KEYS[direction], 0);
+        this.syncBodyToFrame();
       }
       this.player.anims.play(`player-walk-${direction}`, true);
     } else {
       this.player.anims.stop();
-      this.player.setTexture(PLAYER_SHEET_KEYS[direction], 0);
+      if (this.player.texture.key !== PLAYER_SHEET_KEYS[direction]) {
+        this.player.setTexture(PLAYER_SHEET_KEYS[direction], 0);
+        this.syncBodyToFrame();
+      }
     }
 
     // ── depth: 발끝 y = depth → 건물·NPC 뒤/앞 자동 처리 ──────────────────────
