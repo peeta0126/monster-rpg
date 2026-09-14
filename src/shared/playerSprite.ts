@@ -70,9 +70,9 @@ export function atlasFrameName(dir: Dir8, frame: number): string {
 }
 export function atlasFrameCell(source: string): { col: number; row: number } {
   const m = /^(idle|walk)_([A-Z]+)(?:_(\d+))?$/.exec(source);
-  if (!m) throw new Error(`invalid atlas frame: ${source}`);
+  if (!m) throw new Error(`아틀라스 프레임 이름이 아니다: ${source}`);
   const row = PLAYER_ATLAS_ROW_DIRS.indexOf(m[2] as Dir8);
-  if (row < 0) throw new Error(`unsupported atlas direction: ${source}`);
+  if (row < 0) throw new Error(`아틀라스에 없는 방향이다: ${source}`);
   return { col: m[1] === "idle" ? 0 : Number(m[3]) + 1, row };
 }
 export function getPlayerFrame(dir: Dir8, frame: number): PlayerFrame {
