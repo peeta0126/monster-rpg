@@ -1,70 +1,39 @@
-# Traveler atlas normalization
+# 플레이어·NPC 원화
 
-Run `python scripts/resize-player-sprite.py` (requires Pillow).
+`public/assets/player/` 로 나가는 것들의 마스터다. 굽는 것은
+`node scripts/optimize-assets.mjs` 한 줄이고 레시피는 그 파일에 적혀 있다.
 
-- Current immutable input: `art-src/player/player-traveler-current-original.png`, 1254×1254.
-- Earlier source retained separately: `player-traveler-original.png`.
-- Size reference: `public/assets/player/player1.png`, identical to the previous Git atlas, 320×320.
-- Runtime output: `public/assets/player/player.png`, 320×320, 25 equal 64×64 cells.
-- Measurements and source slicing rectangles: `resize-report.json`.
+## sheets/ — 걷기 시트 다섯
 
-The artwork has uneven gutters: simply dividing 1254 by five cuts through
-heads and boots in the middle rows. The script first looks for empty gutters.
-When no straight gutter exists, as in the current input, it detects exactly 25
-connected silhouettes and sorts them in their original row/column order. It fails
-if it cannot identify exactly 25 silhouettes. Detection uses alpha >= 128; gutter
-crops retain up to a two-source-pixel fringe, while connected-component crops use
-tight bounding boxes so a neighboring head is not included below a boot. It does
-not redraw, mirror, recolor, smooth, or modify the sampled pixels' alpha. Very
-faint source noise outside those bounding boxes is not part of the extracted art.
-The source already contains partial alpha; normalization does not create new
-semi-transparent edge colors. Output RGBA values are a subset of source values
-plus transparent black for the canvas.
+한 장이 칸 여섯을 가로로 이어 붙인 것이다. 0번이 정지, 1~5번이 걷기다.
 
-All poses use the same nominal 0.2352941176 scale (23.53% of source linear size),
-with integer output dimensions and Pillow `Image.Resampling.NEAREST`. Resulting
-visible bounds at alpha >= 128 are 35–44px wide and 54–57px high. The old artwork
-is 54–61px high, so the existing visual size takes precedence over a generic
-65–75% frame-height target. The lower fifth of each silhouette anchors its feet
-at x=32 (rounding error <=0.5px), with its bottom edge at y=61. Backpack size does
-not determine the horizontal anchor.
+| 파일 | 크기 | 칸 |
+| --- | --- | --- |
+| south.png · southeast.png · east.png · north.png | 2172×724 | 362×724 |
+| northeast.png | 2052×682 | 342×682 |
 
-Runtime code and atlas JSON are unchanged: scale=3, origin=(0.5,0.5), foot inset=3,
-physics body=20×10 texture pixels (60×30 world pixels), offset=(22,51). The workshop
-also retains its existing CSS display size, foot origin and collision geometry.
-The existing atlas names use the first column as idle and columns 2–5 as walking;
-all five original poses remain present. Row mapping remains S, SE, E, NE, N.
+**시트 폭은 칸 폭의 정수배여야 한다.** Phaser 는 남는 픽셀을 조용히 버린다. 남쪽이
+2170px 으로 들어와 있어서 362 로 다섯 칸밖에 안 나왔고, 걷기가 마지막 프레임을 잃은
+채 돌았다. 콘솔 경고 한 줄 말고는 아무 데도 안 나오고 화면에서는 "남쪽만 걸음이
+어색하다"로 보인다. 칸 폭이 정수가 아닌 것도 같이 안 된다 — 경계가 픽셀 사이에
+떨어지면 옆 칸 한 줄이 딸려 나온다(북동이 2048/6 = 341.33 이었다).
 
-The traveler atlas is rendered in the basecamp/village and workshop. Forest UI
-does not render this atlas; the tower's BattleScene renders party monsters.
+`tests/playerSprite.test.ts` 의 「시트 여섯 칸이 폭에 정확히 들어간다」 가 실제 파일을
+재서 막는다. 원화를 갈아끼우면 여기부터 걸린다.
 
-## Current-source verification (2026-09-08)
+서쪽 셋(W·SW·NW)은 원화가 없다. 동쪽 것을 뒤집어 쓴다(`monsterDirection`).
 
-The runtime PNG had been replaced with a different 1254×1254 traveler after the
-earlier conversion. The current source is preserved separately and is now the
-script's default. Existing `player1.png` and `player2.png` were left untouched.
+## npc/ — 마을 NPC
 
-- Unit tests: 50 passed (playerSprite, campCollision, workshopLayout).
-- Actual browser tests: 8 passed (camp collision from 8 locations in 8 directions;
-  camp, forest, workshop and tower battle captures; workshop walk animation,
-  furniture collision and stage boundaries).
-- Production build passed, with the existing large-chunk advisory.
-- No visible source pixels (alpha >= 128) lie outside the 25 extraction boxes.
-- Output RGBA values are a subset of source RGBA plus transparent canvas pixels.
-- All 25 visible foot baselines equal 61; horizontal foot centers are within
-  0.5 texture pixels of 32. Mean height is 55.88px versus the reference's 57.76px.
-- No runtime TypeScript, atlas JSON, display scales or collision settings changed.
+Orion 은 1254px 원본을 512px 로 줄여 굽는다. 화면에서는 192px 이다.
+Baros 는 아직 64×64 도트라 `public/` 에 PNG 로 그대로 있다 — 둘이 같은 자리에 서는데
+한쪽만 원화라 밀도가 안 맞는다. 언젠가 맞출 것.
 
-## Earlier-source verification (2026-09-08)
+## 발 높이가 방향마다 다르다 (미해결)
 
-- `node --import tsx --test tests/playerSprite.test.ts tests/campCollision.test.ts tests/workshopLayout.test.ts`: 50 passed.
-- `npm run build`: passed (existing large-chunk advisory).
-- Playwright design capture/navigation selection: 23 passed, including camp
-  collision from eight starting locations in eight directions, workshop walking
-  frames, furniture collisions, stage bounds, forest and tower battle captures.
-- Viewed the resulting camp and workshop screenshots: full traveler visible,
-  backpack retained, and scale appropriate relative to the NPC, doorway and furniture.
-- Checked all 25 frame foot baselines and confirmed output RGBA values are sampled
-  exclusively from the source (plus transparent canvas pixels).
-- Screenshots: `design/screenshots/current/{basecamp,workshop,forest,battle}.png`
-  (generated artifacts, ignored by Git).
+다섯 시트의 발끝이 칸 바닥에서 제각각이다. 화면 픽셀로 환산하면 북동이 제일 높고
+북이 제일 낮아 약 9px 차이가 난다. 방향을 바꾸면 인물이 그만큼 아래위로 튄다.
+`PLAYER_FOOT_INSET` 은 3px 하나뿐이라 어느 방향과도 안 맞는다.
+
+고치려면 다섯 장의 발 기준선을 한 줄로 맞춰 다시 구워야 한다. 원화를 건드리는
+일이라 남겨 둔다.

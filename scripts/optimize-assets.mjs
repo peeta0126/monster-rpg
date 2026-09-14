@@ -74,6 +74,26 @@ const RECIPES = [
    */
   { src: "voyager-atelier-logo.png", out: "favicon-32.png",        square: 32,  format: "png" },
   { src: "voyager-atelier-logo.png", out: "apple-touch-icon.png",  square: 180, format: "png" },
+
+  /**
+   * 플레이어 방향 시트 다섯. 한 장이 362×724(북동만 342×682) 칸 여섯을 가로로 이어
+   * 붙인 것이고, 화면에서는 높이 192px 로 줄여 그린다(PLAYER_RENDER_SCALE).
+   *
+   * 원본이 RGBA PNG 라 다섯 장이 5.2MB 였다. 걸어 들어갈 때마다 받는 파일이고
+   * 실제로는 3분의 1 크기로 보는 그림이라 webp 85 로 굽는다(약 18%).
+   *
+   * 마스터의 폭은 반드시 칸 폭의 정수배여야 한다. Phaser 는 남는 픽셀을 조용히
+   * 버리므로 2170px 짜리 남쪽 시트가 다섯 칸으로 잘려 걷기 애니메이션이 마지막
+   * 프레임을 잃고 있었다 — 경고 한 줄 말고는 아무 데도 안 나온다.
+   */
+  { src: "player/sheets/south.png",     out: "assets/player/south.webp",     quality: 85 },
+  { src: "player/sheets/southeast.png", out: "assets/player/southeast.webp", quality: 85 },
+  { src: "player/sheets/east.png",      out: "assets/player/east.webp",      quality: 85 },
+  { src: "player/sheets/north.png",     out: "assets/player/north.webp",     quality: 85 },
+  { src: "player/sheets/northeast.png", out: "assets/player/northeast.webp", quality: 85 },
+
+  /** 마을 NPC. 1254px 원본을 192px 로 그리고 있었다. 2배 여유만 남긴다. */
+  { src: "player/npc/Orion.png", out: "assets/player/Orion.webp", width: 512, quality: 85 },
 ];
 
 /**
