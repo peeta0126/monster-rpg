@@ -43,6 +43,9 @@ type PlayerPos = Point;
 /** %/frame (16ms 기준). deltaTime 으로 보정한다 */
 const SPEED = 0.4;
 
+/** 정면 idle 프레임의 발끝을 기준으로 고정한 그림자 위치. */
+const PLAYER_SHADOW_BASELINE_RATIO = 53 / 725;
+
 // --- 무대 -------------------------------------------------------------
 // 공방은 화면 고정이다. 방 하나가 통째로 들어오고 화면은 안 움직인다.
 // 걸어 다녀도 배경은 제자리다. 확대해서 따라다니던 때는 어느 방향으로 가든
@@ -140,6 +143,8 @@ export default function WorkshopPage() {
   // 플레이어도 무대에 맞춰 커지고 작아진다. 고정 px 이면 창을 줄였을 때
   // 방만 작아지고 사람은 그대로라 통·침대와 견준 키가 어긋난다.
   const playerDisplay = stageH * PLAYER_DISPLAY_RATIO;
+  const shadowBottom =
+    playerDisplay * PLAYER_SPRITE_SCALE * PLAYER_SHADOW_BASELINE_RATIO - 3.5;
 
   // ── 마우스 좌표 (디버그용, stage 기준 %) ─────────────────────────────────────
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -349,7 +354,7 @@ export default function WorkshopPage() {
             <div
               className="absolute rounded-full"
               style={{
-                bottom: 2,
+                bottom: shadowBottom,
                 left: "50%",
                 transform: "translateX(-50%)",
                 width: playerDisplay * 0.55,
