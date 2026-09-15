@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import path from "node:path";
 import {
-  CAMP_COLLISION_BOXES, CAMP_INTERACTIONS, bodyYFromSpriteY, hitsWall,
+  CAMP_COLLISION_BOXES, CAMP_INTERACTIONS, PLAYER_BODY, bodyYFromSpriteY, hitsWall,
 } from "../src/camp/campCollision";
 
 /**
@@ -158,17 +158,59 @@ test.describe("basecamp:", () => {
   });
 
   /**
+   * 공방 문 앞에서 방향을 바꿔 가며 벽을 두드린다.
+   *
+   * 시트마다 칸 크기가 달라서(북동만 341×682) 텍스처만 갈아끼우면 물리 바디가 7px
+   * 순간이동한다. 그 7px 이 문짝 벽 안에 떨어지면 Arcade 가 벽 **너머로** 밀어내고,
+   * 한 번 넘어가면 같은 벽이 반대편에서 막아 다시 못 내려온다. 실제로 그렇게 집
+   * 지붕 쪽으로 빠져나갔다.
+   *
+   * 방향 전환이 잦을수록 잘 걸리므로 짧게 툭툭 끊어 누른다. 원인 쪽 불변식은
+   * `tests/campCollision.test.ts` 가 계산으로 못 박고, 여기서는 실제로 걸어 본다.
+   */
+  test("문 앞에서 방향을 바꿔도 벽을 뚫지 않는다", async ({ page }) => {
+    test.slow();
+    await openCamp(page);
+
+    /** 문짝 벽(house-door-n)의 남쪽 면. 바디 윗변이 이보다 북쪽이면 집 안으로 들어간 것이다. */
+    const DOOR_WALL_S = 1108;
+    const bad: string[] = [];
+
+    for (let trial = 0; trial < 12; trial++) {
+      await teleport(page, 794, 1230);
+      await page.waitForTimeout(60);
+      await hold(page, ["ArrowUp", "ArrowRight"], 900);
+      await hold(page, ["ArrowUp", "ArrowLeft"], 500);
+      for (let i = 0; i < 8; i++) {
+        await hold(page, ["ArrowDown"], 16 + (trial % 5) * 8);
+        await hold(page, ["ArrowUp", "ArrowRight"], 60);
+        const p = await scenePos(page);
+        const top = p.by - PLAYER_BODY.h / 2;
+        if (hitsWall(p.bx, p.by)) bad.push(`벽과 겹침 (${p.bx | 0}, ${p.by | 0}) sprite ${p.x | 0},${p.y | 0}`);
+        else if (top < DOOR_WALL_S - 1) bad.push(`문 위 벽을 넘었다 (${p.bx | 0}, ${top | 0})`);
+      }
+    }
+    expect(bad.slice(0, 5).join(" / ")).toBe("");
+
+    // 뚫고 나갔으면 벽이 반대편에서 막아 못 내려온다. 내려올 수 있어야 정상이다.
+    const before = await scenePos(page);
+    await hold(page, ["ArrowDown"], 1500);
+    const after = await scenePos(page);
+    expect(after.y - before.y, "문 앞에서 아래로 못 내려온다").toBeGreaterThan(150);
+  });
+
+  /**
    * 안내는 하나뿐이고 플레이어를 따라와야 한다. 예전에는 대상마다 텍스트를 만들고
    * 지웠는데 만든 자리에 못박혀 있어서, 걸어가면 안내만 월드에 남아 떠다녔다.
    */
   test("근접 안내가 플레이어를 따라온다", async ({ page }) => {
     await openCamp(page);
-    const house = CAMP_INTERACTIONS.find((i) => i.id === "house")!;
+    const house = CAMP_INTERACTIONS.find((i) => i.id === "workshop")!;
     await teleport(page, house.x, house.y + 40);
     await page.waitForTimeout(300);
 
     const before = await readHint(page);
-    expect(before.hint, "집 앞인데 안내가 없다").not.toBeNull();
+    expect(before.hint, "공방 앞인데 안내가 없다").not.toBeNull();
     expect(Math.abs(before.hint!.x - before.x)).toBeLessThan(4);
 
     await hold(page, ["ArrowDown"], 400);

@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   CAMP_COLLISION_BOXES, CAMP_WALL_SEGMENTS, CAMP_MAP_W, CAMP_MAP_H, CAMP_INTERACTIONS,
-  bodyYFromSpriteY, footYFromSpriteY, hitsWall, reachableCells,
+  bodyYFromSpriteY, playerBodyOffset, PLAYER_SCALE, hitsWall, reachableCells,
 } from "../src/camp/campCollision";
+import { PLAYER_SHEET_METRICS, spriteOriginY, type MonsterSheetDir } from "../src/shared/playerSprite";
 import { getCampPosition } from "../src/camp/campPositionStore";
 
 /**
@@ -144,6 +145,41 @@ test("걸어 닿는 곳이 광장 밖으로 번지지 않는다", () => {
   );
 });
 
-test("발끝이 바디 중심보다 아래에 있다", () => {
-  assert.ok(footYFromSpriteY(0) > bodyYFromSpriteY(0), "depth 기준(발끝)이 바디 중심보다 위에 있다");
+/**
+ * 시트를 갈아끼워도 발밑 바디는 월드에서 제자리여야 한다.
+ *
+ * 북동만 칸이 341×682 라, 그리는 기준점(origin)을 같이 안 옮기면 방향을 바꾸는
+ * 순간 바디가 7px 순간이동한다. 그 7px 이 집 문 위 벽 안으로 들어가면 Arcade 가
+ * 벽 너머로 밀어내고, 한 번 넘어가면 같은 벽에 막혀 다시 못 내려온다.
+ */
+test("방향이 바뀌어도 발밑 바디와 발이 닿는 줄은 제자리다", () => {
+  const dirs = Object.keys(PLAYER_SHEET_METRICS) as MonsterSheetDir[];
+  const bodyTopOf = (dir: MonsterSheetDir) => {
+    const m = PLAYER_SHEET_METRICS[dir];
+    // Phaser: body.y = sprite.y + scale × (offset.y − displayOriginY)
+    return playerBodyOffset(dir).y - spriteOriginY(dir) * m.frameHeight;
+  };
+  const footOf = (dir: MonsterSheetDir) =>
+    PLAYER_SHEET_METRICS[dir].footY - spriteOriginY(dir) * PLAYER_SHEET_METRICS[dir].frameHeight;
+
+  for (const dir of dirs) {
+    assert.ok(
+      Math.abs(bodyTopOf(dir) - bodyTopOf("south")) < 0.5,
+      `${dir}: 바디가 정면과 다른 자리에 있다`,
+    );
+    assert.ok(
+      Math.abs(footOf(dir) - footOf("south")) < 0.5,
+      `${dir}: 발이 닿는 줄이 정면과 다르다`,
+    );
+  }
+});
+
+/** 발밑 바디는 발이 닿는 줄을 한가운데 놓는다. 그래야 그림과 판정이 같은 곳을 본다. */
+test("발밑 바디의 한가운데가 발이 닿는 줄이다", () => {
+  const spriteY = 1000;
+  const bodyCenter = bodyYFromSpriteY(spriteY);
+  const footLine = spriteY
+    + (PLAYER_SHEET_METRICS.south.footY - spriteOriginY("south") * PLAYER_SHEET_METRICS.south.frameHeight)
+      * PLAYER_SCALE;
+  assert.ok(Math.abs(bodyCenter - footLine) < 0.5, `${bodyCenter} vs ${footLine}`);
 });

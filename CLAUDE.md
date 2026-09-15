@@ -19,6 +19,17 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
   오른쪽을 본다)와 **원화가 원래 보던 쪽**(`monsterImages.MONSTER_ART_FACING`)을 같이 본다.
   자리만 보고 뒤집으면 오른쪽을 보는 원화(아쿠번·모치final)에서 둘이 같은 쪽을 본다.
   원화를 더하면 표에 방향을 한 줄 적을 것 — 빠뜨리면 `left` 로 떨어진다.
+- **걸어 다니는 플레이어의 기준점은 '발이 닿는 줄'이다.** 시트 한 칸의 아래가 아니다 —
+  원화는 칸을 안 채워서 발밑에 80~130px 씩 빈 자리가 남고, 그 크기가 방향마다 다르다.
+  칸 아래를 기준으로 삼으면 사람이 그만큼 떠서 걷고(공방에서 38px) 벽 위에 올라선 것처럼
+  보인다. 표는 `shared/playerSprite.PLAYER_SHEET_METRICS` 한 벌이고
+  `node scripts/measure-player-sheets.mjs` 가 원본에서 다시 재 준다.
+  · 그리기 — `spriteOriginY(방향)`  · 발밑 판정 — `campCollision.playerBodyOffset(방향)`
+  **원화를 갈아끼웠으면 표를 다시 재고, Phaser 쪽은 텍스처만 바꾸지 말 것.** 칸 크기가
+  시트마다 달라서(북동만 341×682) origin 을 같이 안 옮기면 물리 바디가 순간이동한다 —
+  공방 문 위 벽을 뚫고 나가 다시 못 내려온 적이 있다(`BaseCampScene.applySheet`).
+  걷기 그림은 **시간이 아니라 나아간 거리**로 넘긴다. 시간으로 세면 방향마다 한 걸음
+  거리가 달라져 발이 미끄러진다.
 - 폰트 크기는 Galmuri 기준 크기의 정수배만 (12/24/36px). text-pixel-* / text-title-* 만 쓴다.
 - 몬스터 일러스트에 image-rendering: pixelated 를 적용하지 말 것.
 - **이모지를 쓰지 말 것.** 아이콘은 `<PixelIcon>` 으로만 그린다 — 부품을 하나 더 만들지 말 것.

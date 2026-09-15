@@ -1,4 +1,7 @@
-import { PLAYER_FRAME_HEIGHT, PLAYER_FOOT_INSET, PLAYER_RENDER_SCALE, PLAYER_SPRITE_SCALE } from "../shared/playerSprite";
+import {
+  PLAYER_FOOT_FROM_ORIGIN, PLAYER_RENDER_SCALE, PLAYER_SHEET_METRICS, PLAYER_SPRITE_SCALE,
+  type MonsterSheetDir,
+} from "../shared/playerSprite";
 
 /**
  * 베이스캠프 충돌.
@@ -37,43 +40,45 @@ export interface CampBox {
  */
 export const PLAYER_BODY = { w: 60, h: 30 };
 
-/** 스프라이트 한 칸의 절반. 씬이 쓰는 원점(중심)에서 위아래로 이만큼이다. */
-const HALF_FRAME = PLAYER_FRAME_HEIGHT / 2;
-
 /**
  * 씬이 스프라이트에 먹이는 배율. 여기 두는 이유는 바디 오프셋 계산이 이 값에 걸려서다.
- *
- * 정수배여야 픽셀이 안 뭉개진다. 2.5 같은 값을 쓰면 도트가 뭉개진다. 한 칸 64px 을
- * 3배로 그리면 그림 속 인물(55~60px)이 화면에서 165~180px 이다.
  */
-/** Render scale: 724px source height remains the former 192px world height. */
 export const PLAYER_SCALE = PLAYER_RENDER_SCALE * PLAYER_SPRITE_SCALE;
 
-/** 한 칸 원본 기준 바디 오프셋. 씬의 `body.setOffset` 이 그대로 쓴다. */
-export const PLAYER_BODY_OFFSET = {
-  x: (362 - PLAYER_BODY.w / PLAYER_SCALE) / 2,
-  y: PLAYER_FRAME_HEIGHT - PLAYER_BODY.h / PLAYER_SCALE - PLAYER_FOOT_INSET / PLAYER_SCALE,
-};
-
 /**
- * 스프라이트 중심 y → 발밑 바디 중심 y.
+ * 시트별 바디 오프셋. 씬의 `body.setOffset` 이 그대로 쓴다.
  *
- * 상호작용 거리(`E`)는 스프라이트 중심으로 재고 충돌은 발밑으로 잰다. 두 좌표계를
- * 오갈 일이 테스트·오버레이 양쪽에 있어서 변환을 여기 한 번만 적어 둔다.
+ * 발밑 바디는 **발이 닿는 줄을 한가운데 놓는다.** 예전에는 칸 바닥에서 3px 띄운
+ * 자리에 뒀는데, 원화가 칸을 안 채우니까 그 자리가 발보다 22px 아래였다. 그래서
+ * 화면에서는 캐릭터가 화단·문턱을 넘어선 자리에 서 있는데 판정은 아직 안 닿은 상태가
+ * 됐다 — 벽 위를 걷는 것처럼 보이던 이유다.
+ *
+ * `frameWidth`/`footY` 를 시트마다 다시 읽는 것이 핵심이다. 북동 시트만 칸이
+ * 341×682 라, 한 벌로 계산해 두면 방향을 바꾸는 순간 바디가 7px 순간이동한다.
  */
-export function bodyYFromSpriteY(spriteY: number): number {
-  return spriteY + (PLAYER_BODY_OFFSET.y + PLAYER_BODY.h / PLAYER_SCALE / 2 - HALF_FRAME) * PLAYER_SCALE;
+export function playerBodyOffset(dir: MonsterSheetDir) {
+  const m = PLAYER_SHEET_METRICS[dir];
+  return {
+    x: (m.frameWidth - PLAYER_BODY.w / PLAYER_SCALE) / 2,
+    y: m.footY - PLAYER_BODY.h / PLAYER_SCALE / 2,
+  };
 }
 
+/** 정면 기준값. 씬이 처음 바디를 만들 때 쓴다. */
+export const PLAYER_BODY_OFFSET = playerBodyOffset("south");
+
 /**
- * 스프라이트 중심 y → 발끝 y. depth 정렬 기준이다.
+ * 스프라이트 기준점 y → 발이 닿는 줄.
  *
- * NPC 는 원점이 (0.5, 1) 이라 npc.y 가 곧 발끝이다. 플레이어만 스프라이트 중심을
- * 쓰면 기준이 어긋난다. 스프라이트 아래쪽이 빈 여백이라, 그 끝을 depth 로 쓰면
- * 발이 NPC 뒤에 있는데도 앞으로 그려진다.
+ * 이 한 줄이 세 가지를 같이 정한다 — 발밑 충돌 바디의 중심, depth 정렬 기준,
+ * 그리고 오버레이 캡처가 사람을 세우는 자리. 상호작용 거리(`X`)만 스프라이트
+ * 기준점으로 재므로 두 좌표계를 오가는 변환을 여기 한 번만 적어 둔다.
+ *
+ * NPC 는 원점이 (0.5, 1) 이라 npc.y 가 곧 발끝이다. 플레이어도 같은 줄로 재야
+ * 나란히 섰을 때 앞뒤가 뒤집히지 않는다.
  */
-export function footYFromSpriteY(spriteY: number): number {
-  return spriteY + (HALF_FRAME - PLAYER_FOOT_INSET / PLAYER_SCALE) * PLAYER_SCALE;
+export function bodyYFromSpriteY(spriteY: number): number {
+  return spriteY + PLAYER_FOOT_FROM_ORIGIN * PLAYER_SCALE;
 }
 
 /** 걸을 수 있는 땅의 테두리 한 줄. `t` 는 선 두께(px). */
@@ -200,7 +205,7 @@ export const NPC_BODY = { w: 70, h: 28 };
  * 시작했다. 이제 좌표를 적어 두고 테스트가 벽 밖인지 확인한다.
  */
 export interface CampInteraction {
-  id: "tower" | "forest" | "house";
+  id: "tower" | "forest" | "workshop";
   /** 근접 안내에 뜨는 문구 */
   label: string;
   x: number;
@@ -226,7 +231,9 @@ export const CAMP_INTERACTIONS: CampInteraction[] = [
     returnAt: { x: 1500, y: 1980 },
   },
   {
-    id: "house", label: "집 입장",
+    // 광장 북쪽 집이 곧 제작 공방이다. 안내에 "집" 이라고 적어 두면 들어가 보기
+    // 전에는 살림집으로 읽힌다 — 모루·연금술 제작대가 있는 곳이라고 먼저 말한다.
+    id: "workshop", label: "공방 입장",
     x: 794, y: 1215, radius: 90,
     returnAt: { x: 794, y: 1290 },
   },
