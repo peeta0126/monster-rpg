@@ -287,7 +287,7 @@ export default class BaseCampScene extends Phaser.Scene {
    * 걷기 애니메이션 등록.
    *
    * 아틀라스에 든 방향은 다섯이다(S·SE·E·NE·N). 나머지 셋은 좌우 반전이라
-   * 애니메이션을 따로 안 만든다. resolveDir 이 어느 쪽을 뒤집을지 정한다.
+   * 애니메이션을 따로 안 만든다. monsterDirection 이 어느 쪽을 뒤집을지 정한다.
    */
   private registerPlayerAnimations() {
     for (const direction of Object.keys(PLAYER_SHEET_KEYS) as Array<keyof typeof PLAYER_SHEET_KEYS>) {
@@ -439,7 +439,7 @@ export default class BaseCampScene extends Phaser.Scene {
     body.velocity.normalize().scale(speed);
 
     // 방향은 실제 이동 벡터에서 뽑는다. 대각선 입력도 8방향 중 하나로 떨어지고,
-    // 서쪽 셋은 resolveDir 이 동쪽 프레임을 뒤집어 쓰라고 알려 준다.
+    // 서쪽 셋은 monsterDirection 이 동쪽 프레임을 뒤집어 쓰라고 알려 준다.
     if (isMoving) this.facing = dirFromVector(body.velocity.x, body.velocity.y);
     const { direction, flipX } = monsterDirection(this.facing);
     this.player.setFlipX(flipX);

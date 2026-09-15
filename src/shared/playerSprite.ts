@@ -8,13 +8,6 @@ export function dirFromVector(dx: number, dy: number): Dir8 {
   return DIRS_8[Math.round(((90 - deg + 360) % 360) / 45) % 8];
 }
 
-// Only right-facing diagonal/side art is supplied; left directions are mirrored.
-const MIRROR: Partial<Record<Dir8, Dir8>> = { SE: "SW", E: "W", NE: "NW" };
-export function resolveDir(dir: Dir8): { dir: Dir8; flipX: boolean } {
-  const mirrored = MIRROR[dir];
-  return { dir: mirrored ?? dir, flipX: mirrored !== undefined };
-}
-
 export type MonsterSheetDir = "south" | "southeast" | "east" | "northeast" | "north";
 export interface PlayerFrame { source: MonsterSheetDir; frame?: number; flipX: boolean; }
 
@@ -68,10 +61,7 @@ export const PLAYER_SHEET_METRICS: Record<MonsterSheetDir, PlayerSheetMetrics> =
 export const PLAYER_FRAME_WIDTH = PLAYER_SHEET_METRICS.south.frameWidth;
 export const PLAYER_FRAME_HEIGHT = PLAYER_SHEET_METRICS.south.frameHeight;
 
-// Kept for consumers/tests of the retired 64px atlas API.
-export const PLAYER_WALK_FRAMES = 4;
-export const PLAYER_FRAME_SIZE = 64;
-export const PLAYER_ATLAS_ROW_DIRS: readonly Dir8[] = ["S", "SW", "W", "NW", "N"];
+/** 씬이 한 칸을 이 높이로 그린다. 시트 원본 높이를 여기에 맞추는 배율이 PLAYER_RENDER_SCALE. */
 export const PLAYER_DISPLAY_HEIGHT = 192;
 /** Runtime-only visual enlargement; source assets and animation frames are unchanged. */
 export const PLAYER_SPRITE_SCALE = 1.2;
@@ -108,25 +98,4 @@ export function monsterDirection(dir: Dir8): { direction: MonsterSheetDir; flipX
 export function getMonsterFrame(dir: Dir8, frame: number): PlayerFrame {
   const { direction, flipX } = monsterDirection(dir);
   return { source: direction, frame: frame === 0 ? 0 : ((frame - 1) % PLAYER_MONSTER_WALK_FRAMES) + 1, flipX };
-}
-
-// Legacy atlas helpers remain source-compatible for non-rendering tooling.
-export const PLAYER_ATLAS_KEY = "player-atlas";
-export const PLAYER_ATLAS_PNG = "/assets/player/player.png";
-export const PLAYER_ATLAS_JSON = "/assets/player/player.json";
-export const PLAYER_ATLAS_COLS = 5;
-export const PLAYER_ATLAS_ROWS = 5;
-export function atlasFrameName(dir: Dir8, frame: number): string {
-  return frame === 0 ? `idle_${dir}` : `walk_${dir}_${String((frame - 1) % PLAYER_WALK_FRAMES).padStart(2, "0")}`;
-}
-export function atlasFrameCell(source: string): { col: number; row: number } {
-  const m = /^(idle|walk)_([A-Z]+)(?:_(\d+))?$/.exec(source);
-  if (!m) throw new Error(`아틀라스 프레임 이름이 아니다: ${source}`);
-  const row = PLAYER_ATLAS_ROW_DIRS.indexOf(m[2] as Dir8);
-  if (row < 0) throw new Error(`아틀라스에 없는 방향이다: ${source}`);
-  return { col: m[1] === "idle" ? 0 : Number(m[3]) + 1, row };
-}
-export function getPlayerFrame(dir: Dir8, frame: number): PlayerFrame {
-  const resolved = resolveDir(dir);
-  return { source: atlasFrameName(resolved.dir, frame) as unknown as MonsterSheetDir, flipX: resolved.flipX };
 }
