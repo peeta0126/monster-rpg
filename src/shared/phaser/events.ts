@@ -118,6 +118,8 @@ export interface NpcDialoguePayload {
     rewards: QuestReward[];
     setsFlag?: PersistedStoryFlag;
   };
+  /** 최종 퀘스트는 아이템 전달을 먼저 확정하고, 이 대사를 끝낸 뒤 엔딩으로 간다. */
+  endsStory?: boolean;
 }
 
 export interface BattleHitPayload {

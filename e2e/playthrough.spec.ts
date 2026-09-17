@@ -63,7 +63,7 @@ async function seedSave(page: Page) {
   );
 }
 
-test("무한의 탑 1층 → 50층 → 엔딩 완주", async ({ page }) => {
+test("무한의 탑 1층 → 50층 → 만물의 정수를 들고 베이스캠프 귀환", async ({ page }) => {
   page.on("pageerror", (err) => console.log(`[pageerror] ${err.message}`));
 
   await seedSave(page);
@@ -87,14 +87,15 @@ test("무한의 탑 1층 → 50층 → 엔딩 완주", async ({ page }) => {
     }
   }
 
-  // 50층 승리 화면에서만 나오는 엔딩 진입 버튼
+  // 50층 승리 화면에서는 엔딩이 아니라 베이스캠프로 돌아간다
   const toEnding = page.locator("button").filter({ hasText: "정수를 들고 마을로" });
   await expect(toEnding).toBeVisible();
   await toEnding.click();
 
-  await expect(page).toHaveURL(/\/ending$/);
-  await expect(page.getByText("THE END")).toBeVisible();
-  await expect(page.getByText("오리온: …고맙다. 네가 해냈다.")).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+  const state = await page.evaluate(() => JSON.parse(localStorage.getItem("monster-rpg-player")!).state);
+  expect(state.materials.ormr_essence).toBe(1);
+  expect(state.storyFlags.tower_cleared).not.toBe(true);
 
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, "ending.png"), fullPage: true });
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, "floor-50-return.png"), fullPage: true });
 });

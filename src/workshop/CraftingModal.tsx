@@ -1,10 +1,9 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   ARTIFACT_RECIPES,
-  POTION_RECIPES,
   DIFFICULTY_LABEL,
   STATION_LABEL,
+  visiblePotionRecipes,
 } from "./craftingRecipes";
 import { usePlayerStore } from "../shared/playerStore";
 import type { CraftingRecipe, CraftingStationType, CraftedItem } from "../shared/crafting";
@@ -78,13 +77,12 @@ interface CraftingModalProps {
 }
 
 export function CraftingModal({ open, stationType, onClose }: CraftingModalProps) {
-  const navigate = useNavigate();
-  const { materials, craftWorkshopRecipe, craftWorkshopRecipeByQuality, grantWorkshopTestMaterials } = usePlayerStore();
+  const { materials, seenDialogues, craftWorkshopRecipe, craftWorkshopRecipeByQuality, grantWorkshopTestMaterials } = usePlayerStore();
 
-  // "어머니의 치료약"은 재료(만물의 정수)를 실제로 얻기 전까진 존재 자체를 숨긴다
+  // 오리온이 정수를 확인하고 제조법을 알려 준 뒤에만 최종 레시피를 보여 준다.
   const recipes = stationType === "artifact"
     ? ARTIFACT_RECIPES
-    : POTION_RECIPES.filter((r) => r.id !== "ws_mothers_cure" || (materials.ormr_essence ?? 0) > 0);
+    : visiblePotionRecipes(materials, seenDialogues);
 
   const [selectedRecipeId, setSelectedRecipeId] = useState(recipes[0]?.id ?? "");
   const [activeRecipe,     setActiveRecipe]     = useState<CraftingRecipe | null>(null);
@@ -146,7 +144,7 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
     const recipe = activeRecipe;
     // 품질은 첫 판정 한 번으로 정하고 나머지는 같은 품질로 찍어낸다
     let quality: ItemQuality | null = null;
-    const item = craftBatch(recipe, () => {
+    craftBatch(recipe, () => {
       if (quality === null) {
         const first = craftWorkshopRecipe(recipe, rpsResult);
         quality = first?.quality ?? null;
@@ -154,7 +152,6 @@ export function CraftingModal({ open, stationType, onClose }: CraftingModalProps
       }
       return craftWorkshopRecipeByQuality(recipe, quality);
     });
-    if (item && recipe.id === "ws_mothers_cure") navigate("/ending");
   };
 
   // 아티팩트(방향키 QTE) 완료

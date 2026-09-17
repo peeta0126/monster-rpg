@@ -76,17 +76,19 @@ test("완성품 목표 — 가지고 있으면 된다", () => {
   assert.equal(evaluateObjective(o, snap({ potions: { mothers_cure_potion: 1 } })).done, true);
 });
 
-test("가져가는 건 재료 목표뿐이다", () => {
+test("재료와 완성품 목표는 NPC에게 건넬 때 실제로 차감한다", () => {
   assert.deepEqual(
     objectiveCost({ kind: "material", itemId: "herb", amount: 3 }),
-    { itemId: "herb", amount: 3 });
+    { source: "material", itemId: "herb", amount: 3 });
 
   // 층을 도로 내리거나 잡은 몬스터를 도감에서 지울 수는 없다
   assert.equal(objectiveCost({ kind: "floor", floor: 10 }), null);
   assert.equal(objectiveCost({ kind: "catchType", elementType: "poison" }), null);
   assert.equal(objectiveCost({ kind: "equipped" }), null);
   assert.equal(objectiveCost({ kind: "artifactLevel", level: 20 }), null);
-  assert.equal(objectiveCost({ kind: "potion", potionId: "x", name: "x" }), null);
+  assert.deepEqual(
+    objectiveCost({ kind: "potion", potionId: "x", name: "x" }),
+    { source: "potion", itemId: "x", amount: 1 });
 });
 
 test("모든 목표가 화면에 적을 한 줄을 낸다", () => {

@@ -52,7 +52,7 @@ test("밀린 퀘스트는 순서대로 하나씩 흐른다", () => {
   for (let i = 0; i < ALL_QUESTS.length * 2; i++) {
     let any = false;
     for (const npcId of ["baros", "orion"] as const) {
-      const q = activeQuestFor(npcId, ENDED, 50, status);
+      const q = activeQuestFor(npcId, ENDED, 50, status, ["orion_floor_50"]);
       if (!q) continue;
       status[q.id] = "completed";
       seen.push(q.id);
@@ -64,7 +64,11 @@ test("밀린 퀘스트는 순서대로 하나씩 흐른다", () => {
   // 사람별로 보면 정의 순서 그대로다
   for (const npcId of ["orion", "baros"] as const) {
     const mine = seen.filter((id) => ALL_QUESTS.find((q) => q.id === id)!.npcId === npcId);
-    assert.deepEqual(mine, questsOf(npcId).map((q) => q.id));
+    const defined = questsOf(npcId).map((q) => q.id);
+    const expected = npcId === "orion"
+      ? ["orion_mothers_cure", ...defined.filter((id) => id !== "orion_mothers_cure")]
+      : defined;
+    assert.deepEqual(mine, expected);
   }
 });
 

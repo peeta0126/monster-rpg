@@ -18,7 +18,7 @@ export interface QuestDef {
    * 퀘스트 완료 여부는 이미 저장되고 있으니, 앞 퀘스트를 가리키면 세이브에 새로 넣을
    * 값이 없다.
    */
-  requires: { flag?: StoryFlag; minFloor?: number; questDone?: string };
+  requires: { flag?: StoryFlag; minFloor?: number; questDone?: string; seenDialogue?: string };
   objective: QuestObjective;
   rewards: QuestReward[];
   acceptLines: string[];
@@ -61,6 +61,8 @@ export interface DialogueEntry {
   quest?: QuestDef;
   /** 대사 끝에 건네주는 몬스터. 이미 가지고 있어도 한 번 더 주지는 않는다(플래그가 같이 선다) */
   grantsMonsterId?: string;
+  /** 이 이야기 대사를 끝까지 읽는 순간 함께 시작할 퀘스트 */
+  acceptQuestId?: string;
 }
 
 // ─── 퀘스트 ────────────────────────────────────────────────────────────────────
@@ -328,33 +330,31 @@ export const BAROS_CHANGE_GEAR_QUEST: QuestDef = {
 };
 
 /**
- * 엔딩 후 · 오리온. 이야기를 닫는다.
- *
- * 50층 이야기 대사가 이미 "공방에 가져가라"고 말하는데, 그건 부탁의 형태였을 뿐 아무
- * 기록도 보상도 없었다. 퀘스트로 만들면 로그에 남고 받을 것도 생긴다.
- * 엔딩 후에 남는 건 재도전뿐이라, 보상은 트로피이자 다음 판의 밑천이다.
+ * 최종 이야기 · 오리온. 만물의 정수로 만든 치료약을 건네는 마지막 부탁이다.
+ * 50층 귀환 대사를 끝까지 읽은 뒤 자동으로 시작하며, 완료 대사가 끝난 뒤 엔딩으로 간다.
  */
 export const ORION_MOTHERS_CURE_QUEST: QuestDef = {
   id: "orion_mothers_cure",
   title: "어머니의 치료약",
   npcId: "orion",
-  requires: { flag: "tower_cleared", questDone: "orion_once_more" },
+  requires: { flag: "floor_50", seenDialogue: "orion_floor_50" },
   objective: { kind: "potion", potionId: "mothers_cure_potion", name: "어머니의 치료약" },
   rewards: [
     { kind: "artifact", itemId: "spirit_amulet", quality: "elite", level: 50, enhancement: 5 },
     { kind: "material", itemId: "enhancement_stone", amount: 15 },
   ],
   acceptLines: [
-    "정수를 봤다. 이런 게 정말 있었구나.",
-    "공방에 가져가라. 연금술로 다뤄봐야겠다.",
-    "어머니의 치료약이라고 하더구나. 그런 이름이 붙은 게 있다는 것도 이제 알았다.",
+    "만물의 정수는 공방에서 연금술로 다뤄야 한다.",
+    "어머니의 치료약으로 만들어 오너라.",
   ],
   progressLines: ["아직인가. 서둘러라. …아니다, 미안하다. 서두를 사람은 나였구나."],
   completeLines: [
-    "이게 그것이냐.",
-    "…오늘 밤에 드시게 하마.",
-    "이건 가져가라. 부적이다. 내가 오르던 시절엔 못 만들던 물건이지.",
-    "이제 네가 오를 이유는 없다. 그래도 오를 거면, 이걸 끼고 가라.",
+    "…완성했구나.",
+    "정말 만들어냈어. 이걸 어머니께 가져다드리마.",
+    "네가 탑을 오르기 시작했을 때만 해도 이런 날이 올 거라곤 생각하지 못했다.",
+    "내가 멈춘 곳을 지나, 그 위의 끝까지 올라가서… 결국 답을 가지고 돌아왔구나.",
+    "수고했다.",
+    "이제 좀 쉬어도 된다.",
   ],
 };
 
@@ -487,13 +487,14 @@ export const ORION_DIALOGUES: DialogueEntry[] = [
   {
     id: "orion_floor_50",
     requires: "floor_50",
+    acceptQuestId: "orion_mothers_cure",
     lines: [
       "…이게 뭐냐.",
       "만물의 정수라니. 이런 게 정말 있었구나.",
       "그 용을 정말 넘었단 말이지.",
       "이 기운이라면… 어머니를 훑고 간 파장도 씻어낼 수 있을지 모른다.",
-      "연금술로 다뤄봐야겠구나. 공방에 가져가라.",
-      "물약으로 만들 수 있을 것 같다.",
+      "정수는 네가 가지고 있어라. 공방에서 연금술로 다뤄봐야겠구나.",
+      "어머니의 치료약으로 만들어 오너라.",
     ],
   },
   // 3-8. 엔딩 이후. 어머니가 나은 뒤
@@ -672,11 +673,13 @@ export function questUnlocked(
   storyFlags: Record<PersistedStoryFlag, boolean>,
   bestFloor: number,
   questStatus: Record<string, QuestStatus>,
+  seenDialogues: readonly string[] = [],
 ): boolean {
-  const { flag, minFloor, questDone } = quest.requires;
+  const { flag, minFloor, questDone, seenDialogue } = quest.requires;
   if (flag && !isStoryFlagSet(flag, storyFlags, bestFloor)) return false;
   if (minFloor !== undefined && bestFloor < minFloor) return false;
   if (questDone && (questStatus[questDone] ?? "not_accepted") !== "completed") return false;
+  if (seenDialogue && !seenDialogues.includes(seenDialogue)) return false;
   return true;
 }
 
@@ -688,7 +691,7 @@ export function questUnlocked(
  * `requires` 한 벌에서 그대로 만든다 — 여기서 다시 적으면 표와 화면이 갈라진다.
  */
 export function questUnlockLabel(quest: QuestDef): string {
-  const { flag, minFloor, questDone } = quest.requires;
+  const { flag, minFloor, questDone, seenDialogue } = quest.requires;
   const parts: string[] = [];
 
   const floorNeed = Math.max(
@@ -702,6 +705,7 @@ export function questUnlockLabel(quest: QuestDef): string {
     const prev = ALL_QUESTS.find((q) => q.id === questDone);
     parts.push(prev ? `「${prev.title}」 완료` : "앞 부탁 완료");
   }
+  if (seenDialogue === "orion_floor_50") parts.push("오리온에게 만물의 정수 보여주기");
   if (flag === "tower_cleared") parts.push("탑 정복");
   if (flag === "met_orion")     parts.push("오리온과 만남");
   if (flag === "met_baros")     parts.push("바로스와 만남");
@@ -724,10 +728,19 @@ export function activeQuestFor(
   storyFlags: Record<PersistedStoryFlag, boolean>,
   bestFloor: number,
   questStatus: Record<string, QuestStatus>,
+  seenDialogues: readonly string[] = [],
 ): QuestDef | undefined {
-  return questsOf(npcId).find(
+  const quests = questsOf(npcId);
+  // 선택형 부탁이 밀려 있어도 메인 엔딩선은 50층 귀환 직후 이어져야 한다.
+  const finalQuest = quests.find((q) => q.id === "orion_mothers_cure");
+  if (finalQuest
+    && (questStatus[finalQuest.id] ?? "not_accepted") !== "completed"
+    && questUnlocked(finalQuest, storyFlags, bestFloor, questStatus, seenDialogues)) {
+    return finalQuest;
+  }
+  return quests.find(
     (q) => (questStatus[q.id] ?? "not_accepted") !== "completed"
-      && questUnlocked(q, storyFlags, bestFloor, questStatus),
+      && questUnlocked(q, storyFlags, bestFloor, questStatus, seenDialogues),
   );
 }
 
@@ -750,7 +763,21 @@ export function resolveNpcInteraction(
 ): NpcInteractionResult | undefined {
   const { storyFlags, bestFloor, snapshot, questStatus, seenDialogues } = ctx;
   const seen = new Set(seenDialogues);
-  const quest = activeQuestFor(ctx.npcId, storyFlags, bestFloor, questStatus);
+
+  // 첫 엔딩선은 밀린 일반 이야기나 선택 퀘스트보다 우선한다. 50층에서 막 돌아온
+  // 플레이어가 오리온에게 처음 말을 걸었을 때 바로 정수를 보여 주어야 한다.
+  const floor50Return = !storyFlags.tower_cleared && bestFloor >= 50
+    ? dialogues.find((entry) => entry.id === "orion_floor_50" && !seen.has(entry.id))
+    : undefined;
+  if (floor50Return) {
+    return {
+      lines: floor50Return.lines,
+      dialogueId: floor50Return.id,
+      acceptQuestId: floor50Return.acceptQuestId,
+    };
+  }
+
+  const quest = activeQuestFor(ctx.npcId, storyFlags, bestFloor, questStatus, seenDialogues);
   const status = quest ? questStatus[quest.id] ?? "not_accepted" : "completed";
 
   // 1) 완료 가능
@@ -787,6 +814,7 @@ export function resolveNpcInteraction(
       dialogueId: story.id,
       setsFlag: story.setsFlag,
       grantsMonsterId: story.grantsMonsterId,
+      acceptQuestId: story.acceptQuestId,
     };
   }
 

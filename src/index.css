@@ -205,6 +205,28 @@ canvas {
   from { grid-template-rows: 0fr; }
   to   { grid-template-rows: 1fr; }
 }
+
+@keyframes finalStoryFadeOut {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes endingTitleFade {
+  0%, 100% { opacity: 0; }
+  28%, 72% { opacity: 1; }
+}
+@keyframes endingCreditsRoll {
+  from { transform: translateY(100vh); }
+  to   { transform: translateY(-100%); }
+}
+@keyframes endingThanksFade {
+  0%, 100% { opacity: 0; }
+  25%, 75% { opacity: 1; }
+}
+.ending-title-scene { animation: endingTitleFade 3600ms ease-in-out both; }
+.ending-credits-window { overflow: hidden; }
+.ending-credits-roll { animation: endingCreditsRoll 10500ms linear both; }
+.ending-thanks-scene { animation: endingThanksFade 4400ms ease-in-out both; }
 .menu-unroll {
   display: grid;
   grid-template-rows: 1fr;

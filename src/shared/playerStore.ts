@@ -577,7 +577,9 @@ export const usePlayerStore = create<PlayerState>()(
           : { seenDialogues: [...s.seenDialogues, dialogueId] })),
 
       acceptQuest: (questId) =>
-        set((s) => ({ questStatus: { ...s.questStatus, [questId]: "in_progress" } })),
+        set((s) => ((s.questStatus[questId] ?? "not_accepted") === "not_accepted"
+          ? { questStatus: { ...s.questStatus, [questId]: "in_progress" } }
+          : {})),
 
       /**
        * 재료 확인 → 차감 → 보상 지급 → 완료 처리 → 플래그 설정을 set() 한 번에 끝낸다.
@@ -589,16 +591,30 @@ export const usePlayerStore = create<PlayerState>()(
        */
       completeQuest: ({ questId, objective, rewards, setsFlag, monster }) => {
         const s = get();
-        // 가져가는 건 재료 목표뿐이다. 층을 도로 내리거나 잡은 몬스터를 도감에서 지울 수는 없다
+        // 재료와 건네는 완성품만 가져간다. 층·도감·장비 진행은 되돌릴 수 없다.
         const cost = objectiveCost(objective);
         const newMats = { ...s.materials };
-        if (cost) {
-          if ((newMats[cost.itemId] ?? 0) < cost.amount) return null;
-          newMats[cost.itemId] = (newMats[cost.itemId] ?? 0) - cost.amount;
-        }
-
         const newPotions = { ...s.potions };
         let newCraftedPotions = s.craftedPotions;
+        if (cost?.source === "material") {
+          if ((newMats[cost.itemId] ?? 0) < cost.amount) return null;
+          newMats[cost.itemId] = (newMats[cost.itemId] ?? 0) - cost.amount;
+        } else if (cost?.source === "potion") {
+          if ((newPotions[cost.itemId] ?? 0) < cost.amount) return null;
+          newPotions[cost.itemId] = (newPotions[cost.itemId] ?? 0) - cost.amount;
+
+          // 전투 재고와 가방 표시 스택은 항상 같은 수량을 유지한다.
+          const qualityOrder: Record<string, number> = { normal: 0, rare: 1, elite: 2 };
+          const target = newCraftedPotions
+            .filter((p) => p.itemId === cost.itemId && p.quantity > 0)
+            .sort((a, b) => (qualityOrder[a.quality] ?? 0) - (qualityOrder[b.quality] ?? 0))[0];
+          if (target) {
+            newCraftedPotions = newCraftedPotions
+              .map((p) => p.stackId === target.stackId ? { ...p, quantity: p.quantity - cost.amount } : p)
+              .filter((p) => p.quantity > 0);
+          }
+        }
+
         let newCraftedArtifacts = s.craftedArtifacts;
         let newParty = s.party;
         let newStorage = s.storage;
