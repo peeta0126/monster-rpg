@@ -223,10 +223,130 @@ canvas {
   0%, 100% { opacity: 0; }
   25%, 75% { opacity: 1; }
 }
-.ending-title-scene { animation: endingTitleFade 3600ms ease-in-out both; }
+@keyframes endingStoryPlayback {
+  0%      { opacity: 0; transform: scale(1); }
+  12.77%  { opacity: 1; transform: scale(1); }
+  85.11%  { opacity: 1; transform: scale(1.04); }
+  100%    { opacity: 0; transform: scale(1.04); }
+}
+@keyframes endingStoryFinalPlayback {
+  0%      { opacity: 0; transform: scale(1); }
+  12.77%  { opacity: 1; transform: scale(1); }
+  100%    { opacity: 1; transform: scale(1.04); }
+}
+@keyframes endingNarrationPlayback {
+  0%      { opacity: 0; transform: translate(-50%, 6px); }
+  12.77%  { opacity: 1; transform: translate(-50%, 0); }
+  85.11%  { opacity: 1; transform: translate(-50%, 0); }
+  100%    { opacity: 0; transform: translate(-50%, 0); }
+}
+@keyframes endingStoryReducedPlayback {
+  0%      { opacity: 0; }
+  12.77%  { opacity: 1; }
+  85.11%  { opacity: 1; }
+  100%    { opacity: 0; }
+}
+@keyframes endingStoryReducedFinalPlayback {
+  0%      { opacity: 0; }
+  12.77%  { opacity: 1; }
+  100%    { opacity: 1; }
+}
+@keyframes endingStoryBlackout {
+  0%, 35% { opacity: 0; }
+  100%    { opacity: 1; }
+}
+.ending-story-scene {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-shadow-900);
+}
+.ending-story-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 70%,
+    color-mix(in srgb, var(--color-shadow-900) 24%, transparent) 100%
+  );
+}
+.ending-story-scene::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  height: 18%;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--color-shadow-900) 88%, transparent)
+  );
+}
+.ending-story-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 700ms ease-in-out;
+}
+.ending-story-image-active {
+  z-index: 1;
+  opacity: 1;
+  animation: endingStoryPlayback 4.7s linear both;
+  transition-duration: 600ms;
+}
+.ending-story-final .ending-story-image-active {
+  animation-name: endingStoryFinalPlayback;
+}
+.ending-story-narration {
+  position: absolute;
+  bottom: clamp(0.4rem, 1.5vh, 0.85rem);
+  left: 50%;
+  z-index: 3;
+  width: min(42rem, calc(100% - 2rem));
+  padding: 0.65rem 1rem;
+  transform: translateX(-50%);
+  color: var(--color-cream-100);
+  font-size: clamp(0.72rem, 1.5vw, 1rem);
+  line-height: 1.8;
+  letter-spacing: 0.06em;
+  white-space: pre-line;
+  text-shadow: 0 2px 3px var(--color-shadow-900), 0 0 10px var(--color-shadow-900);
+  animation: endingNarrationPlayback 4.7s linear both;
+}
+.ending-story-blackout {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: var(--color-shadow-900);
+  animation: endingStoryBlackout 2800ms ease-in both;
+}
+.ending-story-outro .ending-story-image,
+.ending-story-outro .ending-story-narration {
+  animation: none;
+}
+.ending-title-scene { animation: endingTitleFade 3000ms ease-in-out both; }
 .ending-credits-window { overflow: hidden; }
 .ending-credits-roll { animation: endingCreditsRoll 10500ms linear both; }
-.ending-thanks-scene { animation: endingThanksFade 4400ms ease-in-out both; }
+.ending-thanks-scene { animation: endingThanksFade 4000ms ease-in-out both; }
+@media (max-aspect-ratio: 3 / 2), (min-aspect-ratio: 2 / 1) {
+  .ending-story-image { object-fit: contain; }
+}
 .menu-unroll {
   display: grid;
   grid-template-rows: 1fr;
@@ -237,6 +357,13 @@ canvas {
 }
 @media (prefers-reduced-motion: reduce) {
   .menu-unroll { animation: none; }
+  .ending-story-image {
+    transform: none;
+    transition: opacity 600ms ease-in-out;
+  }
+  .ending-story-image-active { animation-name: endingStoryReducedPlayback; }
+  .ending-story-final .ending-story-image-active { animation-name: endingStoryReducedFinalPlayback; }
+  .ending-story-narration { animation-name: endingStoryReducedPlayback; }
 }
 
 /* ── 슬라이더 (개수 선택 · 음량) ─────────────────────────────────────────────
