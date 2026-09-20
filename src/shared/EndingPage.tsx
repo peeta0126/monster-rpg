@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../auth/authStore";
 import { usePlayerStore } from "./playerStore";
+import { MONSTER_IMAGE_MAP } from "../monster/monsterImages";
 import { useBgm, BGM } from "./audio";
 
 type EndingScene = "black" | "story" | "end" | "credits" | "thanks";
@@ -138,92 +139,43 @@ const ENDING_STORY_SCENES: EndingStoryScene[] = [
 /**
  * 크레딧.
  *
- * 이 게임이 어떤 게임인지 설명하는 자리가 아니다 — 그건 방금 다섯 시간 동안 본 사람이
- * 제일 잘 안다. 여기 적는 건 **어떻게 만들어졌는가**다. 무엇을 손으로 세었고, 무엇을
- * 일부러 안 했고, 어디서 한 번 무너졌는지.
+ * 크레딧은 글이 아니라 명단이다. 한 카드에 역할 하나, 그 아래 그 일을 한 것 하나.
+ * 설명하려 들면 그 순간 크레딧이 아니라 소개문이 된다.
  *
- * 그래서 수치는 규모 자랑이 아니라 품으로만 적는다("속성 여덟" X, "예순네 칸을 손으로" O).
- * 표를 늘렸으면 여기 숫자도 같이 고칠 것.
+ * 글자만으로 채우지 않는다 — 여기서 제일 오래 보게 되는 건 얼굴과 동료다.
+ * 마지막 카드 둘(YOUR PARTY · PLAYED BY)은 이 세이브에서 꺼내 그리므로
+ * 사람마다 다르게 나온다. 그게 이 크레딧이 그 사람 것인 이유다.
  */
-interface EndingCreditsSection {
+const CREDIT_ROLES = [
+  "DIRECTION · GAME DESIGN",
+  "SCENARIO · BATTLE · MONSTERS",
+  "CRAFTING · PIXEL ART · INTERFACE",
+  "PROGRAMMING",
+];
+
+interface EndingCastMember {
+  name: string;
   title: string;
-  subtitle?: string;
-  lines: string[];
+  portrait: string;
 }
 
-const ENDING_CREDITS: EndingCreditsSection[] = [
-  {
-    title: "기획 · 개발",
-    lines: ["건국대학교 컴퓨터공학과 졸업작품"],
-  },
-  {
-    title: "STORY",
-    subtitle: "스토리",
-    lines: [
-      "삼백 줄 남짓의 대사를 한 줄씩 썼습니다",
-      "이장 오리온과 탑의 문지기 바로스는",
-      "같은 일을 끝까지 서로 다르게 말하도록 말투를 따로 두었습니다",
-      "아홉 개의 부탁이 탑을 오르는 속도를 잡습니다",
-    ],
-  },
-  {
-    title: "BATTLE",
-    subtitle: "전투",
-    lines: [
-      "속성 상성 예순네 칸을 손으로 채웠습니다",
-      "약점이 겹치면 한 속성이 계열을 통째로 지워 버려서",
-      "두 속성을 가진 몬스터는 셋만 남겼습니다",
-      "층마다 승률을 재고 다시 맞추기를 반복했습니다",
-    ],
-  },
-  {
-    title: "MONSTERS",
-    subtitle: "몬스터",
-    lines: [
-      "스물여섯 마리를 그리고 진화로 이었습니다",
-      "서른일곱 가지 기술을 누가 언제 배우는지 표에 적었습니다",
-      "레벨로 밀어붙이는 길은 일부러 막아 두었습니다",
-    ],
-  },
-  {
-    title: "CRAFTING",
-    subtitle: "제작",
-    lines: [
-      "모으고, 만들고, 강화하고, 다시 부수는 고리를 짰습니다",
-      "제작대마다 다른 미니게임을 붙였습니다",
-      "마지막 한 병에만 레시피를 주지 않았습니다",
-    ],
-  },
-  {
-    title: "PIXEL WORLD",
-    subtitle: "픽셀 월드",
-    lines: [
-      "걸어 다니는 두 무대의 테두리를 선분 쉰한 줄로 둘렀습니다",
-      "한 줄만 열려도 사람은 지붕 위로 걸어 나갑니다",
-      "실제로 한 번 나갔고, 그 틈은 12픽셀이었습니다",
-    ],
-  },
-  {
-    title: "INTERFACE",
-    subtitle: "인터페이스",
-    lines: [
-      "픽셀 폰트가 깨지지 않도록 글자를 열두 배수에만 놓았습니다",
-      "색은 한 벌의 표에서만 꺼내 썼습니다",
-      "창이 넓어지면 글자가 아니라 칸이 늘어납니다",
-    ],
-  },
-  {
-    title: "MUSIC",
-    subtitle: "음악",
-    lines: [
-      "「탑의 문 앞에서」 — 타이틀, 그리고 이 엔딩",
-      "「돌아올 곳」 — 베이스캠프",
-      "「잎사귀 사이로」 — 숲",
-      "「모루와 불씨」 — 제작 공방",
-      "「한 층 더」 — 탑의 전투",
-      "「문 너머의 것」 — 보스",
-    ],
-  },
+const ENDING_CAST: EndingCastMember[] = [
+  { name: "오리온", title: "이장",        portrait: "/assets/player/Orion_portrait.webp" },
+  { name: "바로스", title: "탑의 문지기", portrait: "/assets/player/Baros_portrait.webp" },
+];
+
+interface EndingTrack {
+  title: string;
+  where: string;
+}
+
+const CREDIT_TRACKS: EndingTrack[] = [
+  { title: "탑의 문 앞에서", where: "타이틀 · 엔딩" },
+  { title: "돌아올 곳",      where: "베이스캠프" },
+  { title: "잎사귀 사이로",  where: "숲" },
+  { title: "모루와 불씨",    where: "제작 공방" },
+  { title: "한 층 더",       where: "탑의 전투" },
+  { title: "문 너머의 것",   where: "보스" },
 ];
 
 const OPENING_BLACK_DURATION = 1000;
@@ -245,6 +197,10 @@ export default function EndingPage() {
   const navigate = useNavigate();
   const username = useAuthStore((s) => s.username);
   const setStoryFlag = usePlayerStore((s) => s.setStoryFlag);
+  // 마지막 카드 둘은 이 세이브를 그대로 읽는다. 사람마다 다른 크레딧이 되는 자리다.
+  const party = usePlayerStore((s) => s.party);
+  const bestFloor = usePlayerStore((s) => s.bestFloor);
+  const dexCaught = usePlayerStore((s) => s.dexCaught);
   const [scene, setScene] = useState<EndingScene>("black");
   const [storyIndex, setStoryIndex] = useState(0);
   const [storyPhase, setStoryPhase] = useState<StoryPhase>("entering");
@@ -257,7 +213,14 @@ export default function EndingPage() {
   // 첫 컷 전에 모든 고유 이미지를 받아 두어 장면 사이에 자산 로딩이 끼지 않게 한다.
   useEffect(() => {
     let cancelled = false;
-    const sources = [...new Set(ENDING_STORY_SCENES.map((storyScene) => storyScene.image))];
+    // 크레딧의 얼굴과 동료도 같이 받아 둔다. 굴러가는 도중에 도착하면 그 줄만 늦게 뜬다.
+    const sources = [...new Set([
+      ...ENDING_STORY_SCENES.map((storyScene) => storyScene.image),
+      ...ENDING_CAST.map((member) => member.portrait),
+      // 파티는 여기서 한 번만 읽는다. 의존성에 걸면 세이브가 늦게 들어올 때 이 effect 가
+      // 다시 돌면서 이미 지나간 장면을 처음부터 다시 연다.
+      ...usePlayerStore.getState().party.map((m) => MONSTER_IMAGE_MAP[m.id]).filter(Boolean),
+    ])];
     const images = sources.map(() => new Image());
     const preload = images.map(
       (image, index) => new Promise<void>((resolve) => {
@@ -438,26 +401,96 @@ export default function EndingPage() {
       {scene === "credits" && (
         <div className="ending-credits-window mx-auto h-full max-w-2xl px-6 text-sand-200">
           <div
-            className="ending-credits-roll space-y-16"
+            className="ending-credits-roll space-y-24"
             style={{ animationDuration: `${CREDITS_DURATION}ms` }}
           >
-            <section className="space-y-5">
+            <section className="space-y-4">
               <p className="text-pixel-md tracking-widest text-ember-500">MONSTER RPG</p>
               <p className="text-pixel-sm text-earth-400">무한의 탑 이야기</p>
             </section>
-            {ENDING_CREDITS.map((section) => (
-              <section key={section.title} className="space-y-4">
-                <p className="text-title-sm text-sand-300">{section.title}</p>
-                {section.subtitle && (
-                  <p className="text-pixel-sm text-earth-400">{section.subtitle}</p>
-                )}
+
+            <section className="space-y-6">
+              <div className="space-y-2">
+                {CREDIT_ROLES.map((role) => (
+                  <p key={role} className="text-pixel-sm tracking-widest text-earth-400">{role}</p>
+                ))}
+              </div>
+              <p className="text-title-sm text-cream-100">건국대학교 컴퓨터공학과 졸업작품</p>
+            </section>
+
+            <section className="space-y-8">
+              <div className="space-y-2">
+                <p className="text-pixel-sm tracking-widest text-earth-400">CAST</p>
+                <p className="text-pixel-sm text-sand-300">등장인물</p>
+              </div>
+              <div className="flex items-start justify-center gap-12">
+                {ENDING_CAST.map((member) => (
+                  <div key={member.name} className="space-y-3">
+                    <img
+                      src={member.portrait}
+                      alt={member.name}
+                      className="mx-auto h-32 w-32 object-contain"
+                    />
+                    <p className="text-pixel-sm text-earth-400">{member.title}</p>
+                    <p className="text-title-sm text-cream-100">{member.name}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="space-y-8">
+              <div className="space-y-2">
+                <p className="text-pixel-sm tracking-widest text-earth-400">MUSIC</p>
+                <p className="text-pixel-sm text-sand-300">음악</p>
+              </div>
+              <div className="mx-auto grid max-w-md gap-3">
+                {CREDIT_TRACKS.map((track) => (
+                  <div key={track.title} className="grid grid-cols-2 items-baseline gap-4">
+                    <p className="text-pixel-sm text-right text-cream-100">「{track.title}」</p>
+                    <p className="text-pixel-sm text-left text-earth-400">{track.where}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {party.length > 0 && (
+              <section className="space-y-8">
                 <div className="space-y-2">
-                  {section.lines.map((line) => (
-                    <p key={line} className="text-pixel-sm leading-relaxed">{line}</p>
+                  <p className="text-pixel-sm tracking-widest text-earth-400">YOUR PARTY</p>
+                  <p className="text-pixel-sm text-sand-300">끝까지 함께 오른 동료</p>
+                </div>
+                <div className="flex items-end justify-center gap-10">
+                  {party.map((m) => (
+                    <div key={m.uid} className="space-y-3">
+                      <img
+                        src={MONSTER_IMAGE_MAP[m.id]}
+                        alt={m.name}
+                        className="mx-auto h-32 w-32 object-contain"
+                      />
+                      <p className="text-title-sm text-cream-100">{m.nickname || m.name}</p>
+                      <p className="text-pixel-sm text-earth-400">Lv.{m.level}</p>
+                    </div>
                   ))}
                 </div>
               </section>
-            ))}
+            )}
+
+            <section className="space-y-6">
+              <p className="text-pixel-sm tracking-widest text-earth-400">PLAYED BY</p>
+              <p className="text-title-sm text-cream-100">{playerDisplayName}</p>
+              <div className="mx-auto grid max-w-md gap-3">
+                {[
+                  ["오른 층", `${bestFloor}층`],
+                  ["만난 몬스터", `${dexCaught.length}종`],
+                ].map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-2 items-baseline gap-4">
+                    <p className="text-pixel-sm text-right text-earth-400">{label}</p>
+                    <p className="text-pixel-sm text-left text-sand-300">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <p className="text-pixel-sm text-earth-400">— 끝 —</p>
           </div>
         </div>
