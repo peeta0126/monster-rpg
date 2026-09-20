@@ -223,37 +223,13 @@ canvas {
   0%, 100% { opacity: 0; }
   25%, 75% { opacity: 1; }
 }
-@keyframes endingStoryPlayback {
-  0%      { opacity: 0; transform: scale(1); }
-  12.77%  { opacity: 1; transform: scale(1); }
-  85.11%  { opacity: 1; transform: scale(1.04); }
-  100%    { opacity: 0; transform: scale(1.04); }
+@keyframes endingStoryFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-@keyframes endingStoryFinalPlayback {
-  0%      { opacity: 0; transform: scale(1); }
-  12.77%  { opacity: 1; transform: scale(1); }
-  100%    { opacity: 1; transform: scale(1.04); }
-}
-@keyframes endingNarrationPlayback {
-  0%      { opacity: 0; transform: translate(-50%, 6px); }
-  12.77%  { opacity: 1; transform: translate(-50%, 0); }
-  85.11%  { opacity: 1; transform: translate(-50%, 0); }
-  100%    { opacity: 0; transform: translate(-50%, 0); }
-}
-@keyframes endingStoryReducedPlayback {
-  0%      { opacity: 0; }
-  12.77%  { opacity: 1; }
-  85.11%  { opacity: 1; }
-  100%    { opacity: 0; }
-}
-@keyframes endingStoryReducedFinalPlayback {
-  0%      { opacity: 0; }
-  12.77%  { opacity: 1; }
-  100%    { opacity: 1; }
-}
-@keyframes endingStoryBlackout {
-  0%, 35% { opacity: 0; }
-  100%    { opacity: 1; }
+@keyframes endingDialogueAppear {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .ending-story-scene {
   position: relative;
@@ -265,7 +241,28 @@ canvas {
   justify-content: center;
   background: var(--color-shadow-900);
 }
-.ending-story-scene::before {
+.ending-story-frame {
+  --ending-image-scale: 1;
+  position: relative;
+  width: min(100vw, calc(100vh * 16 / 9));
+  max-width: 100vw;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--color-shadow-900);
+  box-shadow: 0 0 60px color-mix(in srgb, var(--color-shadow-900) 90%, transparent);
+  opacity: 1;
+}
+.ending-story-entering .ending-story-frame {
+  animation: endingStoryFadeIn 900ms ease-out both;
+}
+.ending-story-leaving .ending-story-frame {
+  opacity: 0;
+  transition: opacity 900ms ease-in;
+}
+.ending-story-interlude .ending-story-frame {
+  opacity: 0;
+}
+.ending-story-frame::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -273,79 +270,120 @@ canvas {
   pointer-events: none;
   background: radial-gradient(
     ellipse at center,
-    transparent 70%,
-    color-mix(in srgb, var(--color-shadow-900) 24%, transparent) 100%
+    transparent 68%,
+    color-mix(in srgb, var(--color-shadow-900) 22%, transparent) 100%
   );
 }
-.ending-story-scene::after {
+.ending-story-flashback .ending-story-frame::after {
   content: "";
   position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
   z-index: 2;
-  height: 18%;
   pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in srgb, var(--color-shadow-900) 88%, transparent)
-  );
+  background: color-mix(in srgb, var(--color-shadow-900) 7%, transparent);
 }
 .ending-story-image {
-  position: absolute;
-  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
-  opacity: 0;
-  transform: scale(1.04);
-  transition: opacity 700ms ease-in-out;
+  object-fit: contain;
+  object-position: top center;
+  transform: scale(var(--ending-image-scale));
+  transform-origin: top center;
 }
-.ending-story-image-active {
-  z-index: 1;
-  opacity: 1;
-  animation: endingStoryPlayback 4.7s linear both;
-  transition-duration: 600ms;
-}
-.ending-story-final .ending-story-image-active {
-  animation-name: endingStoryFinalPlayback;
-}
-.ending-story-narration {
+.ending-flashback-label {
   position: absolute;
-  bottom: clamp(0.4rem, 1.5vh, 0.85rem);
-  left: 50%;
   z-index: 3;
-  width: min(42rem, calc(100% - 2rem));
-  padding: 0.65rem 1rem;
-  transform: translateX(-50%);
-  color: var(--color-cream-100);
-  font-size: clamp(0.72rem, 1.5vw, 1rem);
-  line-height: 1.8;
-  letter-spacing: 0.06em;
-  white-space: pre-line;
-  text-shadow: 0 2px 3px var(--color-shadow-900), 0 0 10px var(--color-shadow-900);
-  animation: endingNarrationPlayback 4.7s linear both;
+  top: clamp(0.65rem, 2vw, 1.4rem);
+  left: clamp(0.65rem, 2vw, 1.4rem);
+  margin: 0;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--color-sand-300) 55%, transparent);
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--color-shadow-900) 76%, transparent);
+  color: var(--color-sand-200);
+  font-size: clamp(0.62rem, 1.2vw, 0.82rem);
+  letter-spacing: 0.15em;
+  text-shadow: 0 2px 3px var(--color-shadow-900);
 }
-.ending-story-blackout {
+.ending-dialogue-panel {
   position: absolute;
-  inset: 0;
-  z-index: 4;
+  z-index: 5;
+  top: 78%;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: minmax(0, clamp(6rem, 19%, 12rem)) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+  column-gap: clamp(0.7rem, 1.8vw, 1.25rem);
+  margin: 0;
+  padding: clamp(0.55rem, 1.4vw, 1rem) clamp(0.8rem, 3vw, 2.5rem) clamp(1.35rem, 2.8vw, 1.8rem);
+  border-top: 3px solid var(--color-ember-700);
+  /* 1~4장 원본에 들어 있는 옛 대화 글자가 새 대사 뒤로 비치지 않게 완전히 가린다. */
   background: var(--color-shadow-900);
-  animation: endingStoryBlackout 2800ms ease-in both;
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--color-sand-300) 45%, transparent);
+  text-align: left;
+  animation: endingDialogueAppear 260ms ease-out both;
 }
-.ending-story-outro .ending-story-image,
-.ending-story-outro .ending-story-narration {
-  animation: none;
+.ending-dialogue-speaker {
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+  padding-right: clamp(0.5rem, 1.2vw, 0.9rem);
+  border-right: 1px solid color-mix(in srgb, var(--color-ember-500) 55%, transparent);
+  color: var(--color-ember-500);
+  font-size: clamp(0.72rem, 1.7vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ending-dialogue-text {
+  grid-column: 2;
+  min-width: 0;
+  color: var(--color-cream-100);
+  font-size: clamp(0.72rem, 1.6vw, 1.08rem);
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 3px var(--color-shadow-900);
+  overflow-wrap: break-word;
+}
+.ending-dialogue-hint {
+  position: absolute;
+  right: clamp(0.8rem, 3vw, 2.5rem);
+  bottom: clamp(0.35rem, 0.8vw, 0.6rem);
+  color: var(--color-earth-400);
+  font-size: clamp(0.55rem, 1vw, 0.72rem);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 .ending-title-scene { animation: endingTitleFade 3000ms ease-in-out both; }
 .ending-credits-window { overflow: hidden; }
 .ending-credits-roll { animation: endingCreditsRoll 10500ms linear both; }
 .ending-thanks-scene { animation: endingThanksFade 4000ms ease-in-out both; }
-@media (max-aspect-ratio: 3 / 2), (min-aspect-ratio: 2 / 1) {
-  .ending-story-image { object-fit: contain; }
+@media (max-width: 640px) {
+  .ending-dialogue-panel {
+    top: 76%;
+    grid-template-columns: minmax(0, 20%) minmax(0, 1fr);
+    column-gap: 0.6rem;
+    padding: 0.45rem 0.7rem 1.2rem;
+  }
+  .ending-dialogue-speaker {
+    padding-right: 0.5rem;
+    font-size: clamp(0.6rem, 3vw, 0.78rem);
+  }
+  .ending-dialogue-text {
+    font-size: clamp(0.58rem, 2.8vw, 0.76rem);
+    line-height: 1.4;
+  }
+  .ending-dialogue-hint {
+    right: 0.7rem;
+    bottom: 0.3rem;
+  }
 }
 .menu-unroll {
   display: grid;
@@ -357,13 +395,8 @@ canvas {
 }
 @media (prefers-reduced-motion: reduce) {
   .menu-unroll { animation: none; }
-  .ending-story-image {
-    transform: none;
-    transition: opacity 600ms ease-in-out;
-  }
-  .ending-story-image-active { animation-name: endingStoryReducedPlayback; }
-  .ending-story-final .ending-story-image-active { animation-name: endingStoryReducedFinalPlayback; }
-  .ending-story-narration { animation-name: endingStoryReducedPlayback; }
+  .ending-story-entering .ending-story-frame,
+  .ending-dialogue-panel { animation: none; }
 }
 
 /* ── 슬라이더 (개수 선택 · 음량) ─────────────────────────────────────────────

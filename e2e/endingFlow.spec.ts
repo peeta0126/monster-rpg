@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PLAYER_KEY = "monster-rpg-player";
 const AUTH = JSON.stringify({
-  state: { token: null, username: null, isGuest: true, isDev: false },
+  state: { token: null, username: "very_long_player_name_123", isGuest: true, isDev: false },
   version: 0,
 });
 
@@ -73,6 +73,68 @@ function readState(page: Page) {
   return page.evaluate((playerKey) => JSON.parse(localStorage.getItem(playerKey as string)!).state, PLAYER_KEY);
 }
 
+const ENDING_STORY = [
+  { id: "reunion", first: "...여긴...", last: "처음부터 이야기해 드릴게요.", lineCount: 8 },
+  { id: "the-beginning", first: "모든 건 그날부터 시작됐어요.", last: "어떻게 해야 어머니를 다시 깨울 수 있는지도...", lineCount: 5 },
+  { id: "first-companion", first: "그때 촌장님이 저를 도와주셨어요.", last: "하지만 이 아이가 계속 제 곁에 있어 줬어요.", lineCount: 5 },
+  { id: "the-journey", first: "그 뒤로 정말 많은 곳을 돌아다녔어요.", last: "그러면서 조금씩 강해졌어요.", lineCount: 7 },
+  { id: "infinite-tower", first: "그리고 결국...", last: "꼭 어머니를 다시 만나고 싶었으니까.", lineCount: 12 },
+  { id: "home-again", first: "...그런 일이 있었구나.", last: "다녀왔어요, 어머니.", lineCount: 7 },
+] as const;
+
+async function playEndingStory(page: Page) {
+  const story = page.getByTestId("ending-scene-story");
+
+  for (let sceneIndex = 0; sceneIndex < ENDING_STORY.length; sceneIndex++) {
+    const expected = ENDING_STORY[sceneIndex];
+    await expect(story).toHaveAttribute("data-story-id", expected.id, { timeout: 5_000 });
+    await expect(story).toHaveAttribute("data-story-phase", "dialogue", { timeout: 3_000 });
+    await expect(page.locator(".ending-dialogue-text")).toHaveText(expected.first);
+    let firstAdvance = 0;
+
+    if (sceneIndex === 0) {
+      await expect(page.locator(".ending-dialogue-speaker")).toHaveText("어머니");
+      await page.keyboard.press("Enter");
+      await page.waitForTimeout(200);
+      await expect(page.locator(".ending-dialogue-speaker")).toHaveText("very_long_player_name_123");
+      await expect(page.locator(".ending-dialogue-speaker")).toHaveAttribute("title", "very_long_player_name_123");
+      const layout = await page.evaluate(() => {
+        const frame = document.querySelector<HTMLElement>(".ending-story-frame")!.getBoundingClientRect();
+        const panel = document.querySelector<HTMLElement>(".ending-dialogue-panel")!.getBoundingClientRect();
+        const speaker = document.querySelector<HTMLElement>(".ending-dialogue-speaker")!.getBoundingClientRect();
+        const text = document.querySelector<HTMLElement>(".ending-dialogue-text")!.getBoundingClientRect();
+        return {
+          panelRatio: panel.height / frame.height,
+          columnsDoNotOverlap: speaker.right <= text.left,
+          pageDoesNotOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        };
+      });
+      expect(layout.panelRatio).toBeGreaterThanOrEqual(0.18);
+      expect(layout.panelRatio).toBeLessThanOrEqual(0.24);
+      expect(layout.columnsDoNotOverlap).toBe(true);
+      expect(layout.pageDoesNotOverflow).toBe(true);
+      firstAdvance = 1;
+    }
+
+    // 마지막 현재 장면은 최종 대사를 2.6초 보여 준 뒤 스스로 암전한다.
+    const advances = sceneIndex === ENDING_STORY.length - 1
+      ? expected.lineCount - 1
+      : expected.lineCount;
+    for (let line = firstAdvance; line < advances; line++) {
+      if (line % 3 === 0) await page.keyboard.press("Enter");
+      else if (line % 3 === 1) await page.keyboard.press("Space");
+      else await story.click({ position: { x: 20, y: 20 } });
+      await page.waitForTimeout(200);
+    }
+
+    if (sceneIndex === ENDING_STORY.length - 1) {
+      await expect(page.locator(".ending-dialogue-text")).toHaveText(expected.last);
+    }
+  }
+
+  await expect(page.getByTestId("ending-scene-end")).toBeVisible({ timeout: 5_000 });
+}
+
 test("50층 클리어만으로 /ending에 직접 들어갈 수 없다", async ({ page }) => {
   await open(page, save({ materials: { ormr_essence: 1 }, seenDialogues: [] }), "/ending");
   await expect(page).toHaveURL(/\/$/);
@@ -90,7 +152,8 @@ test("치료약을 제작했어도 전달 전에는 /ending에 직접 들어갈 
   await expect(page).toHaveURL(/\/$/);
 });
 
-test("치료약 전달의 마지막 대사 뒤에만 엔딩이 시작되고 캠프로 복귀한다", async ({ page }) => {
+test("치료약 전달 뒤 회상 엔딩 전체가 재생되고 캠프로 복귀한다", async ({ page }) => {
+  test.setTimeout(90_000);
   await open(page, save({
     potions: { mothers_cure_potion: 1 },
     craftedPotions: [{
@@ -119,8 +182,11 @@ test("치료약 전달의 마지막 대사 뒤에만 엔딩이 시작되고 캠�
   expect(delivered.storyFlags.tower_cleared).toBe(false);
 
   await expect(page).toHaveURL(/\/ending$/);
-  await expect(page.getByText("THE END")).toBeVisible();
+  await expect(page.getByTestId("ending-scene-story")).toHaveAttribute("data-story-id", "reunion", { timeout: 5_000 });
+  await expect(page.locator(".ending-story-image")).toHaveAttribute("src", "/assets/ending/스토리 0장.png");
   expect((await readState(page)).storyFlags.tower_cleared).toBe(true);
+  await playEndingStory(page);
+  await expect(page.getByText("THE END")).toBeVisible();
   await expect(page.getByTestId("ending-scene-credits")).toBeVisible({ timeout: 6_000 });
   await expect(page.getByText("SPECIAL THANKS")).toBeVisible();
   await expect(page.getByText("THANK YOU FOR PLAYING")).toBeVisible({ timeout: 13_000 });
@@ -142,5 +208,7 @@ test("tower_cleared 세이브는 엔딩 다시보기에 바로 들어갈 수 있
     },
   }), "/ending");
   await expect(page).toHaveURL(/\/ending$/);
-  await expect(page.getByText("THE END")).toBeVisible();
+  await expect(page.getByTestId("ending-scene-story")).toHaveAttribute("data-story-id", "reunion", { timeout: 5_000 });
+  await expect(page.getByText("...여긴...")).toBeVisible({ timeout: 3_000 });
+  expect((await readState(page)).storyFlags.tower_cleared).toBe(true);
 });
