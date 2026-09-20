@@ -66,7 +66,7 @@ async function talkTo(page: Page, npc: keyof typeof NPC_AT) {
     g.scene.getScene("BaseCampScene").player.setPosition(px, py + 60);
   }, [x, y] as const);
   await page.waitForTimeout(150);
-  await page.keyboard.press("x");   // 상호작용 키는 게임 전체가 X 하나다
+  await page.keyboard.press("Space");   // 상호작용 키는 게임 전체가 Space 하나다
   await page.waitForTimeout(250);
 }
 
@@ -84,7 +84,7 @@ async function readThrough(page: Page, maxLines = 20): Promise<string[]> {
     const dialogue = page.locator("img[alt='Orion'], img[alt='Baros']").first();
     if (!(await dialogue.isVisible().catch(() => false))) break;
     lines.push((await page.locator("p.text-cream-100").last().innerText()).trim());
-    await page.keyboard.press("x");   // 대사 넘기기도 X
+    await page.keyboard.press("Space");   // 대사 넘기기도 Space
     await page.waitForTimeout(120);
   }
   return lines;

@@ -1239,7 +1239,7 @@ export default function BaseCampPage() {
   }, [npcDialogue, dialogueLineIndex, closeNpcDialogue]);
 
   /**
-   * 화면 위에 무언가 떠 있으면 캔버스의 X 를 잠근다.
+   * 화면 위에 무언가 떠 있으면 캔버스의 Space 를 잠근다.
    * 떠난 뒤에도 잠긴 채로 남으면 다시 들어왔을 때 아무 키도 안 먹으므로 반드시 푼다.
    */
   const overlayOpen = endingTransition || !!npcDialogue || menuOpen || dexOpen || questLogOpen
@@ -1251,9 +1251,9 @@ export default function BaseCampPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // 대사 넘기기도 X 다. Space 로 두면 걷다가 튀어나온 대사를 손이 먼저 넘긴다 —
-      // 이 게임에서 이야기가 나오는 자리가 여기뿐이라 제일 아까운 자리다.
-      if (e.code === "KeyX" && npcDialogue) { e.preventDefault(); advanceNpcDialogue(); return; }
+      // 대사 넘기기도 Space 다. 브라우저에서 Space 는 스크롤과 '초점 잡힌 버튼
+      // 누르기'를 겸하니, 이 화면에서 받아 쓸 때는 기본 동작을 같이 막는다.
+      if (e.code === "Space" && npcDialogue) { e.preventDefault(); advanceNpcDialogue(); return; }
       if (e.key === "Tab") {
         if (npcDialogue || towerPayload || dexOpen || questLogOpen) return;
         e.preventDefault();
@@ -1308,7 +1308,7 @@ export default function BaseCampPage() {
           <ControlHint
             items={[
               { keys: "WASD / 방향키", action: "이동" },
-              { keys: "X", action: "상호작용" },
+              { keys: "SPACE", action: "상호작용" },
               { keys: "TAB", action: "메뉴" },
             ]}
           />
@@ -1395,8 +1395,8 @@ export default function BaseCampPage() {
               </div>
               <p className="text-earth-400 text-pixel-sm self-end">
                 {dialogueLineIndex < npcDialogue.lines.length - 1
-                  ? "클릭 / X: 다음  ·  ESC: 닫기"
-                  : "클릭 / X: 닫기  ·  ESC: 닫기"}
+                  ? "클릭 / SPACE: 다음  ·  ESC: 닫기"
+                  : "클릭 / SPACE: 닫기  ·  ESC: 닫기"}
               </p>
             </div>
           </div>

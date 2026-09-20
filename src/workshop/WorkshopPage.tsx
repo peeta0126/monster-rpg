@@ -200,9 +200,10 @@ export default function WorkshopPage() {
         return;
       }
       if (menuOpenRef.current) return;
-      // 상호작용은 게임 전체가 X 다(캠프도 같다). Space 는 손이 너무 쉽게 눌러서,
-      // 읽으라고 띄운 글을 그대로 넘겨 버린다.
-      if (e.code === "KeyX") {
+      // 상호작용은 게임 전체가 Space 하나다(캠프도 같다). 브라우저에서 Space 는
+      // 스크롤과 '초점 잡힌 버튼 누르기'를 겸하므로 여기서 반드시 막는다 — 안 막으면
+      // 메뉴를 닫은 손이 그 버튼을 한 번 더 누른다.
+      if (e.code === "Space") {
         e.preventDefault();
         if (activeStationRef.current) return;   // 모달이 열려 있으면 상호작용 차단
         const hit = findInteractable(posRef.current);
@@ -615,13 +616,13 @@ export default function WorkshopPage() {
       {/* 늘 떠 있는 것들은 그림 옆 어두운 띠로 내보낸다. 띠 폭은 창 비율이 정하므로
           패널 폭도 거기 맞춘다 — 폭을 박으면 좁은 화면에서 그림을 파고든다. */}
       <StageRail stage={stage} viewportW={viewport.w} side="left">
-        {/* 뒤로가기 버튼은 뺐다. 나가는 길은 문 앞 X 와 메뉴 두 곳이다 —
+        {/* 뒤로가기 버튼은 뺐다. 나가는 길은 문 앞 Space 와 메뉴 두 곳이다 —
             둘 다 두는 건 의도다. 걷는 사람과 메뉴를 쓰는 사람의 손버릇이 다르다. */}
         <div className="pointer-events-none mt-auto">
           <ControlHint
             items={[
               { keys: "WASD / 방향키", action: "이동" },
-              { keys: "X", action: "상호작용" },
+              { keys: "SPACE", action: "상호작용" },
               { keys: "TAB", action: "메뉴" },
             ]}
           />

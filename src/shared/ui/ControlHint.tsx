@@ -13,7 +13,7 @@ export interface ControlHintItem {
  * 늘어놓지 않고 **키와 동작을 위아래로** 쌓는다 — 한 줄로 두면 제일 좁은 띠에서
  * "WASD / 방향키" 와 "이동" 사이가 저 혼자 끊겨 읽는 사람이 두 항목으로 본다.
  *
- * 베이스캠프와 공방이 같은 부품을 쓴다. 상호작용 키만 다르다(E / SPACE).
+ * 베이스캠프와 공방이 같은 부품을 쓴다. 조작은 둘이 똑같다.
  */
 export function ControlHint({ items }: { items: ControlHintItem[] }) {
   return (
