@@ -215,12 +215,13 @@ test.describe("audio:", () => {
     await page.keyboard.down("ArrowRight");
     await page.waitForTimeout(150);
     await page.keyboard.up("ArrowRight");
-    await expect.poll(() => page.evaluate(() => {
-      const g = (window as unknown as {
-        __phaserGame: { scene: { getScene: (k: string) => { children: { getByName: (n: string) => { text: string } | null } } } };
-      }).__phaserGame;
-      return g.scene.getScene("BaseCampScene").children.getByName("interactHint")?.text ?? "";
-    }), { timeout: 10_000, message: "숲 입구 안내가 안 떴다" }).toContain("숲");
+    await expect.poll(
+      async () => {
+        const badge = page.getByTestId("interaction-prompt");
+        return (await badge.count()) > 0 ? await badge.first().innerText() : "";
+      },
+      { timeout: 10_000, message: "숲 입구 안내가 안 떴다" },
+    ).toContain("숲");
     await page.keyboard.press("Space");   // 상호작용 키는 게임 전체가 Space 하나다
     await watch(900, "숲으로 걸어 들어가는 중");
     await waitForTrack(page, "forest");

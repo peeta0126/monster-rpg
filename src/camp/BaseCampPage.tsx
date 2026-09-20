@@ -11,6 +11,7 @@ import type { OwnedMonster } from "../shared/playerStore";
 import { getNextObjective } from "../shared/nextObjective";
 import { ObjectiveBanner } from "../shared/ui/ObjectiveBanner";
 import { StageHud, StageRail } from "../shared/ui/StageHud";
+import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { ControlHint } from "../shared/ui/ControlHint";
 import { useViewportSize } from "../shared/ui/useViewportSize";
 import { cameraRect } from "../shared/ui/stageRect";
@@ -1074,6 +1075,8 @@ export default function BaseCampPage() {
   const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string } | null>(null);
   const [healed, setHealed] = useState(false);
   const [npcDialogue, setNpcDialogue]   = useState<NpcDialoguePayload | null>(null);
+  /** 지금 닿아 있는 대상의 이름. 씬이 바뀔 때만 보내준다 */
+  const [interactHint, setInteractHint] = useState<string | null>(null);
   const [endingTransition, setEndingTransition] = useState(false);
   /** 방금 받은 것들. 대사가 끝난 뒤 한 장 띄운다 */
   const [rewardScreen, setRewardScreen] = useState<{ title: string; items: RewardDisplay[] } | null>(null);
@@ -1163,16 +1166,20 @@ export default function BaseCampPage() {
       setDialogueLineIndex(0);
     };
 
+    const handleInteractHint = (label: string | null) => setInteractHint(label);
+
     gameEvents.on(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
     gameEvents.on(GAME_EVENT.ENTER_FOREST, handleEnterForest);
     gameEvents.on(GAME_EVENT.ENTER_HOUSING, handleEnterWorkshop);
     gameEvents.on(GAME_EVENT.SHOW_NPC_DIALOGUE, handleShowNpcDialogue);
+    gameEvents.on(GAME_EVENT.CAMP_INTERACT_HINT, handleInteractHint);
 
     return () => {
       gameEvents.off(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
       gameEvents.off(GAME_EVENT.ENTER_FOREST, handleEnterForest);
       gameEvents.off(GAME_EVENT.ENTER_HOUSING, handleEnterWorkshop);
       gameEvents.off(GAME_EVENT.SHOW_NPC_DIALOGUE, handleShowNpcDialogue);
+      gameEvents.off(GAME_EVENT.CAMP_INTERACT_HINT, handleInteractHint);
       game.destroy(true);
     };
   }, [navigate, completeQuest]);
@@ -1299,6 +1306,14 @@ export default function BaseCampPage() {
       {/* 그림 위에 얹혀도 되는 것 — 목표 띠는 장면에 붙어 읽혀야 한다 */}
       <StageHud rect={stage}>
         <ObjectiveBanner objective={objective} />
+
+        {/* 상호작용 안내. 공방과 같은 부품·같은 자리다 — 걸어 다니는 동안 자리가
+            흔들리면 안 되니 플레이어를 따라가지 않고 그림 하단에 붙인다. */}
+        {interactHint && !overlayOpen && (
+          <div className="pointer-events-none absolute bottom-14 left-1/2 z-30 -translate-x-1/2">
+            <InteractionPrompt>{interactHint}</InteractionPrompt>
+          </div>
+        )}
       </StageHud>
 
       {/* 늘 떠 있는 것들은 그림 옆 어두운 띠로 내보낸다. 캔버스는 16:9 로 고정이고

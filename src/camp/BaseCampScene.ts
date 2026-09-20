@@ -2,10 +2,9 @@ import Phaser from "phaser";
 import { gameEvents, GAME_EVENT } from "../shared/phaser/events";
 import { reportSceneError, safeHandler } from "../shared/phaser/sceneErrorHandler";
 import { markSceneReady } from "../shared/phaser/sceneReady";
-import { PIXEL_FONT, textResolution, redrawTextOnFontLoad } from "../shared/phaser/text";
+import { redrawTextOnFontLoad } from "../shared/phaser/text";
 import { getCampPosition, setCampPosition } from "./campPositionStore";
 import { isCampInputLocked } from "./campInputLock";
-import { PALETTE, withAlpha } from "../shared/palette";
 import { BASECAMP_BACKGROUND_IMAGE } from "../shared/assetPaths";
 import {
   dirFromVector, monsterDirection, PLAYER_MONSTER_WALK_FRAMES,
@@ -87,7 +86,8 @@ export default class BaseCampScene extends Phaser.Scene {
   private playerBodyGfx?: Phaser.GameObjects.Graphics;
   private cleanupDebug?: () => void;
   /** 근접 안내. 하나만 두고 매 프레임 플레이어를 따라 옮긴다. */
-  private hint?: Phaser.GameObjects.Text;
+  /** 지금 화면에 떠 있는 안내. 같은 값을 두 번 보내지 않으려고 들고 있다 */
+  private hintLabel: string | null = null;
 
   /** 지금 걸려 있는 시트. 텍스처 키로 보면 애니메이션이 바꿔 둔 것과 구분이 안 된다. */
   private sheet: MonsterSheetDir | null = null;
@@ -238,6 +238,10 @@ export default class BaseCampScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       unsubscribe();
       this.cleanupDebug?.();
+      // 떠날 때 안내를 내린다. 씬 인스턴스는 재사용되므로 들고 있던 값도 같이 비워야
+      // 다음에 같은 자리에서 다시 들어왔을 때 emit 이 한 번 걸러진다.
+      this.hintLabel = null;
+      gameEvents.emit(GAME_EVENT.CAMP_INTERACT_HINT, null);
     });
     this.redrawCollisionDebug();
   }
@@ -467,9 +471,9 @@ export default class BaseCampScene extends Phaser.Scene {
     }
 
     // ── 근접 힌트 ────────────────────────────────────────────────────────────────
-    // 안내는 하나뿐이고 판정은 E 키와 같은 findTarget 을 쓴다. 원래는 대상마다
-    // 텍스트를 따로 만들고 지웠는데, 만든 자리에 그대로 못박혀 있어서 걸어가면
-    // 안내만 월드에 남아 떠다녔다. 매 프레임 플레이어 위로 옮긴다.
+    // 안내는 하나뿐이고 판정은 상호작용 키와 같은 findTarget 을 쓴다. 그리는 건 React 다
+    // (StageHud). 캔버스에 글자로 얹으면 카메라 배율(0.5)과 캔버스 확대를 연달아 타서
+    // 같은 12px 인데도 화면에서는 옆 띠의 안내보다 커 보인다.
     this.updateHint(this.findTarget());
   }
 
@@ -478,27 +482,9 @@ export default class BaseCampScene extends Phaser.Scene {
       ? target.kind === "npc" ? target.npc.name : target.spot.label
       : null;
 
-    if (!label) {
-      this.hint?.destroy();
-      this.hint = undefined;
-      return;
-    }
-    if (!this.hint) {
-      this.hint = this.add
-        .text(0, 0, "", {
-          fontSize: "24px",
-          fontFamily: PIXEL_FONT,
-          resolution: textResolution(),
-          color: PALETTE.sand200,
-          backgroundColor: withAlpha("shadow900", 0.93),
-          padding: { x: 6, y: 3 },
-        })
-        .setOrigin(0.5, 1)
-        .setName("interactHint")
-        .setDepth(9999);
-    }
-    const text = `SPACE: ${label}`;
-    if (this.hint.text !== text) this.hint.setText(text);
-    this.hint.setPosition(this.player.x, this.player.y - 60);
+    // 바뀔 때만 보낸다. 매 프레임 emit 하면 React 가 같은 값으로 계속 다시 그린다.
+    if (label === this.hintLabel) return;
+    this.hintLabel = label;
+    gameEvents.emit(GAME_EVENT.CAMP_INTERACT_HINT, label);
   }
 }
