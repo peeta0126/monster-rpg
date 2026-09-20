@@ -363,7 +363,8 @@ canvas {
 }
 .ending-title-scene { animation: endingTitleFade 3000ms ease-in-out both; }
 .ending-credits-window { overflow: hidden; }
-.ending-credits-roll { animation: endingCreditsRoll 10500ms linear both; }
+/* 시간은 EndingPage 의 CREDITS_DURATION 이 인라인으로 덮어쓴다. 여기 값은 폴백이다. */
+.ending-credits-roll { animation: endingCreditsRoll 34000ms linear both; }
 .ending-thanks-scene { animation: endingThanksFade 4000ms ease-in-out both; }
 @media (max-width: 640px) {
   .ending-dialogue-panel {

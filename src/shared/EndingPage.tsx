@@ -135,6 +135,95 @@ const ENDING_STORY_SCENES: EndingStoryScene[] = [
   },
 ];
 
+/**
+ * 크레딧. 맡은 일을 항목으로 세우고 그 아래 한 일을 적는 보통의 엔딩 크레딧 꼴이다.
+ * 숫자를 늘어놓는 자리가 아니다 — 굴러가는 글이라 한 줄에 한 번밖에 눈이 안 머문다.
+ * 밖에서 받아 온 것(아이콘·플레이어 원화)은 출처를 적는다. 늘었으면 여기도 늘릴 것.
+ */
+interface EndingCreditsSection {
+  title: string;
+  subtitle?: string;
+  lines: string[];
+}
+
+const ENDING_CREDITS: EndingCreditsSection[] = [
+  {
+    title: "기획 · 개발",
+    lines: ["건국대학교 컴퓨터공학과 졸업작품"],
+  },
+  {
+    title: "STORY",
+    subtitle: "스토리",
+    lines: [
+      "쓰러진 어머니를 깨우기 위해 탑을 오르는 이야기",
+      "시나리오 · 대사 · 퀘스트",
+      "촌장 오리온 · 바로스 · 어머니",
+    ],
+  },
+  {
+    title: "BATTLE",
+    subtitle: "전투",
+    lines: [
+      "전투 설계 · 속성 상성 · 밸런스",
+      "무한의 탑 50층, 그 사이의 관문과 보스",
+      "최상층에서 기다린 것 — 오름",
+    ],
+  },
+  {
+    title: "MONSTERS",
+    subtitle: "몬스터",
+    lines: [
+      "몬스터 디자인 · 진화 계보 · 기술 학습",
+      "숲의 포획과 각인",
+      "함께 올라온 모든 동료들",
+    ],
+  },
+  {
+    title: "CRAFTING",
+    subtitle: "제작",
+    lines: [
+      "제작 · 강화 · 합성",
+      "채집한 재료와 연금술의 물약",
+      "마지막 한 병 — 어머니의 치료약",
+    ],
+  },
+  {
+    title: "PIXEL WORLD",
+    subtitle: "픽셀 월드",
+    lines: [
+      "베이스캠프 · 제작 공방 · 숲 · 무한의 탑",
+      "몬스터 원화 · 배경 · 이펙트",
+      "아이템 아이콘 — aetherforgeai.com",
+      "플레이어 캐릭터 — PixelLab · Google Gemini",
+    ],
+  },
+  {
+    title: "INTERFACE",
+    subtitle: "인터페이스",
+    lines: [
+      "화면 구성 · 조작 · 아트 디렉션",
+      "픽셀 폰트 — Galmuri11 · Galmuri14",
+      "React · Phaser 3 · TypeScript · Tailwind CSS",
+    ],
+  },
+  {
+    title: "MUSIC",
+    subtitle: "음악",
+    lines: [
+      "타이틀 — 로그인 화면과 이 엔딩",
+      "베이스캠프 — 마을에 머무는 동안",
+      "숲 — 원정과 포획",
+      "제작 공방 — 제작대 앞",
+      "전투 — 탑의 모든 층",
+      "보스 — 열 층마다 기다리는 이름들",
+    ],
+  },
+  {
+    title: "SPECIAL THANKS",
+    lines: ["탑의 끝까지 함께해 주신 모든 분께"],
+  },
+];
+
 const OPENING_BLACK_DURATION = 1000;
 const STORY_FADE_DURATION = 900;
 const STORY_IMAGE_HOLD_DURATION = 850;
@@ -142,7 +231,10 @@ const STORY_INTERLUDE_DURATION = 320;
 const FINAL_LINE_HOLD_DURATION = 2600;
 const INPUT_LOCK_DURATION = 180;
 const END_TITLE_DURATION = 3000;
-const CREDITS_DURATION = 10500;
+// 크레딧은 스스로 굴러가므로 읽는 속도가 곧 이 값이다. 항목을 더했으면 같이 늘릴 것 —
+// 굴러가는 거리는 내용 높이가 정하는데 시간이 그대로면 그만큼 빨리 지나간다.
+// CSS 의 animation-duration 도 이 값으로 먹인다(한 곳에서만 정한다).
+const CREDITS_DURATION = 34000;
 const THANKS_DURATION = 4000;
 
 export default function EndingPage() {
@@ -343,27 +435,27 @@ export default function EndingPage() {
 
       {scene === "credits" && (
         <div className="ending-credits-window mx-auto h-full max-w-2xl px-6 text-sand-200">
-          <div className="ending-credits-roll space-y-16">
+          <div
+            className="ending-credits-roll space-y-16"
+            style={{ animationDuration: `${CREDITS_DURATION}ms` }}
+          >
             <section className="space-y-5">
               <p className="text-pixel-md tracking-widest text-ember-500">MONSTER RPG</p>
               <p className="text-pixel-sm text-earth-400">무한의 탑 이야기</p>
             </section>
-            <section className="space-y-4">
-              <p className="text-title-sm text-sand-300">기획 · 개발</p>
-              <p className="text-pixel-sm">건국대학교 소프트웨어학과 졸업작품</p>
-            </section>
-            <section className="space-y-4">
-              <p className="text-title-sm text-sand-300">GAME DESIGN</p>
-              <p className="text-pixel-sm">스토리 · 전투 · 몬스터 · 제작</p>
-            </section>
-            <section className="space-y-4">
-              <p className="text-title-sm text-sand-300">ART &amp; SOUND</p>
-              <p className="text-pixel-sm">픽셀 월드 · 인터페이스 · 음악</p>
-            </section>
-            <section className="space-y-4">
-              <p className="text-title-sm text-sand-300">SPECIAL THANKS</p>
-              <p className="text-pixel-sm">탑의 끝까지 함께해 주신 모든 분께</p>
-            </section>
+            {ENDING_CREDITS.map((section) => (
+              <section key={section.title} className="space-y-4">
+                <p className="text-title-sm text-sand-300">{section.title}</p>
+                {section.subtitle && (
+                  <p className="text-pixel-sm text-earth-400">{section.subtitle}</p>
+                )}
+                <div className="space-y-2">
+                  {section.lines.map((line) => (
+                    <p key={line} className="text-pixel-sm leading-relaxed">{line}</p>
+                  ))}
+                </div>
+              </section>
+            ))}
             <p className="text-pixel-sm text-earth-400">— 끝 —</p>
           </div>
         </div>

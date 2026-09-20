@@ -55,7 +55,7 @@ async function talkToOrion(page: Page) {
     game.scene.getScene("BaseCampScene").player.setPosition(1090, 2010);
   });
   await page.waitForTimeout(150);
-  await page.keyboard.press("x");
+  await page.keyboard.press("Space");
   await expect(page.locator("img[alt='Orion']")).toBeVisible();
 }
 
@@ -63,7 +63,7 @@ async function finishDialogue(page: Page, maxLines = 20) {
   for (let i = 0; i < maxLines; i++) {
     const portrait = page.locator("img[alt='Orion']");
     if (!(await portrait.isVisible().catch(() => false))) return;
-    await page.keyboard.press("x");
+    await page.keyboard.press("Space");
     await page.waitForTimeout(100);
   }
   throw new Error("오리온 대화가 제한 줄 안에 끝나지 않았다");
@@ -189,7 +189,8 @@ test("치료약 전달 뒤 회상 엔딩 전체가 재생되고 캠프로 복귀
   await expect(page.getByText("THE END")).toBeVisible();
   await expect(page.getByTestId("ending-scene-credits")).toBeVisible({ timeout: 6_000 });
   await expect(page.getByText("SPECIAL THANKS")).toBeVisible();
-  await expect(page.getByText("THANK YOU FOR PLAYING")).toBeVisible({ timeout: 13_000 });
+  // 크레딧은 EndingPage 의 CREDITS_DURATION(34초) 동안 굴러간다. 늘렸으면 여기도 늘릴 것.
+  await expect(page.getByText("THANK YOU FOR PLAYING")).toBeVisible({ timeout: 38_000 });
   await expect(page).toHaveURL(/\/$/, { timeout: 6_000 });
 
   await talkToOrion(page);
