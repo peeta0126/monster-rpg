@@ -188,7 +188,7 @@ test("치료약 전달 뒤 회상 엔딩 전체가 재생되고 캠프로 복귀
   await playEndingStory(page);
   await expect(page.getByText("THE END")).toBeVisible();
   await expect(page.getByTestId("ending-scene-credits")).toBeVisible({ timeout: 6_000 });
-  await expect(page.getByText("SPECIAL THANKS")).toBeVisible();
+  await expect(page.getByText("건국대학교 컴퓨터공학과 졸업작품")).toBeVisible();
   // 크레딧은 EndingPage 의 CREDITS_DURATION(34초) 동안 굴러간다. 늘렸으면 여기도 늘릴 것.
   await expect(page.getByText("THANK YOU FOR PLAYING")).toBeVisible({ timeout: 38_000 });
   await expect(page).toHaveURL(/\/$/, { timeout: 6_000 });
