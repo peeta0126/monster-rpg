@@ -4,10 +4,12 @@ import path from "node:path";
 import sharp from "sharp";
 import {
   dirFromVector, monsterDirection, getMonsterFrame, DIRS_8,
-  PLAYER_SHEET_PATHS, PLAYER_SHEET_FRAMES, PLAYER_MONSTER_WALK_FRAMES,
-  PLAYER_FRAME_WIDTH, PLAYER_FRAME_HEIGHT,
-  PLAYER_NORTHEAST_FRAME_WIDTH, PLAYER_NORTHEAST_FRAME_HEIGHT,
+  PLAYER_SHEET_PATHS, PLAYER_SHEET_METRICS, PLAYER_SHEET_FRAMES,
+  PLAYER_MONSTER_WALK_FRAMES, spriteOriginY,
+  type MonsterSheetDir,
 } from "../src/shared/playerSprite.ts";
+// @ts-expect-error — 순수 자바스크립트 도구라 타입 선언이 없다
+import { measureSheet, SHEETS } from "../scripts/measure-player-sheets.mjs";
 
 test("dirFromVector: 축 방향 4개", () => {
   assert.equal(dirFromVector(0, 1), "S");    // 화면 좌표라 +y가 아래(남)
@@ -89,9 +91,8 @@ test("뒤집어 쓰는 방향은 자기 시트가 없다", () => {
  */
 test("시트 여섯 칸이 폭에 정확히 들어간다", async () => {
   for (const [direction, url] of Object.entries(PLAYER_SHEET_PATHS)) {
-    const isNortheast = direction === "northeast";
-    const cellW = isNortheast ? PLAYER_NORTHEAST_FRAME_WIDTH : PLAYER_FRAME_WIDTH;
-    const cellH = isNortheast ? PLAYER_NORTHEAST_FRAME_HEIGHT : PLAYER_FRAME_HEIGHT;
+    const { frameWidth: cellW, frameHeight: cellH } =
+      PLAYER_SHEET_METRICS[direction as MonsterSheetDir];
     assert.equal(Number.isInteger(cellW), true, `${direction} 칸 폭이 정수가 아니다`);
 
     const file = path.resolve(import.meta.dirname, "../public", url.slice(1));
@@ -149,4 +150,42 @@ test("문서 코드와 구현이 같은 결과를 낸다", () => {
 test("부호를 뒤집은 공식은 E/W 만 맞고 6방향이 틀린다", () => {
   const wrong = CASES.filter(([dx, dy, exp]) => dirFromVectorBuggy(dx, dy) !== exp);
   assert.deepEqual(wrong.map(([, , exp]) => exp), ["S", "SE", "NE", "N", "NW", "SW"]);
+});
+
+// ── 시트 치수 ─────────────────────────────────────────────────────────────────
+
+/**
+ * 표가 원본 PNG 와 맞는지 다시 잰다.
+ *
+ * 원화를 갈아끼우면 칸 크기도 발 높이도 조용히 달라진다. 표만 그대로면 캐릭터가
+ * 공중에 뜨고, Phaser 쪽에서는 물리 바디가 방향을 바꿀 때마다 순간이동한다 —
+ * 어느 쪽도 오류를 안 내고 그림에서만 보인다. 그래서 여기서 매번 다시 잰다.
+ * 어긋나면 `node scripts/measure-player-sheets.mjs` 가 찍어 주는 표로 갈아라.
+ */
+test("PLAYER_SHEET_METRICS 가 원본 시트와 맞는다", async () => {
+  for (const [dir, file] of SHEETS as Array<[MonsterSheetDir, string]>) {
+    const m = await measureSheet(file);
+    const table = PLAYER_SHEET_METRICS[dir];
+    assert.equal(m.frameWidth, table.frameWidth, `${dir} 한 칸 폭`);
+    assert.equal(m.frameHeight, table.frameHeight, `${dir} 한 칸 높이`);
+    assert.equal(m.bottoms[0], table.footY, `${dir} 발이 닿는 줄`);
+    assert.equal(m.bottoms.length, PLAYER_SHEET_FRAMES, `${dir} 칸 수`);
+  }
+});
+
+/** 어느 방향을 보든 발은 같은 자리에 와야 한다. 여기가 어긋나면 돌 때 위아래로 튄다. */
+test("방향이 달라도 발이 같은 자리에 온다", () => {
+  const footFromOrigin = (dir: MonsterSheetDir) => {
+    const m = PLAYER_SHEET_METRICS[dir];
+    return m.footY - spriteOriginY(dir) * m.frameHeight;
+  };
+  const dirs = Object.keys(PLAYER_SHEET_METRICS) as MonsterSheetDir[];
+  for (const dir of dirs) {
+    assert.ok(
+      Math.abs(footFromOrigin(dir) - footFromOrigin("south")) < 0.5,
+      `${dir}: ${footFromOrigin(dir)} ≠ ${footFromOrigin("south")}`,
+    );
+  }
+  // 정면은 손대지 않은 기준이라 정확히 한가운데여야 한다
+  assert.equal(spriteOriginY("south"), 0.5);
 });

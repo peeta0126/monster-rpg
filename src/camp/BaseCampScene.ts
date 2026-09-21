@@ -9,9 +9,8 @@ import { PALETTE, withAlpha } from "../shared/palette";
 import { BASECAMP_BACKGROUND_IMAGE } from "../shared/assetPaths";
 import {
   dirFromVector, monsterDirection, PLAYER_MONSTER_WALK_FRAMES,
-  PLAYER_SHEET_KEYS, PLAYER_SHEET_PATHS,
-  PLAYER_FRAME_WIDTH, PLAYER_FRAME_HEIGHT, PLAYER_NORTHEAST_FRAME_WIDTH, PLAYER_NORTHEAST_FRAME_HEIGHT,
-  type Dir8,
+  PLAYER_SHEET_KEYS, PLAYER_SHEET_PATHS, PLAYER_SHEET_METRICS, spriteOriginY,
+  type Dir8, type MonsterSheetDir,
 } from "../shared/playerSprite";
 import { usePlayerStore } from "../shared/playerStore";
 import { ORION_DIALOGUES, BAROS_DIALOGUES, resolveNpcInteraction } from "./campDialogues";
@@ -20,8 +19,8 @@ import type { SmallTalkNpcId } from "./campSmallTalk";
 import type { DialogueEntry } from "./campDialogues";
 import {
   CAMP_COLLISION_BOXES, CAMP_WALL_SEGMENTS, CAMP_MAP_W, CAMP_MAP_H,
-  CAMP_INTERACTIONS, PLAYER_BODY, playerBodyOffset, PLAYER_SCALE, NPC_BODY,
-  footYFromSpriteY, safeSpawn,
+  CAMP_INTERACTIONS, PLAYER_BODY, PLAYER_SCALE, NPC_BODY,
+  playerBodyOffset, bodyYFromSpriteY, safeSpawn,
   type CampInteraction,
 } from "./campCollision";
 import {
@@ -94,19 +93,24 @@ export default class BaseCampScene extends Phaser.Scene {
   /** 근접 안내. 하나만 두고 매 프레임 플레이어를 따라 옮긴다. */
   private hint?: Phaser.GameObjects.Text;
 
+  /** 지금 걸려 있는 시트. 텍스처 키로 보면 애니메이션이 바꿔 둔 것과 구분이 안 된다. */
+  private sheet: MonsterSheetDir | null = null;
+
   constructor() {
     super("BaseCampScene");
   }
 
   preload() {
-    // JSON Array 형식(Aseprite 내보내기)이라 load.atlas 로 읽는다. load.aseprite 는
-    // meta.frameTags 를 요구하는데 이 파일엔 태그가 없다. 애니메이션은 아래
-    // registerPlayerAnimations 가 프레임 이름 규칙에서 직접 만든다.
-    (Object.keys(PLAYER_SHEET_KEYS) as Array<keyof typeof PLAYER_SHEET_KEYS>).forEach((direction) => {
-      const isNortheast = direction === "northeast";
+    // 방향마다 가로로 여섯 칸짜리 시트 한 장이다. 태그가 없어 load.aseprite 는 못 쓰고,
+    // 애니메이션은 registerPlayerAnimations 가 칸 번호로 직접 만든다.
+    //
+    // 칸 크기는 시트마다 다르다(북동만 2048×682). 표 하나에서 꺼내 쓴다 — 여기에
+    // 숫자를 다시 적으면 2170px 짜리 정면 시트를 362 로 잘라 다섯 칸만 만들고,
+    // 마지막 걷기 프레임이 통째로 사라진다.
+    (Object.keys(PLAYER_SHEET_KEYS) as MonsterSheetDir[]).forEach((direction) => {
+      const { frameWidth, frameHeight } = PLAYER_SHEET_METRICS[direction];
       this.load.spritesheet(PLAYER_SHEET_KEYS[direction], PLAYER_SHEET_PATHS[direction], {
-        frameWidth: isNortheast ? PLAYER_NORTHEAST_FRAME_WIDTH : PLAYER_FRAME_WIDTH,
-        frameHeight: isNortheast ? PLAYER_NORTHEAST_FRAME_HEIGHT : PLAYER_FRAME_HEIGHT,
+        frameWidth, frameHeight,
       });
     });
     this.load.image("basecamp-bg", BASECAMP_BACKGROUND_IMAGE);
@@ -149,11 +153,16 @@ export default class BaseCampScene extends Phaser.Scene {
     this.player = this.physics.add.sprite(initPos.x, initPos.y, PLAYER_SHEET_KEYS.south, 0);
     this.player.setCollideWorldBounds(true);
     this.player.setScale(PLAYER_SCALE);
-    this.player.setDepth(footYFromSpriteY(initPos.y));
+    this.player.setDepth(bodyYFromSpriteY(initPos.y));
 
-    // 바디는 발밑에 둔다. 원래 스프라이트 한가운데에 있어서, 벽 앞에 서면 발이
-    // 화단·좌판 안으로 파고들어 있었다. texture 좌표 → 월드 = ×PLAYER_SCALE.
-    this.syncBodyToFrame();
+    // 바디는 발밑에 둔다. 원래 스프라이트 한가운데(offset 27,27)에 있어서,
+    // 벽 앞에 서면 발이 화단·좌판 안으로 80px 씩 파고들어 있었다.
+    // texture 좌표 → 월드 = ×PLAYER_SCALE. 자리는 applySheet 이 시트마다 다시 잡는다.
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    body.setSize(PLAYER_BODY.w / PLAYER_SCALE, PLAYER_BODY.h / PLAYER_SCALE);
+    // 씬 인스턴스는 재시작해도 그대로 재사용된다. 새 스프라이트에 다시 먹이려면 비워야 한다.
+    this.sheet = null;
+    this.applySheet("south");
 
     // ── 카메라 ──────────────────────────────────────────────────────────────────
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -259,23 +268,31 @@ export default class BaseCampScene extends Phaser.Scene {
   }
 
   /**
+   * 시트를 갈아끼운다. **텍스처만 바꾸면 안 된다.**
+   *
+   * 칸 크기가 시트마다 달라서(북동만 341×682) 텍스처를 바꾸면 `displayOrigin` 이
+   * 같이 바뀌고, 물리 바디가 그 차이만큼 순간이동한다. 집 문 위 벽 안으로 7px 밀려
+   * 들어갔다가 Arcade 가 밖으로 밀어내면서 벽 너머로 튕겨 나갔다 — 한 번 넘어가면
+   * 같은 벽이 반대편에서 막아 다시 내려오지 못했다.
+   *
+   * origin 과 바디 오프셋을 텍스처와 **같이** 옮기면 바디는 월드에서 제자리고,
+   * 발이 닿는 줄도 방향과 무관하게 한 자리다.
+   */
+  private applySheet(direction: MonsterSheetDir) {
+    if (this.sheet === direction) return;
+    this.sheet = direction;
+    this.player.setTexture(PLAYER_SHEET_KEYS[direction], 0);
+    this.player.setOrigin(0.5, spriteOriginY(direction));
+    const offset = playerBodyOffset(direction);
+    (this.player.body as Phaser.Physics.Arcade.Body).setOffset(offset.x, offset.y);
+  }
+
+  /**
    * 걷기 애니메이션 등록.
    *
    * 시트에 든 방향은 다섯이다(S·SE·E·NE·N). 나머지 셋은 좌우 반전이라
    * 애니메이션을 따로 안 만든다. monsterDirection 이 어느 쪽을 뒤집을지 정한다.
    */
-  /**
-   * 발밑 바디를 지금 칸에 맞춘다. 텍스처를 바꾼 뒤에는 반드시 같이 부른다 —
-   * 북동 시트만 칸이 작아서(342×682) 안 부르면 그 방향에서만 바디가 발을 벗어난다.
-   */
-  private syncBodyToFrame() {
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    const { width, height } = this.player.frame;
-    body.setSize(PLAYER_BODY.w / PLAYER_SCALE, PLAYER_BODY.h / PLAYER_SCALE);
-    const offset = playerBodyOffset(width, height);
-    body.setOffset(offset.x, offset.y);
-  }
-
   private registerPlayerAnimations() {
     for (const direction of Object.keys(PLAYER_SHEET_KEYS) as Array<keyof typeof PLAYER_SHEET_KEYS>) {
       const key = `player-walk-${direction}`;
@@ -430,24 +447,18 @@ export default class BaseCampScene extends Phaser.Scene {
     if (isMoving) this.facing = dirFromVector(body.velocity.x, body.velocity.y);
     const { direction, flipX } = monsterDirection(this.facing);
     this.player.setFlipX(flipX);
+    this.applySheet(direction);
     if (isMoving) {
       // play 의 두 번째 인자(ignoreIfPlaying)로 같은 애니메이션 재시작을 막는다.
       // 매 프레임 처음부터 다시 틀면 첫 장에서 멈춘 것처럼 보인다.
-      if (this.player.texture.key !== PLAYER_SHEET_KEYS[direction]) {
-        this.player.setTexture(PLAYER_SHEET_KEYS[direction], 0);
-        this.syncBodyToFrame();
-      }
       this.player.anims.play(`player-walk-${direction}`, true);
     } else {
       this.player.anims.stop();
-      if (this.player.texture.key !== PLAYER_SHEET_KEYS[direction]) {
-        this.player.setTexture(PLAYER_SHEET_KEYS[direction], 0);
-        this.syncBodyToFrame();
-      }
+      this.player.setFrame(0);
     }
 
-    // ── depth: 발끝 y = depth → 건물·NPC 뒤/앞 자동 처리 ──────────────────────
-    this.player.setDepth(footYFromSpriteY(this.player.y));
+    // ── depth: 발이 닿는 줄 = depth → 건물·NPC 뒤/앞 자동 처리 ────────────────
+    this.player.setDepth(bodyYFromSpriteY(this.player.y));
 
     // ── 개발자 모드: 플레이어 발밑 바디 ──────────────────────────────────────
     if (this.playerBodyGfx) {

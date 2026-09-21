@@ -13,14 +13,15 @@ import { containRect } from "../shared/ui/stageRect";
 import { useBgm, BGM } from "../shared/audio";
 import {
   getMonsterFrame, dirFromVector, PLAYER_SHEET_PATHS, PLAYER_SHEET_FRAMES,
-  PLAYER_MONSTER_WALK_FRAMES, PLAYER_FOOT_ANCHOR, PLAYER_SPRITE_SCALE,
+  PLAYER_MONSTER_WALK_FRAMES, PLAYER_SHEET_METRICS, PLAYER_FRAME_HEIGHT,
+  PLAYER_SPRITE_SCALE,
   type Dir8,
 } from "../shared/playerSprite";
 import {
   WORKSHOP_BACKGROUND_IMAGE,
 } from "../shared/assetPaths";
 import {
-  BG_RATIO, INITIAL_POS, PLAYER_BOUNDS, PLAYER_DISPLAY_RATIO, PLAYER_FOOT,
+  BG_W, BG_H, BG_RATIO, INITIAL_POS, PLAYER_BOUNDS, PLAYER_DISPLAY_RATIO, PLAYER_FOOT,
   COLLISION_BOXES, CRAFTING_STATIONS, EXIT_ZONE,
   SHOW_COLLISION_DEBUG, SHOW_INTERACTION_DEBUG,
   clamp, isPlayerBlocked, findInteractable,
@@ -40,11 +41,24 @@ type PlayerPos = Point;
 
 // --- 이동 -------------------------------------------------------------
 
-/** %/frame (16ms 기준). deltaTime 으로 보정한다 */
-const SPEED = 0.4;
+/**
+ * 걷는 빠르기. **배경 원화 px/초**다.
+ *
+ * 스테이지 좌표는 % 인데 방이 2400×1792 라 1% 가 가로 24px, 세로 17.9px 이다.
+ * 축마다 같은 % 를 더하면 가로가 세로보다 1.34배 빠르고, 대각선은 거기다 1.41배
+ * 더 빠르다. 걷는 그림은 그대로인데 발밑만 미끄러지니까 걷는 게 아니라 끌려가는
+ * 것처럼 보인다. 그래서 속도는 px 로 정하고, 축마다 % 로 환산해 더한다.
+ */
+const SPEED_PX_PER_SEC = 600;
 
-/** 정면 idle 프레임의 발끝을 기준으로 고정한 그림자 위치. */
-const PLAYER_SHADOW_BASELINE_RATIO = 53 / 725;
+/**
+ * 걷기 그림 한 장이 버티는 거리(배경 원화 px).
+ *
+ * **시간이 아니라 거리로 센다.** 시간으로 세면 어느 방향으로 가느냐에 따라 한 걸음에
+ * 나아가는 거리가 달라져서 발이 땅에서 미끄러진다. 거리로 세면 벽에 막혀 제자리걸음일
+ * 때 다리도 같이 멈춘다 — 벽을 밀면서 계속 걷던 것이 안 걷는 것처럼 보이던 이유다.
+ */
+const WALK_FRAME_DISTANCE = 78;
 
 // --- 무대 -------------------------------------------------------------
 // 공방은 화면 고정이다. 방 하나가 통째로 들어오고 화면은 안 움직인다.
@@ -80,7 +94,10 @@ export default function WorkshopPage() {
 
   const keysRef      = useRef(new Set<string>());
   const rafRef       = useRef<number | null>(null);
-  const walkTimerRef = useRef(0);
+  /** 마지막 걷기 그림을 넘긴 뒤로 실제로 나아간 거리(배경 원화 px) */
+  const walkedRef    = useRef(0);
+  /** 방향키는 눌렀는데 벽에 막혀 못 나아간 시간(ms) */
+  const blockedRef   = useRef(0);
   const lastTimeRef  = useRef<number | null>(null);
   const posRef       = useRef<PlayerPos>(INITIAL_POS);
 
@@ -143,8 +160,15 @@ export default function WorkshopPage() {
   // 플레이어도 무대에 맞춰 커지고 작아진다. 고정 px 이면 창을 줄였을 때
   // 방만 작아지고 사람은 그대로라 통·침대와 견준 키가 어긋난다.
   const playerDisplay = stageH * PLAYER_DISPLAY_RATIO;
-  const shadowBottom =
-    playerDisplay * PLAYER_SPRITE_SCALE * PLAYER_SHADOW_BASELINE_RATIO - 3.5;
+
+  // 원화 1px 이 화면에서 몇 px 인가. 시트마다 칸 크기가 달라도(북동만 341×682)
+  // 이 배율 하나로 그려야 방향을 바꿀 때 사람 키가 안 변한다.
+  const spritePx = (playerDisplay * PLAYER_SPRITE_SCALE) / PLAYER_FRAME_HEIGHT;
+  const sheet = PLAYER_SHEET_METRICS[playerFrame.source];
+  const spriteW = sheet.frameWidth * spritePx;
+  const spriteH = sheet.frameHeight * spritePx;
+  // 칸 위에서 신발 바닥까지. pos 가 곧 발이 닿는 자리라 이만큼 위로 올려 그린다.
+  const spriteFootTop = sheet.footY * spritePx;
 
   // ── 마우스 좌표 (디버그용, stage 기준 %) ─────────────────────────────────────
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -209,7 +233,8 @@ export default function WorkshopPage() {
         // 눌려 있던 키를 비운다. 방향키를 누른 채 모달을 열면 그 사이의 keyup 을
         // 놓칠 수 있고, 그러면 닫는 순간 유령 입력으로 플레이어가 미끄러진다.
         keysRef.current.clear();
-        walkTimerRef.current = 0;
+        walkedRef.current = 0;
+        blockedRef.current = 0;
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
@@ -223,43 +248,68 @@ export default function WorkshopPage() {
       if (keys.has("ArrowDown")  || keys.has("s") || keys.has("S")) dy += 1;
 
       if (dx !== 0 || dy !== 0) {
-        const step = (SPEED / 16) * dt;
-        setPos((prev) => {
-          // 외곽 경계 클램프 후 X / Y 충돌을 따로 검사
-          // → 벽면을 따라 미끄러지듯 이동 가능
-          const nx = clamp(prev.x + dx * step, PLAYER_BOUNDS.minX, PLAYER_BOUNDS.maxX);
-          const ny = clamp(prev.y + dy * step, PLAYER_BOUNDS.minY, PLAYER_BOUNDS.maxY);
+        // 대각선은 두 축을 그대로 더하면 1.41배 빠르다. 방향은 길이 1 로 맞추고
+        // 거리만 곱한다.
+        const len = Math.hypot(dx, dy);
+        const reach = (SPEED_PX_PER_SEC * dt) / 1000;
+        // 같은 px 라도 % 로는 축마다 다르다(방이 2400×1792). 여기서 환산한다.
+        const stepX = ((reach * dx) / len / BG_W) * 100;
+        const stepY = ((reach * dy) / len / BG_H) * 100;
 
-          let rx = prev.x;
-          let ry = prev.y;
+        const prev = posRef.current;
+        // 외곽 경계 클램프 후 X / Y 충돌을 따로 검사
+        // → 벽면을 따라 미끄러지듯 이동 가능
+        const nx = clamp(prev.x + stepX, PLAYER_BOUNDS.minX, PLAYER_BOUNDS.maxX);
+        const ny = clamp(prev.y + stepY, PLAYER_BOUNDS.minY, PLAYER_BOUNDS.maxY);
 
-          // X축 단독 검사 / Y축 단독 검사. 항상 원래 prev 기준으로 봐야
-          // 대각선으로 갈 때 박스 모서리를 파고들어 갇히는 걸 막는다
-          const collideX = isPlayerBlocked({ x: nx, y: prev.y });
-          const collideY = isPlayerBlocked({ x: prev.x, y: ny });
-          if (!collideX) rx = nx;
-          if (!collideY) ry = ny;
+        let rx = prev.x;
+        let ry = prev.y;
 
-          // 대각선 이동: 각 축은 개별적으로 안전해 보여도 합쳐진 목적지가
-          // 박스 내부라면(모서리 통과) 이동 자체를 취소한다. 박스 안에 끼는 걸 막는다
-          if (!collideX && !collideY && isPlayerBlocked({ x: nx, y: ny })) {
-            rx = prev.x;
-            ry = prev.y;
-          }
+        // X축 단독 검사 / Y축 단독 검사. 항상 원래 prev 기준으로 봐야
+        // 대각선으로 갈 때 박스 모서리를 파고들어 갇히는 걸 막는다
+        const collideX = isPlayerBlocked({ x: nx, y: prev.y });
+        const collideY = isPlayerBlocked({ x: prev.x, y: ny });
+        if (!collideX) rx = nx;
+        if (!collideY) ry = ny;
 
-          posRef.current = { x: rx, y: ry };
-          return { x: rx, y: ry };
-        });
+        // 대각선 이동: 각 축은 개별적으로 안전해 보여도 합쳐진 목적지가
+        // 박스 내부라면(모서리 통과) 이동 자체를 취소한다. 박스 안에 끼는 걸 막는다
+        if (!collideX && !collideY && isPlayerBlocked({ x: nx, y: ny })) {
+          rx = prev.x;
+          ry = prev.y;
+        }
+
+        posRef.current = { x: rx, y: ry };
+        setPos(posRef.current);
         setDirection(dirFromVector(dx, dy));
 
-        walkTimerRef.current += dt;
-        if (walkTimerRef.current >= 130) {
-          setWalkFrame((f) => (f % PLAYER_MONSTER_WALK_FRAMES) + 1);
-          walkTimerRef.current = 0;
+        // 그림은 **실제로 나아간 거리**로 넘긴다.
+        const moved = Math.hypot(
+          ((rx - prev.x) / 100) * BG_W,
+          ((ry - prev.y) / 100) * BG_H,
+        );
+        walkedRef.current += moved;
+        if (walkedRef.current >= WALK_FRAME_DISTANCE) {
+          const advance = Math.floor(walkedRef.current / WALK_FRAME_DISTANCE);
+          walkedRef.current -= advance * WALK_FRAME_DISTANCE;
+          setWalkFrame((f) => ((f - 1 + advance) % PLAYER_MONSTER_WALK_FRAMES) + 1);
+        }
+
+        // 벽에 대고 계속 누르고 있으면 서 있는 자세로 돌린다. 거리로 세니까 다리는
+        // 이미 멈췄는데, 걷다 만 자세로 굳어 있으면 그게 더 어색하다. 모서리를
+        // 스치는 한두 프레임까지 서게 만들지 않도록 조금 기다린다.
+        if (moved < reach * 0.05) blockedRef.current += dt;
+        else blockedRef.current = 0;
+        if (blockedRef.current > 120) {
+          setWalkFrame(0);
+          walkedRef.current = 0;
         }
       } else {
         setWalkFrame(0);
-        walkTimerRef.current = 0;
+        // 다음 걸음이 첫 장부터 시작하도록 비운다. 안 비우면 섰다 갈 때마다
+        // 걷기 그림이 중간부터 튀어나온다.
+        walkedRef.current = 0;
+        blockedRef.current = 0;
       }
 
       rafRef.current = requestAnimationFrame(tick);
@@ -339,28 +389,26 @@ export default function WorkshopPage() {
           />
 
           {/* ── 플레이어 스프라이트 ──────────────────────────────────────────── */}
+          {/* pos 는 **발이 닿는 자리**다. 원화가 칸을 안 채워서(발밑에 100px 넘게
+              빈 자리가 남는다) 칸 아래를 기준점으로 삼으면 사람이 38px 떠서 걷는다.
+              어디가 발인지는 시트마다 다르고 PLAYER_SHEET_METRICS 가 정한다 —
+              여기에 백분율을 손으로 적지 마라. */}
           <div
             className="absolute z-20"
-            style={{
-              left: `${pos.x}%`,
-              top:  `${pos.y}%`,
-              // 발밑이 좌표 기준점이 되게 위로 올린다. 프레임 안에서 발끝이 어디인지는
-              // 시트가 정하니까 여기 백분율을 손으로 적지 마라. 64px 시절 90% 를
-              // 그대로 뒀더니 발이 판정보다 17px 아래에 붙어 있었다.
-              transform: `translate(-50%, ${-PLAYER_FOOT_ANCHOR * 100}%)`,
-            }}
+            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
           >
-            {/* 발밑 그림자 */}
+            {/* 발밑 그림자. 발이 닿는 자리에 그대로 깐다 — 이게 바닥에 붙어 있다는
+                유일한 단서라, 발보다 아래에 두면 사람이 뜬 것처럼 보인다. */}
             <div
               className="absolute rounded-full"
               style={{
-                bottom: shadowBottom,
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: playerDisplay * 0.55,
-                height: 7,
-                background: "rgba(13, 18, 35, .45)",
-                filter: "blur(5px)",
+                left: 0,
+                top: 0,
+                transform: "translate(-50%, -50%)",
+                width: spriteW * 0.5,
+                height: 10,
+                background: withAlpha("shadow900", 0.5),
+                filter: "blur(3px)",
               }}
             />
             {/* 아틀라스 한 칸을 배경으로 잘라 쓴다. <img src> 로는 시트에서 한 칸만
@@ -369,18 +417,17 @@ export default function WorkshopPage() {
               role="img"
               aria-label="player"
               data-frame={playerFrame.source}
-              className="pixel-img"
+              className="pixel-img absolute"
               style={{
-                transform: `${playerFrame.flipX ? "scaleX(-1) " : ""}scale(${PLAYER_SPRITE_SCALE})`,
-                transformOrigin: "center bottom",
-                width:  playerDisplay / 2,
-                height: playerDisplay,
+                left: -spriteW / 2,
+                top:  -spriteFootTop,
+                transform: playerFrame.flipX ? "scaleX(-1)" : undefined,
+                width:  spriteW,
+                height: spriteH,
                 backgroundImage: `url(${PLAYER_SHEET_PATHS[playerFrame.source]})`,
-                backgroundSize: `${playerDisplay * PLAYER_SHEET_FRAMES / 2}px ${playerDisplay}px`,
-                backgroundPosition: `${-(playerFrame.frame ?? 0) * playerDisplay / 2}px 0`,
+                backgroundSize: `${spriteW * PLAYER_SHEET_FRAMES}px ${spriteH}px`,
+                backgroundPosition: `${-(playerFrame.frame ?? 0) * spriteW}px 0`,
                 backgroundRepeat: "no-repeat",
-                filter: "drop-shadow(0 5px 10px rgba(13, 18, 35, .9))",
-                display: "block",
               }}
             />
           </div>

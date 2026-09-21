@@ -10,15 +10,28 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-$cloudflared = @(
-  "C:\Program Files (x86)\cloudflared\cloudflared.exe",
-  "C:\Program Files\cloudflared\cloudflared.exe"
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
+# PATH 를 먼저 본다. winget 말고 exe 를 직접 받아 둔 자리(~\bin)도 있어서, 설치 경로
+# 두 개만 찍어 두면 멀쩡히 깔려 있는데도 "cloudflared 가 없다" 로 멈춘다.
+$cloudflared = (Get-Command cloudflared -ErrorAction SilentlyContinue).Source
+if (-not $cloudflared) {
+  $cloudflared = @(
+    "C:\Program Files (x86)\cloudflared\cloudflared.exe",
+    "C:\Program Files\cloudflared\cloudflared.exe",
+    (Join-Path $env:USERPROFILE "bin\cloudflared.exe")
+  ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
 
 if (-not $cloudflared) {
   Write-Host "cloudflared 가 없다. 먼저: winget install --id Cloudflare.cloudflared" -ForegroundColor Red
   exit 1
 }
+Write-Host "cloudflared : $cloudflared" -ForegroundColor DarkGray
+
+# Start-Process 는 PATH 의 `npm`(확장자 없는 sh 스크립트)을 집어서 "%1 is not a valid
+# Win32 application" 으로 죽는다. 파이프라인에서 부르는 npm 과 달리 여기서는 실행 파일을
+# 직접 지목해야 한다.
+$npm = (Get-Command npm.cmd -ErrorAction SilentlyContinue).Source
+if (-not $npm) { $npm = "npm.cmd" }
 
 # 포트를 먼저 비운다. 4000 을 쥔 프로세스가 남아 있으면 새 서버는 EADDRINUSE 로 죽고
 # 옛 설정을 문 서버가 계속 도는데, 화면상으로는 "고쳤는데 그대로" 로만 보인다.
@@ -36,15 +49,26 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $tunnelLog = Join-Path $logDir "tunnel.log"
 if (Test-Path $tunnelLog) { Remove-Item $tunnelLog -Force }
 
+# 빌드 실패를 그냥 지나치지 말 것. $ErrorActionPreference 는 exe 의 종료 코드를 안 본다 —
+# 빌드가 죽어도 스크립트는 계속 가서 **지난번 dist 를** 내보내고, 화면에서는 "고쳤는데
+# 그대로" 로만 보인다. 발표 직전에 이걸로 헤매면 원인을 찾을 시간이 없다.
 Write-Host "`n빌드 중..." -ForegroundColor Cyan
 npm run build            | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Host "화면 빌드 실패. npm run build 로 확인할 것." -ForegroundColor Red; exit 1 }
 npm --prefix server run build | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Host "서버 빌드 실패. npm --prefix server run build 로 확인할 것." -ForegroundColor Red; exit 1 }
+
+# 세이브 표(SQLite)를 최신 마이그레이션까지 올린다. 접속 기록 표가 없는 DB 로 서버를
+# 띄우면 로그인은 되는데 /admin 의 「접속」이 통째로 비어서 나온다.
+Write-Host "세이브 표 확인" -ForegroundColor Cyan
+npm --prefix server run migrate | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Host "마이그레이션 실패. npm --prefix server run migrate 로 확인할 것." -ForegroundColor Red; exit 1 }
 
 Write-Host "세이브 서버 (:4000)" -ForegroundColor Cyan
-$server = Start-Process npm -ArgumentList "--prefix", "server", "start" -PassThru -NoNewWindow
+$server = Start-Process $npm -ArgumentList "--prefix", "server", "start" -PassThru -NoNewWindow
 
 Write-Host "게임 화면 (:4173)" -ForegroundColor Cyan
-$preview = Start-Process npm -ArgumentList "run", "preview", "--", "--host", "--port", "4173" -PassThru -NoNewWindow
+$preview = Start-Process $npm -ArgumentList "run", "preview", "--", "--host", "--port", "4173" -PassThru -NoNewWindow
 
 Write-Host "터널 여는 중..." -ForegroundColor Cyan
 $tunnel = Start-Process $cloudflared `
