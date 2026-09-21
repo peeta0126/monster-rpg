@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
-import { advanceLogs, canAct } from "./autoBattle";
+import { advanceLogs, advanceLogsCollecting, canAct } from "./autoBattle";
+import { movesAtLevel } from "../src/monster/growth";
+import { monsters } from "../src/monster/monsters";
 
 /**
  * 이번 전투 정비가 실제 화면에서 되는지 확인한다. 계산 쪽은 tests/ 가 보고,
@@ -42,16 +44,21 @@ async function enterFloor(page: Page, floor: number) {
   await expect.poll(() => canAct(page), { timeout: 60_000 }).toBe(true);
 }
 
-/** 로그 기록 패널을 열어 지금까지의 줄을 전부 읽는다 */
+/**
+ * 로그 기록 패널을 열어 지금까지의 줄을 전부 읽는다.
+ *
+ * 버튼이 아니라 단축키(L)로 연다. 승패 오버레이는 화면 전체를 덮으므로 전투가
+ * 끝난 뒤에는 기록 버튼을 누를 수 없다 — 클릭으로 열던 때는 한 방에 끝난 전투마다
+ * "요소가 가려져 있다"로 시간이 다 갔다. 단축키는 window 에 달려 있어 그때도 먹는다.
+ */
 async function logLines(page: Page): Promise<string> {
-  const toggle = page.locator("button").filter({ hasText: "기록" }).first();
   const history = page.getByTestId("battle-log-history");
   // 눌렀다고 바로 열려 있지는 않다. 열린 것을 확인하고 읽는다. 예전에는 곧바로
   // innerText 를 읽어서, 화면이 잠깐 버벅이면 로그 대신 적 정보를 읽고 실패했다.
-  await toggle.click();
+  await page.keyboard.press("l");
   await expect(history).toBeVisible();
   const text = await page.locator("[data-testid=battle-panel]").innerText();
-  await toggle.click();
+  await page.keyboard.press("l");
   await expect(history).toBeHidden();
   return text;
 }
@@ -66,9 +73,12 @@ test("시작 몬스터 모시로 시작해도 비활성 기술 버튼이 없다"
   await expect(page.getByTestId("cmd-moves")).toBeEnabled();
   await page.getByTestId("cmd-moves").click();
 
+  // 칸 수는 학습표가 정한다. 여기 숫자를 박아 두면 모시가 기술을 하나 더 배운 날
+  // 게임이 아니라 이 줄이 틀리고, 정작 보려던 "비활성 칸이 없다"는 안 보인다.
+  const expected = movesAtLevel("mossy", 5, monsters.find((m) => m.id === "mossy")!.moves);
   const cells = page.locator('[data-testid^="move-"]');
-  await expect(cells).toHaveCount(2);          // 몸통박치기 · 전기불꽃
-  for (let i = 0; i < 2; i++) await expect(cells.nth(i)).toBeEnabled();
+  await expect(cells).toHaveCount(expected.length);
+  for (let i = 0; i < expected.length; i++) await expect(cells.nth(i)).toBeEnabled();
 
   // 칸마다 속성·분류·위력·명중이 다 적혀 있다
   const first = (await cells.first().innerText()).replace(/\s+/g, " ");
@@ -169,15 +179,23 @@ test("치명타가 장비 없이도 뜬다 (기본 치명타율)", async ({ page
     moves: [{ id: "spark", name: "전기불꽃", type: "electric", power: 1, accuracy: 100, category: "physical" }] });
   await enterFloor(page, 30);
 
-  // 한 방에 안 죽는 보스를 오래 때리며 치명타 로그가 뜨는지 본다
-  for (let i = 0; i < 40; i++) {
-    if (!(await canAct(page))) { await advanceLogs(page); continue; }
+  // 한 방에 안 죽는 보스를 오래 때리며 치명타 로그가 뜨는지 본다.
+  //
+  // 세는 것은 돈 횟수가 아니라 **실제로 때린 횟수**다. 전투가 끝나 버리면 조작이
+  // 막혀 헛도는데, 그걸 마흔 턴으로 세고 "치명타가 안 뜬다"고 말하던 때가 있었다.
+  // 끝났으면 같은 층에 다시 들어가 표본을 이어 간다.
+  let swings = 0;
+  for (let i = 0; i < 200 && swings < 40; i++) {
+    if (await canAct(page)) {
+      await page.getByTestId("cmd-moves").click();
+      await page.getByTestId("move-spark").click();
+      swings++;
+      await advanceLogs(page);
+    }
     if ((await logLines(page)).includes("치명타 공격!")) return;
-    await page.getByTestId("cmd-moves").click();
-    await page.getByTestId("move-spark").click();
-    await advanceLogs(page);
+    if (!(await canAct(page))) await enterFloor(page, 30);
   }
-  throw new Error("40턴 동안 치명타가 한 번도 안 떴다");
+  throw new Error(`${swings}번 때리는 동안 치명타가 한 번도 안 떴다`);
 });
 
 // ─── 4. 적이 읽히지 않는가 ──────────────────────────────────────────────────────
@@ -237,8 +255,10 @@ test("키보드만으로 기술을 고를 수 있다", async ({ page }) => {
   await page.keyboard.press("1");
   await expect(page.locator('[data-testid^="move-"]').first()).toBeVisible();
   await page.keyboard.press("1");
-  await advanceLogs(page);
-  expect(await logLines(page)).toMatch(/모시의/);
+  // 기록 패널로 읽지 않는다. Lv8 모시는 1층을 한 방에 끝내고, 그러면 승리 오버레이가
+  // 기록 버튼을 덮어서 이 줄에서 클릭이 막힌다. 넘기면서 그 자리에서 읽는다.
+  const lines = await advanceLogsCollecting(page);
+  expect(lines.join(" | ")).toMatch(/모시의/);
 });
 
 test("커맨드에서 왼쪽 화살표로 파티 구역에 들어간다", async ({ page }) => {

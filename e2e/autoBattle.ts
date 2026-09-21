@@ -63,7 +63,9 @@ export async function resolveForgetPrompt(page: Page): Promise<boolean> {
  * 전투 로그는 한 줄마다 Q(또는 클릭) ACK를 기다린다(BattlePage.sendLogAndWait).
  * 조작 가능 상태로 돌아오거나 승패 오버레이가 뜰 때까지 q를 눌러 로그를 넘긴다.
  */
-export async function advanceLogs(page: Page, timeoutMs = 60_000): Promise<void> {
+export async function advanceLogs(
+  page: Page, timeoutMs = 60_000, onLine?: (line: string) => void,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (await resolveForgetPrompt(page)) continue;
@@ -72,10 +74,29 @@ export async function advanceLogs(page: Page, timeoutMs = 60_000): Promise<void>
     if (await isVisible(loseOverlay(page))) return;
     if (await isVisible(mustSwitchNotice(page))) return;
     if (await canAct(page)) return;
+    if (onLine) {
+      const line = page.getByTestId("battle-log-line");
+      if (await isVisible(line)) onLine((await line.first().innerText()).trim());
+    }
     await page.keyboard.press("q");
     await page.waitForTimeout(60);
   }
   throw new Error("로그 진행이 멈췄습니다 (BATTLE_LOG_ACK 경로 확인 필요)");
+}
+
+/**
+ * 넘기면서 지나간 줄을 모은다.
+ *
+ * 로그 칸은 한 줄씩 덮어쓰이므로 넘기기 전에 읽어야 남는다. 나중에 기록 패널을 열어
+ * 읽으면 되는 것 같지만, 한 방에 끝난 전투는 승패 오버레이가 기록 버튼을 덮어서
+ * 그 클릭이 막힌다 — 강한 파티로 낮은 층에 들어가는 검사가 전부 여기 걸린다.
+ */
+export async function advanceLogsCollecting(page: Page, timeoutMs = 60_000): Promise<string[]> {
+  const lines: string[] = [];
+  await advanceLogs(page, timeoutMs, (line) => {
+    if (line && lines[lines.length - 1] !== line) lines.push(line);
+  });
+  return lines;
 }
 
 interface MoveOption {

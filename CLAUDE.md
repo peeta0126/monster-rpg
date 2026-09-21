@@ -26,7 +26,7 @@ React + Phaser 3 로 만든 몬스터 수집 RPG. 구조·밸런스·함정은 `
   `node scripts/measure-player-sheets.mjs` 가 원본에서 다시 재 준다.
   · 그리기 — `spriteOriginY(방향)`  · 발밑 판정 — `campCollision.playerBodyOffset(방향)`
   **원화를 갈아끼웠으면 표를 다시 재고, Phaser 쪽은 텍스처만 바꾸지 말 것.** 칸 크기가
-  시트마다 달라서(북동만 341×682) origin 을 같이 안 옮기면 물리 바디가 순간이동한다 —
+  시트마다 달라서(북동만 342×682) origin 을 같이 안 옮기면 물리 바디가 순간이동한다 —
   공방 문 위 벽을 뚫고 나가 다시 못 내려온 적이 있다(`BaseCampScene.applySheet`).
   걷기 그림은 **시간이 아니라 나아간 거리**로 넘긴다. 시간으로 세면 방향마다 한 걸음
   거리가 달라져 발이 미끄러진다.
