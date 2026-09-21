@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { getAIAction, aiFocus, createBattleMonster, type BattleMonster } from "../src/battle/battleUtils";
+import { getFloorEnemy, getFloorEnemySkill } from "../src/shared/floorTable";
 import type { ElementType, Move } from "../src/shared/game";
 
 /** 적이 무엇을 내는가. 읽힐 정도로 띄어나면 그것도 고장이다 */
@@ -86,4 +87,35 @@ test("낮은 층일수록 최선을 덜 고른다", () => {
 
 test("기술이 하나뿐인 적도 고를 수 있다", () => {
   assert.equal(getAIAction(mon({ moves: [weak] }), mon({ id: "p" }), 10).id, "weak");
+});
+
+/**
+ * 50층 오름의 기술 순서. 게임이 실제로 타는 길(`getFloorEnemySkill` 이 먼저,
+ * 겨냥하는 턴만 `getAIAction`)을 그대로 불러서 본다.
+ *
+ * 화면에서 보던 검사가 여기로 내려온 이유는 표본이다. 한 전투에서 여덟 턴을 모으려면
+ * 양쪽 다 안 죽어야 하는데, 세이브의 기술은 id 로만 믿고 표에서 다시 꺼내오므로
+ * (`playerStore.refreshMoves`) 테스트가 "위력 1" 이라고 적어도 진짜 위력으로 나간다.
+ * 그래서 전투가 대여섯 턴에 끝나고 표본이 모자란 채 판정에 들어갔다. 계산이라
+ * 여기서 수백 판을 재는 편이 맞다.
+ */
+test("50층 오름의 기술 순서는 고정 순환이 아니다", () => {
+  const target = mon({ id: "p", type: "normal" });
+  let cyclic = 0;
+  const RUNS = 400;
+  for (let r = 0; r < RUNS; r++) {
+    const enemy = mon({ moves: (getFloorEnemy(50) as { moves: Move[] }).moves });
+    const seq: string[] = [];
+    let last: string | undefined;
+    for (let turn = 0; turn < 8; turn++) {
+      const mv = getFloorEnemySkill(50, turn, enemy.moves, last) ?? getAIAction(enemy, target, 50, last);
+      last = mv.id;
+      seq.push(mv.id);
+    }
+    // 예전엔 가진 기술 4개를 1→2→3→4→1 로 돌렸다. 네 칸 뒤가 늘 같은 기술이었다
+    if (seq.slice(4).every((m, i) => m === seq[i])) cyclic++;
+    assert.ok(new Set(seq).size > 1, `한 기술만 반복한다: ${seq.join(" → ")}`);
+  }
+  // 무작위로도 이따금 겹친다. 고정 순환이면 400판이 전부 걸린다
+  assert.ok(cyclic < RUNS * 0.1, `${RUNS}판 중 ${cyclic}판이 4턴 주기다`);
 });

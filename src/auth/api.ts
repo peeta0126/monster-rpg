@@ -60,9 +60,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         updatedAt: body.updatedAt ?? null,
       });
     }
-    throw new ApiError(res.status, body?.error ?? `요청에 실패했습니다. (${res.status})`);
+    throw new ApiError(res.status, body?.error ?? fallbackMessage(res.status));
   }
   return res.json() as Promise<T>;
+}
+
+/**
+ * 몸이 비어 있는 실패에 붙일 문구.
+ *
+ * 서버(4000)가 안 떠 있으면 vite 프록시가 **본문 없는 500** 을 대신 낸다. 우리 서버의
+ * 에러 미들웨어를 안 거쳤으니 `{ error: ... }` 가 없다. 그걸 안 가르고 상태 코드만
+ * 적으면 화면에 "요청에 실패했습니다. (500)" 만 떠서, 서버를 켜면 끝날 일을 가입
+ * 로직의 버그로 읽게 된다. 실제로 한 번 그렇게 헤맸다.
+ *
+ * 서버가 자기 문구를 실어 보낸 500 은 여기까지 안 온다 — 그건 서버에 닿았다는 뜻이라
+ * "켜져 있는지 확인하라"로 덮으면 진짜 오류가 가려진다.
+ */
+function fallbackMessage(status: number): string {
+  if (status >= 500) return "세이브 서버가 켜져 있는지 확인해주세요.";
+  return `요청에 실패했습니다. (${status})`;
 }
 
 function authHeader(): Record<string, string> {
