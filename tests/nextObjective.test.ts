@@ -90,3 +90,19 @@ test("관문 직전에 회복 물약이 없으면 공방부터 가리킨다", ()
   const boss = getNextObjective({ ...base, bestFloor: 19, healPotionCount: 0 });
   assert.match(boss!.text, /20층에는 보스가 있습니다/);
 });
+
+test("50층 이후 최종 목표가 대화·제작·전달 순서로 바뀐다", () => {
+  const storyFlags = all({ met_orion: true, met_baros: true, first_capture: true });
+  const base = { storyFlags, bestFloor: 50, potionCount: 3 };
+
+  assert.match(getNextObjective(base)!.text, /오리온에게 보여/);
+  assert.match(getNextObjective({ ...base, seenDialogues: ["orion_floor_50"] })!.text, /공방.*제작/);
+  assert.match(getNextObjective({
+    ...base, seenDialogues: ["orion_floor_50"], mothersCureCount: 1,
+  })!.text, /오리온에게 가져가/);
+  assert.equal(getNextObjective({
+    ...base,
+    seenDialogues: ["orion_floor_50"],
+    questStatus: { orion_mothers_cure: "completed" },
+  }), null);
+});

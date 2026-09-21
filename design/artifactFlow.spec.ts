@@ -32,7 +32,7 @@ const APPROACH = 0.8;
 async function craftBatch(page: Page) {
   expect(await walkTo(page, BENCH, APPROACH * BENCH.radius), "아티팩트 제작대까지 못 갔다").toBe(true);
   await expect(page.getByText("아티팩트 제작대 사용하기")).toBeVisible();
-  await page.keyboard.press("x");
+  await page.keyboard.press("Space");
   await expect(page.getByRole("heading", { name: "아티팩트 제작대" })).toBeVisible();
 
   await page.getByRole("button", { name: "테스트 재료" }).click();
@@ -89,7 +89,7 @@ test.describe("artifact:", () => {
 
     // ── 2. 모루에서 첫 번째를 두 번째를 재료로 강화한다 (+0 → +1, 성공률 100%) ──
     expect(await walkTo(page, ANVIL, APPROACH * ANVIL.radius), "모루까지 못 갔다").toBe(true);
-    await page.keyboard.press("x");
+    await page.keyboard.press("Space");
     await expect(page.getByRole("heading", { name: "장비 모루" })).toBeVisible();
     await page.getByRole("button", { name: /강화/ }).first().click();
 

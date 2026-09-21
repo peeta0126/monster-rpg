@@ -1414,10 +1414,10 @@ export default function BattlePage() {
 
             <div className="flex flex-col gap-2">
               {floor === MAX_TOWER_FLOOR ? (
-                <button onClick={() => navigate("/ending")}
+                <button onClick={() => navigate("/")}
                   data-testid="result-primary"
                   className="w-full border-2 border-ember-500 bg-ember-700/25 py-3 text-pixel-sm font-bold text-ember-500 hover:bg-ember-700/40 transition active:scale-95">
-                  &gt; 정수를 들고 마을로 <span className="opacity-70">(Enter)</span>
+                  &gt; 만물의 정수를 들고 마을로 <span className="opacity-70">(Enter)</span>
                 </button>
               ) : (
                 <button onClick={() => navigate("/battle", { state: { floor: floor + 1 } })}

@@ -28,6 +28,10 @@ interface ObjectiveInput {
   storyFlags: Record<PersistedStoryFlag, boolean>;
   bestFloor: number;
   potionCount: number;
+  /** 최종 스토리는 기존 저장값의 조합으로만 판정한다. */
+  seenDialogues?: readonly string[];
+  questStatus?: Record<string, string>;
+  mothersCureCount?: number;
   /**
    * 가방의 **회복** 물약 수. 전체 개수와 따로 받는 이유가 있다 — 해독제와 공격 버프만
    * 잔뜩 남은 채로 보스 앞에 서는 게 이 게임에서 제일 흔한 패배 경로다(40층 실측:
@@ -60,11 +64,27 @@ function restockWarning(bestFloor: number, healPotionCount: number): string | nu
 }
 
 export function getNextObjective(
-  { storyFlags, bestFloor, potionCount, healPotionCount, activeQuest }: ObjectiveInput,
+  {
+    storyFlags, bestFloor, potionCount, healPotionCount, activeQuest,
+    seenDialogues = [], questStatus = {}, mothersCureCount = 0,
+  }: ObjectiveInput,
 ): Objective | null {
   if (!storyFlags.met_orion)     return { text: "이장 오리온에게 말을 걸어 보세요", where: "마을 안쪽" };
   if (!storyFlags.met_baros)     return { text: "탑 앞의 바로스에게 말을 걸어 보세요", where: "탑 입구" };
   if (!storyFlags.first_capture) return { text: "숲에서 몬스터를 포획해 보세요", where: "숲", via: "메뉴 → 숲" };
+  if (storyFlags.tower_cleared)   return activeQuest ?? null;
+
+  // 50층 뒤에는 일반 보급·퀘스트 안내보다 최종 이야기 목표가 항상 앞선다.
+  if (bestFloor >= 50) {
+    if (questStatus.orion_mothers_cure === "completed") return null;
+    if (mothersCureCount > 0) {
+      return { text: "완성된 어머니의 치료약을 촌장 오리온에게 가져가세요", where: "베이스캠프 · 촌장 오리온" };
+    }
+    if (seenDialogues.includes("orion_floor_50")) {
+      return { text: "공방에서 만물의 정수로 어머니의 치료약을 제작하세요", where: "집 안 공방" };
+    }
+    return { text: "만물의 정수를 촌장 오리온에게 보여주세요", where: "베이스캠프 · 촌장 오리온" };
+  }
   if (bestFloor === 0)           return { text: "무한의 탑 1층에 도전해 보세요", where: "탑", via: "메뉴 → 무한의 탑" };
   if (potionCount === 0)         return { text: "공방에서 물약을 만들어 보세요", where: "집 안 공방" };
   // 부탁보다 앞에 세운다. 관문 하나가 회복 물약 대여섯 개를 먹는데, 빈손으로 올라가면
@@ -72,8 +92,5 @@ export function getNextObjective(
   const warning = restockWarning(bestFloor, healPotionCount ?? potionCount);
   if (warning) return { text: `${warning}. 공방에서 회복 물약을 채워 가세요`, where: "집 안 공방" };
   if (activeQuest)               return activeQuest;
-  if (!storyFlags.tower_cleared) {
-    return { text: `무한의 탑 ${bestFloor + 1}층에 도전해 보세요`, where: "탑", via: "메뉴 → 무한의 탑" };
-  }
-  return null;   // 엔딩까지 봤고 남은 부탁도 없으면 더 시킬 것이 없다
+  return { text: `무한의 탑 ${bestFloor + 1}층에 도전해 보세요`, where: "탑", via: "메뉴 → 무한의 탑" };
 }

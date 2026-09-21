@@ -11,6 +11,7 @@ import type { OwnedMonster } from "../shared/playerStore";
 import { getNextObjective } from "../shared/nextObjective";
 import { ObjectiveBanner } from "../shared/ui/ObjectiveBanner";
 import { StageHud, StageRail } from "../shared/ui/StageHud";
+import { InteractionPrompt } from "../shared/ui/InteractionPrompt";
 import { ControlHint } from "../shared/ui/ControlHint";
 import { useViewportSize } from "../shared/ui/useViewportSize";
 import { cameraRect } from "../shared/ui/stageRect";
@@ -573,6 +574,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
   const questStatus = usePlayerStore((s) => s.questStatus);
   const storyFlags  = usePlayerStore((s) => s.storyFlags);
   const bestFloor   = usePlayerStore((s) => s.bestFloor);
+  const seenDialogues = usePlayerStore((s) => s.seenDialogues);
   const snapshot    = useQuestSnapshot();
   const [showDone, setShowDone] = useState(false);
 
@@ -583,7 +585,7 @@ function QuestLogModal({ onClose }: { onClose: () => void }) {
   // 아직 수락 안 했지만 지금 가면 받을 수 있는 것. 제목은 가린다.
   // 무슨 부탁인지는 만나서 듣는 게 맞다
   const waiting = (["orion", "baros"] as const)
-    .map((npcId) => activeQuestFor(npcId, storyFlags, bestFloor, questStatus))
+    .map((npcId) => activeQuestFor(npcId, storyFlags, bestFloor, questStatus, seenDialogues))
     .filter((q): q is QuestDef => !!q && status(q) === "not_accepted");
 
   /**
@@ -1073,6 +1075,9 @@ export default function BaseCampPage() {
   const [towerPayload, setTowerPayload] = useState<{ from: string; portalId: string } | null>(null);
   const [healed, setHealed] = useState(false);
   const [npcDialogue, setNpcDialogue]   = useState<NpcDialoguePayload | null>(null);
+  /** 지금 닿아 있는 대상의 이름. 씬이 바뀔 때만 보내준다 */
+  const [interactHint, setInteractHint] = useState<string | null>(null);
+  const [endingTransition, setEndingTransition] = useState(false);
   /** 방금 받은 것들. 대사가 끝난 뒤 한 장 띄운다 */
   const [rewardScreen, setRewardScreen] = useState<{ title: string; items: RewardDisplay[] } | null>(null);
   const [dialogueLineIndex, setDialogueLineIndex] = useState(0);
@@ -1107,6 +1112,7 @@ export default function BaseCampPage() {
   // 반복해서, 벽에 부딪힌 사람한테 제작·강화를 한 번도 안 짚어 줬다.
   const questSnapshot = useQuestSnapshot();
   const questStatus = usePlayerStore((s) => s.questStatus);
+  const seenDialogues = usePlayerStore((s) => s.seenDialogues);
   const activeQuestLine = (() => {
     const doing = ALL_QUESTS.find((q) => questStatus[q.id] === "in_progress");
     if (!doing) return null;
@@ -1124,6 +1130,9 @@ export default function BaseCampPage() {
       .filter((p) => (HEAL_POTION_IDS as readonly string[]).includes(p.itemId))
       .reduce((a, p) => a + p.quantity, 0),
     activeQuest: activeQuestLine,
+    seenDialogues,
+    questStatus,
+    mothersCureCount: questSnapshot.potions.mothers_cure_potion ?? 0,
   });
   const acceptQuest = usePlayerStore((s) => s.acceptQuest);
   const completeQuest = usePlayerStore((s) => s.completeQuest);
@@ -1143,23 +1152,37 @@ export default function BaseCampPage() {
     const handleEnterForest  = () => navigate("/forest");
     const handleEnterWorkshop = () => navigate("/workshop");
     const handleShowNpcDialogue = (payload: NpcDialoguePayload) => {
+      if (payload.completeQuest?.questId === "orion_mothers_cure") {
+        const { questId, objective, rewards, setsFlag } = payload.completeQuest;
+        // 전달과 소비를 먼저 확정한다. 마지막 대사는 그 결과를 말하는 장면이고,
+        // /ending 이동만 플레이어가 전부 읽은 뒤에 한다.
+        const granted = completeQuest({ questId, objective, rewards, setsFlag });
+        if (granted === null) return;
+        setNpcDialogue({ ...payload, completeQuest: undefined, endsStory: true });
+        setDialogueLineIndex(0);
+        return;
+      }
       setNpcDialogue(payload);
       setDialogueLineIndex(0);
     };
+
+    const handleInteractHint = (label: string | null) => setInteractHint(label);
 
     gameEvents.on(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
     gameEvents.on(GAME_EVENT.ENTER_FOREST, handleEnterForest);
     gameEvents.on(GAME_EVENT.ENTER_HOUSING, handleEnterWorkshop);
     gameEvents.on(GAME_EVENT.SHOW_NPC_DIALOGUE, handleShowNpcDialogue);
+    gameEvents.on(GAME_EVENT.CAMP_INTERACT_HINT, handleInteractHint);
 
     return () => {
       gameEvents.off(GAME_EVENT.ENTER_BATTLE, handleEnterBattle);
       gameEvents.off(GAME_EVENT.ENTER_FOREST, handleEnterForest);
       gameEvents.off(GAME_EVENT.ENTER_HOUSING, handleEnterWorkshop);
       gameEvents.off(GAME_EVENT.SHOW_NPC_DIALOGUE, handleShowNpcDialogue);
+      gameEvents.off(GAME_EVENT.CAMP_INTERACT_HINT, handleInteractHint);
       game.destroy(true);
     };
-  }, [navigate]);
+  }, [navigate, completeQuest]);
 
   // 키 핸들러 effect가 이 함수를 참조하므로 useCallback으로 고정한다.
   // 매 렌더 새로 만들면 effect 의존성에 넣을 수 없고(리스너를 매번 재등록하게 된다),
@@ -1171,7 +1194,7 @@ export default function BaseCampPage() {
    * 완료 대사를 보고 ESC 를 누른 사람은 재료만 그대로 든 채 아무것도 못 받았다. 재료
    * 몇 개일 땐 티가 안 났는데, 몬스터를 주기 시작하면 사고다.
    */
-  const applyDialogueOutcome = useCallback(async (payload: NpcDialoguePayload) => {
+  const applyDialogueOutcome = useCallback(async (payload: NpcDialoguePayload): Promise<boolean> => {
     if (payload.dialogueId) markDialogueSeen(payload.dialogueId);
     if (payload.grantsMonsterId) grantMonster(payload.grantsMonsterId);
     if (payload.setsFlag) setStoryFlag(payload.setsFlag);
@@ -1183,10 +1206,12 @@ export default function BaseCampPage() {
       // 스토어 안에서는 못 만든다. 숲의 포획도 같은 경로를 쓴다
       const monster = wanted ? await buildQuestMonster(wanted) : undefined;
       const granted = completeQuest({ questId, objective, rewards, setsFlag, monster });
+      if (granted === null) return false;
       if (granted?.length) {
         setRewardScreen({ title: payload.completeQuest.questTitle, items: granted });
       }
     }
+    return true;
   }, [markDialogueSeen, setStoryFlag, grantMonster, acceptQuest, completeQuest]);
 
   const closeNpcDialogue = useCallback(() => {
@@ -1194,8 +1219,19 @@ export default function BaseCampPage() {
     const payload = npcDialogue;
     setNpcDialogue(null);
     setDialogueLineIndex(0);
+    if (payload.endsStory) {
+      setEndingTransition(true);
+      void applyDialogueOutcome(payload).then((completed) => {
+        if (!completed) {
+          setEndingTransition(false);
+          return;
+        }
+        window.setTimeout(() => navigate("/ending"), 1400);
+      });
+      return;
+    }
     void applyDialogueOutcome(payload);
-  }, [npcDialogue, applyDialogueOutcome]);
+  }, [npcDialogue, applyDialogueOutcome, navigate]);
 
   // 키 핸들러 effect가 이 함수를 참조하므로 useCallback으로 고정한다.
   // 매 렌더 새로 만들면 effect 의존성에 넣을 수 없고(리스너를 매번 재등록하게 된다),
@@ -1210,10 +1246,10 @@ export default function BaseCampPage() {
   }, [npcDialogue, dialogueLineIndex, closeNpcDialogue]);
 
   /**
-   * 화면 위에 무언가 떠 있으면 캔버스의 X 를 잠근다.
+   * 화면 위에 무언가 떠 있으면 캔버스의 Space 를 잠근다.
    * 떠난 뒤에도 잠긴 채로 남으면 다시 들어왔을 때 아무 키도 안 먹으므로 반드시 푼다.
    */
-  const overlayOpen = !!npcDialogue || menuOpen || dexOpen || questLogOpen
+  const overlayOpen = endingTransition || !!npcDialogue || menuOpen || dexOpen || questLogOpen
     || !!towerPayload || !!rewardScreen;
   useEffect(() => {
     setCampInputLocked(overlayOpen);
@@ -1222,9 +1258,9 @@ export default function BaseCampPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // 대사 넘기기도 X 다. Space 로 두면 걷다가 튀어나온 대사를 손이 먼저 넘긴다 —
-      // 이 게임에서 이야기가 나오는 자리가 여기뿐이라 제일 아까운 자리다.
-      if (e.code === "KeyX" && npcDialogue) { e.preventDefault(); advanceNpcDialogue(); return; }
+      // 대사 넘기기도 Space 다. 브라우저에서 Space 는 스크롤과 '초점 잡힌 버튼
+      // 누르기'를 겸하니, 이 화면에서 받아 쓸 때는 기본 동작을 같이 막는다.
+      if (e.code === "Space" && npcDialogue) { e.preventDefault(); advanceNpcDialogue(); return; }
       if (e.key === "Tab") {
         if (npcDialogue || towerPayload || dexOpen || questLogOpen) return;
         e.preventDefault();
@@ -1233,7 +1269,12 @@ export default function BaseCampPage() {
       }
       if (e.key === "Escape") {
         // ESC 로 닫아도 지급은 된다. 안 읽고 넘긴 것과 못 받은 것은 다르다
-        if (npcDialogue) { closeNpcDialogue(); return; }
+        if (npcDialogue) {
+          // 마지막 대사는 끝까지 넘겨야 한다. ESC 로 퀘스트 완료와 엔딩을 건너뛰지 않는다.
+          if (npcDialogue.endsStory) return;
+          closeNpcDialogue();
+          return;
+        }
         if (dexOpen) { setDexOpen(false); setMenuOpen(true); return; }
         if (questLogOpen) { setQuestLogOpen(false); setMenuOpen(true); return; }
         // 도감·퀘스트와 같게 메뉴를 다시 연다. 셋 다 메뉴에서 연 창이라, 잘못 눌러
@@ -1265,6 +1306,14 @@ export default function BaseCampPage() {
       {/* 그림 위에 얹혀도 되는 것 — 목표 띠는 장면에 붙어 읽혀야 한다 */}
       <StageHud rect={stage}>
         <ObjectiveBanner objective={objective} />
+
+        {/* 상호작용 안내. 공방과 같은 부품·같은 자리다 — 걸어 다니는 동안 자리가
+            흔들리면 안 되니 플레이어를 따라가지 않고 그림 하단에 붙인다. */}
+        {interactHint && !overlayOpen && (
+          <div className="pointer-events-none absolute bottom-14 left-1/2 z-30 -translate-x-1/2">
+            <InteractionPrompt>{interactHint}</InteractionPrompt>
+          </div>
+        )}
       </StageHud>
 
       {/* 늘 떠 있는 것들은 그림 옆 어두운 띠로 내보낸다. 캔버스는 16:9 로 고정이고
@@ -1274,7 +1323,7 @@ export default function BaseCampPage() {
           <ControlHint
             items={[
               { keys: "WASD / 방향키", action: "이동" },
-              { keys: "X", action: "상호작용" },
+              { keys: "SPACE", action: "상호작용" },
               { keys: "TAB", action: "메뉴" },
             ]}
           />
@@ -1361,12 +1410,21 @@ export default function BaseCampPage() {
               </div>
               <p className="text-earth-400 text-pixel-sm self-end">
                 {dialogueLineIndex < npcDialogue.lines.length - 1
-                  ? "클릭 / X: 다음  ·  ESC: 닫기"
-                  : "클릭 / X: 닫기  ·  ESC: 닫기"}
+                  ? "클릭 / SPACE: 다음  ·  ESC: 닫기"
+                  : "클릭 / SPACE: 닫기  ·  ESC: 닫기"}
               </p>
             </div>
           </div>
         </div>
+      )}
+
+      {endingTransition && (
+        <div
+          className="pointer-events-auto fixed inset-0 z-[3400] bg-shadow-900"
+          style={{ animation: "finalStoryFadeOut 1400ms ease-in forwards" }}
+          aria-label="엔딩으로 전환 중"
+          data-testid="ending-fade"
+        />
       )}
     </div>
   );

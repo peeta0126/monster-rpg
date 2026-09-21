@@ -70,6 +70,12 @@ export const GAME_EVENT = {
   ENTER_FOREST: "portal:enter-forest",
   /** BaseCampScene → BaseCampPage: NPC 대화창 표시 */
   SHOW_NPC_DIALOGUE: "npc:show-dialogue",
+  /**
+   * BaseCampScene → BaseCampPage: 지금 닿아 있는 대상의 이름(없으면 null).
+   * 안내는 React 가 그린다 — 캔버스 글자는 카메라 배율을 타서 화면에서 UI 보다 커진다.
+   * 라벨이 바뀔 때만 보내므로 매 프레임 다시 그려지지 않는다.
+   */
+  CAMP_INTERACT_HINT: "camp:interact-hint",
   /** BattleScene → BattlePage: create() 완료, 리스너 등록됨 (스킬 조작 허용 시점) */
   BATTLE_READY: "battle:ready",
   /** BattlePage → BattleScene: HP·상태이상 갱신 */
@@ -118,6 +124,8 @@ export interface NpcDialoguePayload {
     rewards: QuestReward[];
     setsFlag?: PersistedStoryFlag;
   };
+  /** 최종 퀘스트는 아이템 전달을 먼저 확정하고, 이 대사를 끝낸 뒤 엔딩으로 간다. */
+  endsStory?: boolean;
 }
 
 export interface BattleHitPayload {

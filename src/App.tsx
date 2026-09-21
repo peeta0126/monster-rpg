@@ -42,6 +42,17 @@ function BattlePageWrapper() {
   return <BattlePage key={location.key} />;
 }
 
+function EndingPageWrapper() {
+  const finalQuestComplete = usePlayerStore(
+    (s) => s.questStatus.orion_mothers_cure === "completed",
+  );
+  const towerCleared = usePlayerStore((s) => s.storyFlags.tower_cleared);
+
+  // 첫 엔딩은 치료약 전달까지 끝낸 세이브만, 이후에는 다시보기 플래그로 입장한다.
+  if (!finalQuestComplete && !towerCleared) return <Navigate to="/" replace />;
+  return <EndingPage />;
+}
+
 /** 청크를 받는 동안 잠깐 보인다. 화면 전환 커버와 같은 색이라 이어붙은 것처럼 보인다. */
 function RouteFallback() {
   return <div className="fixed inset-0 bg-shadow-900" aria-hidden />;
@@ -64,7 +75,7 @@ export default function App() {
               <Route path="/forest" element={<ForestPage />} />
               <Route path="/monsters" element={<MonstersPage />} />
               <Route path="/workshop" element={<WorkshopPage />} />
-              <Route path="/ending" element={<EndingPage />} />
+              <Route path="/ending" element={<EndingPageWrapper />} />
               <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </Suspense>

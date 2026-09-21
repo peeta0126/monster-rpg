@@ -166,3 +166,12 @@ export const POTION_RECIPES: CraftingRecipe[] = [
 
 export const CRAFTING_RECIPES: CraftingRecipe[] = [...ARTIFACT_RECIPES, ...POTION_RECIPES];
 
+/** 최종 치료약은 오리온에게 정수를 보여 준 뒤에만 공방 목록에 나타난다. */
+export function visiblePotionRecipes(
+  materials: Record<string, number>,
+  seenDialogues: readonly string[],
+): CraftingRecipe[] {
+  return POTION_RECIPES.filter((recipe) => recipe.id !== "ws_mothers_cure"
+    || ((materials.ormr_essence ?? 0) > 0 && seenDialogues.includes("orion_floor_50")));
+}
+

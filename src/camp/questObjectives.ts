@@ -25,7 +25,7 @@ export type QuestObjective =
   | { kind: "equipped" }
   /** 장비 하나를 그 레벨 이상으로 올리기 */
   | { kind: "artifactLevel"; level: number }
-  /** 그 완성품을 손에 넣기 */
+  /** 그 완성품을 손에 넣어 NPC에게 건네기. 완료할 때 1개 차감한다 */
   | { kind: "potion"; potionId: string; name: string };
 
 /** 목표를 판정하는 데 필요한 것만 추린 지금 상태 */
@@ -139,11 +139,17 @@ export function objectiveVia(o: QuestObjective): string | null {
 }
 
 /**
- * 완료할 때 가져가는 것. 재료 목표만 차감한다.
+ * 완료할 때 NPC에게 건네는 것. 재료 목표와 완성품 목표만 차감한다.
  *
  * 나머지 셋은 "이미 한 일"을 확인할 뿐이라 뺏을 게 없다. 층을 도로 내리거나 잡은 몬스터를
  * 도감에서 지울 수는 없다.
  */
-export function objectiveCost(o: QuestObjective): { itemId: string; amount: number } | null {
-  return o.kind === "material" ? { itemId: o.itemId, amount: o.amount } : null;
+export function objectiveCost(o: QuestObjective): {
+  source: "material" | "potion";
+  itemId: string;
+  amount: number;
+} | null {
+  if (o.kind === "material") return { source: "material", itemId: o.itemId, amount: o.amount };
+  if (o.kind === "potion") return { source: "potion", itemId: o.potionId, amount: 1 };
+  return null;
 }

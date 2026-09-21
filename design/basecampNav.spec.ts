@@ -70,23 +70,23 @@ function scenePos(page: Page) {
   });
 }
 
-/** 좌표와 근접 안내를 한 번에 읽는다. 안내는 씬이 이름 붙여 둔 텍스트 하나뿐이다. */
-function readHint(page: Page) {
-  return page.evaluate(() => {
+/**
+ * 좌표와 근접 안내를 한 번에 읽는다. 안내는 캔버스가 아니라 그림 칸의 배지 하나다 —
+ * 캔버스 글자는 카메라 배율을 타서 화면에서 옆 띠의 안내보다 커 보였다.
+ */
+async function readHint(page: Page) {
+  const pos = await page.evaluate(() => {
     const g = (window as unknown as {
-      __phaserGame: {
-        scene: {
-          getScene: (k: string) => {
-            player: { x: number; y: number };
-            children: { getByName: (n: string) => { x: number; y: number; text: string } | null };
-          };
-        };
-      };
+      __phaserGame: { scene: { getScene: (k: string) => { player: { x: number; y: number } } } };
     }).__phaserGame;
     const s = g.scene.getScene("BaseCampScene");
-    const h = s.children.getByName("interactHint");
-    return { x: s.player.x, y: s.player.y, hint: h ? { x: h.x, y: h.y, text: h.text } : null };
+    return { x: s.player.x, y: s.player.y };
   });
+  const badge = page.getByTestId("interaction-prompt");
+  const hint = (await badge.count()) > 0 && (await badge.first().isVisible())
+    ? { text: (await badge.first().innerText()).replace(/\s+/g, " ").trim() }
+    : null;
+  return { ...pos, hint };
 }
 
 async function hold(page: Page, keys: string[], ms: number) {
@@ -200,10 +200,11 @@ test.describe("basecamp:", () => {
   });
 
   /**
-   * 안내는 하나뿐이고 플레이어를 따라와야 한다. 예전에는 대상마다 텍스트를 만들고
-   * 지웠는데 만든 자리에 못박혀 있어서, 걸어가면 안내만 월드에 남아 떠다녔다.
+   * 안내는 하나뿐이고, 그리는 쪽은 React 다. 예전에는 캔버스에 글자로 얹었는데
+   * 카메라 배율(0.5)과 캔버스 확대를 연달아 타서 같은 12px 인데도 화면에서는
+   * 옆 띠의 안내보다 커 보였다. 공방과 같은 배지를 쓴다.
    */
-  test("근접 안내가 플레이어를 따라온다", async ({ page }) => {
+  test("근접 안내가 그림 칸에 뜨고 멀어지면 사라진다", async ({ page }) => {
     await openCamp(page);
     const house = CAMP_INTERACTIONS.find((i) => i.id === "workshop")!;
     await teleport(page, house.x, house.y + 40);
@@ -211,17 +212,13 @@ test.describe("basecamp:", () => {
 
     const before = await readHint(page);
     expect(before.hint, "공방 앞인데 안내가 없다").not.toBeNull();
-    expect(Math.abs(before.hint!.x - before.x)).toBeLessThan(4);
+    expect(before.hint!.text).toContain("SPACE");
+    expect(await page.getByTestId("interaction-prompt").count(), "안내가 둘 이상이다").toBe(1);
 
-    await hold(page, ["ArrowDown"], 400);
+    await teleport(page, house.x, house.y + house.radius + 400);
+    await page.waitForTimeout(300);
     const after = await readHint(page);
-    expect(after.y, "아래로 눌렀는데 안 움직였다").toBeGreaterThan(before.y);
-    if (after.hint) {
-      expect(
-        Math.abs(after.hint.x - after.x) + Math.abs(after.hint.y - (after.y - 60)),
-        "안내가 플레이어를 안 따라온다",
-      ).toBeLessThan(6);
-    }
+    expect(after.hint, "멀리 떨어졌는데 안내가 남아 있다").toBeNull();
   });
 
   /**
